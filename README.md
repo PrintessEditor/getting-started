@@ -7,6 +7,8 @@ This repo shows how easy it is to get started with the printess editor.
 You can see thode code running here:
 <https://printesseditor.github.io/getting-started/>
 
+> :warning: **You will be prompted for a password on load. This is only because Printess is not live yet and will be removed with the official release. Please contact the Printess folks to get this password.**
+
 ## Prerequisits
 
 Printess has a single npm depencency which you can easily add to your own **package.json**
@@ -26,7 +28,7 @@ Be aware that Printess itself is loaded when all webcomponents polyfills are pro
   <script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js" defer></script>
 ```
 
-Then we can wait for **WebComponentsReady** to load Printess itself. Printess is build on modern js modules. So it need to be imported in a **module** script tag:
+Now we wait for **WebComponentsReady** before loading Printess itself. Printess is build on modern js modules. So it need to be imported in a **module** script tag:
 
 ```html
 <script type="module">
@@ -35,8 +37,9 @@ Then we can wait for **WebComponentsReady** to load Printess itself. Printess is
       addEventListener('WebComponentsReady', cb)
     }
   };
+  let printess;
   WebComponents.waitFor(async () => {
-    let printess = await import('./printess-editor/printess-editor.js');
+    printess = await import('./printess-editor/printess-editor.js');
     printess.attachPrintess({
       wasmUrl: "./printess-editor/wasm/printess.wasm",
       div: document.getElementById("printess"),
@@ -55,10 +58,11 @@ Please be aware that you'll need to tell Printess the path to the WebAssembly fi
 In the **div** property you need to pass a div-element which Printess will attach to. 
 Printess is intended to have as much space as possible, so it is highly recommended to not leave space on left and right side. Especially on mobile. 
 
-From now on the **printess** variable `let printess = await import..` contains your js-api reference to the Printess editor. 
+Now the variable named **printess** contains a js-api reference to the Printess editor.  
 
 
-
+  
+##    
 
 # Printess Ui or Custom Ui?
 
@@ -68,7 +72,7 @@ In most cases the easy approach of using **Printess Ui** will be the way to go. 
 
 The second option **Custom Ui** reduces Printess to a pure view-container which will ot expose any Ui other then the editable area. All controls and inputs must be provided by your website. This will give you full control on how your website looks like. You have to process selection-change and page-change callbacks. And have calls to set properties on selected frames. 
 
-In the getting-started application you can toggle between both implementations wherey the Custom Ui is a not styled basic exmaple of what is possible. 
+In the getting-started application you can toggle between both implementations whereby the **Custom Ui** is just a very basic exmaple of what is possible. No styling has been applied to keep to code easy to read. 
 
 
 
