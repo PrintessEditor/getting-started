@@ -45,7 +45,7 @@
       <option value="Sign">Sign</option>
       <option value="Business-Card">Business-Card</option>
       <option selected value="Greeting-Card">Greeting-Card</option>
-      <option selected value="Chocolate Bar">Greeting-Card</option>
+      <option value="Chocolate Bar">Chocolate Bar</option>
     </select>
     <div></div>
     <button id="btnUndo">Undo</button>
