@@ -1,1 +1,74 @@
-# getting-started
+![Printess Logo](PrintessLogoS.png)
+
+# Getting Started
+
+This repo shows how easy it is to get started with the printess editor. 
+
+You can see thode code running here:
+<https://printesseditor.github.io/getting-started/>
+
+## Prerequisits
+
+Printess has a single npm depencency which you can easily add to your own **package.json**
+
+```JSON
+{
+  "dependencies": {
+    "@webcomponents/webcomponentsjs": "^2.5.0"
+  }
+}
+```
+Plus you need to place the **printess-editor** folder in your project root. If you place it somewhere else please adjust the import-path `await import('./printess-editor/printess-editor.js')`; and See below how to adjust the wasmUrl as well. 
+
+Be aware that Printess itself is loaded when all webcomponents polyfills are processed. So first we need to load **webcomponentjs**
+
+```html
+  <script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js" defer></script>
+```
+
+Then we can wait for **WebComponentsReady** to load Printess itself. Printess is build on modern js modules. So it need to be imported in a **module** script tag:
+
+```html
+<script type="module">
+  window.WebComponents = window.WebComponents || {
+    waitFor(cb) {
+      addEventListener('WebComponentsReady', cb)
+    }
+  };
+  WebComponents.waitFor(async () => {
+    let printess = await import('./printess-editor/printess-editor.js');
+    printess.attachPrintess({
+      wasmUrl: "./printess-editor/wasm/printess.wasm",
+      div: document.getElementById("printess"),
+      domain: "dev-aws.printess.com",
+      token: "YOUR TOKEN",
+      showBuyerSide: true, 
+      templateName: "Sign"
+    });
+  });
+</script>
+```
+The **attachPrintess** call actually initializes Printess, passed the authentication token and the name of the template you would like to load.
+
+Please be aware that you'll need to tell Printess the path to the WebAssembly file (printess.wasm) in a separate property (**wasmUrl**). Unfortunatly this can not be detected automatically during the **import**. So if your foder structure looks more complex you can always tell Printess to load the proper **wasm**. The **wasmUrl** can also be passed as an absolute Url, like *"https://path.to.wasm/file.wasm"*
+
+In the **div** property you need to pass a div-element which Printess will attach to. 
+Printess is intended to have as much space as possible, so it is highly recommended to not leave space on left and right side. Especially on mobile. 
+
+From now on the **printess** variable `let printess = await import..` contains your js-api reference to the Printess editor. 
+
+
+
+
+# Printess Ui or Custom Ui?
+
+Printess has two option to be implemented inside you website. 
+
+In most cases the easy approach of using **Printess Ui** will be the way to go. Just provide a div and let Printess do the heavy lifting. After the buyer has configured its document, you take the JSON and pass it to your shopping basket. And you can pass this JSON back to Printess at any time. As well you are able to tweak the Ui by passing CSS. 
+
+The second option **Custom Ui** reduces Printess to a pure view-container which will ot expose any Ui other then the editable area. All controls and inputs must be provided by your website. This will give you full control on how your website looks like. You have to process selection-change and page-change callbacks. And have calls to set properties on selected frames. 
+
+In the getting-started application you can toggle between both implementations wherey the Custom Ui is a not styled basic exmaple of what is possible. 
+
+
+

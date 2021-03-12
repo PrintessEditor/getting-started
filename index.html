@@ -65,16 +65,8 @@
       printess.attachPrintess({
         wasmUrl: "./printess-editor/wasm/printess.wasm", // or absolute: "https://path.to.wasm/file.wasm"
         div: document.getElementById("printess"),
-
-        externalConfig: {
-          predefinedUploader: "printess",
-          predefinedDocumentProvider: "printess",
-          api: {
-            domain: "dev-aws.printess.com",
-            token: token
-          }
-        },
-
+        domain: "dev-aws.printess.com",
+        token: token,
         showBuyerSide: true, /* Jumps directly in the buyer view, its also token dependend if the designer-view is available */
         templateName: "Sign", /* Pass the name of a template in your account to load it on startup */
         fullScreenOnMobile: false,

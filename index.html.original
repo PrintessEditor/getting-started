@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>Printess Getting Started</title>
+
+  <meta charset="utf-8">
+  <!--Please always add the correct viewport to ensure Printess works fine on mobile devices-->
+  <meta name="viewport" content="width=device-width">
+
+  <link type="text/css" rel="stylesheet" href="index.css" />
+
+</head>
+
+<body style="margin: 0; padding: 0;">
+
+  <div class="button-bar">
+    <select onchange="location = this.value;">
+      <option value="index.html">Printess Ui</option>
+      <option value="external.html">Custom Ui</option>
+    </select>
+    <select id="loadTemplate">
+      <option disabled selected>Load Template ...</option>
+      <option value="Sign">Sign</option>
+      <option value="Business-Card">Business-Card</option>
+    </select>
+    <div></div>
+    <button id="btnGetJson">Copy JSON to Clipboard</button>
+    <button id="btnSetJson">Paste JSON from Clipboard</button>
+  </div>
+
+  <div id="printess"></div>
+
+
+  <!-- Load polyfills -->
+  <script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js" defer></script>
+
+  <!-- Load components via WebComponents.waitFor -->
+  <script type="module">
+
+    let printess;
+
+    window.WebComponents = window.WebComponents || {
+      waitFor(cb) {
+        addEventListener('WebComponentsReady', cb)
+      }
+    };
+
+    // Add a Printess token, you can get it on printess.com
+    let token = "";
+
+    if (!token) {
+      token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJaMDhkQUpveERuZ3VXVWdyRmNheE1UYkFWclEyIiwianRpIjoiTmY5QTBGYTBuaFpNcG16ZXR5bkdlc3RrLVkyMG50TFkiLCJuYmYiOjE2MTU0Njk5ODcsImV4cCI6MTY0NzAwNTk4NywiaWF0IjoxNjE1NDY5OTg3LCJpc3MiOiJQcmludGVzcyBHbWJIICYgQ28uS0ciLCJhdWQiOiJwcmludGVzcy1zYWFzIn0.fjfjqu-tNVFQqTExjjKjM3X8P4-MWU-zl_9St-6U223j0_dQg-ZYIuFCIh_gQj39JIZbX0H4wxD2pl4Xt8KAPxeKBffKUqm2nIzowpvKwjkR7yG99dFuLeaPfWDZ0_1SBLrHRYaPjz3H3Wb9gCvWuAr4TUHZrPu5C25OVqaQRsT6LROd3tRhWHwJJz0n9gJuIQ75DLJHs-aE0zWzy7Lc-ZDRfTGLg-4-bm418_DQa-kM4ph4Kw12FCCJiIlYkpaVdirBdRQanX1L7OgEbJ2j1f1LyqP_qp_xP9bW-GNIomEn7gWcjY8G1MRv1P3PRACN3r0b0GBJojellq4oGyGbun82_qB3iLO9Vk4Smx8rsW4FFY6Zn9qNkEcAIJ2RBQ4eAHGDzZ-4DF88-czOdjGO5aPUJ8tyteBZgKJTpXHpNqZgWRHRi-My8xc9gFPhkqGapdbYdyakvsnThZcJ5IK66PEUFMFouslbVW_2cAYkAglFSA04gGApXB0cDMWj7cauFBwA-QRKhm9druBtu-ra3YUia-_t0ECvIML6G9ObAawD49l6XijxN8pwkrWA2WSmNVPzX0yHrAd0wbLYi5-cj0Dyi8HifomlpjmHEDXUExpNc2z5SxmLt4RqMNRXKbEDM67NypgPEUpfWGc4OcunXxcnxQxOoioQEYBMnY35qR0";
+      alert("This site is connected to an example token. \nYou will not be able to modify or save any content. \nPlease request your personal token at printess.com")
+    }
+
+    // Specify the template you like to load
+    const templateName = "";
+
+    WebComponents.waitFor(async () => {
+
+      printess = await import('./printess-editor/printess-editor.js');
+
+      printess.attachPrintess({
+        wasmUrl: "./wasm/printess.wasm", // or absolute: "https://path.to.wasm/file.wasm"
+        div: document.getElementById("printess"),
+        domain: "dev-aws.printess.com",
+        token: token,
+        showBuyerSide: true, /* Jumps directly in the buyer view, its also token dependend if the designer-view is available */
+        templateName: "Sign", /* Pass the name of a template in your account to load it on startup */
+        fullScreenOnMobile: false,
+        /* 
+          fullScreenOnMobile is true per default (recommended) and switches to full screen editor display on mobile devices 
+          If you set fullScreenOnMobile to "false" you have to counter 
+          the 100vh viewport bug in IOS devices since Printess is intended to show 
+          app-like without the need to scroll:
+          https://allthingssmitty.com/2020/05/11/css-fix-for-100vh-in-mobile-webkit/
+          https://medium.com/@susiekim9/how-to-compensate-for-the-ios-viewport-unit-bug-46e78d54af0d
+        */
+      });
+    });
+
+    document.getElementById("btnGetJson").onclick = () => {
+      navigator.clipboard.writeText(printess.getJson()).then(function () {
+        /* clipboard successfully set */
+        alert("JSON copied to clipboard");
+      }, function () {
+        alert("Copy failed!");
+      });
+    };
+    document.getElementById("btnSetJson").onclick = () => {
+      navigator.clipboard.readText().then(
+        clipText => {
+          printess.setJson(clipText);
+        });
+    };
+    document.getElementById("loadTemplate").onchange = () => {
+     // alert(document.getElementById("loadTemplate").value);
+      printess.loadTemplate(document.getElementById("loadTemplate").value);
+    };
+
+
+  </script>
+
+  <!-- please add this reference to your website as well -->
+  <script src="./printess-editor/clipper/clipper.js""></script>
+   
+  </body>
+
+</html>
