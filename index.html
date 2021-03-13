@@ -31,6 +31,11 @@
     <button id="btnGetJson">Copy JSON to Clipboard</button>
     <button id="btnSetJson">Paste JSON from Clipboard</button>
   </div>
+  <div class="token-warning">
+    <h4>This site is using a test token. </h4>
+    You will not be able to modify or save any content. 
+    Please contact us to get your personal token.
+  </div>
 
   <div id="printess"></div>
 
@@ -54,7 +59,7 @@
 
     if (!token) {
       token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJaMDhkQUpveERuZ3VXVWdyRmNheE1UYkFWclEyIiwianRpIjoiTmY5QTBGYTBuaFpNcG16ZXR5bkdlc3RrLVkyMG50TFkiLCJuYmYiOjE2MTU0Njk5ODcsImV4cCI6MTY0NzAwNTk4NywiaWF0IjoxNjE1NDY5OTg3LCJpc3MiOiJQcmludGVzcyBHbWJIICYgQ28uS0ciLCJhdWQiOiJwcmludGVzcy1zYWFzIn0.fjfjqu-tNVFQqTExjjKjM3X8P4-MWU-zl_9St-6U223j0_dQg-ZYIuFCIh_gQj39JIZbX0H4wxD2pl4Xt8KAPxeKBffKUqm2nIzowpvKwjkR7yG99dFuLeaPfWDZ0_1SBLrHRYaPjz3H3Wb9gCvWuAr4TUHZrPu5C25OVqaQRsT6LROd3tRhWHwJJz0n9gJuIQ75DLJHs-aE0zWzy7Lc-ZDRfTGLg-4-bm418_DQa-kM4ph4Kw12FCCJiIlYkpaVdirBdRQanX1L7OgEbJ2j1f1LyqP_qp_xP9bW-GNIomEn7gWcjY8G1MRv1P3PRACN3r0b0GBJojellq4oGyGbun82_qB3iLO9Vk4Smx8rsW4FFY6Zn9qNkEcAIJ2RBQ4eAHGDzZ-4DF88-czOdjGO5aPUJ8tyteBZgKJTpXHpNqZgWRHRi-My8xc9gFPhkqGapdbYdyakvsnThZcJ5IK66PEUFMFouslbVW_2cAYkAglFSA04gGApXB0cDMWj7cauFBwA-QRKhm9druBtu-ra3YUia-_t0ECvIML6G9ObAawD49l6XijxN8pwkrWA2WSmNVPzX0yHrAd0wbLYi5-cj0Dyi8HifomlpjmHEDXUExpNc2z5SxmLt4RqMNRXKbEDM67NypgPEUpfWGc4OcunXxcnxQxOoioQEYBMnY35qR0";
-      alert("This site is connected to an example token. \nYou will not be able to modify or save any content. \nPlease request your personal token at printess.com")
+      document.querySelector(".token-warning").style.display ="block";
     }
 
     // Specify the template you like to load

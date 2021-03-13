@@ -36,6 +36,24 @@
   border: 1px solid gray;
 }
 
+.token-warning {
+  display: none; 
+  border: 3px solid red;
+  position: absolute;
+  left: calc(50% - 190px);
+  bottom: -3px;
+  width: 380px;
+ 
+  background-color: yellow;
+  z-index: 9999999;
+  font-family: sans-serif;
+  padding: 5px;
+}
+.token-warning > h4 {
+  margin: 0 0 2px 0;
+}
+
+
 #artworks {
   display: flex;
   flex-direction: column;
@@ -163,5 +181,4 @@ input[type='range'] {
   width: 100%;
   justify-content: space-between;
 }
- 
  
