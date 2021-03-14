@@ -206,7 +206,7 @@
     }
 
     function getFontSizeBox(p) {
-      return getNumberSlider(p, "text-style-size");
+      // alternative show slider:  return getNumberSlider(p, "text-style-size");
 
       const cp = document.createElement("input");
       cp.type = "text";
