@@ -19,15 +19,11 @@
     style="position: relative; margin: 10vw 15vh; width: 80vw; height: 70vh; border: 2px solid orange; "></div>-->
 
   <div class="page-buttons">
-    <button id="btnPage1">Front</button>
-    <button id="btnPage2">Inside Left</button>
-    <button id="btnPage3">Inside Right</button>
-    <button id="btnPage4">Back</button>
   </div>
 
 
-  <div id="artworksWrapper">
-    <div id="artworks"></div>
+  <div id="layoutSnippetsWrapper">
+    <div id="layoutSnippets"></div>
   </div>
 
   <div id="propsdiv" class="no-selection"></div>
@@ -61,7 +57,7 @@
 
   <div class="token-warning">
     <h4>This site is using a test token. </h4>
-    You will not be able to modify or save any content. 
+    You will not be able to modify or print the template.
     Please contact us to get your personal token.
   </div>
 
@@ -81,26 +77,49 @@
       }
     };
 
-    function getImageEffectSlider(p, name) {
-      // create slider for "sepia" | "brightness" | "saturate" | "contrast" | "grayscale"
+    /* function getImageEffectSlider(p, name) {
+       // create slider for "sepia" | "brightness" | "saturate" | "contrast" | "grayscale"
+       const rangeLabel = document.createElement("label");
+       const range = document.createElement("input");
+       range.type = "range"
+       range.min = name === "hueRotate" ? 0 : -100
+       range.max = 100
+       range.step = 1
+       range.value = p.imageMeta[name];
+       range.oninput = () => {
+         printess.setimageMetaProperty(p.id, name, parseFloat(range.value));
+       }
+       const span = document.createElement("span");
+       span.textContent = name + " ";
+       rangeLabel.appendChild(span);
+       rangeLabel.appendChild(range);
+       return rangeLabel;
+     }*/
+
+    function getNumberSlider(p, metaProperty) {
+      // creaate slider for all "Number" properties
+      const ui = printess.getNumberUi(p, metaProperty);
+      if (!ui) {
+        const er = document.createElement("div");
+        er.textContent = "Can't get number UI for " + p.id + " / metaProperty:" + (metaProperty || "");
+        return er;
+      }
       const rangeLabel = document.createElement("label");
       const range = document.createElement("input");
       range.type = "range"
-      range.min = name === "vivid" ? -100 : 0
-      range.max = 100
-      range.step = 1
-      range.value = p.imageMeta[name];
-      range.oninput = () => {
-
-        printess.setimageMetaProperty(p.id, name, parseFloat(range.value));
-      }
+      range.min = ui.meta.min,
+        range.max = ui.meta.max,
+        range.step = ui.meta.step,
+        range.value = ui.value,
+        range.oninput = () => {
+          printess.setNumberUiProperty(p, metaProperty, parseFloat(range.value));
+        }
       const span = document.createElement("span");
-      span.textContent = name + " ";
-      rangeLabel.appendChild(span);
+      span.textContent = metaProperty ? metaProperty : p.label,
+        rangeLabel.appendChild(span);
       rangeLabel.appendChild(range);
       return rangeLabel;
     }
-
     function getFontList(p) {
       const select = document.createElement("select");
       const fonts = printess.getFonts(p.id);
@@ -187,6 +206,8 @@
     }
 
     function getFontSizeBox(p) {
+      return getNumberSlider(p, "text-style-size");
+
       const cp = document.createElement("input");
       cp.type = "text";
       cp.style.fontSize = "9pt";
@@ -275,6 +296,44 @@
       return hdiv;
     }
 
+    const loadingDoneCallback = function (spreads) {
+      /*
+        spreads: Array<{
+          spreadId: string,
+          index: number,
+          name: string,
+          width: number,
+          height: number,
+          thumbUrl: string | null,
+          pages: number
+        }>
+      */
+      console.log("All Spreads", spreads);
+      // draw pages ui
+      const pages = document.querySelector(".page-buttons");
+      if (pages) {
+        let pageNo = 0;
+        pages.innerHTML = "";
+        for (const spread of spreads) {
+
+          for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
+            pageNo++;
+            const pageButton = document.createElement("div");
+            pageButton.innerText = spread.name ? spread.pages ? spread.name + `(#${pageIndex})` : spread.name : "Page " + pageNo;
+            if (pageIndex === spread.pages - 1) {
+              pageButton.style.marginRight = "10px";
+            }
+            pageButton.onclick = () => {
+              
+              printess.selectSpread(spread.index, pageIndex === 0 ? "left-page" : "right-page");
+            }
+            pages.appendChild(pageButton);
+          }
+        }
+      }
+
+    }
+
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread) => {
 
       /* 
@@ -297,14 +356,14 @@
       renderGroupSnippets(); // if no-selection
 
       // populate available layout snippets
-      const artworksDiv = document.getElementById("artworks");
-      if (artworksDiv) artworksDiv.innerHTML = "";
-      if (artworksDiv && layoutSnippets) {
+      const layoutSnippetsDiv = document.getElementById("layoutSnippets");
+      if (layoutSnippetsDiv) layoutSnippetsDiv.innerHTML = "";
+      if (layoutSnippetsDiv && layoutSnippets) {
         for (const cluster of layoutSnippets) {
           const headline = document.createElement("div");
           headline.textContent = cluster.name;
           headline.className = "snippet-cluster-name";
-          artworksDiv.appendChild(headline)
+          layoutSnippetsDiv.appendChild(headline)
           for (const snippet of cluster.snippets) {
             const thumb = document.createElement("div");
             thumb.style.backgroundImage = "url('" + snippet.thumbUrl + "')";
@@ -314,7 +373,7 @@
               //  alert(JSON.stringify(aw));
               //printess.setProperty(p.id, im.id);
             }
-            artworksDiv.appendChild(thumb);
+            layoutSnippetsDiv.appendChild(thumb);
           }
         }
       }
@@ -406,6 +465,10 @@
             div.appendChild(cp);
           }
 
+          if (p.kind == "number") {
+            div.appendChild(getNumberSlider(p));
+          }
+
           if (p.kind == "image") {
             const imageListWrapper = document.createElement("div");
             imageListWrapper.classList.add("image-list-warper");
@@ -478,23 +541,6 @@
                   console.log(images);
                 });
 
-                // or upload single files
-                /*    for (let i = 0; i < inp.files.length; i++) {
-                     const file = inp.files[i];
-   
-                     printess.uploadImage(file, (progress) => {
-                       progressDiv.style.width = (progress * 100) + "%"
-                       if (progress === 1) {
-                         progressDiv.style.width = 0;
-                         // assign image  and 
-                         // reload image list!
-                       }
-                     }, false).then(image => {
-                       console.log(image);
-                     });
-                   } */
-
-
               }
 
 
@@ -502,10 +548,10 @@
             div.appendChild(inp);
 
             /*** Effects ***/
-            div.appendChild(getImageEffectSlider(p, "brightness"));
-            div.appendChild(getImageEffectSlider(p, "contrast"));
-            div.appendChild(getImageEffectSlider(p, "vivid"));
-            div.appendChild(getImageEffectSlider(p, "sepia"));
+            div.appendChild(getNumberSlider(p, "image-brightness"));
+            div.appendChild(getNumberSlider(p, "image-contrast"));
+            div.appendChild(getNumberSlider(p, "image-vivid"));
+            div.appendChild(getNumberSlider(p, "image-sepia"));
 
           }
         }
@@ -535,86 +581,13 @@
       }
     }
 
-    function sendXhr(xhr, body, progressCallback) {
-      return new Promise((resolve, reject) => {
-        xhr.onreadystatechange = () => {
-          if (xhr.readyState === 4) {
-            resolve();
-          }
-        };
-
-        if (progressCallback) {
-          xhr.upload.onprogress = (ev) => {
-            if (ev.lengthComputable) {
-              progressCallback(ev.loaded, ev.total);
-            }
-          };
-        }
-
-        xhr.onerror = function () {
-          reject({
-            status: this.status,
-            statusText: xhr.statusText
-          });
-        };
-
-        xhr.send(body);
-      });
-    }
-
-    class AwsUploadProvider {
-
-      constructor(uploadEndpoint, serveEndpoint) {
-        this.uploadUrl = uploadEndpoint;
-        this.serveEndpoint = serveEndpoint ? serveEndpoint : uploadEndpoint;
-        this.sessionKey = Math.random();
-        this.acl = "public-read";
-        this.i = 0;
-        if (!this.serveEndpoint.endsWith("/")) {
-          this.serveEndpoint += "/";
-        }
-      }
-
-      // optional method if you want to add something to the front of the form data (like AWS needs)
-      beforeAddingFormData(formData, _blob, fileName) {
-        const extension = fileName.substr(fileName.lastIndexOf('.')).toLowerCase();
-        const stamp = (new Date()).getTime() + this.i++;
-        const key = "images/" + stamp + "_" + this.sessionKey + "_" + extension;
-        formData.append("key", key);
-        formData.append("acl", this.acl);
-
-        if (extension === ".png") {
-          formData.append("Content-Type", "image/png");
-        } else if (extension === ".jpeg" || extension === ".jpg") {
-          formData.append("Content-Type", "image/jpg");
-        }
-      }
-
-      // this method must return an url to the uploaded file, which is part of the form data and an id
-      async upload(formData, progressCallback) {
-        const postUrl = this.uploadUrl;
-        const xhr = new XMLHttpRequest();
-
-        xhr.open("POST", postUrl, true);
-        await sendXhr(xhr, formData, progressCallback);
-
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const key = formData.get("key");
-
-          return { "url": this.serveEndpoint + key, "id": key };
-        }
-
-        throw "Could not read uploaded image urls: (status " + xhr.status + ", response " + xhr.response + ")";
-      }
-    }
-
 
     // Add a Printess token, you can get it on printess.com
     let token = "";
 
     if (!token) {
       token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJaMDhkQUpveERuZ3VXVWdyRmNheE1UYkFWclEyIiwianRpIjoiTmY5QTBGYTBuaFpNcG16ZXR5bkdlc3RrLVkyMG50TFkiLCJuYmYiOjE2MTU0Njk5ODcsImV4cCI6MTY0NzAwNTk4NywiaWF0IjoxNjE1NDY5OTg3LCJpc3MiOiJQcmludGVzcyBHbWJIICYgQ28uS0ciLCJhdWQiOiJwcmludGVzcy1zYWFzIn0.fjfjqu-tNVFQqTExjjKjM3X8P4-MWU-zl_9St-6U223j0_dQg-ZYIuFCIh_gQj39JIZbX0H4wxD2pl4Xt8KAPxeKBffKUqm2nIzowpvKwjkR7yG99dFuLeaPfWDZ0_1SBLrHRYaPjz3H3Wb9gCvWuAr4TUHZrPu5C25OVqaQRsT6LROd3tRhWHwJJz0n9gJuIQ75DLJHs-aE0zWzy7Lc-ZDRfTGLg-4-bm418_DQa-kM4ph4Kw12FCCJiIlYkpaVdirBdRQanX1L7OgEbJ2j1f1LyqP_qp_xP9bW-GNIomEn7gWcjY8G1MRv1P3PRACN3r0b0GBJojellq4oGyGbun82_qB3iLO9Vk4Smx8rsW4FFY6Zn9qNkEcAIJ2RBQ4eAHGDzZ-4DF88-czOdjGO5aPUJ8tyteBZgKJTpXHpNqZgWRHRi-My8xc9gFPhkqGapdbYdyakvsnThZcJ5IK66PEUFMFouslbVW_2cAYkAglFSA04gGApXB0cDMWj7cauFBwA-QRKhm9druBtu-ra3YUia-_t0ECvIML6G9ObAawD49l6XijxN8pwkrWA2WSmNVPzX0yHrAd0wbLYi5-cj0Dyi8HifomlpjmHEDXUExpNc2z5SxmLt4RqMNRXKbEDM67NypgPEUpfWGc4OcunXxcnxQxOoioQEYBMnY35qR0";
-      document.querySelector(".token-warning").style.display ="block";
+      document.querySelector(".token-warning").style.display = "block";
     }
 
 
@@ -628,7 +601,7 @@
           maxHeight: 800,
         },
         domain: "dev-aws.printess.com",
-        token: token,        
+        token: token,
         templateName: "Greeting-Card",
         templateJson: undefined, // will be used only if templateName is empty
         templateUserId: undefined, // only needed when loaded from different account
@@ -639,8 +612,9 @@
            }
          ],*/
         hideControls: true,
-        allowZoomAndPan: false,
-        zoomDuration: 0, // in seconds 
+        allowZoomAndPan: true,
+        zoomDuration: 0.5, // in seconds 
+        loadingDoneCallback: loadingDoneCallback,
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
         getOverlayCallback: getOverlayCallback,
@@ -654,19 +628,7 @@
       });
     });
 
-    document.getElementById("btnPage1").onclick = () => {
-      printess.selectSpread(0);
-    };
-    document.getElementById("btnPage2").onclick = () => {
-      printess.selectSpread(1);
-    };
-    document.getElementById("btnPage3").onclick = () => {
-      printess.selectSpread(2);
-    };
-    document.getElementById("btnPage4").onclick = () => {
-      printess.selectSpread(3);
-    };
-
+    
 
     document.getElementById("btnUndo").onclick = () => {
       printess.undo();

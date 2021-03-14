@@ -60,17 +60,26 @@ Printess is intended to have as much space as possible, so it is highly recommen
 
 Now the variable named **printess** contains a js-api reference to the Printess editor.  
 
+## Passing Price relevant information from the editor to your shop
+Printess has the concept of **Form Fields** which can be created by the designer and changed by the buyer. Those Form Fields can contain information which are price relevant like material or color. The **Sign** template which you see when running *index.html* exposes a couple of such Form Fields. **Material**, **Size** - and if a solid material is selected - **Drill Holes** and **Varnish**. All 4 Form Fields are possibly price relevant so the eCommerce application must know if any of this values has been changed. To achieve this, you can pass a very simple callback to attach printess, where you can adjust your basket settings to the users choices.
 
-  
-##    
+```js
+  const formFieldChanged = (name, value) => {
+    alert( "Form Field: [" + name + "] changed to '" + value + "'");
+  }
+  printess.attachPrintess({
+        /* ... all other properties ... */
+        formFieldChangedCallback: formFieldChanged,
+  });
+```
 
 # Printess Ui or Custom Ui?
 
-Printess has two option to be implemented inside you website. 
+There are two ways to add the Printess editor to your website.
 
 In most cases the easy approach of using **Printess Ui** will be the way to go. Just provide a div and let Printess do the heavy lifting. After the buyer has configured its document, you take the JSON and pass it to your shopping basket. And you can pass this JSON back to Printess at any time. As well you are able to tweak the Ui by passing CSS. 
 
-The second option **Custom Ui** reduces Printess to a pure view-container which will ot expose any Ui other then the editable area. All controls and inputs must be provided by your website. This will give you full control on how your website looks like. You have to process selection-change and page-change callbacks. And have calls to set properties on selected frames. 
+The second option **Custom Ui** reduces Printess to a pure view-container which will ot expose any Ui other then the editable area. All controls and inputs must be provided by your website. This will give you full control on how your website looks like. But you have to handle selection-change and page-change callbacks to update your UI, which in return needs to update Printess properties via the js-api.
 
 In the getting-started application you can toggle between both implementations whereby the **Custom Ui** is just a very basic exmaple of what is possible. No styling has been applied to keep to code easy to read. 
 
