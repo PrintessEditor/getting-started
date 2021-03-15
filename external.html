@@ -131,6 +131,7 @@
         select.appendChild(option);
       }
       select.value = p.textStyle.font;
+      select.style.width = "50px";
       select.onchange = () => {
         // alert(p.id + "has changed to " + select.value);
         printess.setTextStyleProperty(p.id, "font", select.value, textStyleMode)
