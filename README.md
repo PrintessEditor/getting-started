@@ -142,7 +142,7 @@ In most cases the easy approach of using **Printess Ui** will be the way to go. 
 
 The second option **Custom Ui** reduces Printess to a pure view-container which will not expose any Ui other then the editable area. All controls and inputs must be provided by your website. This will give you full control on how your website looks. But you have to handle selection-change and page-change callbacks to update your UI, which in return needs to update Printess properties via the js-api.
 
-In the getting-started application you can toggle between both implementations whereby the **Custom Ui** is just a very basic exmaple of what is possible. No styling has been applied to keep to code easy to read. 
+In the getting-started application you can toggle between both implementations whereby the **Custom Ui** is just a very basic example of what is possible. No styling has been applied to keep the code easy to read. 
 
 
 
