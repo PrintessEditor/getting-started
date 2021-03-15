@@ -79,7 +79,7 @@ const currentState = printess.getJson())
 printess.setJson(currentState);
 ```
 
-> :warning: **Get and Set JSON are temporary methods. The final version will just return an ID instead of the full JSON to make handling easier.**
+> :warning: `getJson()` and `setJson()` are temporary methods. The final version will just return an **ID** instead of the full JSON to make handling easier.
 
 ## &nbsp; 
 
@@ -106,7 +106,10 @@ printess.renderFirstPageImage(fileName, documentName, width, height).then(thumbn
 
 **height**: the maximum height of the thumbnail based on aspect ratio of the document the resulting thumbnail-height can smaller.
 
-**TIP**: Press the *Create Thumbnail* Button to request a thumbnail of the current view.
+*TIP*: Press the *Create Thumbnail* Button to show a thumbnail of the current Template.
+
+> :warning: The thumbnail generation might take a couple of seconds. If you request the thumbnail when the buyer clicks **continue** - you need to show an overlay screen and wait for the call to finish before you unload the Printess editor!
+
 ## &nbsp; 
 
 # Passing Form Fields to your Shop
@@ -121,10 +124,13 @@ Printess has the concept of **Form Fields** which can be created by the designer
         formFieldChangedCallback: formFieldChanged,
   });
 ```
+## &nbsp;
 
-**Congratulations!** You now know everything to get started with the Printess Editor. Have fun and please let us know if you struggle. 
+## Congratulations!
 
-## &nbsp; 
+You now know everything to get started with the Printess Editor. Have fun and please let us know if you struggle. 
+
+ 
 
 ## &nbsp; 
 
