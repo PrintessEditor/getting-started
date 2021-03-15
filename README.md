@@ -65,7 +65,7 @@ Now the variable named `printess` contains a **js-api** reference to the Printes
 
 ## &nbsp; 
 
-# Save and Recall the Customers Work
+# Store and Recall the Design Work
 
 To store the result of what your customer has configured in Printess you can simply call `printess.getJson()`.  All you need is to store the JSON returned  along with your shopping basket. You can pass this JSON back to the Printess-Editor at any time with `printess.setJson(data)` and you will later submit it to the Printess-Production-API to retrieve your printe ready files. 
 
@@ -81,7 +81,7 @@ To test it, we added a button in the toolbar **Copy JSON to Clipboard**, which c
 
 ## &nbsp; 
 
-# Passing User Choices to your Shop
+# Passing Form Fields to your Shop
 Printess has the concept of **Form Fields** which can be created by the designer and changed by the buyer. Those Form Fields can contain information which are **price relevant** like material or color. The **Sign** template which you see when running *index.html* exposes a couple of such Form Fields. **Material**, **Size** - and if a solid material is selected - **Drill Holes** and **Varnish**. All 4 Form Fields are possibly price relevant so the eCommerce application must know if any of this values has been changed. To achieve this, you can pass a very simple callback to *attachPrintess*, where you then can adjust your basket settings to the users choices.
 
 ```js
