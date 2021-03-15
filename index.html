@@ -28,6 +28,7 @@
       <option value="Chocolate Bar">Chocolate Bar</option>
     </select>
     <div id="message"></div>
+    <button id="btnCreateThumbnail">Create<br>Thumbnail</button>
     <button id="btnGetJson">Copy JSON to Clipboard</button>
     <button id="btnSetJson">Paste JSON from Clipboard</button>
   </div>
@@ -111,6 +112,20 @@
     document.getElementById("loadTemplate").onchange = () => {
       // alert(document.getElementById("loadTemplate").value);
       printess.loadTemplate(document.getElementById("loadTemplate").value);
+    };
+
+    document.getElementById("btnCreateThumbnail").onclick = () => {
+      document.getElementById("message").textContent = "Creating Thumbnail ...";
+      setTimeout(() => document.getElementById("message").textContent = "", 2000);
+
+      const fileName = "thumb_" + new Date().getTime() + ".png";
+      const documentName = "!PREVIEW!"; // optional set a specific document-name here or leave it empty
+      const width = 400; // max is 400
+      const height = 400; // max is 400
+
+      printess.renderFirstPageImage(fileName, documentName, width, height).then(thumbnailUrl => {
+        window.open(thumbnailUrl);
+      });
     };
 
 

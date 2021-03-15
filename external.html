@@ -320,7 +320,7 @@
           for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
             pageNo++;
             const pageButton = document.createElement("div");
-            pageButton.innerText = spread.name ? spread.pages ? spread.name + `(#${pageIndex})` : spread.name : "Page " + pageNo;
+            pageButton.innerText = spread.name ?  spread.name : "Page " + pageNo;
             if (pageIndex === spread.pages - 1) {
               pageButton.style.marginRight = "10px";
             }
@@ -366,8 +366,9 @@
           headline.className = "snippet-cluster-name";
           layoutSnippetsDiv.appendChild(headline)
           for (const snippet of cluster.snippets) {
-            const thumb = document.createElement("div");
-            thumb.style.backgroundImage = "url('" + snippet.thumbUrl + "')";
+            const thumb = document.createElement("img");
+             thumb.src  =  snippet.thumbUrl  ;
+           // thumb.style.backgroundImage = "url('" + snippet.thumbUrl + "')";
             thumb.classList.add("image-icon");
             thumb.onclick = () => {
               printess.insertLayoutSnippet(snippet.snippetUrl);
@@ -672,6 +673,8 @@
       // alert(document.getElementById("loadTemplate").value);
       printess.loadTemplate(document.getElementById("loadTemplate").value);
     };
+
+   
 
 
 

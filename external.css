@@ -160,7 +160,7 @@ input[type='range'] {
 
 .image-icon {
   width: 80px;
-  height: 113px;
+  height: auto;
   border: 1px solid black;
   background-size: contain;
   background-repeat: no-repeat;
