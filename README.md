@@ -106,7 +106,7 @@ printess.renderFirstPageImage(fileName, documentName, width, height).then(thumbn
 
 **height**: the maximum height of the thumbnail based on aspect ratio of the document the resulting thumbnail-height can smaller.
 
-*TIP*: Press the *Create Thumbnail* Button to show a thumbnail of the current Template.
+*TIP:* Press the *Create Thumbnail* Button to show a thumbnail of the current Template.
 
 > :warning: The thumbnail generation might take a couple of seconds. If you request the thumbnail when the buyer clicks **continue** - you need to show an overlay screen and wait for the call to finish before you unload the Printess editor!
 

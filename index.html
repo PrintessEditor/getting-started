@@ -26,6 +26,7 @@
       <option value="Business-Card">Business-Card</option>
       <option value="Greeting-Card">Greeting-Card</option>
       <option value="Chocolate Bar">Chocolate Bar</option>
+      <option value="T-Shirt">T-Shirt</option>
     </select>
     <div id="message"></div>
     <button id="btnCreateThumbnail">Create<br>Thumbnail</button>
@@ -115,7 +116,7 @@
     };
 
     document.getElementById("btnCreateThumbnail").onclick = () => {
-      document.getElementById("message").textContent = "Creating Thumbnail ...";
+      document.getElementById("message").textContent = "Creating Thumbnail, Please allow Popups ...";
       setTimeout(() => document.getElementById("message").textContent = "", 2000);
 
       const fileName = "thumb_" + new Date().getTime() + ".png";
