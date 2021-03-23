@@ -596,7 +596,7 @@
     WebComponents.waitFor(async () => {
       printess = await import('./printess-editor/printess-editor.js');
       printess.attachPrintess({
-        resourcePath: ".", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library , defaults to "."
+        resourcePath: "/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
         div: document.getElementById("printessin"),
         autoScale: {
           maxWidth: 420,
