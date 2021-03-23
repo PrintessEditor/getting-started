@@ -76,7 +76,7 @@
       printess = await import('./printess-editor/printess-editor.js');
 
       printess.attachPrintess({
-        resourcePath: "/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+        resourcePath: "./printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
         div: document.getElementById("printess"),
         domain: "dev-aws.printess.com",
         token: token,
