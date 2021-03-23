@@ -73,10 +73,10 @@
     }
 
     WebComponents.waitFor(async () => {
-      printess = await import('./printess-editor/printess-editor.js');
+      printess = await import('/getting-started/printess-editor.js');
 
       printess.attachPrintess({
-        resourcePath: "./printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+        resourcePath: "/getting-started/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
         div: document.getElementById("printess"),
         domain: "dev-aws.printess.com",
         token: token,
@@ -132,7 +132,7 @@
   </script>
 
   <!-- please add this reference to your website as well -->
-  <script src="./printess-editor/clipper/clipper.js""></script>
+  <script src="/getting-started/printess-editor/clipper/clipper.js""></script>
    
   </body>
 
