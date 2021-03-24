@@ -23,7 +23,7 @@ Printess has a single npm depencency which you can easily add to your own **pack
   }
 }
 ```
-Plus you need to place the **printess-editor** folder in your project root. If you place it somewhere else please adjust the import-path `await import('./printess-editor/printess-editor.js')`; and see below how to adjust the wasmUrl as well. 
+Plus you need to place the **printess-editor** folder in your project root. If you place it somewhere else please adjust the import-path `await import('./printess-editor/printess-editor.js')`; and see below how to adjust the **resourcePath** as well. 
 
 Be aware that Printess itself is loaded after the webcomponents polyfills. So first we need to load **webcomponentjs**
 
@@ -31,10 +31,10 @@ Be aware that Printess itself is loaded after the webcomponents polyfills. So fi
   <script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js" defer></script>
 ```
 
-Now we wait for **WebComponentsReady** before loading Printess itself. Printess is build on modern js modules. So it need to be imported in a **module** script tag:
+Now we wait for **WebComponentsReady** before loading Printess itself.
 
 ```html
-<script type="module">
+<script>
   window.WebComponents = window.WebComponents || {
     waitFor(cb) {
       addEventListener('WebComponentsReady', cb)
@@ -44,7 +44,7 @@ Now we wait for **WebComponentsReady** before loading Printess itself. Printess 
   WebComponents.waitFor(async () => {
     printess = await import('./printess-editor/printess-editor.js');
     printess.attachPrintess({
-      wasmUrl: "./printess-editor/wasm/printess.wasm",
+      resourcePath: "/getting-started/printess-editor",
       div: document.getElementById("printess"),
       domain: "dev-aws.printess.com",
       token: "YOUR TOKEN",
@@ -56,7 +56,7 @@ Now we wait for **WebComponentsReady** before loading Printess itself. Printess 
 ```
 The **attachPrintess** call initializes Printess, passes the authentication token and the name of the template to be loaded.
 
-Please be aware that you'll need to tell Printess the path to the WebAssembly file (printess.wasm) in a separate property (**wasmUrl**). Unfortunatly this can not be detected automatically during the **import**. So if your foder structure looks more complex you can always tell Printess to load the proper **wasm**. The **wasmUrl** can also be passed as an absolute Url, like *"https://path.to.wasm/file.wasm"*
+Please be aware that you'll need to tell Printess the path to its resource files (Web-Assembly and Default Fonts) in a separate property (**resourcePath**). Unfortunatly this can not be detected automatically during the **import**. So if your foder structure looks more complex you can always tell Printess from where to load. The **resourcePath** can also be passed as an absolute Url, like *"https://folder/folder"*
 
 In the `div` property you need to pass a div-element which Printess Editor will attach to. 
 Printess is intended to have as much space as possible, so it is highly recommended to not leave space on left and right side. Especially on mobile. 
