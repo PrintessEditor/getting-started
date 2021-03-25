@@ -254,7 +254,7 @@
         }
       }
     }
-
+    // TODO get overlay style injection 
     const getOverlayCallback = (properties) => {
       console.log("+++++++Properties", properties);
       const isSingleLineText = properties.filter(p => p.kind === "single-line-text").length > 0;
@@ -351,6 +351,8 @@
             bgColor: string 
           }
       */
+
+      console.log(">>>> Spread Change Happens."); 
 
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
@@ -611,6 +613,7 @@
            {
              templateName: "set2",
              templateUserId: undefined // only needed when loaded from different account 
+             // add spread-number (offset) for placing backsides, etc. 
            }
          ],*/
         hideControls: true,
