@@ -320,12 +320,12 @@
           for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
             pageNo++;
             const pageButton = document.createElement("div");
-            pageButton.innerText = spread.name ?  spread.name : "Page " + pageNo;
+            pageButton.innerText = spread.name ? spread.name : "Page " + pageNo;
             if (pageIndex === spread.pages - 1) {
               pageButton.style.marginRight = "10px";
             }
             pageButton.onclick = () => {
-              
+
               printess.selectSpread(spread.index, pageIndex === 0 ? "left-page" : "right-page");
             }
             pages.appendChild(pageButton);
@@ -352,7 +352,7 @@
           }
       */
 
-      console.log(">>>> Spread Change Happens."); 
+      console.log(">>>> Spread Change Happens.");
 
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
@@ -369,8 +369,8 @@
           layoutSnippetsDiv.appendChild(headline)
           for (const snippet of cluster.snippets) {
             const thumb = document.createElement("img");
-             thumb.src  =  snippet.thumbUrl  ;
-           // thumb.style.backgroundImage = "url('" + snippet.thumbUrl + "')";
+            thumb.src = snippet.thumbUrl;
+            // thumb.style.backgroundImage = "url('" + snippet.thumbUrl + "')";
             thumb.classList.add("image-icon");
             thumb.onclick = () => {
               printess.insertLayoutSnippet(snippet.snippetUrl);
@@ -596,8 +596,8 @@
 
 
     WebComponents.waitFor(async () => {
-      printess = await import('./printess-editor/printess-editor.js');
-      printess.attachPrintess({
+      const printessLoader = await import('./printess-editor/printess-editor.js');
+      printess = await printessLoader.attachPrintess({
         resourcePath: "/getting-started/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
         div: document.getElementById("printessin"),
         autoScale: {
@@ -633,7 +633,7 @@
       });
     });
 
-    
+
 
     document.getElementById("btnUndo").onclick = () => {
       printess.undo();
@@ -677,7 +677,7 @@
       printess.loadTemplate(document.getElementById("loadTemplate").value);
     };
 
-   
+
 
 
 
