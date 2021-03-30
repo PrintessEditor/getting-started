@@ -3987,20 +3987,17 @@ ul {
  */const previousValues=new WeakMap,unsafeHTML=directive((e=>t=>{if(!(t instanceof NodePart))throw new Error("unsafeHTML can only be used in text bindings");const o=previousValues.get(t);if(void 0!==o&&isPrimitive(e)&&e===o.value&&t.value===o.fragment)return;const i=document.createElement("template");i.innerHTML=e;const r=document.importNode(i.content,!0);t.setValue(r),previousValues.set(t,{value:e,fragment:r})}));var __decorate$1=function(e,t,o,i){var r,s=arguments.length,n=s<3?t:null===i?i=Object.getOwnPropertyDescriptor(t,o):i;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)n=Reflect.decorate(e,t,o,i);else for(var a=e.length-1;a>=0;a--)(r=e[a])&&(n=(s<3?r(n):s>3?r(t,o,n):r(t,o))||n);return s>3&&n&&Object.defineProperty(t,o,n),n};const tipCounts=new Map;function getTipMeta(e){switch(e){case"addFeatureOrCreateBox":return{head:"Add Feature or Create new Frame?",image:"tip_addFeatureOrCreateBox.png",text:"Frames can have multiple features like an <b>image</b> and a <b>shape</b> and a <b>text</b>.<br/>You have the choice:<br/><b>Add</b> this feature to the selected frame or <b>Create</b> a new frame?",options:[{caption:"Cancel",token:"CANCEL"},{caption:"Create Frame",token:"addBox"},{caption:"Add Feature",token:"OK"}]};case"enterPercentUnits":return{head:"Percent units for flexible designs.",image:"tip_usingPercentUnits.png",text:"When setting the position or dimensions of a frame you can use percent values like <b>width: 50%</b> - which cause the frame to take up 50% of the documents width. \nYou also can use double percent <b>width: 50%%</b> which will cause the frame to take up 50% of the documents <b>height</b>. \n You can easily convert any frame between all units with the shortcut buttons beneath the position input.",count:3,options:[{caption:"OK",token:"OK"}]};case"textSelectAll":return{head:"Press CTRL + A to select all text",image:"tip_ctrl_a.png",text:"In Text edit mode [<b>T</b>] you can press <b>[CTRL]+[A]</b> to select the entire text. Even the invisible text which does not fit in the current frame. Once selected, you can change for example the font-size.",count:3,options:[{caption:"OK",token:"OK"}]};default:assertNever$1(e)}}function showTip(e){let t=tipCounts.get(e);t||(t=0),t++,tipCounts.set(e,t);const o=getTipMeta(e);return o.count&&o.count>t?new Promise((e=>e("OK"))):(tipCounts.set(e,0),(new WcTipDialog).showDialog(e))}let WcTipDialog=(()=>{let e=class extends LitElement{constructor(){super(),this.meta=getTipMeta("addFeatureOrCreateBox"),this.type="addFeatureOrCreateBox",this.backdrop=new WcBackdrop}showDialog(e){return this.meta=getTipMeta(e),this.type=e,this.skipDialog(e)||scope().isRecording||scope().isReplaying||config.isBuyer||config.isMobile?new Promise((e=>e("OK"))):new Promise((e=>{this._showDialog((t=>{e(t)}))}))}_showDialog(e){this.callback=e,document.body.appendChild(this.backdrop),document.body.appendChild(this)}skipDialog(e){return"SKIP"===localStorage.getItem("tip:"+e)}showAgain(e){localStorage.setItem("tip:"+this.type,e?"SKIP":"")}closeDialog(e){document.body.removeChild(this.backdrop),document.body.removeChild(this),this.callback&&this.callback(e)}static get styles(){return[dialogStyles,css`
    
         :host, :host * {
-          box-sizing: border-box;
-          
+          box-sizing: border-box;  
         }
         
         .content {
           max-width: 400px;
         }
+
         h1 {
           font-size: var(--printess-headlineSize);
           margin-top: 20px;
           margin-bottom: 0px;
-        }
-        p {
-          
         }
       
       .image {
@@ -4023,7 +4020,7 @@ ul {
         <div class="content">
             
               ${this.meta.image?html`
-                <div class="image" style="background-image: url('printess-editor/${this.meta.image}');"></div>
+                <div class="image" style="background-image: url('printess-editor/img/${this.meta.image}');"></div>
               `:""}
               <h1>${this.meta.head}</h1>
               ${unsafeHTML(this.text)} 
@@ -7504,13 +7501,14 @@ Polymer({_template:html$1`
           <div class="content">
           
             <h1 style="padding-bottom: 10px;">Select Image</h1>
-        
-            <label class="imageItem">
-              <input style="display: none;" @change="${e=>this.inputChange(e)}"  
-                  type="file" multiple accept="image/svg+xml,image/png,image/jpg,image/jpeg,image/tiff"/>
-              <wc-icon class="imageBox" primaryColor="medium" style=" background: white;" icon="plus" ></wc-icon>       
-            </label>
-            
+
+            ${this.allowUpload?html`
+              <label class="imageItem">
+                <input style="display: none;" @change="${e=>this.inputChange(e)}"  
+                    type="file" multiple accept="image/svg+xml,image/png,image/jpg,image/jpeg"/>
+                <wc-icon class="imageBox" primaryColor="medium" style=" background: white;" icon="plus" ></wc-icon>       
+              </label>
+            `:""}
        
             <div class="imageListContainer">
               <div class="imageList">
@@ -9848,41 +9846,44 @@ Polymer({_template:html$1`
         ${this.renderImageUploadUi()}
         ${this.renderImageScaleUi()}
         ${this.renderImageUploadProgressUi()}
-      `:html``}get isValid(){if(this.property){const e=this.property;if(e.imageMeta){const t=e.imageMeta,o=e.value;if(t.isMandatory&&o.toLowerCase()===t.defaultValue.toLowerCase())return{ok:!1,hint:"You need to replace this image."}}}return{ok:!0,hint:""}}openSelectImageDialog(){var e;new WcSelectImageDialog("callback",null===(e=this.property)||void 0===e?void 0:e.id).showDialog((e=>{this.property&&(scope().selection.externalProperties=[],api.setProperty(this.property.id,e.id))}))}getImages(){return this.property?api.getImages(this.property.id).filter((e=>{var t;return e.id!==(null===(t=this.property)||void 0===t?void 0:t.value)})):[]}renderImageScaleUi(){if(!this.property)return"";const e=this.property;return-1===this.uploadProgress&&e&&e.imageMeta&&"pick"!==this.mode?html`<wc-number-box mode="slider" .value=${this.scaleValue} title=${this.scaleValue}
+      `:html``}get isValid(){if(this.property){const e=this.property;if(e.imageMeta){const t=e.imageMeta,o=e.value;if(t.isMandatory&&o.toLowerCase()===t.defaultValue.toLowerCase())return{ok:!1,hint:"You need to replace this image."}}}return{ok:!0,hint:""}}openSelectImageDialog(){var e,t,o;new WcSelectImageDialog("callback",null===(e=this.property)||void 0===e?void 0:e.id,null===(o=null===(t=this.property)||void 0===t?void 0:t.imageMeta)||void 0===o?void 0:o.canUpload).showDialog((e=>{this.property&&(scope().selection.externalProperties=[],api.setProperty(this.property.id,e.id))}))}getImages(){return this.property?api.getImages(this.property.id).filter((e=>{var t;return e.id!==(null===(t=this.property)||void 0===t?void 0:t.value)})):[]}renderImageScaleUi(){if(!this.property)return"";const e=this.property;return-1===this.uploadProgress&&e&&e.imageMeta&&"pick"!==this.mode?html`<wc-number-box mode="slider" .value=${this.scaleValue} title=${this.scaleValue}
         property="customMinMax" customMin="${e.imageMeta.scaleHints.min}" customMax="${e.imageMeta.scaleHints.max}"
         .callback=${(e,t)=>this.setScaleValue(e,t)}></wc-number-box>
         
         ${config.isMobile?html`<wc-icon @click=${()=>this.reset()} primaryColor="head-toolbar" icon="trash-solid" ></wc-icon>`:""}
-        `:""}reset(){const e=this.property;e&&e.imageMeta&&this.setScaleValue(e.imageMeta.scaleHints.min,!1)}renderImageUploadUi(){if(!this.property)return"";const e=this.property,t=this.isValid;return-1===this.uploadProgress&&e.imageMeta&&"scale"!==this.mode?html`   
+        `:""}reset(){const e=this.property;e&&e.imageMeta&&this.setScaleValue(e.imageMeta.scaleHints.min,!1)}renderImageUploadUi(){var e;if(!this.property)return"";const t=this.property,o=this.isValid;return-1===this.uploadProgress&&t.imageMeta&&"scale"!==this.mode?html`   
       <div class="imageListWrapper"  style="padding:0; overflow: hidden;">
         <div class="imageList">
 
+       
           <div class="imageItem" @click=${()=>this.openSelectImageDialog()}  >
-            <div class="imageBox" style="background-image: ${e.imageMeta.thumbCssUrl};" ></div>
+            <div class="imageBox" style="background-image: ${t.imageMeta.thumbCssUrl};" ></div>
           </div>
 
 
           <div class="small-image-list">
-            <div class="small-image-item" style="position: relative;" @click=${()=>this.openSelectImageDialog()}  >
-              <wc-icon  primaryColor="medium" class="small-icon" icon="plus" ></wc-icon>     
-            </div>
-            ${this.getImages().map((t=>html`
-              <div class="small-image-item"  @click=${()=>setProperty(e.id,t.id)}  >
-                <div class="imageBox" style="background-image: ${t.thumbCssUrl};" ></div>
+            ${(null===(e=t.imageMeta)||void 0===e?void 0:e.canUpload)?html`
+              <div class="small-image-item" style="position: relative;" @click=${()=>this.openSelectImageDialog()}  >
+                <wc-icon  primaryColor="medium" class="small-icon" icon="plus" ></wc-icon>     
+              </div>
+            `:""}
+            ${this.getImages().map((e=>html`
+              <div class="small-image-item"  @click=${()=>setProperty(t.id,e.id)}  >
+                <div class="imageBox" style="background-image: ${e.thumbCssUrl};" ></div>
               </div>
             `))}
           </div>
          
        
         </div>
-        ${t.ok?"":html`<p style="color: red; margin-top: 5px;">${t.hint}</p>`}
+        ${o.ok?"":html`<p style="color: red; margin-top: 5px;">${o.hint}</p>`}
       </div>
       
      
 
       ${this.renderLevelUi()}
 
-    `:""}assignImage(e,t){return __awaiter$z(this,void 0,void 0,(function*(){yield setProperty(e,t),scope().selectionPropertiesUi.requestUpdate()}))}renderLevelUi(){if(this.property&&this.property.imageMeta&&!config.isMobile){const e=this.property.imageMeta.allows,t=e.indexOf("brightness")>=0,o=e.indexOf("contrast")>=0,i=e.indexOf("vivid")>=0,r=e.indexOf("sepia")>=0,s=e.indexOf("hueRotate")>=0;return html`
+    `:""}assignImage(e,t){return __awaiter$z(this,void 0,void 0,(function*(){yield setProperty(e,t),scope().selectionPropertiesUi.requestUpdate()}))}renderLevelUi(){if(this.property&&this.property.imageMeta&&this.property.imageMeta.canUpload&&!config.isMobile){const e=this.property.imageMeta.allows,t=e.indexOf("brightness")>=0,o=e.indexOf("contrast")>=0,i=e.indexOf("vivid")>=0,r=e.indexOf("sepia")>=0,s=e.indexOf("hueRotate")>=0;return html`
   <div class="level-head" @click=${()=>this.toggleLevels()}>
     <wc-icon  
        icon="${this.levels?"carret-down-solid":"carret-right-solid"}"></wc-icon><label>${this.levels?"Hide Image Filters":"Show Image Filters"}</label>
