@@ -43,7 +43,7 @@
 
 
   <!-- Load polyfills -->
-  <script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 
   <!-- Load components via WebComponents.waitFor -->
   <script>
@@ -73,14 +73,14 @@
     }
 
     WebComponents.waitFor(async () => {
-      printess = await import('./printess-editor/printess-editor.js');
+      printess = await import('https://editor.printess.com/printess-editor/printess-editor.js');
 
       printess.attachPrintess({
-        resourcePath: "/getting-started/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
         div: document.getElementById("printess"),
         domain: "dev-aws.printess.com",
         token: token,
-        showBuyerSide: true, /* Jumps directly in the buyer view, its also token dependend if the designer-view is available */
+        showBuyerSide: false, /* Jumps directly in the buyer view, its also token dependend if the designer-view is available */
         templateName: "Sign", /* Pass the name of a template in your account to load it on startup */
         formFieldChangedCallback: formFieldChanged,
         fullScreenOnMobile: false,
