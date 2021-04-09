@@ -7,8 +7,6 @@ This repo shows how easy it is to get started with the printess editor.
 You can see thode code running here:
 <https://printesseditor.github.io/getting-started/>
 
-> :warning: **You will be prompted for a password on load. This is only because Printess is not live yet and will be removed with the official release. Please contact the Printess folks to get this password.**
-
 
 ## &nbsp; 
 
@@ -47,7 +45,7 @@ Now we wait for **WebComponentsReady** before loading Printess itself.
    
 </script>
 ```
-The **attachPrintess** call initializes Printess, passes the authentication token and the name of the template to be loaded.
+The `attachPrintess` call initializes Printess, passes the authentication token and the name of the template to be loaded.
 
 Please be aware that you'll need to tell Printess the path to its resource files (Web-Assembly and Default Fonts) in a separate property `resourcePath`. Please do not change this value.
 
