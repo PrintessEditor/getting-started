@@ -14,21 +14,12 @@ You can see thode code running here:
 
 # Embedding the Printess Editor
 
-Printess has a single npm depencency which you can easily add to your own **package.json**
+Printess can easily be loaded from our CDN. 
 
-```JSON
-{
-  "dependencies": {
-    "@webcomponents/webcomponentsjs": "^2.5.0"
-  }
-}
-```
-Plus you need to place the **printess-editor** folder in your project root. If you place it somewhere else please adjust the import-path `await import('./printess-editor/printess-editor.js')`; and see below how to adjust the **resourcePath** as well. 
-
-Be aware that Printess itself is loaded after the webcomponents polyfills. So first we need to load **webcomponentjs**
+Be aware that Printess itself is loaded after the webcomponents polyfills. So first we need to load **webcomponentjs** from the Printess CDN.
 
 ```html
-  <script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js" defer></script>
+  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 ```
 
 Now we wait for **WebComponentsReady** before loading Printess itself.
@@ -42,9 +33,10 @@ Now we wait for **WebComponentsReady** before loading Printess itself.
   };
   let printess;
   WebComponents.waitFor(async () => {
-    printess = await import('./printess-editor/printess-editor.js');
+    printess = await import('https://editor.printess.com/printess-editor/printess-editor.js');
+
     printess.attachPrintess({
-      resourcePath: "/getting-started/printess-editor",
+      resourcePath: "https://editor.printess.com/printess-editor", // needs to be always set
       div: document.getElementById("printess"),
       domain: "dev-aws.printess.com",
       token: "YOUR TOKEN",
@@ -52,11 +44,12 @@ Now we wait for **WebComponentsReady** before loading Printess itself.
       templateName: "Sign"
     });
   });
+   
 </script>
 ```
 The **attachPrintess** call initializes Printess, passes the authentication token and the name of the template to be loaded.
 
-Please be aware that you'll need to tell Printess the path to its resource files (Web-Assembly and Default Fonts) in a separate property (**resourcePath**). Unfortunatly this can not be detected automatically during the **import**. So if your foder structure looks more complex you can always tell Printess from where to load. The **resourcePath** can also be passed as an absolute Url, like *"https://folder/folder"*
+Please be aware that you'll need to tell Printess the path to its resource files (Web-Assembly and Default Fonts) in a separate property `resourcePath`. Please do not change this value.
 
 In the `div` property you need to pass a div-element which Printess Editor will attach to. 
 Printess is intended to have as much space as possible, so it is highly recommended to not leave space on left and right side. Especially on mobile. 
