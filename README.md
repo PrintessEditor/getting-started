@@ -88,29 +88,15 @@ To store the result of what your customer has configured in Printess you can sim
 **Save customers work**
 
 ```js
-  printess.saveJson().then((token) => {
-    prompt("Template stored under token:", token);
-  });
+  const myToken = await printess.saveJson();
 ```
 
 **Load customers work**
 ```js
-  printess.saveJson().then((token) => {
-    prompt("Template stored under token:", token);
-  });
+  await printess.loadJson(myToken);
 ```
 
-To test it, we added a button in the toolbar **Save State**, which saves the current state and returns a token to load it later. (It also copies the token to the clipboard). Just try it, make some other changes or even load a different template, and then press **Load Stated**, paste the token to the prompt and you will see the state you prevoiusly stored. 
-
-```js
-// Retrieve
-const currentState = printess.getJson()) 
-
-// Recall
-printess.setJson(currentState);
-```
-
-> :warning: `getJson()` and `setJson()` are temporary methods. The final version will just return an **ID** instead of the full JSON to make handling easier.
+To test it, we added a button in the toolbar **Save State**, which saves the current state and returns a token to load it later. Just try it, make some other changes or even load a different template, and then press **Load Stated**, paste the token to the prompt and you will see the state you prevoiusly stored. 
 
 ## &nbsp; 
 

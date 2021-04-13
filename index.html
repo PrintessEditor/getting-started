@@ -99,49 +99,23 @@
       });
     });
 
-    document.getElementById("btnSaveJson").onclick = () => {
+    document.getElementById("btnSaveJson").onclick = async () => {
       printess.saveJson().then((token) => {
         prompt("Template stored with token:", token);
-        navigator.clipboard.writeText(token);
       });
     };
+
     document.getElementById("btnLoadJson").onclick = () => {
-      navigator.clipboard.readText()
-        .then(
-          clipText => {
-            const token = prompt("Load template with token:", clipText);
-            printess.loadJson(token).then(() => {
-              alert("Template Loaded");
-            })
-              .catch((msg) => {
-                alert("Message")
-              });
-          })
-        .catch(() => {
-          const token = prompt("Load template with token:", "");
-          printess.loadJson(token)
-            .then(() => {
-              alert("Template Loaded");
-            })
-            .catch((msg) => {
-              alert("Message")
-            });
+      const token = prompt("Load template with token:", "Paste token here");
+      printess.loadJson(token)
+        .then(() => {
+          alert("Template Loaded");
+        })
+        .catch((msg) => {
+          alert(msg)
         });
     }
-    /* document.getElementById("btnGetJson").onclick = () => {
-       navigator.clipboard.writeText(printess.getJson()).then(function () {
-         // clipboard successfully set
-         alert("JSON copied to clipboard");
-       }, function () {
-         alert("Copy failed!");
-       });
-     };
-     document.getElementById("btnSetJson").onclick = () => {
-       navigator.clipboard.readText().then(
-         clipText => {
-           printess.setJson(clipText);
-         });
-     };*/
+
     document.getElementById("loadTemplate").onchange = () => {
       // alert(document.getElementById("loadTemplate").value);
       printess.loadTemplate(document.getElementById("loadTemplate").value);
