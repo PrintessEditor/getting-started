@@ -30,8 +30,8 @@
     </select>
     <div id="message"></div>
     <button id="btnCreateThumbnail">Create<br>Thumbnail</button>
-    <button id="btnGetJson">Copy JSON to Clipboard</button>
-    <button id="btnSetJson">Paste JSON from Clipboard</button>
+    <button id="btnSaveJson">Save State</button>
+    <button id="btnLoadJson">Load State</button>
   </div>
   <div class="token-warning">
     <h4>This site is using a test token. </h4>
@@ -43,8 +43,7 @@
 
 
   <!-- Load polyfills -->
-  <script
-    src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 
   <!-- Load components via WebComponents.waitFor -->
   <script>
@@ -61,7 +60,7 @@
     let token = "";
 
     if (!token) {
-      token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJaMDhkQUpveERuZ3VXVWdyRmNheE1UYkFWclEyIiwianRpIjoiTmY5QTBGYTBuaFpNcG16ZXR5bkdlc3RrLVkyMG50TFkiLCJuYmYiOjE2MTU0Njk5ODcsImV4cCI6MTY0NzAwNTk4NywiaWF0IjoxNjE1NDY5OTg3LCJpc3MiOiJQcmludGVzcyBHbWJIICYgQ28uS0ciLCJhdWQiOiJwcmludGVzcy1zYWFzIn0.fjfjqu-tNVFQqTExjjKjM3X8P4-MWU-zl_9St-6U223j0_dQg-ZYIuFCIh_gQj39JIZbX0H4wxD2pl4Xt8KAPxeKBffKUqm2nIzowpvKwjkR7yG99dFuLeaPfWDZ0_1SBLrHRYaPjz3H3Wb9gCvWuAr4TUHZrPu5C25OVqaQRsT6LROd3tRhWHwJJz0n9gJuIQ75DLJHs-aE0zWzy7Lc-ZDRfTGLg-4-bm418_DQa-kM4ph4Kw12FCCJiIlYkpaVdirBdRQanX1L7OgEbJ2j1f1LyqP_qp_xP9bW-GNIomEn7gWcjY8G1MRv1P3PRACN3r0b0GBJojellq4oGyGbun82_qB3iLO9Vk4Smx8rsW4FFY6Zn9qNkEcAIJ2RBQ4eAHGDzZ-4DF88-czOdjGO5aPUJ8tyteBZgKJTpXHpNqZgWRHRi-My8xc9gFPhkqGapdbYdyakvsnThZcJ5IK66PEUFMFouslbVW_2cAYkAglFSA04gGApXB0cDMWj7cauFBwA-QRKhm9druBtu-ra3YUia-_t0ECvIML6G9ObAawD49l6XijxN8pwkrWA2WSmNVPzX0yHrAd0wbLYi5-cj0Dyi8HifomlpjmHEDXUExpNc2z5SxmLt4RqMNRXKbEDM67NypgPEUpfWGc4OcunXxcnxQxOoioQEYBMnY35qR0";
+      token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJaMDhkQUpveERuZ3VXVWdyRmNheE1UYkFWclEyIiwianRpIjoicnlZRF9OUHhFbWZYcV9jaWdRdTcycjNSMVR1cE45Tk8iLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODMyNzg2MSwiZXhwIjoxOTMzNjg3ODYxLCJpYXQiOjE2MTgzMjc4NjEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.aPgStHkk7tUWSuKkLwtMVOQ_zZV0ZH4h1OHpAiHOfpaQzPWVyddGX-XAA8UuX2o4D1Cvd2rdAEDhB3m3gkwdX8NbCitoxxr8S4q34dTMgeQ9moyczYxSwE-_JmjSIO3R6Aolj2KfMFxlox9-bJm4NNa1N67MNpAcODLAcGNOQ3tNdJv5SePU2B91JzLz17Yt7iv9ohfIdu1DTPHG5eNrzFjJbxMPU_cd80goR7kWyUjMZ9uRMAJm0VWVZspy31Qo85jtT3XYKdR1eaJaC2RV0qNpd5TMBoJx3jUXB2_zNOVU1biGkT4yJM17isPP480ACvTy7Zfwth3eVLvM8W2LUdmA8t3e84p5Y6wZTaMgtyOn6i4Ip0HRM5qUjXg6BNJoV_L3Fmrb435-Wt2oK7PUWXFJFnaHhMeGYravNrDI6tmUpbMqcg-W4IOi4iuGOOga89OaDHUmYjY9iZVW0_d6jUBYRPhyQOjhhDSpYtR_0ATPagtIAV78O6nE-foRCP1l-eJ1s7E2UUypGa_t8Gtj181_lxWgpdon7BbLyDgJIWoLxKaACUtBJgI4ppBybVStQfOIghOm8sN3p0PtSb6Yr6lCtEKp-SbYGkyld_gnEcEfT49V34igJ0N0zPfKgXu-Bmt74YHX8vVIpFGZhYy9K5HHLPdrIpTwqwR3le-9Oug";
       document.querySelector(".token-warning").style.display = "block";
     }
 
@@ -77,10 +76,14 @@
       printess = await import('https://editor.printess.com/printess-editor/printess-editor.js');
 
       printess.attachPrintess({
-        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
-        div: document.getElementById("printess"),
-        domain: "dev-aws.printess.com",
-        token: token,
+        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is
+        div: document.getElementById("printess"), // the element to attach to
+        domain: "api.printess.com",
+
+        token: token, // your printess shop-token
+        basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
+        shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
+
         showBuyerSide: false, /* Jumps directly in the buyer view, its also token dependend if the designer-view is available */
         templateName: "Sign", /* Pass the name of a template in your account to load it on startup */
         formFieldChangedCallback: formFieldChanged,
@@ -96,20 +99,49 @@
       });
     });
 
-    document.getElementById("btnGetJson").onclick = () => {
-      navigator.clipboard.writeText(printess.getJson()).then(function () {
-        /* clipboard successfully set */
-        alert("JSON copied to clipboard");
-      }, function () {
-        alert("Copy failed!");
+    document.getElementById("btnSaveJson").onclick = () => {
+      printess.saveJson().then((token) => {
+        prompt("Template stored with token:", token);
+        navigator.clipboard.writeText(token);
       });
     };
-    document.getElementById("btnSetJson").onclick = () => {
-      navigator.clipboard.readText().then(
-        clipText => {
-          printess.setJson(clipText);
+    document.getElementById("btnLoadJson").onclick = () => {
+      navigator.clipboard.readText()
+        .then(
+          clipText => {
+            const token = prompt("Load template with token:", clipText);
+            printess.loadJson(token).then(() => {
+              alert("Template Loaded");
+            })
+              .catch((msg) => {
+                alert("Message")
+              });
+          })
+        .catch(() => {
+          const token = prompt("Load template with token:", "");
+          printess.loadJson(token)
+            .then(() => {
+              alert("Template Loaded");
+            })
+            .catch((msg) => {
+              alert("Message")
+            });
         });
-    };
+    }
+    /* document.getElementById("btnGetJson").onclick = () => {
+       navigator.clipboard.writeText(printess.getJson()).then(function () {
+         // clipboard successfully set
+         alert("JSON copied to clipboard");
+       }, function () {
+         alert("Copy failed!");
+       });
+     };
+     document.getElementById("btnSetJson").onclick = () => {
+       navigator.clipboard.readText().then(
+         clipText => {
+           printess.setJson(clipText);
+         });
+     };*/
     document.getElementById("loadTemplate").onchange = () => {
       // alert(document.getElementById("loadTemplate").value);
       printess.loadTemplate(document.getElementById("loadTemplate").value);

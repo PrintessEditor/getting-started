@@ -30,13 +30,16 @@ Now we wait for **WebComponentsReady** before loading Printess itself.
     }
   };
   let printess;
+  let api;
   WebComponents.waitFor(async () => {
     printess = await import('https://editor.printess.com/printess-editor/printess-editor.js');
 
-    printess.attachPrintess({
+    api = printess.attachPrintess({
       resourcePath: "https://editor.printess.com/printess-editor", // needs to be always set
+      domain: "api.printess.com",
       div: document.getElementById("printess"),
-      domain: "dev-aws.printess.com",
+      basketId: "CurrentShopBasketId",
+      shopUserId: "CurrentShopCustomerId",
       token: "YOUR TOKEN",
       showBuyerSide: true, 
       templateName: "Sign"
@@ -49,18 +52,55 @@ The `attachPrintess` call initializes Printess, passes the authentication token 
 
 Please be aware that you'll need to tell Printess the path to its resource files (Web-Assembly and Default Fonts) in a separate property `resourcePath`. Please do not change this value.
 
+The `domain` should remain unchanged. It only needs to be changed if you are uing a private Printess cloud.
+
 In the `div` property you need to pass a div-element which Printess Editor will attach to. 
 Printess is intended to have as much space as possible, so it is highly recommended to not leave space on left and right side. Especially on mobile. 
 
-Now the variable named `printess` contains a **js-api** reference to the Printess editor.  
+`token` should be set to a **Shop-Token** which points to yout Printess Account. You can get this token once you are logged in in the Printess Editor -> Account Menu -> API-Token. You'll see 3 different tokens in the dialog. Please always use the **Shop-Token**.
+
+Finally the variable named `printess` contains a **js-api** reference to the Printess editor.  
+
+If you use typescript you'll find a `printess-editor.d.ts` file in the repro which contains all types for the printess object. 
 
 ## &nbsp; 
 
-# Store and Recall the Design Work
+## `basketId` and `shopUserId`
 
-To store the result of what your customer has configured in Printess you can simply call `printess.getJson()`.  All you need is to store the JSON returned  along with your shopping basket. You can pass this JSON back to the Printess-Editor at any time with `printess.setJson(data)` and you will later submit it to the Printess-Production-API to retrieve your printe ready files. 
+To enable your customer to upload images and to save or load the state of work - you need to pass in minimum a `BasketId` to printess on `attachPrintess()`.
 
-To test it, we added a button in the toolbar **Copy JSON to Clipboard**, which copies the current state as a JSON to the clipboard. Just try it, make some other changes or even load a different template, and then press **Paste JSON from Clipboard** and you will see the state you prevoiusly stored. 
+Optionally you can pass a `shopUserId` to make Printess store in the context of the current customer (user). Also when the customer uploads an image it will be stored under the `shopUserId`. So if the customer returns later he or she will see its previous uploaded images. 
+
+```json
+  {
+    basketId: "CurrentShopBasketId",
+    shopUserId: "CurrentShopCustomerId"
+  }
+```
+We are working on a method to assign an existing `basketId` to a `shopUserId` in the case the user logs in after he or she has already designed his or her artwork. So you can ensure that even with late sign in or user creation the existing uploaded images are assigned to that customer.
+
+## &nbsp; 
+
+## Store and Recall the Design Work
+
+To store the result of what your customer has configured in Printess you can simply call `printess.saveJson()`. In return you will get a token that yu can easily use to load this state if the customer returns or want to make changes. You also can use this token to load the customers design from the admin-view to apply fixes you might have received via email or phone. 
+
+**Save customers work**
+
+```js
+  printess.saveJson().then((token) => {
+    prompt("Template stored under token:", token);
+  });
+```
+
+**Load customers work**
+```js
+  printess.saveJson().then((token) => {
+    prompt("Template stored under token:", token);
+  });
+```
+
+To test it, we added a button in the toolbar **Save State**, which saves the current state and returns a token to load it later. (It also copies the token to the clipboard). Just try it, make some other changes or even load a different template, and then press **Load Stated**, paste the token to the prompt and you will see the state you prevoiusly stored. 
 
 ```js
 // Retrieve
@@ -74,7 +114,7 @@ printess.setJson(currentState);
 
 ## &nbsp; 
 
-# Creating a Thumbnail Image
+## Creating a Thumbnail Image
 
 After the buyer has put the design to the shopping basket you might want to retrieve a small image of the current layout. Do get a URL of such a "Thumbnail" you can call:
 
@@ -103,7 +143,7 @@ printess.renderFirstPageImage(fileName, documentName, width, height).then(thumbn
 
 ## &nbsp; 
 
-# Passing Form Fields to your Shop
+## Passing Form Fields to your Shop
 Printess has the concept of **Form Fields** which can be created by the designer and changed by the buyer. Those Form Fields can contain information which are **price relevant** like material or color. The **Sign** template which you see when running *index.html* exposes a couple of such Form Fields. **Material**, **Size** - and if a solid material is selected - **Drill Holes** and **Varnish**. All 4 Form Fields are possibly price relevant so the eCommerce application must know if any of this values has been changed. To achieve this, you can pass a very simple callback to *attachPrintess*, where you then can adjust your basket settings to the users choices.
 
 ```js
@@ -115,6 +155,7 @@ Printess has the concept of **Form Fields** which can be created by the designer
         formFieldChangedCallback: formFieldChanged,
   });
 ```
+
 ## &nbsp;
 
 ## Congratulations!
