@@ -148,6 +148,7 @@ Printess has the concept of **Form Fields** which can be created by the designer
 
 You now know everything to get started with the Printess Editor. Have fun and please let us know if you struggle. 
 
+Please find more documentation in the [Printess Knowledge Base](https://printess.com/kb/api-reference/js-api/getting-started.html) 
  
 
 ## &nbsp; 
@@ -162,5 +163,5 @@ The second option **Custom Ui** reduces Printess to a pure view-container which 
 
 In the getting-started application you can toggle between both implementations whereby the **Custom Ui** is just a very basic example of what is possible. No styling has been applied to keep the code easy to read. 
 
-
+Please find more documentation in the [Printess Knowledge Base](https://printess.com/kb/api-reference/js-api/getting-started.html) 
 
