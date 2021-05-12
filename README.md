@@ -100,50 +100,6 @@ To test it, we added a button in the toolbar **Save State**, which saves the cur
 
 ## &nbsp; 
 
-## Creating a Thumbnail Image
-
-After the buyer has put the design to the shopping basket you might want to retrieve a small image of the current layout. Do get a URL of such a "Thumbnail" you can call:
-
-```js
-const fileName = "thumb_" + new Date().getTime() + ".png";
-const documentName = "";
-const width = 400; // max is 400
-const height = 400; // max is 400
-
-printess.renderFirstPageImage(fileName, documentName, width, height).then(thumbnailUrl => {
-  window.open(thumbnailUrl);
-});
-```
-
-**fileName**: has to be set, so you can put the basket ID here to override an existing image. 
-
-**documentName**: can be set if you for example want a thumbnail of a specific preview document. Otherwise the primary document will be taken. If you want to get a thumbnail of any existing preview document just pass **"!PREVIEW!"**. If no "preview"-document is found it falls back to the "primary" document and then to the first document of the template. You can see this in action on the "T-Shirt" example.
-
-**width**: the maximum width of the thumbnail based on aspect ratio of the document the resulting thumbnail-width can smaller.
-
-**height**: the maximum height of the thumbnail based on aspect ratio of the document the resulting thumbnail-height can smaller.
-
-*TIP:* Press the *Create Thumbnail* Button to show a thumbnail of the current Template.
-
-> :warning: The thumbnail generation might take a couple of seconds. If you request the thumbnail when the buyer clicks **continue** - you need to show an overlay screen and wait for the call to finish before you unload the Printess editor!
-
-## &nbsp; 
-
-## Passing Form Fields to your Shop
-Printess has the concept of **Form Fields** which can be created by the designer and changed by the buyer. Those Form Fields can contain information which are **price relevant** like material or color. The **Sign** template which you see when running *index.html* exposes a couple of such Form Fields. **Material**, **Size** - and if a solid material is selected - **Drill Holes** and **Varnish**. All 4 Form Fields are possibly price relevant so the eCommerce application must know if any of this values has been changed. To achieve this, you can pass a very simple callback to *attachPrintess*, where you then can adjust your basket settings to the users choices.
-
-```js
-  const formFieldChanged = (name, value) => {
-    alert( "Form Field: [" + name + "] changed to '" + value + "'");
-  }
-  printess.attachPrintess({
-        /* ... all other properties ... */
-        formFieldChangedCallback: formFieldChanged,
-  });
-```
-
-## &nbsp;
-
 ## Congratulations!
 
 You now know everything to get started with the Printess Editor. Have fun and please let us know if you struggle. 
