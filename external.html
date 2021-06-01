@@ -8,40 +8,63 @@
 
   <meta charset="utf-8">
 
+  <meta name="viewport" content="width=device-width">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+
   <link type="text/css" rel="stylesheet" href="external.css" />
+
 </head>
 
 <body style="margin: 0; padding: 0;">
 
-
-
-  <!-- <div id="printessin"
-    style="position: relative; margin: 10vw 15vh; width: 80vw; height: 70vh; border: 2px solid orange; "></div>-->
-
   <div class="page-buttons">
   </div>
+  <button class="show-layouts-button btn btn-primary" type="button" data-bs-toggle="offcanvas"
+    data-bs-target="#layoutOffcanvas" aria-controls="layoutOffcanvas">
+    Change Layout
+  </button>
 
 
-  <div id="layoutSnippetsWrapper">
-    <div id="layoutSnippets"></div>
+
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="layoutOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasLabel">Layouts</h5>
+      <button type="button" class="btn-close text-reset" id="closeLayoutOffCanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <div id="layoutSnippets" class="offcanvas-body">
+
+    </div>
   </div>
 
-  <div id="propsdiv" class="no-selection"></div>
+  <div id="desktop-properties"></div>
   <pre id="json"></pre>
 
   <div id="printessin"></div>
 
   <div class="button-bar">
+
     <select onchange="location = this.value;">
       <option value="index.html">Printess Ui</option>
       <option selected value="external.html">Custom Ui</option>
     </select>
     <select id="loadTemplate">
       <option disabled selected>Load Template ...</option>
-      <option value="Sign">Sign</option>
-      <option value="Business-Card">Business-Card</option>
-      <option selected value="Greeting-Card">Greeting-Card</option>
+      <option value="Children's book">Children's book</option>
+      <option value="Retro Sign">Retro Sign</option>
+      <option value="Business Card">Business Card</option>
+      <option selected value="Greeting Card">Greeting Card</option>
       <option value="Chocolate Bar">Chocolate Bar</option>
+      <option value="Photo-Calendar 1">Photo-Calendar 1</option>
+      <option value="Calendar">Calendar</option>
+      <option value="Newborn Card">Newborn Card</option>
+      <option value="Phone-Case">Phone-Case</option>
+      <option value="Puzzle">Puzzle</option>
+      <option value="T-Shirt">T-shirt 2</option>
+      <option value="Coffee Mug">Coffee Mug</option>
     </select>
     <div></div>
     <button id="btnUndo">Undo</button>
@@ -61,15 +84,21 @@
     Please contact us to get your personal token.
   </div>
 
+  <!-- Bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4"
+    crossorigin="anonymous"></script>
+
   <!-- Load polyfills -->
   <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+
+  <script src="external.js"></script>
 
   <!-- Load components via WebComponents.waitFor -->
   <script>
 
     let printess;
     let currentGroupSnippets = [];
-    const textStyleMode = "all-paragraphs-if-no-selection"; //  "default" | "all-paragraphs" | "all-paragraphs-if-no-selection"
 
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
@@ -77,512 +106,104 @@
       }
     };
 
-    /* function getImageEffectSlider(p, name) {
-       // create slider for "sepia" | "brightness" | "saturate" | "contrast" | "grayscale"
-       const rangeLabel = document.createElement("label");
-       const range = document.createElement("input");
-       range.type = "range"
-       range.min = name === "hueRotate" ? 0 : -100
-       range.max = 100
-       range.step = 1
-       range.value = p.imageMeta[name];
-       range.oninput = () => {
-         printess.setimageMetaProperty(p.id, name, parseFloat(range.value));
-       }
-       const span = document.createElement("span");
-       span.textContent = name + " ";
-       rangeLabel.appendChild(span);
-       rangeLabel.appendChild(range);
-       return rangeLabel;
-     }*/
 
-    function getNumberSlider(p, metaProperty) {
-      // creaate slider for all "Number" properties
-      const ui = printess.getNumberUi(p, metaProperty);
-      if (!ui) {
-        const er = document.createElement("div");
-        er.textContent = "Can't get number UI for " + p.id + " / metaProperty:" + (metaProperty || "");
-        return er;
-      }
-      const rangeLabel = document.createElement("label");
-      const range = document.createElement("input");
-      range.type = "range"
-      range.min = ui.meta.min,
-        range.max = ui.meta.max,
-        range.step = ui.meta.step,
-        range.value = ui.value,
-        range.oninput = () => {
-          printess.setNumberUiProperty(p, metaProperty, parseFloat(range.value));
-        }
-      const span = document.createElement("span");
-      span.textContent = metaProperty ? metaProperty : p.label,
-        rangeLabel.appendChild(span);
-      rangeLabel.appendChild(range);
-      return rangeLabel;
-    }
-    function getFontList(p) {
-      const select = document.createElement("select");
-      const fonts = printess.getFonts(p.id);
-      for (const f of fonts) {
-        // f.thumbUrl contains a preview image 
-        const option = document.createElement("option");
-        option.value = f.name;
-        option.innerText = f.name;
-        select.appendChild(option);
-      }
-      select.value = p.textStyle.font;
-      select.style.width = "50px";
-      select.onchange = () => {
-        // alert(p.id + "has changed to " + select.value);
-        printess.setTextStyleProperty(p.id, "font", select.value, textStyleMode)
-      }
-      return select;
+    window.addEventListener("resize", () => {
+      printess.resizePrintess();
+    });
+
+    const loadingDoneCallback = function (spreads, properties) {
+      uiHelper.renderPageNavigation(printess, spreads, properties)
     }
 
+    const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
 
-    function getFontColorPicker1(p) {
-      const cp = document.createElement("input");
-      cp.type = "color";
-
-      cp.value = p.textStyle.color;
-      cp.onchange = () => {
-        // alert(p.id + "has changed to " + select.value);
-        printess.setTextStyleProperty(p.id, "color", cp.value, textStyleMode)
-      }
-      return cp;
-    }
-
-    function getFontColorPicker(p) {
-      const select = document.createElement("select");
-      const colors = printess.getColors(p.id);
-      for (const f of colors) {
-        const option = document.createElement("option");
-        option.value = f.name;
-        option.innerText = f.name;
-        option.style.backgroundColor = f.color;
-        select.appendChild(option);
-      }
-      select.value = p.textStyle.color;
-      select.onchange = () => {
-        // alert(p.id + "has changed to " + select.value);
-        printess.setTextStyleProperty(p.id, "color", select.value, textStyleMode)
-      }
-      return select;
-    }
-
-    function getHAlignList(p) {
-      const select = document.createElement("select");
-
-      for (const v of ["left", "right", "center", "justifyLeft", "justifyCenter", "justifyRight", "justifyJustify"]) {
-        // f.thumbUrl contains a preview image 
-        const option = document.createElement("option");
-        option.value = v;
-        option.innerText = v;
-        select.appendChild(option);
-      }
-      select.value = p.textStyle.hAlign;
-      select.onchange = () => {
-        // alert(p.id + "has changed to " + select.value);x 
-        printess.setTextStyleProperty(p.id, "hAlign", select.value, textStyleMode)
-      }
-      return select;
-    }
-
-    function getVAlignList(p) {
-      const select = document.createElement("select");
-
-      for (const v of ["top", "center", "bottom"]) {
-        // f.thumbUrl contains a preview image 
-        const option = document.createElement("option");
-        option.value = v;
-        option.innerText = v;
-        select.appendChild(option);
-      }
-      select.value = p.textStyle.vAlign;
-      select.onchange = () => {
-        // alert(p.id + "has changed to " + select.value);x 
-        printess.setTextStyleProperty(p.id, "vAlign", select.value, textStyleMode)
-      }
-      return select;
-    }
-
-    function getFontSizeBox(p) {
-      // alternative show slider:  return getNumberSlider(p, "text-style-size");
-
-      const cp = document.createElement("input");
-      cp.type = "text";
-      cp.style.fontSize = "9pt";
-      cp.value = p.textStyle.size;
-      cp.onchange = () => {
-        // alert(p.id + "has changed to " + select.value);
-        printess.setTextStyleProperty(p.id, "size", cp.value, textStyleMode)
-      }
-      return cp;
-    }
-
-    function renderGroupSnippets() {
-      const div = document.getElementById("propsdiv");
-      if (div && div.classList.contains("no-selection")) {
-        div.innerHTML = "";
-
-        if (currentGroupSnippets.length > 0) {
-          div.style.display = "flex";
-          // no selection, show add-able snippets instead
-          for (const cluster of currentGroupSnippets) {
-            const headline = document.createElement("div");
-            headline.className = "snippet-cluster-name";
-            headline.textContent = cluster.name;
-            div.appendChild(headline)
-            for (const snippet of cluster.snippets) {
-              const thumb = document.createElement("img");
-              thumb.src = snippet.thumbUrl;
-              thumb.style.backgroundColor = snippet.bgColor;
-              thumb.style.width = "100px";
-              thumb.style.height = "100%";
-              thumb.style.margin = "5px";
-              //  thumb.classList.add("image-icon");
-              thumb.onclick = () => {
-                printess.insertGroupSnippet(snippet.snippetUrl);
-                //  alert(JSON.stringify(aw));
-                //printess.setProperty(p.id, im.id);
-              }
-              div.appendChild(thumb);
-            }
-          }
-        } else {
-          div.style.display = "none";
-        }
-      }
-    }
-    // TODO get overlay style injection 
-    const getOverlayCallback = (properties) => {
-      console.log("+++++++Properties", properties);
-      const isSingleLineText = properties.filter(p => p.kind === "single-line-text").length > 0;
-      const isImage = properties.filter(p => p.kind === "image").length > 0;
-      const isColor = properties.filter(p => p.kind === "color").length > 0;
-      const hdiv = document.createElement("div");
-      hdiv.style.border = "10px solid rgba(0,200,100,0.5)";
-      hdiv.style.opacity = "1";
-      if (isSingleLineText) {
-        const tdiv = document.createElement("div");
-        tdiv.style.position = "absolute";
-        tdiv.style.top = "-38px"
-        tdiv.style.left = "10px";
-        tdiv.style.fontSize = "16px";
-        tdiv.style.backgroundColor = "yellow";
-        tdiv.innerText = "TEXT";
-        tdiv.style.padding = "4px"
-        hdiv.appendChild(tdiv);
-      } else if (isImage) {
-        const tdiv = document.createElement("div");
-        tdiv.style.position = "absolute";
-        tdiv.style.top = "-38px"
-        tdiv.style.left = "10px";
-        tdiv.style.fontSize = "16px";
-        tdiv.style.backgroundColor = "lightblue";
-        tdiv.innerText = "IMAGE";
-        tdiv.style.padding = "4px"
-        hdiv.appendChild(tdiv);
-      } else if (isColor) {
-        const tdiv = document.createElement("div");
-        tdiv.style.position = "absolute";
-        tdiv.style.top = "-38px"
-        tdiv.style.left = "10px";
-        tdiv.style.fontSize = "16px";
-        tdiv.style.backgroundColor = "pink";
-        tdiv.innerText = "COLOR";
-        tdiv.style.padding = "4px"
-        hdiv.appendChild(tdiv);
-      }
-      return hdiv;
-    }
-
-    const loadingDoneCallback = function (spreads) {
-      /*
-        spreads: Array<{
-          spreadId: string,
-          index: number,
-          name: string,
-          width: number,
-          height: number,
-          thumbUrl: string | null,
-          pages: number
-        }>
-      */
-      console.log("All Spreads", spreads);
-      // draw pages ui
-      const pages = document.querySelector(".page-buttons");
-      if (pages) {
-        let pageNo = 0;
-        pages.innerHTML = "";
-        for (const spread of spreads) {
-
-          for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
-            pageNo++;
-            const pageButton = document.createElement("div");
-            pageButton.innerText = spread.name ? spread.name : "Page " + pageNo;
-            if (pageIndex === spread.pages - 1) {
-              pageButton.style.marginRight = "10px";
-            }
-            pageButton.onclick = () => {
-
-              printess.selectSpread(spread.index, pageIndex === 0 ? "left-page" : "right-page");
-            }
-            pages.appendChild(pageButton);
-          }
-        }
-      }
-
-    }
-
-    const spreadChangeCallback = (groupSnippets, layoutSnippets, spread) => {
-
-      /* 
-        groupSnippets and layoutSnippets are an Array of iExternalSnippetCluster
-
-        interface iExternalSnippetCluster {
-          name: string,
-          snippets: Array<iExternalSnippet>
-        }
-          interface iExternalSnippet {
-            title: string,
-            snippeturl: string,  
-            thumbUrl: string,
-            bgColor: string 
-          }
-      */
-
-      console.log(">>>> Spread Change Happens.");
+      uiHelper.renderMobileToolbar(printess);      
 
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
-      renderGroupSnippets(); // if no-selection
 
-      // populate available layout snippets
-      const layoutSnippetsDiv = document.getElementById("layoutSnippets");
-      if (layoutSnippetsDiv) layoutSnippetsDiv.innerHTML = "";
-      if (layoutSnippetsDiv && layoutSnippets) {
-        for (const cluster of layoutSnippets) {
-          const headline = document.createElement("div");
-          headline.textContent = cluster.name;
-          headline.className = "snippet-cluster-name";
-          layoutSnippetsDiv.appendChild(headline)
-          for (const snippet of cluster.snippets) {
-            const thumb = document.createElement("img");
-            thumb.src = snippet.thumbUrl;
-            // thumb.style.backgroundImage = "url('" + snippet.thumbUrl + "')";
-            thumb.classList.add("image-icon");
-            thumb.onclick = () => {
-              printess.insertLayoutSnippet(snippet.snippetUrl);
-              //  alert(JSON.stringify(aw));
-              //printess.setProperty(p.id, im.id);
-            }
-            layoutSnippetsDiv.appendChild(thumb);
-          }
-        }
+      const desktop = document.getElementById("desktop-properties");
+      const jsonPre = document.getElementById("json");
+
+      if (!desktop) {
+        throw "#desktop-properties not found, please add to html.";
       }
+      desktop.innerHTML = "";
+
+
+      const layoutSnippetsDiv = document.getElementById("layoutSnippets");
+      layoutSnippetsDiv.innerHTML = "";
+      layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
+      document.querySelector(".show-layouts-button").style.visibility = layoutSnippets.length ? "visible" : "hidden";
+
+      uiHelper.renderLayoutSnippets(printess, layoutSnippets)
 
       /* Get Information of all properties on this spread */
-      printess.getAllPropertiesBySpreadId(spread.id)
-        .then((props) => {
-          console.warn("ALL PROPERTIES:", props);
-        })
+      /* printess.getAllPropertiesBySpreadId(spread.id)
+         .then((props) => {
+           console.warn("ALL PROPERTIES:", props);
+         })*/
 
     }
 
+    const selectionChangeCallback = (properties, scope) => {
 
-    const selectionChangeCallback = (properties) => {
-      /*
-        
-        properties: [
-          {
-            id: string
-            value: string | number | iStoryContent,
-            kind: "color" | "single-line.text" | "number" | "multi-line-text" | "image",
-            label: string
-          }, ...
-        ]
-      */
+      const desktop = document.getElementById("desktop-properties");
+      if (!desktop) {
+        throw "#desktop-properties not found, please add to html.";
+      }
+      desktop.innerHTML = "";
 
+      const t = [];
 
-      const div = document.getElementById("propsdiv");
-      const jsonPre = document.getElementById("json");
-      if (div) {
-        div.innerHTML = "";
-        const t = [];
+      // add mobile - ui 
+      const mobile = document.querySelector(".mobile-ui");
+      if (mobile) {
+        mobile.parentElement.removeChild(mobile);
+      }
+      document.body.appendChild(uiHelper.getMobileUi(printess, properties));
 
 
-
+      if (scope === "document") {
+        //****** Show Document Wide Options
         for (const p of properties) {
           t.push(JSON.stringify(p, undefined, 2));
-
-          if (p.kind === "single-line-text") {
-            const inp = document.createElement("input");
-            inp.type = "text";
-            inp.value = p.value;
-            inp.onkeyup = (newValue) => {
-              printess.setProperty(p.id, inp.value);
-              // alert(inp.value);
-            }
-            div.appendChild(inp);
-          }
-          if (p.kind == "multi-line-text") {
-            const textPropertiesDiv = document.createElement("div");
-            textPropertiesDiv.style.marginBottom = "2px";
-            textPropertiesDiv.classList.add("text-properties");
-            textPropertiesDiv.appendChild(getFontList(p));
-            textPropertiesDiv.appendChild(getFontSizeBox(p));
-            textPropertiesDiv.appendChild(getHAlignList(p));
-            textPropertiesDiv.appendChild(getVAlignList(p));
-            textPropertiesDiv.appendChild(getFontColorPicker(p));
-            div.appendChild(textPropertiesDiv);
-
-            const inp = document.createElement("textarea");
-            inp.value = p.value;
-            inp.onkeyup = (newValue) => {
-              printess.setProperty(p.id, inp.value);
-              // alert(inp.value);
-            }
-            inp.rows = 6;
-            div.appendChild(inp);
-          }
-
-          if (p.kind === "selection-text-style") {
-            const textPropertiesDiv = document.createElement("div");
-            textPropertiesDiv.style.marginBottom = "2px";
-            textPropertiesDiv.classList.add("text-properties");
-            textPropertiesDiv.appendChild(getFontList(p));
-            textPropertiesDiv.appendChild(getFontSizeBox(p));
-            textPropertiesDiv.appendChild(getHAlignList(p));
-            textPropertiesDiv.appendChild(getVAlignList(p));
-            textPropertiesDiv.appendChild(getFontColorPicker(p));
-            div.appendChild(textPropertiesDiv);
-          }
-
-          if (p.kind == "color") {
-            const cp = document.createElement("input");
-            cp.type = "color";
-            cp.value = p.value;
-            cp.onchange = () => {
-              printess.setProperty(p.id, cp.value)
-            }
-            div.appendChild(cp);
-          }
-
-          if (p.kind == "number") {
-            div.appendChild(getNumberSlider(p));
-          }
-
-          if (p.kind == "image") {
-            const imageListWrapper = document.createElement("div");
-            imageListWrapper.classList.add("image-list-warper");
-            const imageList = document.createElement("div");
-            imageList.classList.add("image-list");
-            const images = printess.getImages(p.id);
-            for (const im of images) {
-              const thumb = document.createElement("div");
-              thumb.style.backgroundImage = im.thumbCssUrl;
-              if (im.id === p.value) thumb.style.border = "2px solid red";
-              thumb.onclick = () => {
-                printess.setProperty(p.id, im.id);
-
-              }
-              imageList.appendChild(thumb);
-            }
-            imageListWrapper.appendChild(imageList);
-            div.appendChild(imageListWrapper);
-
-            /*** Image-Style Properties ***/
-
-
-            /*** SCALE ***/
-            const scaleRangeLabel = document.createElement("label");
-            const scaleRangeLabelCaption = document.createElement("span");
-            const scaleRange = document.createElement("input");
-            scaleRange.type = "range"
-            scaleRange.min = p.imageMeta.scaleHints.min
-            scaleRange.max = p.imageMeta.scaleHints.max
-            scaleRange.step = 0.01
-            scaleRange.value = p.imageMeta.scale;
-            scaleRange.oninput = () => {
-              const newScale = parseFloat(scaleRange.value);
-              printess.setimageMetaProperty(p.id, "scale", newScale);
-              scaleRangeLabelCaption.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale) + "dpi)";
-            }
-            scaleRangeLabelCaption.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale) + "dpi)";
-            scaleRangeLabel.style.width = "100%";
-            scaleRange.style.width = "80%";
-            scaleRangeLabel.appendChild(scaleRangeLabelCaption);
-            scaleRangeLabel.appendChild(scaleRange);
-            div.appendChild(scaleRangeLabel);
-
-            /***+ IMAGE UPLOAD ****/
-            const progressDiv = document.createElement("div");
-            progressDiv.style.width = "0%";
-            progressDiv.style.height = "2px";
-            progressDiv.style.backgroundColor = "red";
-            div.appendChild(progressDiv);
-
-            const inp = document.createElement("input");
-            inp.type = "file";
-            inp.accept = "image/png,image/jpg,image/jpeg";
-            inp.multiple = true;
-            inp.onchange = () => {
-
-              // printess.setProperty(p.id, inp.value);
-              if (inp && inp.files?.length) {
-                inp.disabled = true;
-
-                // upload multiple files at once
-                printess.uploadImages(inp.files, (progress) => {
-                  progressDiv.style.width = (progress * 100) + "%"
-                  if (progress === 1) {
-                    progressDiv.style.width = 0;
-                    // assign image  and 
-                    // reload image list!
-                  }
-                }, false).then(images => {
-                  console.log(images);
-                });
-
-              }
-
-
-            }
-            div.appendChild(inp);
-
-            /*** Effects ***/
-            div.appendChild(getNumberSlider(p, "image-brightness"));
-            div.appendChild(getNumberSlider(p, "image-contrast"));
-            div.appendChild(getNumberSlider(p, "image-vivid"));
-            div.appendChild(getNumberSlider(p, "image-sepia"));
-
-          }
+          desktop.appendChild(uiHelper.getPropertyControl(printess, p));
         }
+        desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets))
 
-        // **** Add DONE Button ****
-        if (properties.length === 0) {
-          div.classList.add("no-selection");
-          renderGroupSnippets();
-
-        } else {
-          div.classList.remove("no-selection");
-          div.style.display = "flex";
-          const hr = document.createElement("hr");
-          div.appendChild(hr);
-          const ok = document.createElement("button");
-          ok.innerText = "Done";
-          ok.style.alignSelf = "start";
-          ok.style.padding = "5px";
-          ok.onclick = () => {
-            printess.clearSelection();
+      } else {
+        //****** Show Just the frame / text Properties
+        let colorsContainer = null;
+        for (const p of properties) {
+          if (p.kind === "color") {
+            if (!colorsContainer) {
+              colorsContainer = document.createElement("div");
+              colorsContainer.className = "color-drop-down-list";
+              desktop.appendChild(colorsContainer);
+            }
+            colorsContainer.appendChild(uiHelper.getPropertyControl(printess, p))
+          } else {
+            colorsContainer = null;
+            desktop.appendChild(uiHelper.getPropertyControl(printess, p));
           }
-          div.appendChild(ok);
-
+          t.push(JSON.stringify(p, undefined, 2));
         }
+        const hr = document.createElement("hr");
+        desktop.appendChild(hr);
+        desktop.appendChild(uiHelper.getDoneButton(printess));
+      }
 
+      // print json for debug purposes
+      const jsonPre = document.getElementById("json");
+      if (jsonPre) {
         jsonPre.innerHTML = t.join("<br/>");
       }
+    }
+
+
+    const getOverlayCallback = (properties) => {
+      return uiHelper.getOverlay(printess, properties);
     }
 
 
@@ -590,21 +211,21 @@
     let token = "";
 
     if (!token) {
-      token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJaMDhkQUpveERuZ3VXVWdyRmNheE1UYkFWclEyIiwianRpIjoicnlZRF9OUHhFbWZYcV9jaWdRdTcycjNSMVR1cE45Tk8iLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODMyNzg2MSwiZXhwIjoxOTMzNjg3ODYxLCJpYXQiOjE2MTgzMjc4NjEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.aPgStHkk7tUWSuKkLwtMVOQ_zZV0ZH4h1OHpAiHOfpaQzPWVyddGX-XAA8UuX2o4D1Cvd2rdAEDhB3m3gkwdX8NbCitoxxr8S4q34dTMgeQ9moyczYxSwE-_JmjSIO3R6Aolj2KfMFxlox9-bJm4NNa1N67MNpAcODLAcGNOQ3tNdJv5SePU2B91JzLz17Yt7iv9ohfIdu1DTPHG5eNrzFjJbxMPU_cd80goR7kWyUjMZ9uRMAJm0VWVZspy31Qo85jtT3XYKdR1eaJaC2RV0qNpd5TMBoJx3jUXB2_zNOVU1biGkT4yJM17isPP480ACvTy7Zfwth3eVLvM8W2LUdmA8t3e84p5Y6wZTaMgtyOn6i4Ip0HRM5qUjXg6BNJoV_L3Fmrb435-Wt2oK7PUWXFJFnaHhMeGYravNrDI6tmUpbMqcg-W4IOi4iuGOOga89OaDHUmYjY9iZVW0_d6jUBYRPhyQOjhhDSpYtR_0ATPagtIAV78O6nE-foRCP1l-eJ1s7E2UUypGa_t8Gtj181_lxWgpdon7BbLyDgJIWoLxKaACUtBJgI4ppBybVStQfOIghOm8sN3p0PtSb6Yr6lCtEKp-SbYGkyld_gnEcEfT49V34igJ0N0zPfKgXu-Bmt74YHX8vVIpFGZhYy9K5HHLPdrIpTwqwR3le-9Oug";
+      token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJneTh6NDRFbUxpWjB2clVLclhsV3RpWlkxNUQyIiwianRpIjoibnl4NGJFZlZ5SVVvM1NkR2dYVnEtempzS3hlb0FYZUYiLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODg2ODUxMSwiZXhwIjoxOTM0MjI4NTExLCJpYXQiOjE2MTg4Njg1MTEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.CuI6zdCzBm2y3t2GBD4pYdyztFzSeSEfdGIDBeiZIYvzQckB9oEB1Z4hDkBCGZGBtTMRyuHCbkwZgO6uxD-ZyahifiqrIqfqSqtFEGwgZUF87TvV_KlrYWBzDNTaUIQjr-yUoxLkdnEMzh-3D5qV8UKWIDfqwnYd0KhJiB2K9CSg82_etnz5Lk-altMDAT8b1AnzxcjRAJ9_b6-CAJFXG6AAnfdl7c_PS3sD-RPOkJ75Ta2glfikIiGZzfh09bn5Ptk7rucRdxUsLCLR6m5nUFpZbV77d2eqRw8pT4Kl-5by5gvMr1wUBGbEx751CNXtcCO3qk4uNnptfZ3yCpK0Z2FOo2CYLZBzmDiYCrdFV5U-_SZuVOEl8vk0uR3tj_PQci_R7MlQOjpB4NjlKckQ2zGvBSKNeupuiC71UZ2AT5BFlbqMsuYu0necIztyKiWsBmbniVlLe-v7_paP1N4nS2haD2n4s4N_CenJqijtPggWsITfoLm2twCOe7yNB5IH7bcEFv1-MbANuaFmJVLOcTfc89Zi-mkidaHV-n_9qXypzyB-ih_27YBNluRGwcHgTEkbJecSssMfvHSt1MUuqX-8gbl7bhFGryqHA2gMoSZNDW0LkSYig2K3poOUumD67vtYdNSPLhOmDK4ck9wLAKLOvk6dtywg2qfV-58_VbI";
       document.querySelector(".token-warning").style.display = "block";
     }
 
 
-    WebComponents.waitFor(async () => {
+    window.WebComponents.waitFor(async () => {
       const printessLoader = await import('https://editor.printess.com/printess-editor/printess-editor.js');
       printess = await printessLoader.attachPrintess({
         resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
-       
+
         div: document.getElementById("printessin"),
-        autoScale: {
-          maxWidth: 420,
-          maxHeight: 800,
-        },
+        /* autoScale: {
+           maxWidth: 420,
+           maxHeight: 800,
+         },*/
 
         domain: "api.printess.com",
         token: token,
@@ -612,7 +233,7 @@
         basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
         shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
 
-        templateName: "Greeting-Card",
+        templateName: "Greeting Card",
         templateJson: undefined, // will be used only if templateName is empty
         templateUserId: undefined, // only needed when loaded from different account
         /* mergeTemplates: [
@@ -640,7 +261,6 @@
     });
 
 
-
     document.getElementById("btnUndo").onclick = () => {
       printess.undo();
       selectionChangeCallback([]);
@@ -657,6 +277,7 @@
         printess.selectFrames(id);
       }
     };
+
     document.getElementById("btnClearSelection").onclick = () => {
       printess.clearSelection();
     };
@@ -685,7 +306,7 @@
 
 
   </script>
- 
-  </body>
+
+</body>
 
 </html>
