@@ -130,7 +130,6 @@
       }
       desktop.innerHTML = "";
 
-
       const layoutSnippetsDiv = document.getElementById("layoutSnippets");
       layoutSnippetsDiv.innerHTML = "";
       layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
@@ -228,7 +227,6 @@
          },*/
 
         domain: "api.printess.com",
-        token: token,
         token: token, // your printess shop-token
         basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
         shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
@@ -244,7 +242,7 @@
            }
          ],*/
         hideControls: true,
-        allowZoomAndPan: true,
+        allowZoomAndPan: false,
         zoomDuration: 0.5, // in seconds 
         loadingDoneCallback: loadingDoneCallback,
         selectionChangeCallback: selectionChangeCallback,

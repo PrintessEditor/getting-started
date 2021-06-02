@@ -1,5 +1,5 @@
 
-import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, textStyleModeEnum, iMobileUIButton, iExternalMetaPropertyKind } from "./getting-started-printess-editor";
+import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, textStyleModeEnum, iMobileUIButton, iExternalMetaPropertyKind } from "./printess-editor";
 
 
 declare const bootstrap: any;
