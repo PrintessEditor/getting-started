@@ -102,10 +102,21 @@ input[type="radio"]:checked+label > svg {
   width: 500px;
 }
  
+.mobile-group-snippets-container { 
+  padding-left: 15px;
+  height: 100%;
+  width: 100%;
+  overflow: hidden auto;
+}
+ 
 .group-snippets { 
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
+}
+
+.group-snippets > img {
+  cursor:pointer;
 }
 
 .snippet-cluster-name {
@@ -133,6 +144,7 @@ input[type="radio"]:checked+label > svg {
   display: flex;
   transform: rotate(90deg);
   transform-origin: 0% 100%;
+  z-index: 10;
 }
 
 .page-buttons > div {
@@ -548,19 +560,20 @@ input[type='range'] {
   top: -29px;
   width: 42px;
   height: 42px;
-
+  
   display: flex;
   align-items: center;
   justify-content: center;
   align-content: center;
   z-index: 90;
+  cursor: pointer;
 }
   
   
 .mobile-property-plus-button >  .mobile-property-circle  {
   width: 42px;
   height: 42px;
-  background-color: #72ba15;
+  background-color: #afe713;
   box-shadow: 0px 10px 8px -4px rgba(0,0,0,0.38);
 }
     
@@ -568,6 +581,7 @@ input[type='range'] {
   background-color: black;
   border: 2px solid lime;
 }
+
     
 .mobile-property-back-button {
   position: absolute;
@@ -579,6 +593,7 @@ input[type='range'] {
   align-items: center;
   justify-content: center;
   z-index: 90;
+  cursor: pointer;
 }
   
 .mobile-property-back-button >  .mobile-property-circle  {
@@ -587,6 +602,12 @@ input[type='range'] {
   background-color:  var(--mobile-panel-background);
   box-shadow: 0px 10px 8px -4px rgba(0,0,0,0.38);
 }
+
+.mobile-property-circle > *  {
+  width: 22px;
+  height: 22px;
+}
+
 
 .circle-button-graphic {
   display: grid;
@@ -684,6 +705,13 @@ input[type='range'] {
   background-color: var(--mobile-button-square-bg-selected);
   border: 1px solid var(--mobile-button-border-selected);
   
+}
+
+.mobile-text-area {
+  height: calc(100% + 20px);
+  width: calc(100% + 20px);
+  margin: -10px;
+  padding-left: 10px;
 }
 
 .textButtonContainer {

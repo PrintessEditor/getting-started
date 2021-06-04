@@ -130,6 +130,7 @@
       }
       desktop.innerHTML = "";
 
+
       const layoutSnippetsDiv = document.getElementById("layoutSnippets");
       layoutSnippetsDiv.innerHTML = "";
       layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
@@ -145,7 +146,9 @@
 
     }
 
-    const selectionChangeCallback = (properties, scope) => {
+    const selectionChangeCallback = (properties, state) => {
+
+      // state is "document" or "frames"
 
       const desktop = document.getElementById("desktop-properties");
       if (!desktop) {
@@ -160,16 +163,15 @@
       if (mobile) {
         mobile.parentElement.removeChild(mobile);
       }
-      document.body.appendChild(uiHelper.getMobileUi(printess, properties));
+      uiHelper.renderMobileUi(printess, properties, state,  currentGroupSnippets);
 
-
-      if (scope === "document") {
+      if (state === "document") {
         //****** Show Document Wide Options
         for (const p of properties) {
           t.push(JSON.stringify(p, undefined, 2));
           desktop.appendChild(uiHelper.getPropertyControl(printess, p));
         }
-        desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets))
+        desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets, false))
 
       } else {
         //****** Show Just the frame / text Properties
@@ -242,14 +244,14 @@
            }
          ],*/
         hideControls: true,
-        allowZoomAndPan: false,
+        allowZoomAndPan: true,
         zoomDuration: 0.5, // in seconds 
         loadingDoneCallback: loadingDoneCallback,
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
         getOverlayCallback: getOverlayCallback,
         forceMultilineFormEditing: false,
-        splitMultilineToParagraphs: false,
+        splitMultilineToParagraphs: true,
         enterImageCropingOnSelect: false,
         singleSelectionOnly: false,
         applyImageEffectsInCropMode: true,

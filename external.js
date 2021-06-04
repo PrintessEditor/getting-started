@@ -7,7 +7,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-const textStyleMode = "all-paragraphs-if-no-selection";
 window.uiHelper = {
     getPropertyControl: getPropertyControl,
     renderGroupSnippets: renderGroupSnippets,
@@ -15,7 +14,7 @@ window.uiHelper = {
     getOverlay: getOverlay,
     getDoneButton: getDoneButton,
     renderPageNavigation: renderPageNavigation,
-    getMobileUi: getMobileUi,
+    renderMobileUi: renderMobileUi,
     getMobileButtons: getMobileButtons,
     renderMobileToolbar: renderMobileToolbar
 };
@@ -31,7 +30,25 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
         case "text-area":
             return getTextArea(printess, p);
         case "multi-line-text":
-            return getMultiLineTextBox(printess, p);
+            if (forMobile) {
+                switch (metaProperty) {
+                    case "text-style-color":
+                        return getColorDropDown(printess, p, "color");
+                    case "text-style-font":
+                        return getFontSizeSelect(printess, p);
+                    case "text-style-hAlign":
+                        return getHAlignControl(printess, p);
+                    case "text-style-size":
+                        return getFontSizeSelect(printess, p);
+                    case "text-style-vAlign":
+                        return getVAlignControl(printess, p);
+                    default:
+                        return getMultiLineTextBox(printess, p, forMobile);
+                }
+            }
+            else {
+                return getMultiLineTextBox(printess, p, forMobile);
+            }
         case "selection-text-style":
             return getTextStyleControl(printess, p);
         case "color":
@@ -95,33 +112,51 @@ function getDoneButton(printess) {
 }
 function getTextStyleControl(printess, p) {
     const textPropertiesDiv = document.createElement("div");
-    textPropertiesDiv.style.marginBottom = "2px";
-    textPropertiesDiv.appendChild(getFontDropDown(printess, p));
-    textPropertiesDiv.appendChild(getFontSizeBox(printess, p));
-    textPropertiesDiv.appendChild(getHAlignControl(printess, p));
-    textPropertiesDiv.appendChild(getVAlignControl(printess, p));
-    textPropertiesDiv.appendChild(getColorDropDown(printess, p, "color"));
+    textPropertiesDiv.classList.add("mb-3");
+    const group1 = document.createElement("div");
+    group1.className = "input-group mb-3";
+    const pre1 = document.createElement("div");
+    pre1.className = "input-group-prepend";
+    getColorDropDown(printess, p, "color", false, pre1);
+    getFontSizeDropDown(printess, p, pre1);
+    group1.appendChild(pre1);
+    getFontDropDown(printess, p, group1);
+    textPropertiesDiv.appendChild(group1);
+    const group2 = document.createElement("div");
+    group2.className = "input-group mb-3";
+    const pre2 = document.createElement("div");
+    pre2.className = "input-group-prepend";
+    pre2.appendChild(getHAlignControl(printess, p));
+    group2.appendChild(pre2);
+    group2.appendChild(getVAlignControl(printess, p));
+    textPropertiesDiv.appendChild(group2);
     return textPropertiesDiv;
 }
-function getMultiLineTextBox(printess, p) {
-    const container = document.createElement("div");
-    const textPropertiesDiv = document.createElement("div");
-    textPropertiesDiv.style.marginBottom = "2px";
-    textPropertiesDiv.classList.add("text-properties");
-    textPropertiesDiv.appendChild(getFontList(printess, p));
-    textPropertiesDiv.appendChild(getFontSizeBox(printess, p));
-    textPropertiesDiv.appendChild(getHAlignList(printess, p));
-    textPropertiesDiv.appendChild(getVAlignList(printess, p));
-    textPropertiesDiv.appendChild(getFontColorPicker(printess, p));
-    container.appendChild(textPropertiesDiv);
+function getMultiLineTextBox(printess, p, forMobile) {
     const inp = document.createElement("textarea");
     inp.value = p.value.toString();
     inp.onkeyup = () => {
         printess.setProperty(p.id, inp.value);
     };
     inp.rows = 6;
-    container.appendChild(inp);
-    return container;
+    if (forMobile) {
+        inp.className = "mobile-text-area";
+        return inp;
+    }
+    else {
+        const container = document.createElement("div");
+        const textPropertiesDiv = document.createElement("div");
+        textPropertiesDiv.style.marginBottom = "2px";
+        textPropertiesDiv.classList.add("text-properties");
+        textPropertiesDiv.appendChild(getFontList(printess, p));
+        textPropertiesDiv.appendChild(getFontSizeSelect(printess, p));
+        textPropertiesDiv.appendChild(getHAlignList(printess, p));
+        textPropertiesDiv.appendChild(getVAlignList(printess, p));
+        textPropertiesDiv.appendChild(getFontColorPicker(printess, p));
+        container.appendChild(textPropertiesDiv);
+        container.appendChild(inp);
+        return container;
+    }
 }
 function getSingleLineTextBox(printess, p) {
     const inp = document.createElement("input");
@@ -209,14 +244,15 @@ function getImageSelectList(printess, p) {
     }
     return container;
 }
-function getColorDropDown(printess, p, metaProperty, forMobile = false) {
-    const dropdown = document.createElement("div");
-    dropdown.classList.add("btn-group");
+function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
+    if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.classList.add("btn-group");
+    }
     const colors = printess.getColors(p.id);
     const button = document.createElement("button");
     if (!forMobile) {
-        button.className = "btn btn-light dropdown-toggle color-picker-button";
-        button.style.display = "flex";
+        button.className = "btn btn-light dropdown-toggle";
         button.dataset.bsToggle = "dropdown";
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
@@ -243,7 +279,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false) {
         color.title = f.name;
         color.onclick = () => {
             if (metaProperty === "color") {
-                printess.setTextStyleProperty(p.id, metaProperty, f.name, textStyleMode);
+                printess.setTextStyleProperty(p.id, metaProperty, f.name);
                 const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
                 if (mobileButtonDiv && p.textStyle) {
                     p.textStyle.color = f.color;
@@ -281,7 +317,6 @@ function getDropDown(printess, p, forMobile) {
         const selectedItem = (_a = p.listMeta.list.filter(itm => itm.key === p.value)[0]) !== null && _a !== void 0 ? _a : null;
         const button = document.createElement("button");
         button.className = "btn btn-light dropdown-toggle";
-        button.style.display = "flex";
         button.dataset.bsToggle = "dropdown";
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
@@ -530,7 +565,118 @@ function getNumberSlider(printess, p, metaProperty = null) {
     rangeLabel.appendChild(range);
     return rangeLabel;
 }
-function getFontDropDown(printess, p) {
+function getFontSizeSelect(printess, p) {
+    var _a, _b;
+    const select = document.createElement("select");
+    select.className = "form-control";
+    select.style.width = "60px";
+    select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.size) !== null && _b !== void 0 ? _b : "12pt";
+    select.onchange = () => {
+        printess.setTextStyleProperty(p.id, "size", select.value);
+    };
+    if (!document.getElementById("font-size-data-list")) {
+        const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt"];
+        for (const s of sizes) {
+            const option = document.createElement("option");
+            option.value = s;
+            option.innerText = s;
+            select.appendChild(option);
+        }
+    }
+    return select;
+}
+function getFontSizeDropDown(printess, p, dropdown) {
+    var _a, _b, _c;
+    if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.classList.add("btn-group");
+        dropdown.classList.add("form-control");
+    }
+    dropdown.style.padding = "0";
+    const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt", "54pt", "60pt", "66pt", "72pt", "78pt"];
+    if (p.textStyle && sizes.length) {
+        const selectedItem = (_a = sizes.filter(itm => { var _a, _b; return (_b = itm === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.size)) !== null && _b !== void 0 ? _b : "??pt"; })[0]) !== null && _a !== void 0 ? _a : null;
+        const button = document.createElement("button");
+        button.className = "btn btn-light dropdown-toggle";
+        button.dataset.bsToggle = "dropdown";
+        button.dataset.bsAutoClose = "true";
+        button.setAttribute("aria-expanded", "false");
+        if (selectedItem) {
+            button.innerText = selectedItem;
+        }
+        else {
+            button.innerText = (_c = (_b = p.textStyle) === null || _b === void 0 ? void 0 : _b.size) !== null && _c !== void 0 ? _c : "??pt";
+        }
+        dropdown.appendChild(button);
+        const ddContent = document.createElement("ul");
+        ddContent.classList.add("dropdown-menu");
+        ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+        ddContent.style.width = "100%";
+        ddContent.style.maxHeight = "400px";
+        ddContent.style.overflow = "hidden auto";
+        for (const entry of sizes) {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = "#";
+            a.classList.add("dropdown-item");
+            a.onclick = () => {
+                button.innerHTML = "";
+                printess.setTextStyleProperty(p.id, "size", entry);
+                button.innerText = entry;
+            };
+            a.innerText = entry;
+            li.appendChild(a);
+            ddContent.appendChild(li);
+        }
+        dropdown.appendChild(ddContent);
+    }
+    return dropdown;
+}
+function getFontDropDown(printess, p, dropdown) {
+    var _a;
+    if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.classList.add("btn-group");
+        dropdown.classList.add("form-control");
+    }
+    dropdown.style.padding = "0";
+    const fonts = printess.getFonts(p.id);
+    if (p.textStyle && fonts.length) {
+        const selectedItem = (_a = fonts.filter(itm => { var _a, _b; return (_b = itm.name === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font)) !== null && _b !== void 0 ? _b : ""; })[0]) !== null && _a !== void 0 ? _a : null;
+        const button = document.createElement("button");
+        button.className = "btn btn-light dropdown-toggle";
+        button.dataset.bsToggle = "dropdown";
+        button.dataset.bsAutoClose = "true";
+        button.setAttribute("aria-expanded", "false");
+        if (selectedItem) {
+            button.appendChild(getDropdownImageContent(selectedItem.thumbUrl));
+        }
+        dropdown.appendChild(button);
+        const ddContent = document.createElement("ul");
+        ddContent.classList.add("dropdown-menu");
+        ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+        ddContent.style.width = "100%";
+        ddContent.style.maxHeight = "400px";
+        ddContent.style.overflow = "hidden auto";
+        for (const entry of fonts) {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = "#";
+            a.classList.add("dropdown-item");
+            a.onclick = () => {
+                button.innerHTML = "";
+                printess.setTextStyleProperty(p.id, "font", entry.name);
+                button.appendChild(getDropdownImageContent(entry.thumbUrl));
+            };
+            a.appendChild(getDropdownImageContent(entry.thumbUrl));
+            li.appendChild(a);
+            ddContent.appendChild(li);
+        }
+        dropdown.appendChild(ddContent);
+    }
+    return dropdown;
+}
+function getFontDropDown2(printess, p) {
     var _a;
     const dropdown = document.createElement("div");
     dropdown.classList.add("btn-group");
@@ -562,7 +708,7 @@ function getFontDropDown(printess, p) {
             a.classList.add("dropdown-item");
             a.onclick = () => {
                 button.innerHTML = "";
-                printess.setTextStyleProperty(p.id, "font", entry.name, textStyleMode);
+                printess.setTextStyleProperty(p.id, "font", entry.name);
                 button.appendChild(getDropdownImageContent(entry.thumbUrl));
             };
             a.appendChild(getDropdownImageContent(entry.thumbUrl));
@@ -571,17 +717,13 @@ function getFontDropDown(printess, p) {
         }
         dropdown.appendChild(ddContent);
     }
-    return addLabel(dropdown, p, "Font");
+    return dropdown;
 }
 function getDropdownImageContent(thumbUrl) {
     const img = document.createElement("img");
     img.src = thumbUrl;
     img.style.height = "24px";
-    const div = document.createElement("div");
-    div.style.width = "100%";
-    div.style.display = "flex";
-    div.appendChild(img);
-    return div;
+    return img;
 }
 function getFontList(printess, p) {
     var _a, _b;
@@ -596,7 +738,7 @@ function getFontList(printess, p) {
     select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font) !== null && _b !== void 0 ? _b : "";
     select.style.width = "50px";
     select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "font", select.value, textStyleMode);
+        printess.setTextStyleProperty(p.id, "font", select.value);
     };
     return select;
 }
@@ -613,7 +755,7 @@ function getFontColorPicker(printess, p) {
     }
     select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.color) !== null && _b !== void 0 ? _b : "#ff00ff";
     select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "color", select.value, textStyleMode);
+        printess.setTextStyleProperty(p.id, "color", select.value);
     };
     return select;
 }
@@ -629,14 +771,13 @@ function getHAlignList(printess, p) {
     }
     select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.hAlign) !== null && _b !== void 0 ? _b : "left";
     select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "hAlign", select.value, textStyleMode);
+        printess.setTextStyleProperty(p.id, "hAlign", select.value);
     };
     return select;
 }
 function getVAlignControl(printess, p) {
     const group = document.createElement("div");
     group.className = "btn-group";
-    group.style.width = "100%";
     for (const v of ["top", "center", "bottom"]) {
         let icon = "align-top";
         switch (v) {
@@ -656,8 +797,7 @@ function getVAlignControl(printess, p) {
 function getHAlignControl(printess, p) {
     const group = document.createElement("div");
     group.className = "btn-group";
-    group.style.width = "100%";
-    for (const v of ["left", "right", "center", "justifyLeft", "justifyCenter", "justifyRight", "justifyJustify"]) {
+    for (const v of ["left", "right", "center", "justifyLeft"]) {
         let icon = "text-align-left";
         switch (v) {
             case "right":
@@ -708,7 +848,7 @@ function getRadioButton(printess, p, id, name, value) {
         radio.checked = true;
     }
     radio.onclick = () => {
-        printess.setTextStyleProperty(p.id, name, value, textStyleMode);
+        printess.setTextStyleProperty(p.id, name, value);
     };
     return radio;
 }
@@ -724,7 +864,7 @@ function getVAlignList(printess, p) {
     }
     select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.vAlign) !== null && _b !== void 0 ? _b : "top";
     select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "vAlign", select.value, textStyleMode);
+        printess.setTextStyleProperty(p.id, "vAlign", select.value);
     };
     return select;
 }
@@ -734,9 +874,21 @@ function getFontSizeBox(printess, p) {
     cp.type = "text";
     cp.className = "form-control";
     cp.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.size) !== null && _b !== void 0 ? _b : "12pt";
+    cp.setAttribute("list", "font-size-data-list");
     cp.onchange = () => {
-        printess.setTextStyleProperty(p.id, "size", cp.value, textStyleMode);
+        printess.setTextStyleProperty(p.id, "size", cp.value);
     };
+    if (!document.getElementById("font-size-data-list")) {
+        const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt"];
+        const dl = document.createElement("datalist");
+        dl.id = "font-size-data-list";
+        for (const s of sizes) {
+            const option = document.createElement("option");
+            option.value = s;
+            dl.appendChild(option);
+        }
+        document.body.appendChild(dl);
+    }
     return cp;
 }
 function renderPageNavigation(printess, spreads, _properties) {
@@ -761,7 +913,7 @@ function renderPageNavigation(printess, spreads, _properties) {
         }
     }
 }
-function renderGroupSnippets(printess, groupSnippets) {
+function renderGroupSnippets(printess, groupSnippets, forMobile) {
     const div = document.createElement("div");
     div.className = "group-snippets";
     if (groupSnippets.length > 0) {
@@ -781,13 +933,24 @@ function renderGroupSnippets(printess, groupSnippets) {
                 thumb.style.height = "100%";
                 thumb.style.margin = "5px";
                 thumb.onclick = () => {
+                    if (forMobile) {
+                        div.innerHTML === "";
+                    }
                     printess.insertGroupSnippet(snippet.snippetUrl);
                 };
                 div.appendChild(thumb);
             }
         }
     }
-    return div;
+    if (forMobile) {
+        const mobile = document.createElement("div");
+        mobile.className = "mobile-group-snippets-container";
+        mobile.appendChild(div);
+        return mobile;
+    }
+    else {
+        return div;
+    }
 }
 function renderLayoutSnippets(printess, layoutSnippets) {
     const container = document.createElement("div");
@@ -820,15 +983,64 @@ function renderLayoutSnippets(printess, layoutSnippets) {
     }
     return container;
 }
-function getMobileUi(printess, properties) {
-    const mobileUi = document.createElement("div");
-    mobileUi.className = "mobile-ui";
-    mobileUi.appendChild(getMobileButtons(printess, properties));
-    const controlHost = document.createElement("div");
-    controlHost.className = "mobile-control-host";
-    controlHost.id = "mobile-control-host";
-    mobileUi.appendChild(controlHost);
-    return mobileUi;
+function renderMobileUi(printess, properties, state, groupSnippets) {
+    let mobileUi = document.querySelector(".mobile-ui");
+    if (!mobileUi) {
+        mobileUi = document.createElement("div");
+        mobileUi.className = "mobile-ui";
+        document.body.appendChild(mobileUi);
+    }
+    else {
+        mobileUi.innerHTML = "";
+    }
+    if (state === "add") {
+        const snippets = renderGroupSnippets(printess, groupSnippets, true);
+        mobileUi.appendChild(snippets);
+    }
+    else {
+        mobileUi.appendChild(getMobileButtons(printess, properties));
+        const controlHost = document.createElement("div");
+        controlHost.className = "mobile-control-host";
+        controlHost.id = "mobile-control-host";
+        mobileUi.appendChild(controlHost);
+    }
+    if (groupSnippets.length > 0 && state !== "add") {
+        mobileUi.appendChild(getMobilePlusButton(printess, properties, groupSnippets));
+    }
+    if (state !== "document") {
+        mobileUi.appendChild(getMobileBackButton(printess, properties, state, groupSnippets));
+    }
+}
+function getMobilePlusButton(printess, properties, groupSnippets) {
+    const button = document.createElement("div");
+    button.className = "mobile-property-plus-button";
+    const circle = document.createElement("div");
+    circle.className = "mobile-property-circle";
+    circle.onclick = () => {
+        renderMobileUi(printess, properties, "add", groupSnippets);
+    };
+    const icon = printess.getIcon("plus");
+    circle.appendChild(icon);
+    button.appendChild(circle);
+    return button;
+}
+function getMobileBackButton(printess, properties, state, groupSnippets) {
+    const button = document.createElement("div");
+    button.className = "mobile-property-back-button";
+    const circle = document.createElement("div");
+    circle.className = "mobile-property-circle";
+    circle.onclick = () => {
+        if (state === "frames") {
+            printess.clearSelection();
+        }
+        else if (state === "add") {
+            renderMobileUi(printess, properties, "document", groupSnippets);
+        }
+    };
+    const icon = printess.getIcon("arrow-left");
+    circle.appendChild(icon);
+    button.appendChild(circle);
+    return button;
 }
 function renderMobileToolbar(printess) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -863,6 +1075,17 @@ function renderMobileToolbar(printess) {
         page.innerHTML = "Page<br>" + info.current + " of " + info.max;
         toolbar.appendChild(page);
     });
+}
+function getMobileSelectedProperty(properties) {
+    const selectedButton = document.querySelector(".mobile-property-button.selected");
+    if (selectedButton) {
+        const id = selectedButton.id.split(":")[0];
+        const property = properties.filter(p => p.id === id)[0];
+        if (property) {
+            return property;
+        }
+    }
+    return null;
 }
 function getMobileButtons(printess, properties) {
     var _a, _b, _c;
@@ -1068,4 +1291,5 @@ function getOverlay(printess, properties) {
     }
     return hdiv;
 }
+export {};
 //# sourceMappingURL=getting-started-external.js.map

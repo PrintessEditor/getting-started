@@ -208,8 +208,9 @@ export interface iMobileUiState {
   state: typeof mobileUiStateNames[number],
   externalProperty?: iExternalProperty,
   metaProperty?: iExternalMetaPropertyKind, // can be null
-  callback?: ((e: MouseEvent | TouchEvent | null) => void)
 }
+
+export type MobileUiState  = "document" | "frames" | "add";
 
 export interface iButtonCircle {
   hasSvgCircle: boolean,
@@ -242,6 +243,10 @@ export declare function attachPrintess(p: printessAttachParameters): Promise<iPr
 */
 export declare const api: iPrintessApi;
 
+/**
+ * **iPrintessApi** is returned by the ```attachPrintess()``` call and provides you access to the Printess editor. 
+ * You can retrieve informations, set properties, add snippets and much more.
+ */
 export interface iPrintessApi {
   getJson(): string;
   setJson(jsonString: string): Promise<void>;
@@ -261,6 +266,18 @@ export interface iPrintessApi {
   previousPage(): Promise<void>; 
   pageInfo(): Promise<{current: number, max: number, isFirst: boolean, isLast: boolean}> 
 
+  /**
+   * Returns information about all spreads of the displayed document as an Array of
+   *  iExternalSpreadInfo {
+   *    spreadId: string;
+   *    index: number;
+   *    name: string;
+   *    width: number;
+   *    height: number;
+   *    thumbUrl: string | null;
+   *    pages: number;
+   *  }
+   */
   getAllSpreads(): Promise<Array<iExternalSpreadInfo>>;
   getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
   getAllPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
