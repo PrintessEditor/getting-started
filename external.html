@@ -250,7 +250,7 @@
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
         getOverlayCallback: getOverlayCallback,
-        forceMultilineFormEditing: false,
+        forceMultilineFormEditing: true,
         splitMultilineToParagraphs: true,
         enterImageCropingOnSelect: false,
         singleSelectionOnly: false,
@@ -269,7 +269,6 @@
       printess.redo();
       selectionChangeCallback([]);
     };
-
 
     document.getElementById("btnSelect").onclick = () => {
       const id = prompt("Paste propertyId ...");

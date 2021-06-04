@@ -713,6 +713,9 @@ input[type='range'] {
   margin: -10px;
   padding-left: 10px;
 }
+.desktop-text-area {
+  width: 100%;
+}
 
 .textButtonContainer {
   display: flex; 

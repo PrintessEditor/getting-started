@@ -28,7 +28,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
         case "single-line-text":
             return getSingleLineTextBox(printess, p);
         case "text-area":
-            return getTextArea(printess, p);
+            return getTextArea(printess, p, forMobile);
         case "multi-line-text":
             if (forMobile) {
                 switch (metaProperty) {
@@ -126,35 +126,23 @@ function getTextStyleControl(printess, p) {
     group2.className = "input-group mb-3";
     const pre2 = document.createElement("div");
     pre2.className = "input-group-prepend";
-    pre2.appendChild(getHAlignControl(printess, p));
-    group2.appendChild(pre2);
+    group2.appendChild(getHAlignControl(printess, p));
+    const spacer = document.createElement("div");
+    spacer.style.width = "10px";
+    group2.appendChild(spacer);
     group2.appendChild(getVAlignControl(printess, p));
     textPropertiesDiv.appendChild(group2);
     return textPropertiesDiv;
 }
 function getMultiLineTextBox(printess, p, forMobile) {
-    const inp = document.createElement("textarea");
-    inp.value = p.value.toString();
-    inp.onkeyup = () => {
-        printess.setProperty(p.id, inp.value);
-    };
-    inp.rows = 6;
+    const ta = getTextArea(printess, p, forMobile);
     if (forMobile) {
-        inp.className = "mobile-text-area";
-        return inp;
+        return ta;
     }
     else {
         const container = document.createElement("div");
-        const textPropertiesDiv = document.createElement("div");
-        textPropertiesDiv.style.marginBottom = "2px";
-        textPropertiesDiv.classList.add("text-properties");
-        textPropertiesDiv.appendChild(getFontList(printess, p));
-        textPropertiesDiv.appendChild(getFontSizeSelect(printess, p));
-        textPropertiesDiv.appendChild(getHAlignList(printess, p));
-        textPropertiesDiv.appendChild(getVAlignList(printess, p));
-        textPropertiesDiv.appendChild(getFontColorPicker(printess, p));
-        container.appendChild(textPropertiesDiv);
-        container.appendChild(inp);
+        container.appendChild(getTextStyleControl(printess, p));
+        container.appendChild(ta);
         return container;
     }
 }
@@ -182,7 +170,7 @@ function getTitle(p) {
     container.appendChild(hr);
     return container;
 }
-function getTextArea(printess, p) {
+function getTextArea(printess, p, forMobile) {
     const inp = document.createElement("textarea");
     inp.value = p.value.toString();
     inp.onkeyup = () => {
@@ -194,7 +182,14 @@ function getTextArea(printess, p) {
         }
     };
     inp.rows = 6;
-    return addLabel(inp, p);
+    if (forMobile) {
+        inp.className = "mobile-text-area";
+        return inp;
+    }
+    else {
+        inp.className = "desktop-text-area";
+        return addLabel(inp, p);
+    }
 }
 function addLabel(input, p, label) {
     input.classList.add("form-control");
@@ -722,7 +717,7 @@ function getFontDropDown2(printess, p) {
 function getDropdownImageContent(thumbUrl) {
     const img = document.createElement("img");
     img.src = thumbUrl;
-    img.style.height = "24px";
+    img.style.height = "20px";
     return img;
 }
 function getFontList(printess, p) {
@@ -782,7 +777,7 @@ function getVAlignControl(printess, p) {
         let icon = "align-top";
         switch (v) {
             case "center":
-                icon = "align-center";
+                icon = "align-middle";
                 break;
             case "bottom":
                 icon = "align-bottom";
@@ -1291,5 +1286,4 @@ function getOverlay(printess, properties) {
     }
     return hdiv;
 }
-export {};
 //# sourceMappingURL=getting-started-external.js.map

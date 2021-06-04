@@ -39,7 +39,7 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
       return getSingleLineTextBox(printess, p);
 
     case "text-area":
-      return getTextArea(printess, p);
+      return getTextArea(printess, p, forMobile);
 
     case "multi-line-text":
       if (forMobile) {
@@ -170,11 +170,16 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
 
   const group2 = document.createElement("div");
   group2.className = "input-group mb-3";
+
   const pre2 = document.createElement("div");
   pre2.className = "input-group-prepend";
- 
-  pre2.appendChild(getHAlignControl(printess, p));
-  group2.appendChild(pre2);
+
+  group2.appendChild(getHAlignControl(printess, p));
+
+  const spacer = document.createElement("div");
+  spacer.style.width = "10px";
+  group2.appendChild(spacer);
+
   group2.appendChild(getVAlignControl(printess, p));
   textPropertiesDiv.appendChild(group2);
 
@@ -187,28 +192,27 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
 
 function getMultiLineTextBox(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
 
-  const inp = document.createElement("textarea");
-  inp.value = p.value.toString();
-  inp.onkeyup = () => {
-    printess.setProperty(p.id, inp.value);
-    // alert(inp.value);
-  }
-  inp.rows = 6;
+  const ta = getTextArea(printess, p, forMobile);
   if (forMobile) {
-    inp.className = "mobile-text-area";
-    return inp;
+    return ta;
   } else {
+    
     const container = document.createElement("div");
-    const textPropertiesDiv = document.createElement("div");
-    textPropertiesDiv.style.marginBottom = "2px";
-    textPropertiesDiv.classList.add("text-properties");
-    textPropertiesDiv.appendChild(getFontList(printess, p));
-    textPropertiesDiv.appendChild(getFontSizeSelect(printess, p));
-    textPropertiesDiv.appendChild(getHAlignList(printess, p));
-    textPropertiesDiv.appendChild(getVAlignList(printess, p));
-    textPropertiesDiv.appendChild(getFontColorPicker(printess, p));
-    container.appendChild(textPropertiesDiv);
-    container.appendChild(inp);
+    container.appendChild(getTextStyleControl(printess, p));
+
+    container.appendChild(ta);
+
+    /*  const textPropertiesDiv = document.createElement("div");
+      textPropertiesDiv.style.marginBottom = "2px";
+      textPropertiesDiv.classList.add("text-properties");
+      textPropertiesDiv.appendChild(getFontList(printess, p));
+      textPropertiesDiv.appendChild(getFontSizeSelect(printess, p));
+      textPropertiesDiv.appendChild(getHAlignList(printess, p));
+      textPropertiesDiv.appendChild(getVAlignList(printess, p));
+      textPropertiesDiv.appendChild(getFontColorPicker(printess, p));
+      container.appendChild(textPropertiesDiv);*/
+
+   // container.appendChild(inp);
     return container;
   }
 }
@@ -243,7 +247,7 @@ function getTitle(p: iExternalProperty): HTMLElement {
 }
 
 
-function getTextArea(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
+function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
 
   const inp = document.createElement("textarea");
   inp.value = p.value.toString();
@@ -257,7 +261,15 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty): HTMLElement 
   }
   inp.rows = 6;
 
-  return addLabel(inp, p);
+  if (forMobile) {
+    inp.className = "mobile-text-area";
+    return inp;
+  } else {
+    inp.className = "desktop-text-area";
+    return addLabel(inp, p);
+  }
+
+
 }
 
 function addLabel(input: HTMLElement, p: iExternalProperty, label?: string): HTMLElement {
@@ -409,7 +421,7 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
   if (!forMobile) {
 
     button.className = "btn btn-light dropdown-toggle"; // color-picker-button";
-  //  button.style.display = "flex";
+    //  button.style.display = "flex";
     button.dataset.bsToggle = "dropdown";
     button.dataset.bsAutoClose = "true"
     button.setAttribute("aria-expanded", "false");
@@ -479,7 +491,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
     const selectedItem = p.listMeta.list.filter(itm => itm.key === p.value)[0] ?? null;
     const button = document.createElement("button");
     button.className = "btn btn-light dropdown-toggle";
-   // button.style.display = "flex";
+    // button.style.display = "flex";
     button.dataset.bsToggle = "dropdown";
     button.dataset.bsAutoClose = "true"
     button.setAttribute("aria-expanded", "false");
@@ -825,7 +837,7 @@ function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, dropd
     const selectedItem = sizes.filter(itm => itm === p.textStyle?.size ?? "??pt")[0] ?? null;
     const button = document.createElement("button");
     button.className = "btn btn-light dropdown-toggle";
-  //  button.style.display = "flex";
+    //  button.style.display = "flex";
     button.dataset.bsToggle = "dropdown";
     button.dataset.bsAutoClose = "true"
     button.setAttribute("aria-expanded", "false");
@@ -877,13 +889,13 @@ function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, dropdown:
     const selectedItem = fonts.filter(itm => itm.name === p.textStyle?.font ?? "")[0] ?? null;
     const button = document.createElement("button");
     button.className = "btn btn-light dropdown-toggle";
-   // button.style.display = "flex";
+    // button.style.display = "flex";
     button.dataset.bsToggle = "dropdown";
     button.dataset.bsAutoClose = "true"
     button.setAttribute("aria-expanded", "false");
     if (selectedItem) {
       button.appendChild(getDropdownImageContent(selectedItem.thumbUrl));
-    } 
+    }
     dropdown.appendChild(button);
     const ddContent = document.createElement("ul");
     ddContent.classList.add("dropdown-menu");
@@ -963,11 +975,11 @@ function getFontDropDown2(printess: iPrintessApi, p: iExternalProperty): HTMLEle
 function getDropdownImageContent(thumbUrl: string): HTMLDivElement {
   const img = document.createElement("img");
   img.src = thumbUrl;
-  img.style.height = "24px";
- /* const div = document.createElement("div");
-  div.style.width = "100%";
-  div.style.display = "flex";
-  div.appendChild(img);*/
+  img.style.height = "20px";
+  /* const div = document.createElement("div");
+   div.style.width = "100%";
+   div.style.display = "flex";
+   div.appendChild(img);*/
   return img;
 }
 
@@ -1037,7 +1049,7 @@ function getVAlignControl(printess: iPrintessApi, p: iExternalProperty) {
   for (const v of ["top", "center", "bottom"]) {
     let icon: iconName = "align-top";
     switch (v) {
-      case "center": icon = "align-center"; break;
+      case "center": icon = "align-middle"; break;
       case "bottom": icon = "align-bottom"; break;
     }
 
