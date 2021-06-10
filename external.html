@@ -65,6 +65,8 @@
       <option value="Puzzle">Puzzle</option>
       <option value="T-Shirt">T-shirt 2</option>
       <option value="Coffee Mug">Coffee Mug</option>
+      <option value="BuyerText-Eddi-P-or-Sel">BuyerText-Eddi-P-or-Sel</option>
+      <option value="BuyerText-No-Eddi">BuyerText-No-Eddi-Split</option>
     </select>
     <div></div>
     <button id="btnUndo">Undo</button>
@@ -223,10 +225,7 @@
         resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
 
         div: document.getElementById("printessin"),
-        /* autoScale: {
-           maxWidth: 420,
-           maxHeight: 800,
-         },*/
+       
 
         domain: "api.printess.com",
         token: token, // your printess shop-token
@@ -242,21 +241,21 @@
              templateUserId: undefined // only needed when loaded from different account 
              // add spread-number (offset) for placing backsides, etc. 
            }
-         ],*/
+        ],*/
+
         hideControls: true,
         allowZoomAndPan: true,
         zoomDuration: 0.5, // in seconds 
+         /* autoScale: {
+           maxWidth: 420,
+           maxHeight: 800,
+         },*/
+
         loadingDoneCallback: loadingDoneCallback,
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
         getOverlayCallback: getOverlayCallback,
-        forceMultilineFormEditing: true,
-        splitMultilineToParagraphs: true,
-        enterImageCropingOnSelect: false,
-        singleSelectionOnly: false,
-        applyImageEffectsInCropMode: true,
-        scaledImageMinimumDpi: 180
-
+ 
       });
     });
 

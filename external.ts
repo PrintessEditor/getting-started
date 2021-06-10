@@ -47,13 +47,13 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
           case "text-style-color":
             return getColorDropDown(printess, p, "color");
           case "text-style-font":
-            return getFontSizeSelect(printess, p)
+            return getFontDropDown(printess, p, true)
           case "text-style-hAlign":
-            return getHAlignControl(printess, p);
+            return getHAlignControl(printess, p, true);
           case "text-style-size":
-            return getFontSizeSelect(printess, p);
+            return getFontSizeDropDown(printess, p, true);
           case "text-style-vAlign":
-            return getVAlignControl(printess, p);
+            return getVAlignControl(printess, p, true);
           default:
             return getMultiLineTextBox(printess, p, forMobile)
         }
@@ -157,14 +157,26 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
   const textPropertiesDiv = document.createElement("div");
   textPropertiesDiv.classList.add("mb-3");
 
+  if (!p.textStyle) {
+    return textPropertiesDiv;
+  }
+
   const group1 = document.createElement("div");
   group1.className = "input-group mb-3";
   const pre1 = document.createElement("div");
   pre1.className = "input-group-prepend";
-  getColorDropDown(printess, p, "color", false, pre1);
-  getFontSizeDropDown(printess, p, pre1);
+  if (p.textStyle.allows.indexOf("color") >= 0) {
+    getColorDropDown(printess, p, "color", false, pre1);
+  }
+  if (p.textStyle.allows.indexOf("size") >= 0) {
+    getFontSizeDropDown(printess, p, false, pre1);
+  }
+
   group1.appendChild(pre1);
-  getFontDropDown(printess, p, group1);
+
+  if (p.textStyle.allows.indexOf("font") >= 0) {
+    getFontDropDown(printess, p, false, group1);
+  }
   //  addLabel(dropdown, p, "Font");
   textPropertiesDiv.appendChild(group1);
 
@@ -174,19 +186,18 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
   const pre2 = document.createElement("div");
   pre2.className = "input-group-prepend";
 
-  group2.appendChild(getHAlignControl(printess, p));
+  if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
+    group2.appendChild(getHAlignControl(printess, p, false));
+  }
 
   const spacer = document.createElement("div");
   spacer.style.width = "10px";
   group2.appendChild(spacer);
-
-  group2.appendChild(getVAlignControl(printess, p));
+  if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
+    group2.appendChild(getVAlignControl(printess, p, false));
+  }
   textPropertiesDiv.appendChild(group2);
 
-
-  // textPropertiesDiv.appendChild(getHAlignControl(printess, p));
-  // textPropertiesDiv.appendChild(getVAlignControl(printess, p));
-  //  textPropertiesDiv.appendChild(getColorDropDown(printess, p, "color"));
   return textPropertiesDiv;
 }
 
@@ -196,7 +207,7 @@ function getMultiLineTextBox(printess: iPrintessApi, p: iExternalProperty, forMo
   if (forMobile) {
     return ta;
   } else {
-    
+
     const container = document.createElement("div");
     container.appendChild(getTextStyleControl(printess, p));
 
@@ -212,7 +223,7 @@ function getMultiLineTextBox(printess: iPrintessApi, p: iExternalProperty, forMo
       textPropertiesDiv.appendChild(getFontColorPicker(printess, p));
       container.appendChild(textPropertiesDiv);*/
 
-   // container.appendChild(inp);
+    // container.appendChild(inp);
     return container;
   }
 }
@@ -480,7 +491,7 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
   }
 }
 
-function getDropDown(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
+function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean): HTMLElement {
 
   const dropdown = document.createElement("div");
   dropdown.classList.add("btn-group");
@@ -500,7 +511,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
     }
     dropdown.appendChild(button);
 
-    if (forMobile) {
+    if (asList) {
       ddContent.classList.add("list-group");
     } else {
       ddContent.classList.add("dropdown-menu");
@@ -509,7 +520,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
     }
     for (const entry of p.listMeta.list) {
       const li = document.createElement("li");
-      if (forMobile) {
+      if (asList) {
         li.classList.add("list-group-item");
         if (entry === selectedItem) {
           li.classList.add("active");
@@ -523,7 +534,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
         if (p.listMeta) {
           button.innerHTML = "";
           button.appendChild(getDropdownItemContent(p.listMeta, entry));
-          if (forMobile) {
+          if (asList) {
             ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
             li.classList.add("active")
           }
@@ -535,7 +546,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
     }
     dropdown.appendChild(ddContent);
   }
-  if (forMobile) {
+  if (asList) {
     return ddContent;
   } else {
     return dropdown
@@ -780,6 +791,7 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
   range.step = ui.meta.step.toString();
   range.value = ui.value.toString();
   range.oninput = () => {
+    // will also update model properly
     printess.setNumberUiProperty(p, metaProperty, parseFloat(range.value));
     // update mobile circle if present
     const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
@@ -822,7 +834,7 @@ function getFontSizeSelect(printess: iPrintessApi, p: iExternalProperty) {
 
 }
 
-function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, dropdown: HTMLDivElement): HTMLElement {
+function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement): HTMLElement {
 
   if (!dropdown) {
     dropdown = document.createElement("div");
@@ -832,7 +844,7 @@ function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, dropd
   dropdown.style.padding = "0";
 
   const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt", "54pt", "60pt", "66pt", "72pt", "78pt"];
-
+  const ddContent = document.createElement("ul");
   if (p.textStyle && sizes.length) {
     const selectedItem = sizes.filter(itm => itm === p.textStyle?.size ?? "??pt")[0] ?? null;
     const button = document.createElement("button");
@@ -847,34 +859,62 @@ function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, dropd
       button.innerText = p.textStyle?.size ?? "??pt";
     }
     dropdown.appendChild(button);
-    const ddContent = document.createElement("ul");
-    ddContent.classList.add("dropdown-menu");
-    ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-    ddContent.style.width = "100%";
-    ddContent.style.maxHeight = "400px";
+
+    if (asList) {
+      ddContent.classList.add("list-group");
+    } else {
+      ddContent.classList.add("dropdown-menu");
+      ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+      ddContent.style.width = "100%";
+      ddContent.style.maxHeight = "400px";
+    }
+
     ddContent.style.overflow = "hidden auto";
 
     for (const entry of sizes) {
       const li = document.createElement("li");
-      const a = document.createElement("a");
-      a.href = "#";
-      a.classList.add("dropdown-item");
-      a.onclick = () => {
-        button.innerHTML = "";
-        printess.setTextStyleProperty(p.id, "size", entry)
-        button.innerText = entry;
+      if (asList) {
+        li.classList.add("list-group-item");
+        if (entry === selectedItem) {
+          li.classList.add("active");
+        }
       }
-      a.innerText = entry;
-      li.appendChild(a);
+      //const a = document.createElement("a");
+      // a.href = "#";
+      li.classList.add("dropdown-item");
+      li.onclick = () => {
+        button.innerHTML = "";
+        printess.setTextStyleProperty(p.id, "size", entry);
+        if (p.textStyle) p.textStyle.size = entry;
+        button.innerText = entry;
+        if (asList) {
+          ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+          li.classList.add("active")
+          // update button 
+          const mobileButtonDiv = document.getElementById(p.id + ":text-style-size");
+          if (mobileButtonDiv) {
+            drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+          }
+        }
+
+      }
+
+      li.innerText = entry;
+      //   li.appendChild(a);
       ddContent.appendChild(li)
     }
     dropdown.appendChild(ddContent);
   }
-  return dropdown;
+  if (asList) {
+    return ddContent;
+  } else {
+    return dropdown
+  }
+
 
 }
 
-function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, dropdown: HTMLDivElement): HTMLElement {
+function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement): HTMLElement {
 
   if (!dropdown) {
     dropdown = document.createElement("div");
@@ -884,6 +924,7 @@ function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, dropdown:
   dropdown.style.padding = "0";
 
   const fonts = printess.getFonts(p.id);
+  const ddContent = document.createElement("ul");
 
   if (p.textStyle && fonts.length) {
     const selectedItem = fonts.filter(itm => itm.name === p.textStyle?.font ?? "")[0] ?? null;
@@ -897,78 +938,63 @@ function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, dropdown:
       button.appendChild(getDropdownImageContent(selectedItem.thumbUrl));
     }
     dropdown.appendChild(button);
-    const ddContent = document.createElement("ul");
-    ddContent.classList.add("dropdown-menu");
-    ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-    ddContent.style.width = "100%";
-    ddContent.style.maxHeight = "400px";
+
+    if (asList) {
+      ddContent.classList.add("list-group");
+    } else {
+      ddContent.classList.add("dropdown-menu");
+      ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+      ddContent.style.width = "100%";
+      ddContent.style.maxHeight = "400px";
+    }
+
+
     ddContent.style.overflow = "hidden auto";
 
     for (const entry of fonts) {
       const li = document.createElement("li");
-      const a = document.createElement("a");
-      a.href = "#";
-      a.classList.add("dropdown-item");
-      a.onclick = () => {
-        button.innerHTML = "";
-        printess.setTextStyleProperty(p.id, "font", entry.name)
-        button.appendChild(getDropdownImageContent(entry.thumbUrl));
+
+      li.classList.add("dropdown-item");
+
+      if (asList) {
+        li.classList.add("list-group-item");
+        if (entry === selectedItem) {
+          li.classList.add("active");
+        }
       }
-      a.appendChild(getDropdownImageContent(entry.thumbUrl));
-      li.appendChild(a);
+
+      li.onclick = () => {
+        printess.setTextStyleProperty(p.id, "font", entry.name);
+        if (p.textStyle) {
+          p.textStyle.font = entry.name;
+        }
+        if (asList) {
+          ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+          li.classList.add("active");
+          // update button 
+          const mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
+          if (mobileButtonDiv) {
+            drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+          }
+        } else {
+          button.innerHTML = "";
+          button.appendChild(getDropdownImageContent(entry.thumbUrl));
+        }
+
+
+      }
+      li.appendChild(getDropdownImageContent(entry.thumbUrl));
+
       ddContent.appendChild(li)
     }
     dropdown.appendChild(ddContent);
   }
-  return dropdown;
-
-}
-
-function getFontDropDown2(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
-
-  const dropdown = document.createElement("div");
-  dropdown.classList.add("btn-group");
-  dropdown.classList.add("form-control");
-  dropdown.style.padding = "0";
-
-  const fonts = printess.getFonts(p.id);
-
-  if (p.textStyle && fonts.length) {
-    const selectedItem = fonts.filter(itm => itm.name === p.textStyle?.font ?? "")[0] ?? null;
-    const button = document.createElement("button");
-    button.className = "btn btn-light dropdown-toggle";
-    button.style.display = "flex";
-    button.dataset.bsToggle = "dropdown";
-    button.dataset.bsAutoClose = "true"
-    button.setAttribute("aria-expanded", "false");
-    if (selectedItem) {
-      button.appendChild(getDropdownImageContent(selectedItem.thumbUrl));
-    }
-    dropdown.appendChild(button);
-    const ddContent = document.createElement("ul");
-    ddContent.classList.add("dropdown-menu");
-    ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-    ddContent.style.width = "100%";
-    ddContent.style.maxHeight = "400px";
-    ddContent.style.overflow = "hidden auto";
-
-    for (const entry of fonts) {
-      const li = document.createElement("li");
-      const a = document.createElement("a");
-      a.href = "#";
-      a.classList.add("dropdown-item");
-      a.onclick = () => {
-        button.innerHTML = "";
-        printess.setTextStyleProperty(p.id, "font", entry.name)
-        button.appendChild(getDropdownImageContent(entry.thumbUrl));
-      }
-      a.appendChild(getDropdownImageContent(entry.thumbUrl));
-      li.appendChild(a);
-      ddContent.appendChild(li)
-    }
-    dropdown.appendChild(ddContent);
+  if (asList) {
+    return ddContent;
+  } else {
+    return dropdown
   }
-  return dropdown;
+
 
 }
 
@@ -984,67 +1010,13 @@ function getDropdownImageContent(thumbUrl: string): HTMLDivElement {
 }
 
 
-function getFontList(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
-  const select = document.createElement("select");
-  const fonts = printess.getFonts(p.id);
-  for (const f of fonts) {
-    // f.thumbUrl contains a preview image 
-    const option = document.createElement("option");
-    option.value = f.name;
-    option.innerText = f.name;
-    select.appendChild(option);
-  }
-  select.value = p.textStyle?.font ?? "";
-  select.style.width = "50px";
-  select.onchange = () => {
-    // alert(p.id + "has changed to " + select.value);
-    printess.setTextStyleProperty(p.id, "font", select.value)
-  }
-  return select;
-}
-
-
-function getFontColorPicker(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
-  const select = document.createElement("select");
-  const colors = printess.getColors(p.id);
-  for (const f of colors) {
-    const option = document.createElement("option");
-    option.value = f.name;
-    option.innerText = f.name;
-    option.style.backgroundColor = f.color;
-    select.appendChild(option);
-  }
-  select.value = p.textStyle?.color ?? "#ff00ff";
-  select.onchange = () => {
-    // alert(p.id + "has changed to " + select.value);
-    printess.setTextStyleProperty(p.id, "color", select.value)
-  }
-  return select;
-}
-
-function getHAlignList(printess: iPrintessApi, p: iExternalProperty) {
-  const select = document.createElement("select");
-  select.className = "form-control";
-  for (const v of ["left", "right", "center", "justifyLeft", "justifyCenter", "justifyRight", "justifyJustify"]) {
-    // f.thumbUrl contains a preview image 
-    const option = document.createElement("option");
-    option.value = v;
-    option.innerText = v;
-    select.appendChild(option);
-  }
-  select.value = p.textStyle?.hAlign ?? "left";
-  select.onchange = () => {
-    // alert(p.id + "has changed to " + select.value);x 
-    printess.setTextStyleProperty(p.id, "hAlign", select.value)
-  }
-  return select;
-}
-
-function getVAlignControl(printess: iPrintessApi, p: iExternalProperty) {
+function getVAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean) {
 
   const group = document.createElement("div");
   group.className = "btn-group";
-
+  if (forMobile) {
+    group.classList.add("form-control");
+  }
 
   for (const v of ["top", "center", "bottom"]) {
     let icon: iconName = "align-top";
@@ -1053,7 +1025,7 @@ function getVAlignControl(printess: iPrintessApi, p: iExternalProperty) {
       case "bottom": icon = "align-bottom"; break;
     }
 
-    const id = "btnVAlignRadio" + v;
+    const id = p.id +  "btnVAlignRadio" + v;
 
     group.appendChild(getRadioButton(printess, p, id, "vAlign", v));
     group.appendChild(getRadioLabel(printess, p, id, "vAlign", icon));
@@ -1063,11 +1035,13 @@ function getVAlignControl(printess: iPrintessApi, p: iExternalProperty) {
   return group;
 }
 
-function getHAlignControl(printess: iPrintessApi, p: iExternalProperty) {
+function getHAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean) {
 
   const group = document.createElement("div");
   group.className = "btn-group";
-
+  if (forMobile) {
+    group.classList.add("form-control");
+  }
   for (const v of ["left", "right", "center", "justifyLeft"]) { // you can missing options if needed:  "justifyCenter", "justifyRight", "justifyJustify" 
     let icon: iconName = "text-align-left";
     switch (v) {
@@ -1082,7 +1056,7 @@ function getHAlignControl(printess: iPrintessApi, p: iExternalProperty) {
     //  <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
     //  <label class="btn btn-outline-primary" for="btnradio1">Radio 1</label>
 
-    const id = "btnHAlignRadio" + v;
+    const id =  p.id +  "btnHAlignRadio" + v;
 
     group.appendChild(getRadioButton(printess, p, id, "hAlign", v));
     group.appendChild(getRadioLabel(printess, p, id, "hAlign", icon));
@@ -1110,38 +1084,30 @@ function getRadioButton(printess: iPrintessApi, p: iExternalProperty, id: string
   radio.type = "radio";
   radio.className = "btn-check";
   radio.dataset.value = value;
-  radio.name = name;
+  radio.name = name + "_" + p.id;
   radio.id = id;
   if (p.textStyle && p.textStyle[name] === value) {
     radio.checked = true;
   }
   radio.onclick = () => {
     printess.setTextStyleProperty(p.id, name, value);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (p.textStyle) p.textStyle[name] = value;
+
+    // update mobile button if exists:
+    const mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-" + name);
+    if (mobileButtonDiv) {
+      drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+    }
+
   }
   return radio;
 }
 
-function getVAlignList(printess: iPrintessApi, p: iExternalProperty) {
-  const select = document.createElement("select");
-  select.className = "form-control";
-
-  for (const v of ["top", "center", "bottom"]) {
-    // f.thumbUrl contains a preview image 
-    const option = document.createElement("option");
-    option.value = v;
-    option.innerText = v;
-    select.appendChild(option);
-  }
-  select.value = p.textStyle?.vAlign ?? "top";
-  select.onchange = () => {
-    // alert(p.id + "has changed to " + select.value);x 
-    printess.setTextStyleProperty(p.id, "vAlign", select.value)
-  }
-  return select;
-}
 
 function getFontSizeBox(printess: iPrintessApi, p: iExternalProperty) {
-  // alternativey show slider: return getNumberSlider(p, "text-style-size");
+  // alternativey show selectlist or slider: return getNumberSlider(p, "text-style-size");
 
   const cp = document.createElement("input");
   cp.type = "text";

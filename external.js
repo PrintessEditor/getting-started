@@ -35,13 +35,13 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                     case "text-style-color":
                         return getColorDropDown(printess, p, "color");
                     case "text-style-font":
-                        return getFontSizeSelect(printess, p);
+                        return getFontDropDown(printess, p, true);
                     case "text-style-hAlign":
-                        return getHAlignControl(printess, p);
+                        return getHAlignControl(printess, p, true);
                     case "text-style-size":
-                        return getFontSizeSelect(printess, p);
+                        return getFontSizeDropDown(printess, p, true);
                     case "text-style-vAlign":
-                        return getVAlignControl(printess, p);
+                        return getVAlignControl(printess, p, true);
                     default:
                         return getMultiLineTextBox(printess, p, forMobile);
                 }
@@ -113,24 +113,37 @@ function getDoneButton(printess) {
 function getTextStyleControl(printess, p) {
     const textPropertiesDiv = document.createElement("div");
     textPropertiesDiv.classList.add("mb-3");
+    if (!p.textStyle) {
+        return textPropertiesDiv;
+    }
     const group1 = document.createElement("div");
     group1.className = "input-group mb-3";
     const pre1 = document.createElement("div");
     pre1.className = "input-group-prepend";
-    getColorDropDown(printess, p, "color", false, pre1);
-    getFontSizeDropDown(printess, p, pre1);
+    if (p.textStyle.allows.indexOf("color") >= 0) {
+        getColorDropDown(printess, p, "color", false, pre1);
+    }
+    if (p.textStyle.allows.indexOf("size") >= 0) {
+        getFontSizeDropDown(printess, p, false, pre1);
+    }
     group1.appendChild(pre1);
-    getFontDropDown(printess, p, group1);
+    if (p.textStyle.allows.indexOf("font") >= 0) {
+        getFontDropDown(printess, p, false, group1);
+    }
     textPropertiesDiv.appendChild(group1);
     const group2 = document.createElement("div");
     group2.className = "input-group mb-3";
     const pre2 = document.createElement("div");
     pre2.className = "input-group-prepend";
-    group2.appendChild(getHAlignControl(printess, p));
+    if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
+        group2.appendChild(getHAlignControl(printess, p, false));
+    }
     const spacer = document.createElement("div");
     spacer.style.width = "10px";
     group2.appendChild(spacer);
-    group2.appendChild(getVAlignControl(printess, p));
+    if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
+        group2.appendChild(getVAlignControl(printess, p, false));
+    }
     textPropertiesDiv.appendChild(group2);
     return textPropertiesDiv;
 }
@@ -303,7 +316,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
         return dropdown;
     }
 }
-function getDropDown(printess, p, forMobile) {
+function getDropDown(printess, p, asList) {
     var _a;
     const dropdown = document.createElement("div");
     dropdown.classList.add("btn-group");
@@ -319,7 +332,7 @@ function getDropDown(printess, p, forMobile) {
             button.appendChild(getDropdownItemContent(p.listMeta, selectedItem));
         }
         dropdown.appendChild(button);
-        if (forMobile) {
+        if (asList) {
             ddContent.classList.add("list-group");
         }
         else {
@@ -329,7 +342,7 @@ function getDropDown(printess, p, forMobile) {
         }
         for (const entry of p.listMeta.list) {
             const li = document.createElement("li");
-            if (forMobile) {
+            if (asList) {
                 li.classList.add("list-group-item");
                 if (entry === selectedItem) {
                     li.classList.add("active");
@@ -343,7 +356,7 @@ function getDropDown(printess, p, forMobile) {
                 if (p.listMeta) {
                     button.innerHTML = "";
                     button.appendChild(getDropdownItemContent(p.listMeta, entry));
-                    if (forMobile) {
+                    if (asList) {
                         ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
                         li.classList.add("active");
                     }
@@ -355,7 +368,7 @@ function getDropDown(printess, p, forMobile) {
         }
         dropdown.appendChild(ddContent);
     }
-    if (forMobile) {
+    if (asList) {
         return ddContent;
     }
     else {
@@ -580,7 +593,7 @@ function getFontSizeSelect(printess, p) {
     }
     return select;
 }
-function getFontSizeDropDown(printess, p, dropdown) {
+function getFontSizeDropDown(printess, p, asList, dropdown) {
     var _a, _b, _c;
     if (!dropdown) {
         dropdown = document.createElement("div");
@@ -589,6 +602,7 @@ function getFontSizeDropDown(printess, p, dropdown) {
     }
     dropdown.style.padding = "0";
     const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt", "54pt", "60pt", "66pt", "72pt", "78pt"];
+    const ddContent = document.createElement("ul");
     if (p.textStyle && sizes.length) {
         const selectedItem = (_a = sizes.filter(itm => { var _a, _b; return (_b = itm === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.size)) !== null && _b !== void 0 ? _b : "??pt"; })[0]) !== null && _a !== void 0 ? _a : null;
         const button = document.createElement("button");
@@ -603,31 +617,53 @@ function getFontSizeDropDown(printess, p, dropdown) {
             button.innerText = (_c = (_b = p.textStyle) === null || _b === void 0 ? void 0 : _b.size) !== null && _c !== void 0 ? _c : "??pt";
         }
         dropdown.appendChild(button);
-        const ddContent = document.createElement("ul");
-        ddContent.classList.add("dropdown-menu");
-        ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-        ddContent.style.width = "100%";
-        ddContent.style.maxHeight = "400px";
+        if (asList) {
+            ddContent.classList.add("list-group");
+        }
+        else {
+            ddContent.classList.add("dropdown-menu");
+            ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+            ddContent.style.width = "100%";
+            ddContent.style.maxHeight = "400px";
+        }
         ddContent.style.overflow = "hidden auto";
         for (const entry of sizes) {
             const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.href = "#";
-            a.classList.add("dropdown-item");
-            a.onclick = () => {
+            if (asList) {
+                li.classList.add("list-group-item");
+                if (entry === selectedItem) {
+                    li.classList.add("active");
+                }
+            }
+            li.classList.add("dropdown-item");
+            li.onclick = () => {
                 button.innerHTML = "";
                 printess.setTextStyleProperty(p.id, "size", entry);
+                if (p.textStyle)
+                    p.textStyle.size = entry;
                 button.innerText = entry;
+                if (asList) {
+                    ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+                    li.classList.add("active");
+                    const mobileButtonDiv = document.getElementById(p.id + ":text-style-size");
+                    if (mobileButtonDiv) {
+                        drawButtonContent(printess, mobileButtonDiv, [p]);
+                    }
+                }
             };
-            a.innerText = entry;
-            li.appendChild(a);
+            li.innerText = entry;
             ddContent.appendChild(li);
         }
         dropdown.appendChild(ddContent);
     }
-    return dropdown;
+    if (asList) {
+        return ddContent;
+    }
+    else {
+        return dropdown;
+    }
 }
-function getFontDropDown(printess, p, dropdown) {
+function getFontDropDown(printess, p, asList, dropdown) {
     var _a;
     if (!dropdown) {
         dropdown = document.createElement("div");
@@ -636,6 +672,7 @@ function getFontDropDown(printess, p, dropdown) {
     }
     dropdown.style.padding = "0";
     const fonts = printess.getFonts(p.id);
+    const ddContent = document.createElement("ul");
     if (p.textStyle && fonts.length) {
         const selectedItem = (_a = fonts.filter(itm => { var _a, _b; return (_b = itm.name === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font)) !== null && _b !== void 0 ? _b : ""; })[0]) !== null && _a !== void 0 ? _a : null;
         const button = document.createElement("button");
@@ -647,72 +684,54 @@ function getFontDropDown(printess, p, dropdown) {
             button.appendChild(getDropdownImageContent(selectedItem.thumbUrl));
         }
         dropdown.appendChild(button);
-        const ddContent = document.createElement("ul");
-        ddContent.classList.add("dropdown-menu");
-        ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-        ddContent.style.width = "100%";
-        ddContent.style.maxHeight = "400px";
+        if (asList) {
+            ddContent.classList.add("list-group");
+        }
+        else {
+            ddContent.classList.add("dropdown-menu");
+            ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+            ddContent.style.width = "100%";
+            ddContent.style.maxHeight = "400px";
+        }
         ddContent.style.overflow = "hidden auto";
         for (const entry of fonts) {
             const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.href = "#";
-            a.classList.add("dropdown-item");
-            a.onclick = () => {
-                button.innerHTML = "";
+            li.classList.add("dropdown-item");
+            if (asList) {
+                li.classList.add("list-group-item");
+                if (entry === selectedItem) {
+                    li.classList.add("active");
+                }
+            }
+            li.onclick = () => {
                 printess.setTextStyleProperty(p.id, "font", entry.name);
-                button.appendChild(getDropdownImageContent(entry.thumbUrl));
+                if (p.textStyle) {
+                    p.textStyle.font = entry.name;
+                }
+                if (asList) {
+                    ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+                    li.classList.add("active");
+                    const mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
+                    if (mobileButtonDiv) {
+                        drawButtonContent(printess, mobileButtonDiv, [p]);
+                    }
+                }
+                else {
+                    button.innerHTML = "";
+                    button.appendChild(getDropdownImageContent(entry.thumbUrl));
+                }
             };
-            a.appendChild(getDropdownImageContent(entry.thumbUrl));
-            li.appendChild(a);
+            li.appendChild(getDropdownImageContent(entry.thumbUrl));
             ddContent.appendChild(li);
         }
         dropdown.appendChild(ddContent);
     }
-    return dropdown;
-}
-function getFontDropDown2(printess, p) {
-    var _a;
-    const dropdown = document.createElement("div");
-    dropdown.classList.add("btn-group");
-    dropdown.classList.add("form-control");
-    dropdown.style.padding = "0";
-    const fonts = printess.getFonts(p.id);
-    if (p.textStyle && fonts.length) {
-        const selectedItem = (_a = fonts.filter(itm => { var _a, _b; return (_b = itm.name === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font)) !== null && _b !== void 0 ? _b : ""; })[0]) !== null && _a !== void 0 ? _a : null;
-        const button = document.createElement("button");
-        button.className = "btn btn-light dropdown-toggle";
-        button.style.display = "flex";
-        button.dataset.bsToggle = "dropdown";
-        button.dataset.bsAutoClose = "true";
-        button.setAttribute("aria-expanded", "false");
-        if (selectedItem) {
-            button.appendChild(getDropdownImageContent(selectedItem.thumbUrl));
-        }
-        dropdown.appendChild(button);
-        const ddContent = document.createElement("ul");
-        ddContent.classList.add("dropdown-menu");
-        ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-        ddContent.style.width = "100%";
-        ddContent.style.maxHeight = "400px";
-        ddContent.style.overflow = "hidden auto";
-        for (const entry of fonts) {
-            const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.href = "#";
-            a.classList.add("dropdown-item");
-            a.onclick = () => {
-                button.innerHTML = "";
-                printess.setTextStyleProperty(p.id, "font", entry.name);
-                button.appendChild(getDropdownImageContent(entry.thumbUrl));
-            };
-            a.appendChild(getDropdownImageContent(entry.thumbUrl));
-            li.appendChild(a);
-            ddContent.appendChild(li);
-        }
-        dropdown.appendChild(ddContent);
+    if (asList) {
+        return ddContent;
     }
-    return dropdown;
+    else {
+        return dropdown;
+    }
 }
 function getDropdownImageContent(thumbUrl) {
     const img = document.createElement("img");
@@ -720,59 +739,12 @@ function getDropdownImageContent(thumbUrl) {
     img.style.height = "20px";
     return img;
 }
-function getFontList(printess, p) {
-    var _a, _b;
-    const select = document.createElement("select");
-    const fonts = printess.getFonts(p.id);
-    for (const f of fonts) {
-        const option = document.createElement("option");
-        option.value = f.name;
-        option.innerText = f.name;
-        select.appendChild(option);
-    }
-    select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font) !== null && _b !== void 0 ? _b : "";
-    select.style.width = "50px";
-    select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "font", select.value);
-    };
-    return select;
-}
-function getFontColorPicker(printess, p) {
-    var _a, _b;
-    const select = document.createElement("select");
-    const colors = printess.getColors(p.id);
-    for (const f of colors) {
-        const option = document.createElement("option");
-        option.value = f.name;
-        option.innerText = f.name;
-        option.style.backgroundColor = f.color;
-        select.appendChild(option);
-    }
-    select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.color) !== null && _b !== void 0 ? _b : "#ff00ff";
-    select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "color", select.value);
-    };
-    return select;
-}
-function getHAlignList(printess, p) {
-    var _a, _b;
-    const select = document.createElement("select");
-    select.className = "form-control";
-    for (const v of ["left", "right", "center", "justifyLeft", "justifyCenter", "justifyRight", "justifyJustify"]) {
-        const option = document.createElement("option");
-        option.value = v;
-        option.innerText = v;
-        select.appendChild(option);
-    }
-    select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.hAlign) !== null && _b !== void 0 ? _b : "left";
-    select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "hAlign", select.value);
-    };
-    return select;
-}
-function getVAlignControl(printess, p) {
+function getVAlignControl(printess, p, forMobile) {
     const group = document.createElement("div");
     group.className = "btn-group";
+    if (forMobile) {
+        group.classList.add("form-control");
+    }
     for (const v of ["top", "center", "bottom"]) {
         let icon = "align-top";
         switch (v) {
@@ -783,15 +755,18 @@ function getVAlignControl(printess, p) {
                 icon = "align-bottom";
                 break;
         }
-        const id = "btnVAlignRadio" + v;
+        const id = p.id + "btnVAlignRadio" + v;
         group.appendChild(getRadioButton(printess, p, id, "vAlign", v));
         group.appendChild(getRadioLabel(printess, p, id, "vAlign", icon));
     }
     return group;
 }
-function getHAlignControl(printess, p) {
+function getHAlignControl(printess, p, forMobile) {
     const group = document.createElement("div");
     group.className = "btn-group";
+    if (forMobile) {
+        group.classList.add("form-control");
+    }
     for (const v of ["left", "right", "center", "justifyLeft"]) {
         let icon = "text-align-left";
         switch (v) {
@@ -814,7 +789,7 @@ function getHAlignControl(printess, p) {
                 icon = "text-align-justify-justify";
                 break;
         }
-        const id = "btnHAlignRadio" + v;
+        const id = p.id + "btnHAlignRadio" + v;
         group.appendChild(getRadioButton(printess, p, id, "hAlign", v));
         group.appendChild(getRadioLabel(printess, p, id, "hAlign", icon));
     }
@@ -837,31 +812,21 @@ function getRadioButton(printess, p, id, name, value) {
     radio.type = "radio";
     radio.className = "btn-check";
     radio.dataset.value = value;
-    radio.name = name;
+    radio.name = name + "_" + p.id;
     radio.id = id;
     if (p.textStyle && p.textStyle[name] === value) {
         radio.checked = true;
     }
     radio.onclick = () => {
         printess.setTextStyleProperty(p.id, name, value);
+        if (p.textStyle)
+            p.textStyle[name] = value;
+        const mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-" + name);
+        if (mobileButtonDiv) {
+            drawButtonContent(printess, mobileButtonDiv, [p]);
+        }
     };
     return radio;
-}
-function getVAlignList(printess, p) {
-    var _a, _b;
-    const select = document.createElement("select");
-    select.className = "form-control";
-    for (const v of ["top", "center", "bottom"]) {
-        const option = document.createElement("option");
-        option.value = v;
-        option.innerText = v;
-        select.appendChild(option);
-    }
-    select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.vAlign) !== null && _b !== void 0 ? _b : "top";
-    select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "vAlign", select.value);
-    };
-    return select;
 }
 function getFontSizeBox(printess, p) {
     var _a, _b;

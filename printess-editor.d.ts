@@ -1,3 +1,10 @@
+
+/** 
+ * Main call to attach the Printess to div-element of your choice. 
+ * In ```printessAttachParameters``` you can pass authorization, template-name and other parameters.
+ */
+export declare function attachPrintess(p: printessAttachParameters): Promise<iPrintessApi>;
+
 export interface printessAttachParameters {
   resourcePath?: string;
   domain?: string;
@@ -8,32 +15,200 @@ export interface printessAttachParameters {
   basketId?: string,
   /* when used in shop (shop token) scenario, you CAN provide shopUserId */
   shopUserId?: string,
-  autoScale?: {
-    maxWidth: number;
-    maxHeight: number;
-  };
+
   templateName?: string;
   mergeTemplates?: [{
     templateName: string;
     spreadIndex?: number;
   }];
-  loadingFadeCallback?: () => void;
-  loadingDoneCallback?: (spread: Array<iExternalSpreadInfo>) => void;
-  showBuyerSide?: boolean;
+
+  /**
+   * Activating ```hideControls```sets Printess to **headless  mode**
+   * No ui-elements outside the page will be drawn. You have to implement all property interactions and page navigations by yourself.
+   * You can use the **external.html** from our github as a good boilerplate and start from there.
+   */
   hideControls?: boolean;
+  /**
+   * Activated by default. Deactivating ```allowZoomAndPan``` freezes the visible Area of the current document. 
+   * The buyer will not be able to zoom or pan at all. It's handy for simple configurattions on desktop and conjunction with ```autoScale```
+   * Handle with care on mobile, since users proably need zoom to have a closer look on their products.
+   */
   allowZoomAndPan?: boolean;
+
+  /**
+   * When zooming to a selected page, Printess uses a viewport transition. You can either set the transition duration in seconds or pass **0** to 
+   * turn animation of completely.
+   */
   zoomDuration?: number;
-  formFieldChangedCallback?: externalFormFieldChangeCallback;
-  selectionChangeCallback?: externalSelectionChangeCallback;
-  spreadChangeCallback?: externalSpreadChangeCallback;
-  getOverlayCallback?: externalGetOverlayCallback;
-  forceMultilineFormEditing?: boolean;
-  splitMultilineToParagraphs?: boolean;
-  enterImageCropingOnSelect?: boolean;
-  singleSelectionOnly?: boolean;
-  scaledImageMinimumDpi?: number;
+
+  /**
+   * Printess Editor fill the enitire viewport on mobile devices and treat positioning correctly on iOS (google "iOS viewport-bug")
+   */
   fullScreenOnMobile?: boolean;
+
+  /**
+   * Auto scale is only usefull when ```hideControls```is active and ```allowZoomAndPan```is disabled.
+   * Printess will adjust its width or height in between the given dimensions to meet the aspect ratio of the loaded document.
+   */
+  autoScale?: {
+    maxWidth: number;
+    maxHeight: number;
+  };
+
+
+  /**
+   * If you application displays a loading animation, this call tells you to start
+   * your fade-out animation. Loading will be done soon. 
+   */
+  loadingFadeCallback?: () => void;
+
+  /**
+   * Printess has completely loaded the requested template and is now ready to operate.
+   * You can now paint your page navigation ui based on the passed **iExternalSpreadInfo** Array.
+   */
+  loadingDoneCallback?: (spread: Array<iExternalSpreadInfo>) => void;
+
+  /**
+   * Force Showing Buyer-Side (Only valid if Service-Token is passed)
+   * When Token is Shop-Token, Printess alwyas switches to Buyer-Side.
+   */
+  showBuyerSide?: boolean;
+
+  /**
+   * For every Form Field which is set to **Impact-Price**
+   * Printess fires a callback when the value has changed
+   */
+  formFieldChangedCallback?: externalFormFieldChangeCallback;
+
+  /**
+   * Here is the place to draw your properties ui.
+   */
+  selectionChangeCallback?: externalSelectionChangeCallback;
+
+  /**
+   * Fired whenever the user has selected a new page/spread and passes snippet-lists and spread-info.
+   * Now it's time to redraw **Layout-Snippets** and **Group-Snippets**
+   */
+  spreadChangeCallback?: externalSpreadChangeCallback;
+
+  /**
+   * To indicate selectable frames Printess fires this callback where you can 
+   * provide a custom div
+   */
+  getOverlayCallback?: externalGetOverlayCallback;
+
+
+  /**
+    * Minimum width of any image loaded in the browser
+    * Default is 1600, best alternatives are 200, 400, 800
+    * If you display the Printess editor very small in your website/shop
+    * you might want to avoid the editor loading large images into memory. 
+    * You can also set **minImageWidth** for certain products with many pages. 
+    */
+  minImageWidth?: number;
+
 }
+
+/**
+ * **iPrintessApi** is returned by the ```attachPrintess()``` call and provides you access to the Printess editor. 
+ * You can retrieve informations, set properties, add snippets and much more.
+ */
+export interface iPrintessApi {
+  getJson(): string;
+  setJson(jsonString: string): Promise<void>;
+
+  loadTemplate(templateName: string): Promise<void>;
+
+  saveJson(): Promise<string>;
+  loadJson(id: string): Promise<void>;
+  unexpireJson(id: string): Promise<void>;
+
+  clearSelection(): Promise<void>;
+  deleteSelectedFrames(): Promise<boolean>;
+  selectFrames(propertyId: string): Promise<void>;
+  selectBackground(): Promise<void>;
+  selectSpread(spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
+  nextPage(): Promise<void>;
+  previousPage(): Promise<void>;
+  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean }>
+
+  /**
+   * Returns information about all spreads of the displayed document as an Array of
+   *  iExternalSpreadInfo {
+   *    spreadId: string;
+   *    index: number;
+   *    name: string;
+   *    width: number;
+   *    height: number;
+   *    thumbUrl: string | null;
+   *    pages: number;
+   *  }
+   */
+  getAllSpreads(): Promise<Array<iExternalSpreadInfo>>;
+  getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
+  getAllPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
+  getAllRequiredProperties(): Promise<Array<Array<iExternalProperty>>>;
+  getAllRequiredPropertiesSync(): Array<Array<iExternalProperty>>;
+  getAllRequiredPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
+  getAllRequiredPropertiesBySpreadIdSync(spreadId: string): Array<Array<iExternalProperty>>;
+
+  getMobileUiButtons(properties: Array<iExternalProperty>): Array<iMobileUIButton>;
+
+
+  getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
+
+  isTextButton(m: iMobileUIButton): boolean
+
+
+  setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void>;
+
+  setFormFieldValue(fieldNameOrId: string, newValue: string): Promise<void>;
+
+  getNumberUi(ep: iExternalProperty, metaProperty?: iExternalMetaPropertyKind | null): {
+    meta: iExternalNumberUi;
+    value: number;
+  } | undefined;
+  setNumberUiProperty(ep: iExternalProperty, metaProperty: iExternalMetaPropertyKind | null, value: number): Promise<void>;
+
+  setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
+  setImageMetaProperty(propertyId: string, name: "scale" | "sepia" | "brightness" | "saturate" | "contrast" | "grayscale" | "vivid" | "hueRotate", value: string | number): Promise<void>;
+  resetImageFilters(propertyId: string): Promise<void>;
+
+  uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage[]>;
+  uploadImage(file: File, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage | null>;
+
+  getSerializedImage(imageId: string): string | null;
+  addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
+
+  getImages(propertyId: string): Array<iExternalImage>;
+  getFonts(propertyId: string): Array<{
+    name: string;
+    thumbUrl: string;
+    displayName: string;
+  }>;
+  getColors(propertyId: string): Array<{
+    name: string;
+    color: string;
+  }>;
+
+  getIcon(icon: iconName): SVGElement
+
+  resizePrintess(immediate?: boolean): void;
+
+  load(scopeId: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
+
+  insertLayoutSnippet(snippetUrl: string): Promise<void>;
+  insertGroupSnippet(snippetUrl: string): Promise<void>;
+
+  undo(): void;
+  redo(): void;
+
+  renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
+}
+
+
+
+
 
 /*
 * UPLOAD
@@ -210,7 +385,7 @@ export interface iMobileUiState {
   metaProperty?: iExternalMetaPropertyKind, // can be null
 }
 
-export type MobileUiState  = "document" | "frames" | "add";
+export type MobileUiState = "document" | "frames" | "add";
 
 export interface iButtonCircle {
   hasSvgCircle: boolean,
@@ -231,114 +406,6 @@ export interface iStoryContent {
   pts: Array<any> // Array<iParagraphTextAndStyles>
 }
 
-/*
-* Main call to load printess to div
-*/
-export declare function attachPrintess(p: printessAttachParameters): Promise<iPrintessApi>;
-
-
-
-/*
-* JS-API Methods
-*/
-export declare const api: iPrintessApi;
-
-/**
- * **iPrintessApi** is returned by the ```attachPrintess()``` call and provides you access to the Printess editor. 
- * You can retrieve informations, set properties, add snippets and much more.
- */
-export interface iPrintessApi {
-  getJson(): string;
-  setJson(jsonString: string): Promise<void>;
-
-  loadTemplate(templateName: string): Promise<void>;
-
-  saveJson(): Promise<string>;
-  loadJson(id: string): Promise<void>;
-  unexpireJson(id: string): Promise<void>;
-
-  clearSelection(): Promise<void>;
-  deleteSelectedFrames(): Promise<boolean>;
-  selectFrames(propertyId: string): Promise<void>;
-  selectBackground(): Promise<void>;
-  selectSpread(spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
-  nextPage() : Promise<void>;
-  previousPage(): Promise<void>; 
-  pageInfo(): Promise<{current: number, max: number, isFirst: boolean, isLast: boolean}> 
-
-  /**
-   * Returns information about all spreads of the displayed document as an Array of
-   *  iExternalSpreadInfo {
-   *    spreadId: string;
-   *    index: number;
-   *    name: string;
-   *    width: number;
-   *    height: number;
-   *    thumbUrl: string | null;
-   *    pages: number;
-   *  }
-   */
-  getAllSpreads(): Promise<Array<iExternalSpreadInfo>>;
-  getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
-  getAllPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
-  getAllRequiredProperties(): Promise<Array<Array<iExternalProperty>>>;
-  getAllRequiredPropertiesSync(): Array<Array<iExternalProperty>>;
-  getAllRequiredPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
-  getAllRequiredPropertiesBySpreadIdSync(spreadId: string): Array<Array<iExternalProperty>>;
-
-  getMobileUiButtons(properties: Array<iExternalProperty>): Array<iMobileUIButton>;
-  
-
-  getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
-
-  isTextButton(m: iMobileUIButton): boolean
-
-
-  setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void>;
-
-  setFormFieldValue(fieldNameOrId: string, newValue: string): Promise<void>;
-
-  getNumberUi(ep: iExternalProperty, metaProperty?: iExternalMetaPropertyKind | null): {
-    meta: iExternalNumberUi;
-    value: number;
-  } | undefined;
-  setNumberUiProperty(ep: iExternalProperty, metaProperty: iExternalMetaPropertyKind | null, value: number): Promise<void>;
-
-  setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
-  setImageMetaProperty(propertyId: string, name: "scale" | "sepia" | "brightness" | "saturate" | "contrast" | "grayscale" | "vivid" | "hueRotate", value: string | number): Promise<void>;
-  resetImageFilters(propertyId: string): Promise<void>;
-
-  uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage[]>;
-  uploadImage(file: File, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage | null>;
-
-  getSerializedImage(imageId: string): string | null;
-  addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
-
-  getImages(propertyId: string): Array<iExternalImage>;
-  getFonts(propertyId: string): Array<{
-    name: string;
-    thumbUrl: string;
-    displayName: string;
-  }>;
-  getColors(propertyId: string): Array<{
-    name: string;
-    color: string;
-  }>;
-
-  getIcon(icon: iconName): SVGElement
-
-  resizePrintess(immediate?: boolean): void;
-
-  load(scopeId: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
-
-  insertLayoutSnippet(snippetUrl: string): Promise<void>;
-  insertGroupSnippet(snippetUrl: string): Promise<void>;
-
-  undo(): void;
-  redo(): void;
-
-  renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
-}
 
 export type iconName =
   "image"
