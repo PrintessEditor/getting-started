@@ -4,7 +4,7 @@
 <head>
 
 
-  <title>Printess-Test-Page</title>
+  <title>Printess-Custom-Ui</title>
 
   <meta charset="utf-8">
 
@@ -13,20 +13,155 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
 
+  <link href="sketchy.css" rel="stylesheet">
+
   <link type="text/css" rel="stylesheet" href="external.css" />
 
 </head>
 
-<body style="margin: 0; padding: 0;">
+<body style="margin: 0; padding: 0;background: yellow;">
 
-  <div class="page-buttons">
-  </div>
+  <nav class="navbar navbar-expand navbar-dark bg-primary" style="overflow: hidden;">
+    
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto" style="width: 100%;">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            Ui
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <a class="dropdown-item" href="index.html">Printess Ui</a>
+            <a class="dropdown-item" href="external.html">Custom Ui</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="temlateDropdown" role="button" data-bs-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            Open
+          </a>
+          <div class="dropdown-menu" aria-labelledby="temlateDropdown">
+            <a class="dropdown-item" href="#Children%27s%20book">Children's book</a>
+            <a class="dropdown-item" href="#Retro%20Sign">Retro Sign</a>
+            <a class="dropdown-item" href="#Business%20Card">Business Card</a>
+            <a class="dropdown-item" href="#Greeting%20Card">Greeting Card</a>
+            <a class="dropdown-item" href="#Chocolate%20Bar">Chocolate Bar</a>
+            <a class="dropdown-item" href="#Photo-Calendar%201">
+              <Photo-Calendar 1/a>
+                <a class="dropdown-item" href="#Calendar">Calendar</a>
+                <a class="dropdown-item" href="#Newborn%20Card">Newborn Card</a>
+                <a class="dropdown-item" href="#Phone-Case">Phone-Case</a>
+                <a class="dropdown-item" href="#Puzzle">Puzzle</a>
+                <a class="dropdown-item" href="#T-Shirt">T-Shirt</a>
+                <a class="dropdown-item" href="#Coffee %20Mug">Coffee Mug</a>
+
+                <div class="dropdown-divider">Multi-Line Test Templates</div>
+                <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel">Rich Editing with Fallback to Paragraph</a>
+                <a class="dropdown-item" href="#BuyerText-No-Eddi">Form Editing with Paragraph Split</a>
+          </div>
+        </li>
+        <li class="nav-item" style="flex-grow: 1;"></li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnUndo" title="Undo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-arrow-counterclockwise" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z" />
+              <path
+                d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnRedo" title="Redo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"
+              class="bi bi-arrow-clockwise">
+              <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+              <path
+                d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnSelect" title="Select Frame by Property-ID">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-bounding-box-circles" viewBox="0 0 16 16">
+              <path
+                d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2zm2.5 1.937v8.126c.703.18 1.256.734 1.437 1.437h8.126a2.004 2.004 0 0 1 1.437-1.437V3.937A2.004 2.004 0 0 1 12.063 2.5H3.937A2.004 2.004 0 0 1 2.5 3.937zM14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnClearSelection" title="Clear Selection">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-x-circle"
+              viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+              <path
+                d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnDelete" title="Delete Selected Frames">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash"
+              viewBox="0 0 16 16">
+              <path
+                d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+              <path fill-rule="evenodd"
+                d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnShowJson" title="Show Properties JSON" data-bs-toggle="offcanvas"
+            data-bs-target="#jsonOffcanvas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-code"
+              viewBox="0 0 16 16">
+              <path
+                d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnSave" title="Save Current Artwork">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-cloud-arrow-up-fill" viewBox="0 0 16 16">
+              <path
+                d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2zm2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnLoad" title="Load Artwork by ID">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-cloud-arrow-down" viewBox="0 0 16 16">
+              <path fill-rule="evenodd"
+                d="M7.646 10.854a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 9.293V5.5a.5.5 0 0 0-1 0v3.793L6.354 8.146a.5.5 0 1 0-.708.708l2 2z" />
+              <path
+                d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+            </svg>
+          </a>
+        </li>
+
+
+
+      </ul>
+
+    </div>
+  </nav>
+
+
+  <nav class="page-buttons">
+  </nav>
+
   <button class="show-layouts-button btn btn-primary" type="button" data-bs-toggle="offcanvas"
     data-bs-target="#layoutOffcanvas" aria-controls="layoutOffcanvas">
     Change Layout
   </button>
-
-
 
   <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="layoutOffcanvas"
     aria-labelledby="offcanvasLabel">
@@ -36,49 +171,29 @@
         aria-label="Close"></button>
     </div>
     <div id="layoutSnippets" class="offcanvas-body">
-
     </div>
   </div>
 
+  <!-- JSON DEBUG VIEW -->
+
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="jsonOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasLabel">Properties JSON</h5>
+      <button type="button" class="btn-close text-reset" id="closeJsonOffCanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <pre id="propertiesJson" class="offcanvas-body">
+    </pre>
+  </div>
+
   <div id="desktop-properties"></div>
-  <pre id="json"></pre>
+
 
   <div id="printessin"></div>
 
-  <div class="button-bar">
 
-    <select onchange="location = this.value;">
-      <option value="index.html">Printess Ui</option>
-      <option selected value="external.html">Custom Ui</option>
-    </select>
-    <select id="loadTemplate">
-      <option disabled selected>Load Template ...</option>
-      <option value="Children's book">Children's book</option>
-      <option value="Retro Sign">Retro Sign</option>
-      <option value="Business Card">Business Card</option>
-      <option selected value="Greeting Card">Greeting Card</option>
-      <option value="Chocolate Bar">Chocolate Bar</option>
-      <option value="Photo-Calendar 1">Photo-Calendar 1</option>
-      <option value="Calendar">Calendar</option>
-      <option value="Newborn Card">Newborn Card</option>
-      <option value="Phone-Case">Phone-Case</option>
-      <option value="Puzzle">Puzzle</option>
-      <option value="T-Shirt">T-shirt 2</option>
-      <option value="Coffee Mug">Coffee Mug</option>
-      <option value="BuyerText-Eddi-P-or-Sel">BuyerText-Eddi-P-or-Sel</option>
-      <option value="BuyerText-No-Eddi">BuyerText-No-Eddi-Split</option>
-    </select>
-    <div></div>
-    <button id="btnUndo">Undo</button>
-    <button id="btnRedo">Redo</button>
-    <div></div>
-    <button id="btnSelect">Select Frames</button>
-    <button id="btnClearSelection">Clear Selection</button>
-    <button id="btnDelete">Delete Frames</button>
-    <div></div>
-    <button id="btnGetJson">Get JSON</button>
-    <button id="btnSetJson">Set JSON</button>
-  </div>
+
 
   <div class="token-warning">
     <h4>This site is using a test token. </h4>
@@ -109,23 +224,29 @@
     };
 
 
-    window.addEventListener("resize", () => {
-      printess.resizePrintess();
-    });
+    window.addEventListener("resize", () => resizePrintess());
+
+    function resizePrintess() {
+      if (printess) {
+        printess.resizePrintess();
+      } else {
+        window.setTimeout(resizePrintess, 100);
+      }
+    }
 
     const loadingDoneCallback = function (spreads, properties) {
-      uiHelper.renderPageNavigation(printess, spreads, properties)
+      uiHelper.renderPageNavigation(printess, spreads, properties);
+      printess.resizePrintess();
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
 
-      uiHelper.renderMobileToolbar(printess);      
+      uiHelper.renderMobileToolbar(printess);
 
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
 
       const desktop = document.getElementById("desktop-properties");
-      const jsonPre = document.getElementById("json");
 
       if (!desktop) {
         throw "#desktop-properties not found, please add to html.";
@@ -165,7 +286,7 @@
       if (mobile) {
         mobile.parentElement.removeChild(mobile);
       }
-      uiHelper.renderMobileUi(printess, properties, state,  currentGroupSnippets);
+      uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
 
       if (state === "document") {
         //****** Show Document Wide Options
@@ -198,7 +319,7 @@
       }
 
       // print json for debug purposes
-      const jsonPre = document.getElementById("json");
+      const jsonPre = document.getElementById("propertiesJson");
       if (jsonPre) {
         jsonPre.innerHTML = t.join("<br/>");
       }
@@ -219,20 +340,21 @@
     }
 
 
+
     window.WebComponents.waitFor(async () => {
       const printessLoader = await import('https://editor.printess.com/printess-editor/printess-editor.js');
       printess = await printessLoader.attachPrintess({
         resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
 
         div: document.getElementById("printessin"),
-       
+
 
         domain: "api.printess.com",
         token: token, // your printess shop-token
         basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
         shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
 
-        templateName: "Greeting Card",
+        templateName: decodeURIComponent(window.location.hash.substr(1)) || "Greeting Card",
         templateJson: undefined, // will be used only if templateName is empty
         templateUserId: undefined, // only needed when loaded from different account
         /* mergeTemplates: [
@@ -246,16 +368,16 @@
         hideControls: true,
         allowZoomAndPan: true,
         zoomDuration: 0.5, // in seconds 
-         /* autoScale: {
-           maxWidth: 420,
-           maxHeight: 800,
-         },*/
+        /* autoScale: {
+          maxWidth: 420,
+          maxHeight: 800,
+        },*/
 
         loadingDoneCallback: loadingDoneCallback,
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
         getOverlayCallback: getOverlayCallback,
- 
+
       });
     });
 
@@ -278,29 +400,36 @@
 
     document.getElementById("btnClearSelection").onclick = () => {
       printess.clearSelection();
+      printess.resizePrintess();
     };
     document.getElementById("btnDelete").onclick = () => {
       printess.deleteSelectedFrames();
     };
 
-    document.getElementById("btnGetJson").onclick = () => {
-      navigator.clipboard.writeText(printess.getJson()).then(function () {
-        /* clipboard successfully set */
-        alert("JSON copied to clipboard");
-      }, function () {
-        alert("Copy failed!");
-      });
+    document.getElementById("btnSave").onclick = () => {
+      printess.saveJson().then(id => {
+        navigator.clipboard.writeText(id).then(function () {
+          /* clipboard successfully set */
+          prompt("Saved Artwork and copied ID to clipboard:", id);
+        }, function () {
+          alert("Copy failed!");
+        });
+      })
+
     };
-    document.getElementById("btnSetJson").onclick = () => {
+    document.getElementById("btnLoad").onclick = () => {
       navigator.clipboard.readText().then(
         clipText => {
-          printess.setJson(clipText);
+          const newId = prompt("Load Saved Artwork by ID:", clipText);
+          if (newId) printess.loadJson(newId);
         });
     };
-    document.getElementById("loadTemplate").onchange = () => {
-      // alert(document.getElementById("loadTemplate").value);
-      printess.loadTemplate(document.getElementById("loadTemplate").value);
-    };
+
+    window.addEventListener('hashchange', function () {
+      const id = decodeURIComponent(window.location.hash.substr(1));
+      if (id) printess.loadTemplate(decodeURIComponent(window.location.hash.substr(1)));
+    }, false);
+
 
 
   </script>

@@ -13,12 +13,18 @@ window.uiHelper = {
     renderLayoutSnippets: renderLayoutSnippets,
     getOverlay: getOverlay,
     getDoneButton: getDoneButton,
-    renderPageNavigation: renderPageNavigation,
+    renderPageNavigation: renderPageNavigationBS,
     renderMobileUi: renderMobileUi,
     getMobileButtons: getMobileButtons,
     renderMobileToolbar: renderMobileToolbar
 };
 console.log("helpers loaded");
+const mobileUiHeight = 220;
+const mobileButtonBarHeight = 78;
+function getMobilePropertyControl(printess, p, metaProperty) {
+    const control = getPropertyControl(printess, p, metaProperty, true);
+    return control;
+}
 function getPropertyControl(printess, p, metaProperty, forMobile = false) {
     switch (p.kind) {
         case "title":
@@ -26,7 +32,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
         case "background-button":
             return getChangeBackgroundButton(printess);
         case "single-line-text":
-            return getSingleLineTextBox(printess, p);
+            return getSingleLineTextBox(printess, p, forMobile);
         case "text-area":
             return getTextArea(printess, p, forMobile);
         case "multi-line-text":
@@ -64,9 +70,9 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                         case "image-contrast":
                         case "image-hueRotate":
                         case "image-vivid":
-                            return getNumberSlider(printess, p, metaProperty);
+                            return getNumberSlider(printess, p, metaProperty, true);
                         case "image-scale":
-                            return getImageScaleControl(printess, p);
+                            return getImageScaleControl(printess, p, true);
                     }
                     const d = document.createElement("div");
                     d.innerText = "Property Control no found";
@@ -159,7 +165,7 @@ function getMultiLineTextBox(printess, p, forMobile) {
         return container;
     }
 }
-function getSingleLineTextBox(printess, p) {
+function getSingleLineTextBox(printess, p, forMobile) {
     const inp = document.createElement("input");
     inp.type = "text";
     inp.value = p.value.toString();
@@ -171,7 +177,18 @@ function getSingleLineTextBox(printess, p) {
             drawButtonContent(printess, mobileButtonDiv, [p]);
         }
     };
-    return addLabel(inp, p);
+    inp.onfocus = () => {
+        console.warn("INPUT RECEIVES FOCUS");
+        printess.focusSelectedItem();
+    };
+    inp.blur = () => {
+        printess.unfocusSelectedItem();
+    };
+    const r = addLabel(inp, p);
+    if (forMobile) {
+        r.classList.add("form-control");
+    }
+    return r;
 }
 function getTitle(p) {
     const container = document.createElement("div");
@@ -384,6 +401,7 @@ function getDropdownItemContent(meta, entry) {
         img.style.backgroundImage = `url('${entry.imageUrl}')`;
         img.style.width = meta.thumbWidth + "px";
         img.style.height = meta.thumbHeight + "px";
+        img.style.marginRight = "10px";
         div.appendChild(img);
     }
     const label = document.createElement("div");
@@ -514,7 +532,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
         return container;
     }
 }
-function getImageScaleControl(printess, p) {
+function getImageScaleControlOld(printess, p) {
     var _a, _b, _c, _d, _f, _g;
     const scaleRangeLabel = document.createElement("label");
     const scaleRangeLabelCaption = document.createElement("span");
@@ -545,7 +563,40 @@ function getImageScaleControl(printess, p) {
     scaleRangeLabel.appendChild(scaleRange);
     return scaleRangeLabel;
 }
-function getNumberSlider(printess, p, metaProperty = null) {
+function getImageScaleControl(printess, p, forMobile = false) {
+    var _a, _b, _c, _d, _f, _g;
+    const rangeLabel = document.createElement("label");
+    const range = document.createElement("input");
+    range.className = "form-range";
+    range.type = "range";
+    range.min = (_b = (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.scaleHints.min.toString()) !== null && _b !== void 0 ? _b : "0";
+    range.max = (_d = (_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.scaleHints.max.toString()) !== null && _d !== void 0 ? _d : "0";
+    range.step = "0.01";
+    range.value = (_g = (_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.scale.toString()) !== null && _g !== void 0 ? _g : "0";
+    const span = document.createElement("span");
+    if (p.imageMeta) {
+        span.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale) + "dpi)";
+    }
+    rangeLabel.appendChild(span);
+    rangeLabel.appendChild(range);
+    if (forMobile) {
+        rangeLabel.classList.add("form-control");
+    }
+    range.oninput = () => {
+        const newScale = parseFloat(range.value);
+        printess.setImageMetaProperty(p.id, "scale", newScale);
+        if (p.imageMeta) {
+            p.imageMeta.scale = newScale;
+            span.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale) + "dpi)";
+            const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
+            if (mobileButtonDiv) {
+                drawButtonContent(printess, mobileButtonDiv, [p]);
+            }
+        }
+    };
+    return rangeLabel;
+}
+function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
     const ui = printess.getNumberUi(p, metaProperty);
     if (!ui) {
         const er = document.createElement("div");
@@ -571,6 +622,9 @@ function getNumberSlider(printess, p, metaProperty = null) {
     span.textContent = metaProperty ? metaProperty : p.label;
     rangeLabel.appendChild(span);
     rangeLabel.appendChild(range);
+    if (forMobile) {
+        rangeLabel.classList.add("form-control");
+    }
     return rangeLabel;
 }
 function getFontSizeSelect(printess, p) {
@@ -619,6 +673,7 @@ function getFontSizeDropDown(printess, p, asList, dropdown) {
         dropdown.appendChild(button);
         if (asList) {
             ddContent.classList.add("list-group");
+            ddContent.classList.add("list-group-grid-style");
         }
         else {
             ddContent.classList.add("dropdown-menu");
@@ -873,6 +928,49 @@ function renderPageNavigation(printess, spreads, _properties) {
         }
     }
 }
+function getPaginationItem(printess, content, spread, page) {
+    const li = document.createElement("li");
+    li.className = "page-item";
+    const a = document.createElement("li");
+    a.className = "page-link";
+    if (typeof content === "number") {
+        a.innerText = spread.name ? spread.name : content.toString();
+    }
+    else if (content === "previous") {
+        a.innerText = "&laquo";
+    }
+    else if (content === "next") {
+        a.innerText = "&raquo";
+    }
+    li.appendChild(a);
+    if ((page === "left-page" && spread.pages === 1) || (page === "right-page" && spread.pages === 2)) {
+        li.classList.add("me-2");
+    }
+    li.onclick = () => {
+        printess.selectSpread(spread.index, page);
+    };
+    return li;
+}
+function renderPageNavigationBS(printess, spreads, _properties) {
+    console.log("All Spreads", spreads);
+    const pages = document.querySelector(".page-buttons");
+    if (pages) {
+        let pageNo = 0;
+        pages.innerHTML = "";
+        const ul = document.createElement("ul");
+        ul.className = "pagination";
+        if (spreads.length > 1) {
+            for (const spread of spreads) {
+                for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
+                    pageNo++;
+                    const page = pageIndex === 0 ? "left-page" : "right-page";
+                    ul.appendChild(getPaginationItem(printess, pageNo, spread, page));
+                }
+            }
+        }
+        pages.appendChild(ul);
+    }
+}
 function renderGroupSnippets(printess, groupSnippets, forMobile) {
     const div = document.createElement("div");
     div.className = "group-snippets";
@@ -935,6 +1033,9 @@ function renderLayoutSnippets(printess, layoutSnippets) {
                     const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
                     if (myOffcanvas)
                         myOffcanvas.click();
+                    const offCanvas = document.getElementById("layoutOffcanvas");
+                    if (offCanvas)
+                        offCanvas.style.visibility = "hidden";
                 };
                 clusterDiv.appendChild(thumb);
             }
@@ -943,16 +1044,18 @@ function renderLayoutSnippets(printess, layoutSnippets) {
     }
     return container;
 }
-function renderMobileUi(printess, properties, state, groupSnippets) {
+function getMobileUiDiv() {
     let mobileUi = document.querySelector(".mobile-ui");
     if (!mobileUi) {
         mobileUi = document.createElement("div");
         mobileUi.className = "mobile-ui";
         document.body.appendChild(mobileUi);
     }
-    else {
-        mobileUi.innerHTML = "";
-    }
+    return mobileUi;
+}
+function renderMobileUi(printess, properties, state, groupSnippets) {
+    const mobileUi = getMobileUiDiv();
+    mobileUi.innerHTML = "";
     if (state === "add") {
         const snippets = renderGroupSnippets(printess, groupSnippets, true);
         mobileUi.appendChild(snippets);
@@ -970,6 +1073,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
     if (state !== "document") {
         mobileUi.appendChild(getMobileBackButton(printess, properties, state, groupSnippets));
     }
+    resizeMobileUi(printess);
 }
 function getMobilePlusButton(printess, properties, groupSnippets) {
     const button = document.createElement("div");
@@ -1047,6 +1151,20 @@ function getMobileSelectedProperty(properties) {
     }
     return null;
 }
+function resizeMobileUi(printess) {
+    const mobileUi = getMobileUiDiv();
+    const controlHost = document.getElementById("mobile-control-host");
+    if (mobileUi && controlHost) {
+        const control = controlHost.children[0];
+        const usedHeight = control ? control.offsetHeight : 0;
+        mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
+        const printessDiv = document.getElementById("printessin");
+        if (printessDiv) {
+            printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
+            printess.resizePrintess();
+        }
+    }
+}
 function getMobileButtons(printess, properties) {
     var _a, _b, _c;
     const container = document.createElement("div");
@@ -1071,7 +1189,9 @@ function getMobileButtons(printess, properties) {
                 centerMobileButton(buttonDiv);
                 controlHost.innerHTML = "";
                 if (b.newState.externalProperty) {
-                    controlHost.appendChild(getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true));
+                    const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
+                    controlHost.appendChild(control);
+                    resizeMobileUi(printess);
                 }
             }
         };

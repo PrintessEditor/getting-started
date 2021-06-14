@@ -127,6 +127,8 @@ export interface iPrintessApi {
   deleteSelectedFrames(): Promise<boolean>;
   selectFrames(propertyId: string): Promise<void>;
   selectBackground(): Promise<void>;
+  focusSelectedItem(): Promise<void> ;
+  unfocusSelectedItem(): Promise<void> ;
   selectSpread(spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
   nextPage(): Promise<void>;
   previousPage(): Promise<void>;

@@ -1,7 +1,7 @@
 :root {
   --mobile-break-point: 767px;
 
-  --font-family: sans-serif;
+  --font-family: var(--bs-font-sans-serif);
   --printess-maxContrastColor: black;
   --printess-headlineColor: red;
 
@@ -16,39 +16,15 @@
   --mobile-button-square-bg-selected: #cccc00;
   --mobile-button-square-color: var(--mobile-button-color);
   --mobile-button-image-border: var(--mobile-button-border); /* rgba(255, 255, 255, 0.5);*/
+
+  --nav-bar-height: 47px;
+  --mobile-button-bar-height: 78px;
 }
 
 hr {
   margin: 0;  
 }
 
-.button-bar {
-  position: absolute;
-  right: 0px;
-  top: 0px;
-  width: 100%;
-  height: 50px;
-  display: grid;
-  grid-template-columns: auto auto 1fr auto auto 10px auto auto auto 10px auto auto;
-  column-gap: 3px;
-  padding: 5px 10px;
-  flex-direction: row;
-  justify-content: flex-end;
-  background-color: rgb(0, 0, 0);
-}
-.button-bar > button ,
-.button-bar > select {
-  font-size: 11px;
-  font-family: sans-serif;
-  border: 1px solid#bbb;
-  background-color: #444;
-  color: white;
-  cursor: pointer;
-  line-height: 14px;
-  border-radius: 4px;
-}
-
- 
 
 #printessin {
   position: absolute;
@@ -64,10 +40,12 @@ hr {
   display: none; 
   border: 3px solid red;
   position: absolute;
-  left: calc(50% - 190px);
-  bottom: -3px;
-  width: 380px;
  
+  bottom: -3px;
+  
+  width: 100vw;
+    left:0;
+  
   background-color: yellow;
   z-index: 9999999;
   font-family: sans-serif;
@@ -77,6 +55,11 @@ hr {
   margin: 0 0 2px 0;
 }
 
+.offcanvas-start {
+  /* override bootsrap setting, breaks pages smaller then 400px */
+  max-width: 500px !important;
+  width: 100vw !important;
+}
 
 input[type="radio"]:checked+label > svg {
   fill: white;;
@@ -131,12 +114,9 @@ input[type="radio"]:checked+label > svg {
 .page-buttons {
   position: absolute;
   left: 70px;
-  top: 60px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  width: 600px;
+  top: 70px;
 }
+
 .show-layouts-button {
   position: absolute;
   left: 0px;
@@ -146,23 +126,7 @@ input[type="radio"]:checked+label > svg {
   transform-origin: 0% 100%;
   z-index: 10;
 }
-
-.page-buttons > div {
-  height: 40px;
-  border: 1px solid black;
-  background: white;
-  width: auto;
-  cursor: pointer;
-  padding: 2px;
-  font-family: sans-serif;
-  font-size: 11px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-}
-.page-buttons > div:hover {
-  background: #eee;
-}
+ 
 
 #json {
   position: absolute;
@@ -174,7 +138,6 @@ input[type="radio"]:checked+label > svg {
   width: 500px;
   font-family: monospace;
   font-size: 9pt;
-
 }
 
 label {
@@ -346,6 +309,7 @@ input[type='range'] {
   display: flex;
   flex-direction: row;
   width: 100%;
+  align-items: center;
 }
 
 .dropdown-list-image {
@@ -357,6 +321,13 @@ input[type='range'] {
 .dropdown-list-label {
   font-size: 12pt;
   font-family: sans-serif;
+}
+
+#desktop-properties .dropdown-toggle::after {
+  /* extending the bootstrap class */
+  position: absolute;
+  top: 50%;
+  right: 10px;
 }
 
 /*
@@ -405,16 +376,18 @@ input[type='range'] {
   width: inherit;
   left: 0;
   right: 0;
-  height: 220px; 
+  height: var(--mobile-button-bar-height);
   z-index: 5;
-   
-   border-top: 2px solid black;
-   background-color:  var(--mobile-panel-background);
+  border-top: 2px solid black;
+  background-color:  var(--mobile-panel-background);
+  transition: height 0.5s;
+  overflow: hidden;
  }
  
  
 .mobile-control-host {
-  height: 140px;
+  height: calc(100% - 75px);
+  max-height: 140px;
   position: absolute;
   bottom: 0px;
   left: 0;
@@ -424,10 +397,27 @@ input[type='range'] {
   overflow: hidden auto;
 }
 
+.mobile-control-host > .list-group {
+  /* mobile list elements occupie a fixed height */
+  height: 140px;
+}
+
 .mobile-control-host > ul {
   height: 100%;
 }
  
+.list-group-grid-style {
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: center;
+}
+.list-group-grid-style > li {
+    width: 70px;
+    margin: 4px;
+    border-width: 1px !important;
+    border-radius: 4px;
+    cursor: pointer;
+}
                 
 .mobile-buttons-container {
   
@@ -435,7 +425,7 @@ input[type='range'] {
   top:0;
   left: 0;
   right: 0 ;
-  height: 78px;
+  height: var(--mobile-button-bar-height);
   border-bottom: 1px solid var(--mobile-button-border);
   padding-top: 10px;
   background-color:  var(--mobile-panel-background);
@@ -717,7 +707,7 @@ input[type='range'] {
   left: 0;
   width: 100%;
   top: 0;
-  height: 100%;
+  height: 140px;
   border: none;
   resize: none;
 }
@@ -744,7 +734,7 @@ input[type='range'] {
   position: absolute;
   height: 40px;
   width: 100vw;
-  top: 0;
+  top: var(--nav-bar-height);
   left: 0;
   background-color: var(--mobile-panel-background);
   border-bottom: 2px solid black;
@@ -779,17 +769,26 @@ input[type='range'] {
 
 
 @media screen and (max-width: 767px) {
+@media screen and (min-width: 768px) {
+  .token-warning {
+    left: calc(50% - 190px);
+    bottom: -3px;
+    width: 380px;
+  }
+}
   #printessin {
-    top:40px;
+    top:calc(var(--nav-bar-height) + 40px);
     left: 0;
     right: inherit;
     bottom: inherit;
     border: none;
     box-shadow: none;
     width: 100vw !important;
-    height: calc(100vh - 260px) !important;
+    height: initial;
+    bottom: var(--mobile-button-bar-height);
+   /* height: calc(100vh - 260px - var(--nav-bar-height)) !important;*/
   }
-  #desktop-properties, #json, .button-bar, .token-warning, .page-buttons {
+  #desktop-properties, #json,  .token-warning, .page-buttons {
     display: none !important;
   }
   .mobile-ui {
@@ -798,5 +797,6 @@ input[type='range'] {
   .mobile-toolbar { 
     display: block;
   }
+ 
 }
  
