@@ -22,7 +22,7 @@
 <body style="margin: 0; padding: 0;background: yellow;">
 
   <nav class="navbar navbar-expand navbar-dark bg-primary" style="overflow: hidden;">
-    
+
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
@@ -379,6 +379,13 @@
         getOverlayCallback: getOverlayCallback,
 
       });
+
+      // listen to viual viewport changes to detect virtual keyboard on iOs
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess))
+        window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess))
+      }
+
     });
 
 

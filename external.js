@@ -16,11 +16,31 @@ window.uiHelper = {
     renderPageNavigation: renderPageNavigationBS,
     renderMobileUi: renderMobileUi,
     getMobileButtons: getMobileButtons,
-    renderMobileToolbar: renderMobileToolbar
+    renderMobileToolbar: renderMobileToolbar,
+    viewPortResize: viewPortResize,
+    viewPortScroll: viewPortScroll
 };
 console.log("helpers loaded");
 const mobileUiHeight = 220;
 const mobileButtonBarHeight = 78;
+function viewPortResize(printess) {
+    console.log("!!!! View-Port-Resize: height=" + window.visualViewport.height, window.visualViewport);
+}
+function viewPortScroll(printess) {
+    console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
+    const printessDiv = document.getElementById("printessin");
+    if (printessDiv) {
+        if (window.visualViewport.offsetTop > 0) {
+            printessDiv.style.top = window.visualViewport.offsetTop + "px";
+            printess.resizePrintess(false, true);
+        }
+        else {
+            console.log("Setting printess top to initial");
+            printessDiv.style.top = "87px";
+            printess.resizePrintess(true);
+        }
+    }
+}
 function getMobilePropertyControl(printess, p, metaProperty) {
     const control = getPropertyControl(printess, p, metaProperty, true);
     return control;
@@ -188,6 +208,9 @@ function getSingleLineTextBox(printess, p, forMobile) {
     if (forMobile) {
         r.classList.add("form-control");
     }
+    window.setTimeout(() => {
+        inp.focus();
+    }, 100);
     return r;
 }
 function getTitle(p) {

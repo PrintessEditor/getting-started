@@ -1,5 +1,6 @@
 
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState } from "./printess-editor";
+import { printess } from "./printess-editor/wasm/printessWasmInit";
 import { console_error } from "./shared/tools";
 
 
@@ -17,12 +18,50 @@ import { console_error } from "./shared/tools";
   renderPageNavigation: renderPageNavigationBS,
   renderMobileUi: renderMobileUi,
   getMobileButtons: getMobileButtons,
-  renderMobileToolbar: renderMobileToolbar
+  renderMobileToolbar: renderMobileToolbar,
+  viewPortResize: viewPortResize,
+  viewPortScroll: viewPortScroll
 }
 console.log("helpers loaded");
 
 const mobileUiHeight = 220;
 const mobileButtonBarHeight = 78;
+
+
+function viewPortResize(printess:  iPrintessApi) {
+  console.log("!!!! View-Port-Resize: height=" + window.visualViewport.height, window.visualViewport);
+/*  const printessDiv = document.getElementById("printessin");
+  if (printessDiv) {
+    if (window.visualViewport.offsetTop > 0) {
+      // system has auto scrolled conten, so we adjust printess-editor to fit
+      printessDiv.style.top = window.visualViewport.offsetTop + "px";
+      printess.resizePrintess(true, true);
+    } else {
+      console.log("Setting printess top to initial");
+      printessDiv.style.top = "87px";
+    }
+   
+  }*/
+
+}
+
+function viewPortScroll(printess:  iPrintessApi) {
+  console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
+  const printessDiv = document.getElementById("printessin");
+  if (printessDiv) {
+    if (window.visualViewport.offsetTop > 0) {
+      // system has auto scrolled conten, so we adjust printess-editor to fit
+      printessDiv.style.top = window.visualViewport.offsetTop + "px";
+      printess.resizePrintess(false, true);
+    } else {
+      console.log("Setting printess top to initial");
+      printessDiv.style.top = "87px";
+      printess.resizePrintess(true);
+    }
+   
+  }
+
+}
 
 /*
  * Renders a control for a given property 
@@ -251,8 +290,11 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
       drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
     }
   }
+
   inp.onfocus = () => {
     console.warn("INPUT RECEIVES FOCUS");
+    // if iOS resize ui to use remaining visual viewport
+    // place editor on top of page and focus selected item
     printess.focusSelectedItem();
   }
   inp.blur = () => {
@@ -262,6 +304,9 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   if (forMobile) {
     r.classList.add("form-control");
   }
+  window.setTimeout(() => {
+    inp.focus();
+  }, 100)
   return r;
 }
 
@@ -1446,6 +1491,8 @@ function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExter
   return null;
 }
 
+
+
 function resizeMobileUi(printess: iPrintessApi) {
 
   const mobileUi = getMobileUiDiv();
@@ -1501,7 +1548,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           controlHost.appendChild(control);
 
           resizeMobileUi(printess);
-         
+
         }
       }
     }
@@ -1509,8 +1556,8 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
     drawButtonContent(printess, buttonDiv, properties);
 
     buttonContainer.appendChild(buttonDiv);
- 
-   
+
+
     /*  if ( b === buttons[0]) {
         // center first button
         

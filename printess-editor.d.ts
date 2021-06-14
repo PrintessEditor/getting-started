@@ -195,7 +195,7 @@ export interface iPrintessApi {
 
   getIcon(icon: iconName): SVGElement
 
-  resizePrintess(immediate?: boolean): void;
+  resizePrintess(immediate?: boolean, focusSelection?: boolean): void;
 
   load(scopeId: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
 
