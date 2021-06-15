@@ -1493,7 +1493,7 @@ function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExter
 
 
 
-function resizeMobileUi(printess: iPrintessApi) {
+function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false) {
 
   const mobileUi = getMobileUiDiv();
   const controlHost = document.getElementById("mobile-control-host");
@@ -1506,7 +1506,7 @@ function resizeMobileUi(printess: iPrintessApi) {
     const printessDiv = document.getElementById("printessin");
     if (printessDiv) {
       printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
-      printess.resizePrintess();
+      printess.resizePrintess(true, focusSelection);
     }
   }
 
@@ -1547,7 +1547,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true)
           controlHost.appendChild(control);
 
-          resizeMobileUi(printess);
+          resizeMobileUi(printess, true);
 
         }
       }

@@ -1174,7 +1174,7 @@ function getMobileSelectedProperty(properties) {
     }
     return null;
 }
-function resizeMobileUi(printess) {
+function resizeMobileUi(printess, focusSelection = false) {
     const mobileUi = getMobileUiDiv();
     const controlHost = document.getElementById("mobile-control-host");
     if (mobileUi && controlHost) {
@@ -1184,7 +1184,7 @@ function resizeMobileUi(printess) {
         const printessDiv = document.getElementById("printessin");
         if (printessDiv) {
             printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
-            printess.resizePrintess();
+            printess.resizePrintess(true, focusSelection);
         }
     }
 }
@@ -1214,7 +1214,7 @@ function getMobileButtons(printess, properties) {
                 if (b.newState.externalProperty) {
                     const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
                     controlHost.appendChild(control);
-                    resizeMobileUi(printess);
+                    resizeMobileUi(printess, true);
                 }
             }
         };
