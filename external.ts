@@ -1468,12 +1468,14 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
   if (mobileUi && controlHost) {
     const control = <HTMLDivElement>controlHost.children[0];
     // read button bar height from CSS Variable.
+    const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
     const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
-    const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-button-bar-height").trim().replace("px", "") || "");
+    const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
     const usedHeight = control ? control.offsetHeight : 0;
     mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
     const printessDiv = document.getElementById("printessin");
-    let printessHeight = window.innerHeight - usedHeight - mobileButtonBarHeight;
+    const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    let printessHeight = viewPortHeight - usedHeight - mobileButtonBarHeight;
     if (printessDiv) {
       if (usedHeight > 100) {
         // hide toolbar & pagebar to free up more space 
@@ -1488,6 +1490,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
       } else {
         printessDiv.style.top = "";
         printessHeight -= mobilePageBarHeight;
+        printessHeight -= mobileNavBarHeight;
         const toolBar: HTMLDivElement | null = document.querySelector(".navbar");
         if (toolBar) toolBar.style.visibility = "visible";
         const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");

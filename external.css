@@ -14,10 +14,10 @@
   --mobile-button-square-bg-selected: #cccc00;
   --mobile-button-square-color: var(--mobile-button-color);
   --mobile-button-image-border: var(--mobile-button-border); /* rgba(255, 255, 255, 0.5);*/
-
-  --nav-bar-height: 47px;
-  --mobile-button-bar-height: 78px;
+ 
+  --mobile-buttonbar-height: 78px;
   --mobile-pagebar-height: 40px;
+  --mobile-navbar-height: 40px;
 }
 
 hr {
@@ -377,7 +377,7 @@ input[type='range'] {
   width: inherit;
   left: 0;
   right: 0;
-  height: var(--mobile-button-bar-height);
+  height: var(--mobile-buttonbar-height);
   z-index: 5;
   border-top: 2px solid black;
   background-color:  var(--mobile-panel-background);
@@ -426,7 +426,7 @@ input[type='range'] {
   top:0;
   left: 0;
   right: 0 ;
-  height: var(--mobile-button-bar-height);
+  height: var(--mobile-buttonbar-height);
   border-bottom: 1px solid var(--mobile-button-border);
   padding-top: 10px;
   background-color:  var(--mobile-panel-background);
@@ -735,7 +735,7 @@ input[type='range'] {
   position: absolute;
   height: var(--mobile-pagebar-height);
   width: 100vw;
-  top: var(--nav-bar-height);
+  top: var(--mobile-navbar-height);
   left: 0;
   background-color: var(--mobile-panel-background);
   border-bottom: 2px solid black;
@@ -780,7 +780,7 @@ input[type='range'] {
 
 @media screen and (max-width: 767px) {
   #printessin {
-    top:calc(var(--nav-bar-height) + 40px);
+    top:calc(var(--mobile-navbar-height) + var(--mobile-pagebar-height));
     left: 0;
     right: inherit;
     bottom: inherit;
@@ -788,8 +788,7 @@ input[type='range'] {
     box-shadow: none;
     width: 100vw !important;
     height: initial;
-    bottom: var(--mobile-button-bar-height);
-   /* height: calc(100vh - 260px - var(--nav-bar-height)) !important;*/
+    bottom: var(--mobile-buttonbar-height);
   }
   #desktop-properties, #json,  .token-warning, .page-buttons {
     display: none !important;

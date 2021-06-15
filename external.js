@@ -1165,12 +1165,14 @@ function resizeMobileUi(printess, focusSelection = false) {
     const controlHost = document.getElementById("mobile-control-host");
     if (mobileUi && controlHost) {
         const control = controlHost.children[0];
+        const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
         const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
-        const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-button-bar-height").trim().replace("px", "") || "");
+        const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
         const usedHeight = control ? control.offsetHeight : 0;
         mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
         const printessDiv = document.getElementById("printessin");
-        let printessHeight = window.innerHeight - usedHeight - mobileButtonBarHeight;
+        const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        let printessHeight = viewPortHeight - usedHeight - mobileButtonBarHeight;
         if (printessDiv) {
             if (usedHeight > 100) {
                 printessDiv.style.top = "0";
@@ -1186,6 +1188,7 @@ function resizeMobileUi(printess, focusSelection = false) {
             else {
                 printessDiv.style.top = "";
                 printessHeight -= mobilePageBarHeight;
+                printessHeight -= mobileNavBarHeight;
                 const toolBar = document.querySelector(".navbar");
                 if (toolBar)
                     toolBar.style.visibility = "visible";
