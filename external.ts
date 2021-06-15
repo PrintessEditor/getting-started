@@ -1,7 +1,5 @@
 
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState } from "./printess-editor";
-import { printess } from "./printess-editor/wasm/printessWasmInit";
-import { console_error } from "./shared/tools";
 
 
 //declare const bootstrap: any;
@@ -18,35 +16,14 @@ import { console_error } from "./shared/tools";
   renderPageNavigation: renderPageNavigationBS,
   renderMobileUi: renderMobileUi,
   getMobileButtons: getMobileButtons,
-  renderMobileToolbar: renderMobileToolbar,
-  viewPortResize: viewPortResize,
+  renderMobilePagebar: renderMobilePagebar,
   viewPortScroll: viewPortScroll
 }
 console.log("helpers loaded");
 
-const mobileUiHeight = 220;
-const mobileButtonBarHeight = 78;
 
-
-function viewPortResize(printess:  iPrintessApi) {
-  console.log("!!!! View-Port-Resize: height=" + window.visualViewport.height, window.visualViewport);
-/*  const printessDiv = document.getElementById("printessin");
-  if (printessDiv) {
-    if (window.visualViewport.offsetTop > 0) {
-      // system has auto scrolled conten, so we adjust printess-editor to fit
-      printessDiv.style.top = window.visualViewport.offsetTop + "px";
-      printess.resizePrintess(true, true);
-    } else {
-      console.log("Setting printess top to initial");
-      printessDiv.style.top = "87px";
-    }
-   
-  }*/
-
-}
-
-function viewPortScroll(printess:  iPrintessApi) {
-  console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
+function viewPortScroll(printess: iPrintessApi) {
+  // console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
   const printessDiv = document.getElementById("printessin");
   if (printessDiv) {
     if (window.visualViewport.offsetTop > 0) {
@@ -55,10 +32,10 @@ function viewPortScroll(printess:  iPrintessApi) {
       printess.resizePrintess(false, true);
     } else {
       console.log("Setting printess top to initial");
-      printessDiv.style.top = "87px";
+      printessDiv.style.top = "";
       printess.resizePrintess(true);
     }
-   
+
   }
 
 }
@@ -291,15 +268,6 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
     }
   }
 
-  inp.onfocus = () => {
-    console.warn("INPUT RECEIVES FOCUS");
-    // if iOS resize ui to use remaining visual viewport
-    // place editor on top of page and focus selected item
-    printess.focusSelectedItem();
-  }
-  inp.blur = () => {
-    printess.unfocusSelectedItem();
-  }
   const r = addLabel(inp, p);
   if (forMobile) {
     r.classList.add("form-control");
@@ -1439,12 +1407,12 @@ function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternal
   return button;
 }
 
-async function renderMobileToolbar(printess: iPrintessApi) {
+async function renderMobilePagebar(printess: iPrintessApi) {
 
-  let toolbar = document.querySelector(".mobile-toolbar");
+  let toolbar = document.querySelector(".mobile-pagebar");
   if (!toolbar) {
     toolbar = document.createElement("div");
-    toolbar.className = "mobile-toolbar";
+    toolbar.className = "mobile-pagebar";
     document.body.appendChild(toolbar);
   } else {
     toolbar.innerHTML = "";
@@ -1453,11 +1421,11 @@ async function renderMobileToolbar(printess: iPrintessApi) {
   const info = await printess.pageInfo();
 
   const page = document.createElement("div");
-  page.className = "mobile-toolbar-page-info";
+  page.className = "mobile-pagebar-page-info";
 
   if (!info.isFirst) {
     const previousPage = printess.getIcon("arrow-left");
-    previousPage.classList.add("mobile-toolbar-page-previous");
+    previousPage.classList.add("mobile-pagebar-page-previous");
     previousPage.onclick = () => {
       printess.previousPage();
     }
@@ -1466,7 +1434,7 @@ async function renderMobileToolbar(printess: iPrintessApi) {
 
   if (!info.isLast) {
     const nextPage = printess.getIcon("arrow-right");
-    nextPage.classList.add("mobile-toolbar-page-next");
+    nextPage.classList.add("mobile-pagebar-page-next");
     nextPage.onclick = () => {
       printess.nextPage();
     }
@@ -1494,19 +1462,40 @@ function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExter
 
 
 function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false) {
-
   const mobileUi = getMobileUiDiv();
   const controlHost = document.getElementById("mobile-control-host");
   // determine used-height of current controls
   if (mobileUi && controlHost) {
     const control = <HTMLDivElement>controlHost.children[0];
-
+    // read button bar height from CSS Variable.
+    const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+    const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-button-bar-height").trim().replace("px", "") || "");
     const usedHeight = control ? control.offsetHeight : 0;
     mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
     const printessDiv = document.getElementById("printessin");
+    let printessHeight = window.innerHeight - usedHeight - mobileButtonBarHeight;
     if (printessDiv) {
+      if (usedHeight > 100) {
+        // hide toolbar & pagebar to free up more space 
+        printessDiv.style.top = "0";
+        window.setTimeout(() => {
+          const toolBar: HTMLDivElement | null = document.querySelector(".navbar");
+          if (toolBar) toolBar.style.visibility = "hidden";
+          const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
+          if (pageBar) pageBar.style.visibility = "hidden";
+        }, 400);
+
+      } else {
+        printessDiv.style.top = "";
+        printessHeight -= mobilePageBarHeight;
+        const toolBar: HTMLDivElement | null = document.querySelector(".navbar");
+        if (toolBar) toolBar.style.visibility = "visible";
+        const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
+        if (pageBar) pageBar.style.visibility = "visible";
+      }
+
       printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
-      printess.resizePrintess(true, focusSelection);
+      printess.resizePrintess(true, focusSelection, undefined, printessHeight);
     }
   }
 

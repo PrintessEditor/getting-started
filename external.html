@@ -241,7 +241,7 @@
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
 
-      uiHelper.renderMobileToolbar(printess);
+      uiHelper.renderMobilePagebar(printess);
 
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
@@ -382,7 +382,7 @@
 
       // listen to viual viewport changes to detect virtual keyboard on iOs
       if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess))
+       // window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess))
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess))
       }
 

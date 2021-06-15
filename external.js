@@ -16,18 +16,11 @@ window.uiHelper = {
     renderPageNavigation: renderPageNavigationBS,
     renderMobileUi: renderMobileUi,
     getMobileButtons: getMobileButtons,
-    renderMobileToolbar: renderMobileToolbar,
-    viewPortResize: viewPortResize,
+    renderMobilePagebar: renderMobilePagebar,
     viewPortScroll: viewPortScroll
 };
 console.log("helpers loaded");
-const mobileUiHeight = 220;
-const mobileButtonBarHeight = 78;
-function viewPortResize(printess) {
-    console.log("!!!! View-Port-Resize: height=" + window.visualViewport.height, window.visualViewport);
-}
 function viewPortScroll(printess) {
-    console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
     const printessDiv = document.getElementById("printessin");
     if (printessDiv) {
         if (window.visualViewport.offsetTop > 0) {
@@ -36,7 +29,7 @@ function viewPortScroll(printess) {
         }
         else {
             console.log("Setting printess top to initial");
-            printessDiv.style.top = "87px";
+            printessDiv.style.top = "";
             printess.resizePrintess(true);
         }
     }
@@ -196,13 +189,6 @@ function getSingleLineTextBox(printess, p, forMobile) {
             p.value = inp.value;
             drawButtonContent(printess, mobileButtonDiv, [p]);
         }
-    };
-    inp.onfocus = () => {
-        console.warn("INPUT RECEIVES FOCUS");
-        printess.focusSelectedItem();
-    };
-    inp.blur = () => {
-        printess.unfocusSelectedItem();
     };
     const r = addLabel(inp, p);
     if (forMobile) {
@@ -1129,12 +1115,12 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
     button.appendChild(circle);
     return button;
 }
-function renderMobileToolbar(printess) {
+function renderMobilePagebar(printess) {
     return __awaiter(this, void 0, void 0, function* () {
-        let toolbar = document.querySelector(".mobile-toolbar");
+        let toolbar = document.querySelector(".mobile-pagebar");
         if (!toolbar) {
             toolbar = document.createElement("div");
-            toolbar.className = "mobile-toolbar";
+            toolbar.className = "mobile-pagebar";
             document.body.appendChild(toolbar);
         }
         else {
@@ -1142,10 +1128,10 @@ function renderMobileToolbar(printess) {
         }
         const info = yield printess.pageInfo();
         const page = document.createElement("div");
-        page.className = "mobile-toolbar-page-info";
+        page.className = "mobile-pagebar-page-info";
         if (!info.isFirst) {
             const previousPage = printess.getIcon("arrow-left");
-            previousPage.classList.add("mobile-toolbar-page-previous");
+            previousPage.classList.add("mobile-pagebar-page-previous");
             previousPage.onclick = () => {
                 printess.previousPage();
             };
@@ -1153,7 +1139,7 @@ function renderMobileToolbar(printess) {
         }
         if (!info.isLast) {
             const nextPage = printess.getIcon("arrow-right");
-            nextPage.classList.add("mobile-toolbar-page-next");
+            nextPage.classList.add("mobile-pagebar-page-next");
             nextPage.onclick = () => {
                 printess.nextPage();
             };
@@ -1179,12 +1165,36 @@ function resizeMobileUi(printess, focusSelection = false) {
     const controlHost = document.getElementById("mobile-control-host");
     if (mobileUi && controlHost) {
         const control = controlHost.children[0];
+        const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+        const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-button-bar-height").trim().replace("px", "") || "");
         const usedHeight = control ? control.offsetHeight : 0;
         mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
         const printessDiv = document.getElementById("printessin");
+        let printessHeight = window.innerHeight - usedHeight - mobileButtonBarHeight;
         if (printessDiv) {
+            if (usedHeight > 100) {
+                printessDiv.style.top = "0";
+                window.setTimeout(() => {
+                    const toolBar = document.querySelector(".navbar");
+                    if (toolBar)
+                        toolBar.style.visibility = "hidden";
+                    const pageBar = document.querySelector(".mobile-pagebar");
+                    if (pageBar)
+                        pageBar.style.visibility = "hidden";
+                }, 400);
+            }
+            else {
+                printessDiv.style.top = "";
+                printessHeight -= mobilePageBarHeight;
+                const toolBar = document.querySelector(".navbar");
+                if (toolBar)
+                    toolBar.style.visibility = "visible";
+                const pageBar = document.querySelector(".mobile-pagebar");
+                if (pageBar)
+                    pageBar.style.visibility = "visible";
+            }
             printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
-            printess.resizePrintess(true, focusSelection);
+            printess.resizePrintess(true, focusSelection, undefined, printessHeight);
         }
     }
 }

@@ -107,6 +107,12 @@ export interface printessAttachParameters {
     */
   minImageWidth?: number;
 
+  /**
+   * Optinally you can pass a list of buttons.
+   * Since yu have full control over the ui in custom mode, you of course can simply 
+   * hard-code the required buttons.
+   */
+  buttons?: Array<iExternalButton>;
 }
 
 /**
@@ -127,8 +133,6 @@ export interface iPrintessApi {
   deleteSelectedFrames(): Promise<boolean>;
   selectFrames(propertyId: string): Promise<void>;
   selectBackground(): Promise<void>;
-  focusSelectedItem(): Promise<void> ;
-  unfocusSelectedItem(): Promise<void> ;
   selectSpread(spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
   nextPage(): Promise<void>;
   previousPage(): Promise<void>;
@@ -195,7 +199,14 @@ export interface iPrintessApi {
 
   getIcon(icon: iconName): SVGElement
 
-  resizePrintess(immediate?: boolean, focusSelection?: boolean): void;
+  /**
+   * Trigger a resize and fit of the current page, can focus the selection alternatively.
+   * @param immediate Optional: Determines if resize should wait for a second or happens immediatly
+   * @param focusSelection Optional: Will zoom to current selection
+   * @param width Optional: Overrides the retrieved offsetWidth of the printess container - helpfull when animation are longer running
+   * @param height Optional: Overrides the retrieved offsetHeight of the printess container - helpfull when animation are longer running
+   */
+  resizePrintess(immediate?: boolean, focusSelection?: boolean,  width?: number, height?: number): void;
 
   load(scopeId: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
 
