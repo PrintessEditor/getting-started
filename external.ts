@@ -23,21 +23,21 @@ console.log("helpers loaded");
 
 
 function viewPortScroll(printess: iPrintessApi) {
-  // console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
+  console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
   const printessDiv = document.getElementById("printessin");
   if (printessDiv) {
     if (window.visualViewport.offsetTop > 0) {
       // system has auto scrolled conten, so we adjust printess-editor to fit
-      printessDiv.style.top = window.visualViewport.offsetTop + "px";
-      printess.resizePrintess(false, true);
+      //printessDiv.style.top = window.visualViewport.offsetTop + "px";
+      resizeMobileUi(printess, true);
+      //  printess.resizePrintess(false, true);
     } else {
-      console.log("Setting printess top to initial");
-      printessDiv.style.top = "";
-      printess.resizePrintess(true);
+      //  console.log("Setting printess top to initial");
+      // printessDiv.style.top = "";
+      resizeMobileUi(printess, false);
+      // printess.resizePrintess(true);
     }
-
   }
-
 }
 
 /*
@@ -272,9 +272,9 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   if (forMobile) {
     r.classList.add("form-control");
   }
-  window.setTimeout(() => {
-    inp.focus();
-  }, 100)
+  /* window.setTimeout(() => {
+     inp.focus();
+   }, 100)*/
   return r;
 }
 
@@ -1363,6 +1363,13 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
   }
   if (state !== "document") {
     mobileUi.appendChild(getMobileBackButton(printess, properties, state, groupSnippets))
+
+  } else {
+    // propably we where in text edit and now need to wait for viewport scroll evevnt to fire 
+    // to not resize twice 
+    if (window.visualViewport && window.visualViewport.offsetTop) {
+      return;
+    }
   }
 
   resizeMobileUi(printess);
@@ -1460,6 +1467,9 @@ function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExter
 }
 
 
+let lastPrintessHeight = 0;
+let lastPrintessTop = "";
+let lastPrintessBottom = 0;
 
 function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false) {
   const mobileUi = getMobileUiDiv();
@@ -1472,14 +1482,22 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
     const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
     const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
     const usedHeight = control ? control.offsetHeight : 0;
+
     mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
     const printessDiv = document.getElementById("printessin");
     const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
     let printessHeight = viewPortHeight - usedHeight - mobileButtonBarHeight;
     if (printessDiv) {
-      if (usedHeight > 100) {
+      let printessTop: string;
+
+      if (viewPortTopOffset > 0) {
+        // counter-act view-port shift if iOS keyboard is visible
+        printessTop = viewPortTopOffset + "px";
+
+      } else if (usedHeight > 100 || viewPortTopOffset > 0) {
         // hide toolbar & pagebar to free up more space 
-        printessDiv.style.top = "0";
+        printessTop = "0";
         window.setTimeout(() => {
           const toolBar: HTMLDivElement | null = document.querySelector(".navbar");
           if (toolBar) toolBar.style.visibility = "hidden";
@@ -1488,7 +1506,8 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
         }, 400);
 
       } else {
-        printessDiv.style.top = "";
+        // reduce height by visible toolbar and pagebar 
+        printessTop = "";
         printessHeight -= mobilePageBarHeight;
         printessHeight -= mobileNavBarHeight;
         const toolBar: HTMLDivElement | null = document.querySelector(".navbar");
@@ -1497,8 +1516,17 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
         if (pageBar) pageBar.style.visibility = "visible";
       }
 
-      printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
-      printess.resizePrintess(true, focusSelection, undefined, printessHeight);
+      const printessBottom = mobileButtonBarHeight + usedHeight;
+
+      if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
+        lastPrintessBottom = printessBottom;
+        lastPrintessTop = printessTop;
+        lastPrintessHeight = printessHeight;
+        printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
+        printessDiv.style.top = printessTop;
+        printess.resizePrintess(true, focusSelection, undefined, printessHeight);
+        console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
+      }
     }
   }
 

@@ -21,16 +21,14 @@ window.uiHelper = {
 };
 console.log("helpers loaded");
 function viewPortScroll(printess) {
+    console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
     const printessDiv = document.getElementById("printessin");
     if (printessDiv) {
         if (window.visualViewport.offsetTop > 0) {
-            printessDiv.style.top = window.visualViewport.offsetTop + "px";
-            printess.resizePrintess(false, true);
+            resizeMobileUi(printess, true);
         }
         else {
-            console.log("Setting printess top to initial");
-            printessDiv.style.top = "";
-            printess.resizePrintess(true);
+            resizeMobileUi(printess, false);
         }
     }
 }
@@ -194,9 +192,6 @@ function getSingleLineTextBox(printess, p, forMobile) {
     if (forMobile) {
         r.classList.add("form-control");
     }
-    window.setTimeout(() => {
-        inp.focus();
-    }, 100);
     return r;
 }
 function getTitle(p) {
@@ -1082,6 +1077,11 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
     if (state !== "document") {
         mobileUi.appendChild(getMobileBackButton(printess, properties, state, groupSnippets));
     }
+    else {
+        if (window.visualViewport && window.visualViewport.offsetTop) {
+            return;
+        }
+    }
     resizeMobileUi(printess);
 }
 function getMobilePlusButton(printess, properties, groupSnippets) {
@@ -1160,6 +1160,9 @@ function getMobileSelectedProperty(properties) {
     }
     return null;
 }
+let lastPrintessHeight = 0;
+let lastPrintessTop = "";
+let lastPrintessBottom = 0;
 function resizeMobileUi(printess, focusSelection = false) {
     const mobileUi = getMobileUiDiv();
     const controlHost = document.getElementById("mobile-control-host");
@@ -1172,10 +1175,15 @@ function resizeMobileUi(printess, focusSelection = false) {
         mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
         const printessDiv = document.getElementById("printessin");
         const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
         let printessHeight = viewPortHeight - usedHeight - mobileButtonBarHeight;
         if (printessDiv) {
-            if (usedHeight > 100) {
-                printessDiv.style.top = "0";
+            let printessTop;
+            if (viewPortTopOffset > 0) {
+                printessTop = viewPortTopOffset + "px";
+            }
+            else if (usedHeight > 100 || viewPortTopOffset > 0) {
+                printessTop = "0";
                 window.setTimeout(() => {
                     const toolBar = document.querySelector(".navbar");
                     if (toolBar)
@@ -1186,7 +1194,7 @@ function resizeMobileUi(printess, focusSelection = false) {
                 }, 400);
             }
             else {
-                printessDiv.style.top = "";
+                printessTop = "";
                 printessHeight -= mobilePageBarHeight;
                 printessHeight -= mobileNavBarHeight;
                 const toolBar = document.querySelector(".navbar");
@@ -1196,8 +1204,16 @@ function resizeMobileUi(printess, focusSelection = false) {
                 if (pageBar)
                     pageBar.style.visibility = "visible";
             }
-            printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
-            printess.resizePrintess(true, focusSelection, undefined, printessHeight);
+            const printessBottom = mobileButtonBarHeight + usedHeight;
+            if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
+                lastPrintessBottom = printessBottom;
+                lastPrintessTop = printessTop;
+                lastPrintessHeight = printessHeight;
+                printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
+                printessDiv.style.top = printessTop;
+                printess.resizePrintess(true, focusSelection, undefined, printessHeight);
+                console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
+            }
         }
     }
 }
