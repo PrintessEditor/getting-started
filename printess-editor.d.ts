@@ -402,11 +402,12 @@ export interface iMobileUIButton {
 }
 
 export interface iMobileUiState {
-  state: typeof mobileUiStateNames[number],
+  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop"
   externalProperty?: iExternalProperty,
-  metaProperty?: iExternalMetaPropertyKind, // can be null
+  metaProperty?: iExternalMetaPropertyKind
 }
 
+ 
 export type MobileUiState = "document" | "frames" | "add";
 
 export interface iButtonCircle {

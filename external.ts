@@ -703,6 +703,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
     container.appendChild(scaleControl)
     return container;
   } else {
+    container.classList.add("form-control");
     container.appendChild(imageList);
     return container;
   }
@@ -1507,12 +1508,13 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
   const controlHost = document.getElementById("mobile-control-host");
   // determine used-height of current controls
   if (mobileUi && controlHost) {
-    const control = <HTMLDivElement>controlHost.children[0];
+    const control = <HTMLDivElement>controlHost;
+    const usedHeight = control ? control.offsetHeight : 0;
     // read button bar height from CSS Variable.
     const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
     const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
     const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
-    const usedHeight = control ? control.offsetHeight : 0;
+
 
     mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
     const printessDiv = document.getElementById("printessin");
@@ -1579,6 +1581,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
 
   if (buttons.length === 0) {
     // if we have no properties on document level, we can render the page navigation
+    document.body.classList.remove("no-mobile-button-bar");
     const spreads = printess.getAllSpreadsSync();
     const info = printess.pageInfoSync();
     if (spreads.length <= 10) {
@@ -1586,7 +1589,27 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
     }
     renderPageNavigation(printess, spreads, info, buttonContainer);
 
+  } else if (buttons.length === 1) {
+    // Auto jump to first button action: 
+    document.body.classList.add("no-mobile-button-bar");
+    window.setTimeout(() => {
+      const controlHost = document.getElementById("mobile-control-host");
+      if (controlHost) {
+        const b = buttons[0];
+        controlHost.innerHTML = "";
+        if (b.newState.externalProperty) {
+          controlHost.classList.remove("mobile-control-sm");
+          controlHost.classList.remove("mobile-control-md");
+          controlHost.classList.remove("mobile-control-lg");
+          controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty));
+          const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true)
+          controlHost.appendChild(control);
+          resizeMobileUi(printess, true);
+        }
+      }
+    }, 50);
   } else {
+    document.body.classList.remove("no-mobile-button-bar");
     for (const b of buttons) {
       const buttonDiv = document.createElement("div");
       buttonDiv.id = (b.newState.externalProperty?.id ?? "") + ":" + (b.newState.metaProperty ?? "");
@@ -1603,9 +1626,14 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
         const controlHost = document.getElementById("mobile-control-host");
 
         if (controlHost) {
+          controlHost.classList.remove("mobile-control-sm");
+          controlHost.classList.remove("mobile-control-md");
+          controlHost.classList.remove("mobile-control-lg");
+
           centerMobileButton(buttonDiv);
           controlHost.innerHTML = "";
           if (b.newState.externalProperty) {
+            controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty))
             const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true)
             controlHost.appendChild(control);
             resizeMobileUi(printess, true);
@@ -1616,7 +1644,16 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
       drawButtonContent(printess, buttonDiv, properties);
 
       buttonContainer.appendChild(buttonDiv);
+
+      if (buttons.length === 1) {
+        // press this button immediately
+        window.setTimeout(() => {
+          buttonDiv.click();
+        }, 100)
+
+      }
     }
+
   }
 
 
@@ -1625,6 +1662,26 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   return container;
 }
 
+function getMobileControlHeightClass(property: iExternalProperty, meta?: iExternalMetaPropertyKind): string {
+  switch (property.kind) {
+    case "image":
+      if (!meta) {
+        return "mobile-control-lg"
+      }
+      break;
+    case "multi-line-text":
+      if (!meta || meta === "text-style-color" || meta === "text-style-font" || meta === "text-style-size") {
+        return "mobile-control-lg"
+      }
+      break;
+    case "color":
+    case "text-area":
+    case "select-list":
+      return "mobile-control-lg"
+  }
+
+  return "mobile-control-sm"
+}
 
 
 function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, properties: Array<iExternalProperty>) {

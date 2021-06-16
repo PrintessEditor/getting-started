@@ -533,6 +533,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
         return container;
     }
     else {
+        container.classList.add("form-control");
         container.appendChild(imageList);
         return container;
     }
@@ -1200,11 +1201,11 @@ function resizeMobileUi(printess, focusSelection = false) {
     const mobileUi = getMobileUiDiv();
     const controlHost = document.getElementById("mobile-control-host");
     if (mobileUi && controlHost) {
-        const control = controlHost.children[0];
+        const control = controlHost;
+        const usedHeight = control ? control.offsetHeight : 0;
         const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
         const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
-        const usedHeight = control ? control.offsetHeight : 0;
         mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
         const printessDiv = document.getElementById("printessin");
         const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -1260,6 +1261,7 @@ function getMobileButtons(printess, properties) {
     buttonContainer.className = "mobile-buttons";
     const buttons = printess.getMobileUiButtons(properties);
     if (buttons.length === 0) {
+        document.body.classList.remove("no-mobile-button-bar");
         const spreads = printess.getAllSpreadsSync();
         const info = printess.pageInfoSync();
         if (spreads.length <= 10) {
@@ -1267,7 +1269,27 @@ function getMobileButtons(printess, properties) {
         }
         renderPageNavigation(printess, spreads, info, buttonContainer);
     }
+    else if (buttons.length === 1) {
+        document.body.classList.add("no-mobile-button-bar");
+        window.setTimeout(() => {
+            const controlHost = document.getElementById("mobile-control-host");
+            if (controlHost) {
+                const b = buttons[0];
+                controlHost.innerHTML = "";
+                if (b.newState.externalProperty) {
+                    controlHost.classList.remove("mobile-control-sm");
+                    controlHost.classList.remove("mobile-control-md");
+                    controlHost.classList.remove("mobile-control-lg");
+                    controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty));
+                    const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
+                    controlHost.appendChild(control);
+                    resizeMobileUi(printess, true);
+                }
+            }
+        }, 50);
+    }
     else {
+        document.body.classList.remove("no-mobile-button-bar");
         for (const b of buttons) {
             const buttonDiv = document.createElement("div");
             buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + ":" + ((_c = b.newState.metaProperty) !== null && _c !== void 0 ? _c : "");
@@ -1280,9 +1302,13 @@ function getMobileButtons(printess, properties) {
                 drawButtonContent(printess, buttonDiv, properties);
                 const controlHost = document.getElementById("mobile-control-host");
                 if (controlHost) {
+                    controlHost.classList.remove("mobile-control-sm");
+                    controlHost.classList.remove("mobile-control-md");
+                    controlHost.classList.remove("mobile-control-lg");
                     centerMobileButton(buttonDiv);
                     controlHost.innerHTML = "";
                     if (b.newState.externalProperty) {
+                        controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty));
                         const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
                         controlHost.appendChild(control);
                         resizeMobileUi(printess, true);
@@ -1291,11 +1317,35 @@ function getMobileButtons(printess, properties) {
             };
             drawButtonContent(printess, buttonDiv, properties);
             buttonContainer.appendChild(buttonDiv);
+            if (buttons.length === 1) {
+                window.setTimeout(() => {
+                    buttonDiv.click();
+                }, 100);
+            }
         }
     }
     scrollContainer.appendChild(buttonContainer);
     container.appendChild(scrollContainer);
     return container;
+}
+function getMobileControlHeightClass(property, meta) {
+    switch (property.kind) {
+        case "image":
+            if (!meta) {
+                return "mobile-control-lg";
+            }
+            break;
+        case "multi-line-text":
+            if (!meta || meta === "text-style-color" || meta === "text-style-font" || meta === "text-style-size") {
+                return "mobile-control-lg";
+            }
+            break;
+        case "color":
+        case "text-area":
+        case "select-list":
+            return "mobile-control-lg";
+    }
+    return "mobile-control-sm";
 }
 function drawButtonContent(printess, buttonDiv, properties) {
     var _a, _b;

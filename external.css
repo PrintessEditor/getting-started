@@ -23,6 +23,9 @@
 body.inline-mobile-page-bar {
   --mobile-pagebar-height: 0px;
 }
+body.no-mobile-button-bar {
+  --mobile-buttonbar-height: 0px;
+}
 
 hr {
   margin: 0;  
@@ -391,15 +394,24 @@ input[type='range'] {
  
  
 .mobile-control-host {
-  height: calc(100% - 75px);
-  max-height: 140px;
+  height:0px;
   position: absolute;
   bottom: 0px;
   left: 0;
   right: 0;
-  padding: 0;
+  padding: 5px 5px;
   background-color:  var(--mobile-panel-background);
+  background-color: lavender;
   overflow: hidden auto;
+}
+.mobile-control-sm {
+  height: 60px;
+}
+.mobile-control-md {
+  height: 90px;
+}
+.mobile-control-lg {
+  height: 140px;
 }
 
 .mobile-control-host > .list-group {
