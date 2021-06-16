@@ -1,5 +1,5 @@
 
-import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState } from "./printess-editor";
+import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iExternalButton } from "./printess-editor";
 
 
 //declare const bootstrap: any;
@@ -13,10 +13,12 @@ import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty
   renderLayoutSnippets: renderLayoutSnippets,
   getOverlay: getOverlay,
   getDoneButton: getDoneButton,
-  renderPageNavigation: renderPageNavigationBS,
+  getTitle: getTitle,
+  renderPageNavigation: renderPageNavigation,
   renderMobileUi: renderMobileUi,
   getMobileButtons: getMobileButtons,
   renderMobilePagebar: renderMobilePagebar,
+  renderMobileNavBar: renderMobileNavBar,
   viewPortScroll: viewPortScroll
 }
 console.log("helpers loaded");
@@ -55,9 +57,6 @@ function getMobilePropertyControl(printess: iPrintessApi, p: iExternalProperty, 
 function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaProperty?: iExternalMetaPropertyKind, forMobile: boolean = false): HTMLElement {
 
   switch (p.kind) {
-
-    case "title":
-      return getTitle(p);
 
     case "background-button":
       return getChangeBackgroundButton(printess);
@@ -278,14 +277,14 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   return r;
 }
 
-function getTitle(p: iExternalProperty): HTMLElement {
+function getTitle(title: string): HTMLElement {
   const container = document.createElement("div");
 
   const hr = document.createElement("hr");
   container.appendChild(hr);
 
   const h1 = document.createElement("h2");
-  h1.innerText = p.label;
+  h1.innerText = title;
 
   container.appendChild(h1);
   container.appendChild(hr);
@@ -413,7 +412,7 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
     } else {
       button.style.backgroundColor = p.value.toString();
     }
-
+    button.innerHTML = "&nbsp;";
     dropdown.appendChild(button);
   }
 
@@ -1154,38 +1153,17 @@ function getFontSizeBox(printess: iPrintessApi, p: iExternalProperty) {
  * PAGE LIST 
  */
 
-function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSpreadInfo>, _properties: Array<iExternalProperty>): void {
-  console.log("All Spreads", spreads);
 
-  // draw pages ui
-  const pages = document.querySelector(".page-buttons");
-  if (pages) {
-    let pageNo = 0;
-    pages.innerHTML = "";
-    for (const spread of spreads) {
-      for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
-        pageNo++;
-        const pageButton = document.createElement("div");
-        pageButton.innerText = spread.name ? spread.name : "Page " + pageNo;
-        if (pageIndex === spread.pages - 1) {
-          pageButton.style.marginRight = "10px";
-        }
-        pageButton.onclick = () => {
-          printess.selectSpread(spread.index, pageIndex === 0 ? "left-page" : "right-page");
-        }
-        pages.appendChild(pageButton);
-      }
-    }
-  }
-
-}
-
-function getPaginationItem(printess: iPrintessApi, content: number | "previous" | "next", spread: iExternalSpreadInfo, page: "left-page" | "right-page"): HTMLLIElement {
+function getPaginationItem(printess: iPrintessApi, content: number | "previous" | "next", spread: iExternalSpreadInfo, page: "left-page" | "right-page", isActive: boolean): HTMLLIElement {
   const li = document.createElement("li");
   li.className = "page-item";
 
   const a = document.createElement("li");
   a.className = "page-link";
+
+  if (isActive) {
+    a.classList.add("active");
+  }
 
   if (typeof content === "number") {
     a.innerText = spread.name ? spread.name : content.toString();
@@ -1206,11 +1184,11 @@ function getPaginationItem(printess: iPrintessApi, content: number | "previous" 
   return li;
 }
 
-function renderPageNavigationBS(printess: iPrintessApi, spreads: Array<iExternalSpreadInfo>, _properties: Array<iExternalProperty>): void {
+function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSpreadInfo>, info?: { current: number, max: number, isFirst: boolean, isLast: boolean }, container?: HTMLDivElement): void {
   console.log("All Spreads", spreads);
 
   // draw pages ui
-  const pages = document.querySelector(".page-buttons");
+  const pages = container || document.querySelector(".page-buttons");
   if (pages) {
     let pageNo = 0;
     pages.innerHTML = "";
@@ -1221,7 +1199,11 @@ function renderPageNavigationBS(printess: iPrintessApi, spreads: Array<iExternal
         for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
           pageNo++;
           const page = pageIndex === 0 ? "left-page" : "right-page";
-          ul.appendChild(getPaginationItem(printess, pageNo, spread, page));
+          let isActive = false;
+          if (info) {
+            isActive = info.current === pageIndex;
+          }
+          ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
         }
       }
     }
@@ -1338,6 +1320,15 @@ function getMobileUiDiv(): HTMLDivElement {
   }
   return mobileUi;
 }
+function getMobileNavbar(): HTMLElement {
+  let mobileNav: HTMLElement | null = document.querySelector(".mobile-navbar");
+  if (!mobileNav) {
+    mobileNav = document.createElement("nav");
+    mobileNav.className = "mobile-navbar navbar navbar-dark bg-primary"
+    document.body.appendChild(mobileNav);
+  }
+  return mobileNav;
+}
 
 function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>) {
 
@@ -1350,7 +1341,10 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
     mobileUi.appendChild(snippets);
   } else {
     // render properties UI
-    mobileUi.appendChild(getMobileButtons(printess, properties));
+    const buttonsOrPages = getMobileButtons(printess, properties);
+    mobileUi.innerHTML = "";
+    mobileUi.appendChild(buttonsOrPages);
+
     const controlHost = document.createElement("div");
     controlHost.className = "mobile-control-host";
     controlHost.id = "mobile-control-host";
@@ -1412,6 +1406,43 @@ function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternal
 
   button.appendChild(circle);
   return button;
+}
+
+function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButton>) {
+  if (!buttons || buttons.length === 0) {
+    buttons = [
+      {
+        type: "back"
+      },
+      {
+        type: "addToBasket"
+      }
+    ]
+  }
+
+  const nav = getMobileNavbar();
+  nav.innerHTML = "";
+  for (const b of buttons) {
+    const btn = document.createElement("button");
+    btn.classList.add("btn");
+    btn.classList.add("btn-sm");
+    // btn.classList.add("btn-outline");
+    btn.classList.add("me-2");
+    if (b.type === "addToBasket") {
+      btn.classList.add("btn-outline-light");
+      btn.innerText = b.caption || "Add to Basket";
+    } else if (b.type === "back") {
+      const ico = printess.getIcon("arrow-left");
+      ico.style.width = "20px";
+      ico.style.height = "20px";
+      ico.style.fill = "white";
+      btn.appendChild(ico);
+    } else {
+      btn.innerText = b.caption || b.type;
+    }
+    nav.appendChild(btn);
+  }
+  return nav;
 }
 
 async function renderMobilePagebar(printess: iPrintessApi) {
@@ -1499,7 +1530,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
         // hide toolbar & pagebar to free up more space 
         printessTop = "0";
         window.setTimeout(() => {
-          const toolBar: HTMLDivElement | null = document.querySelector(".navbar");
+          const toolBar: HTMLDivElement | null = document.querySelector(".mobile-navbar");
           if (toolBar) toolBar.style.visibility = "hidden";
           const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
           if (pageBar) pageBar.style.visibility = "hidden";
@@ -1510,7 +1541,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
         printessTop = "";
         printessHeight -= mobilePageBarHeight;
         printessHeight -= mobileNavBarHeight;
-        const toolBar: HTMLDivElement | null = document.querySelector(".navbar");
+        const toolBar: HTMLDivElement | null = document.querySelector(".mobile-navbar");
         if (toolBar) toolBar.style.visibility = "visible";
         const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
         if (pageBar) pageBar.style.visibility = "visible";
@@ -1543,55 +1574,51 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   const buttonContainer = document.createElement("div");
   buttonContainer.className = "mobile-buttons";
 
+
   const buttons = printess.getMobileUiButtons(properties);
 
-  for (const b of buttons) {
-    const buttonDiv = document.createElement("div");
-    buttonDiv.id = (b.newState.externalProperty?.id ?? "") + ":" + (b.newState.metaProperty ?? "");
-    buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
+  if (buttons.length === 0) {
+    // if we have no properties on document level, we can render the page navigation
+    const spreads = printess.getAllSpreadsSync();
+    const info = printess.pageInfoSync();
+    if (spreads.length <= 10) {
+      buttonContainer.style.width = "100%" // centers the page navigation
+    }
+    renderPageNavigation(printess, spreads, info, buttonContainer);
 
-    buttonDiv.onclick = (_e: MouseEvent) => {
-      document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
-      document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-      buttonDiv.classList.toggle("selected");
-      buttonDiv.innerHTML = "";
-      drawButtonContent(printess, buttonDiv, properties);
+  } else {
+    for (const b of buttons) {
+      const buttonDiv = document.createElement("div");
+      buttonDiv.id = (b.newState.externalProperty?.id ?? "") + ":" + (b.newState.metaProperty ?? "");
+      buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
 
-      // render control
-      const controlHost = document.getElementById("mobile-control-host");
+      buttonDiv.onclick = (_e: MouseEvent) => {
+        document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
+        document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+        buttonDiv.classList.toggle("selected");
+        buttonDiv.innerHTML = "";
+        drawButtonContent(printess, buttonDiv, properties);
 
-      if (controlHost) {
-        centerMobileButton(buttonDiv);
-        controlHost.innerHTML = "";
-        if (b.newState.externalProperty) {
-          const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true)
-          controlHost.appendChild(control);
+        // render control
+        const controlHost = document.getElementById("mobile-control-host");
 
-          resizeMobileUi(printess, true);
-
+        if (controlHost) {
+          centerMobileButton(buttonDiv);
+          controlHost.innerHTML = "";
+          if (b.newState.externalProperty) {
+            const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true)
+            controlHost.appendChild(control);
+            resizeMobileUi(printess, true);
+          }
         }
       }
+
+      drawButtonContent(printess, buttonDiv, properties);
+
+      buttonContainer.appendChild(buttonDiv);
     }
-
-    drawButtonContent(printess, buttonDiv, properties);
-
-    buttonContainer.appendChild(buttonDiv);
-
-
-    /*  if ( b === buttons[0]) {
-        // center first button
-        
-        
-        window.setTimeout(()=>{
-          //centerMobileButton(buttonDiv);
-          const scrollContainer = <HTMLDivElement>document.querySelector(".mobile-buttons-scroll-container");
-          const mobileUi = <HTMLDivElement>document.querySelector(".mobile-ui");
-          if (scrollContainer && mobileUi) {
-            scrollContainer.scrollLeft = mobileUi.offsetWidth / 2;
-          }
-        },0)
-      }*/
   }
+
 
   scrollContainer.appendChild(buttonContainer);
   container.appendChild(scrollContainer);

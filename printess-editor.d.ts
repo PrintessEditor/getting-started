@@ -65,8 +65,9 @@ export interface printessAttachParameters {
   /**
    * Printess has completely loaded the requested template and is now ready to operate.
    * You can now paint your page navigation ui based on the passed **iExternalSpreadInfo** Array.
+   * You also can display the **title** of the template
    */
-  loadingDoneCallback?: (spread: Array<iExternalSpreadInfo>) => void;
+  loadingDoneCallback?: (spreads: Array<iExternalSpreadInfo>, title: string) => void;
 
   /**
    * Force Showing Buyer-Side (Only valid if Service-Token is passed)
@@ -137,6 +138,7 @@ export interface iPrintessApi {
   nextPage(): Promise<void>;
   previousPage(): Promise<void>;
   pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean }>
+  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean }
 
   /**
    * Returns information about all spreads of the displayed document as an Array of
@@ -151,6 +153,10 @@ export interface iPrintessApi {
    *  }
    */
   getAllSpreads(): Promise<Array<iExternalSpreadInfo>>;
+  /**
+   * Sync method will not return thumbnails, only spread infos.
+   */
+  getAllSpreadsSync(): Array<iExternalSpreadInfo>;
   getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
   getAllPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
   getAllRequiredProperties(): Promise<Array<Array<iExternalProperty>>>;
@@ -163,6 +169,9 @@ export interface iPrintessApi {
 
   getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
 
+  /**
+   * Returns if a iMobileUIButton should display text instead of an icon
+   */
   isTextButton(m: iMobileUIButton): boolean
 
 
@@ -206,7 +215,7 @@ export interface iPrintessApi {
    * @param width Optional: Overrides the retrieved offsetWidth of the printess container - helpfull when animation are longer running
    * @param height Optional: Overrides the retrieved offsetHeight of the printess container - helpfull when animation are longer running
    */
-  resizePrintess(immediate?: boolean, focusSelection?: boolean,  width?: number, height?: number): void;
+  resizePrintess(immediate?: boolean, focusSelection?: boolean, width?: number, height?: number): void;
 
   load(scopeId: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
 
@@ -279,7 +288,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "title" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" |
@@ -377,7 +386,7 @@ export interface iExternalImage {
   height: number;
 }
 export interface iExternalButton {
-  type: "callback" | "print",
+  type: "callback" | "print" | "back" | "addToBasket",
   callback?: () => void,
   caption?: string
 }

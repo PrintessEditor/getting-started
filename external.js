@@ -13,10 +13,12 @@ window.uiHelper = {
     renderLayoutSnippets: renderLayoutSnippets,
     getOverlay: getOverlay,
     getDoneButton: getDoneButton,
-    renderPageNavigation: renderPageNavigationBS,
+    getTitle: getTitle,
+    renderPageNavigation: renderPageNavigation,
     renderMobileUi: renderMobileUi,
     getMobileButtons: getMobileButtons,
     renderMobilePagebar: renderMobilePagebar,
+    renderMobileNavBar: renderMobileNavBar,
     viewPortScroll: viewPortScroll
 };
 console.log("helpers loaded");
@@ -38,8 +40,6 @@ function getMobilePropertyControl(printess, p, metaProperty) {
 }
 function getPropertyControl(printess, p, metaProperty, forMobile = false) {
     switch (p.kind) {
-        case "title":
-            return getTitle(p);
         case "background-button":
             return getChangeBackgroundButton(printess);
         case "single-line-text":
@@ -194,12 +194,12 @@ function getSingleLineTextBox(printess, p, forMobile) {
     }
     return r;
 }
-function getTitle(p) {
+function getTitle(title) {
     const container = document.createElement("div");
     const hr = document.createElement("hr");
     container.appendChild(hr);
     const h1 = document.createElement("h2");
-    h1.innerText = p.label;
+    h1.innerText = title;
     container.appendChild(h1);
     container.appendChild(hr);
     return container;
@@ -291,6 +291,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
         else {
             button.style.backgroundColor = p.value.toString();
         }
+        button.innerHTML = "&nbsp;";
         dropdown.appendChild(button);
     }
     const ddContent = document.createElement("div");
@@ -910,33 +911,14 @@ function getFontSizeBox(printess, p) {
     }
     return cp;
 }
-function renderPageNavigation(printess, spreads, _properties) {
-    console.log("All Spreads", spreads);
-    const pages = document.querySelector(".page-buttons");
-    if (pages) {
-        let pageNo = 0;
-        pages.innerHTML = "";
-        for (const spread of spreads) {
-            for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
-                pageNo++;
-                const pageButton = document.createElement("div");
-                pageButton.innerText = spread.name ? spread.name : "Page " + pageNo;
-                if (pageIndex === spread.pages - 1) {
-                    pageButton.style.marginRight = "10px";
-                }
-                pageButton.onclick = () => {
-                    printess.selectSpread(spread.index, pageIndex === 0 ? "left-page" : "right-page");
-                };
-                pages.appendChild(pageButton);
-            }
-        }
-    }
-}
-function getPaginationItem(printess, content, spread, page) {
+function getPaginationItem(printess, content, spread, page, isActive) {
     const li = document.createElement("li");
     li.className = "page-item";
     const a = document.createElement("li");
     a.className = "page-link";
+    if (isActive) {
+        a.classList.add("active");
+    }
     if (typeof content === "number") {
         a.innerText = spread.name ? spread.name : content.toString();
     }
@@ -955,9 +937,9 @@ function getPaginationItem(printess, content, spread, page) {
     };
     return li;
 }
-function renderPageNavigationBS(printess, spreads, _properties) {
+function renderPageNavigation(printess, spreads, info, container) {
     console.log("All Spreads", spreads);
-    const pages = document.querySelector(".page-buttons");
+    const pages = container || document.querySelector(".page-buttons");
     if (pages) {
         let pageNo = 0;
         pages.innerHTML = "";
@@ -968,7 +950,11 @@ function renderPageNavigationBS(printess, spreads, _properties) {
                 for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
                     pageNo++;
                     const page = pageIndex === 0 ? "left-page" : "right-page";
-                    ul.appendChild(getPaginationItem(printess, pageNo, spread, page));
+                    let isActive = false;
+                    if (info) {
+                        isActive = info.current === pageIndex;
+                    }
+                    ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
                 }
             }
         }
@@ -1057,6 +1043,15 @@ function getMobileUiDiv() {
     }
     return mobileUi;
 }
+function getMobileNavbar() {
+    let mobileNav = document.querySelector(".mobile-navbar");
+    if (!mobileNav) {
+        mobileNav = document.createElement("nav");
+        mobileNav.className = "mobile-navbar navbar navbar-dark bg-primary";
+        document.body.appendChild(mobileNav);
+    }
+    return mobileNav;
+}
 function renderMobileUi(printess, properties, state, groupSnippets) {
     const mobileUi = getMobileUiDiv();
     mobileUi.innerHTML = "";
@@ -1065,7 +1060,9 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         mobileUi.appendChild(snippets);
     }
     else {
-        mobileUi.appendChild(getMobileButtons(printess, properties));
+        const buttonsOrPages = getMobileButtons(printess, properties);
+        mobileUi.innerHTML = "";
+        mobileUi.appendChild(buttonsOrPages);
         const controlHost = document.createElement("div");
         controlHost.className = "mobile-control-host";
         controlHost.id = "mobile-control-host";
@@ -1114,6 +1111,42 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
     circle.appendChild(icon);
     button.appendChild(circle);
     return button;
+}
+function renderMobileNavBar(printess, buttons) {
+    if (!buttons || buttons.length === 0) {
+        buttons = [
+            {
+                type: "back"
+            },
+            {
+                type: "addToBasket"
+            }
+        ];
+    }
+    const nav = getMobileNavbar();
+    nav.innerHTML = "";
+    for (const b of buttons) {
+        const btn = document.createElement("button");
+        btn.classList.add("btn");
+        btn.classList.add("btn-sm");
+        btn.classList.add("me-2");
+        if (b.type === "addToBasket") {
+            btn.classList.add("btn-outline-light");
+            btn.innerText = b.caption || "Add to Basket";
+        }
+        else if (b.type === "back") {
+            const ico = printess.getIcon("arrow-left");
+            ico.style.width = "20px";
+            ico.style.height = "20px";
+            ico.style.fill = "white";
+            btn.appendChild(ico);
+        }
+        else {
+            btn.innerText = b.caption || b.type;
+        }
+        nav.appendChild(btn);
+    }
+    return nav;
 }
 function renderMobilePagebar(printess) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1185,7 +1218,7 @@ function resizeMobileUi(printess, focusSelection = false) {
             else if (usedHeight > 100 || viewPortTopOffset > 0) {
                 printessTop = "0";
                 window.setTimeout(() => {
-                    const toolBar = document.querySelector(".navbar");
+                    const toolBar = document.querySelector(".mobile-navbar");
                     if (toolBar)
                         toolBar.style.visibility = "hidden";
                     const pageBar = document.querySelector(".mobile-pagebar");
@@ -1197,7 +1230,7 @@ function resizeMobileUi(printess, focusSelection = false) {
                 printessTop = "";
                 printessHeight -= mobilePageBarHeight;
                 printessHeight -= mobileNavBarHeight;
-                const toolBar = document.querySelector(".navbar");
+                const toolBar = document.querySelector(".mobile-navbar");
                 if (toolBar)
                     toolBar.style.visibility = "visible";
                 const pageBar = document.querySelector(".mobile-pagebar");
@@ -1226,29 +1259,39 @@ function getMobileButtons(printess, properties) {
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "mobile-buttons";
     const buttons = printess.getMobileUiButtons(properties);
-    for (const b of buttons) {
-        const buttonDiv = document.createElement("div");
-        buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + ":" + ((_c = b.newState.metaProperty) !== null && _c !== void 0 ? _c : "");
-        buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
-        buttonDiv.onclick = (_e) => {
-            document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
-            document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-            buttonDiv.classList.toggle("selected");
-            buttonDiv.innerHTML = "";
-            drawButtonContent(printess, buttonDiv, properties);
-            const controlHost = document.getElementById("mobile-control-host");
-            if (controlHost) {
-                centerMobileButton(buttonDiv);
-                controlHost.innerHTML = "";
-                if (b.newState.externalProperty) {
-                    const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
-                    controlHost.appendChild(control);
-                    resizeMobileUi(printess, true);
+    if (buttons.length === 0) {
+        const spreads = printess.getAllSpreadsSync();
+        const info = printess.pageInfoSync();
+        if (spreads.length <= 10) {
+            buttonContainer.style.width = "100%";
+        }
+        renderPageNavigation(printess, spreads, info, buttonContainer);
+    }
+    else {
+        for (const b of buttons) {
+            const buttonDiv = document.createElement("div");
+            buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + ":" + ((_c = b.newState.metaProperty) !== null && _c !== void 0 ? _c : "");
+            buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
+            buttonDiv.onclick = (_e) => {
+                document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
+                document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+                buttonDiv.classList.toggle("selected");
+                buttonDiv.innerHTML = "";
+                drawButtonContent(printess, buttonDiv, properties);
+                const controlHost = document.getElementById("mobile-control-host");
+                if (controlHost) {
+                    centerMobileButton(buttonDiv);
+                    controlHost.innerHTML = "";
+                    if (b.newState.externalProperty) {
+                        const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
+                        controlHost.appendChild(control);
+                        resizeMobileUi(printess, true);
+                    }
                 }
-            }
-        };
-        drawButtonContent(printess, buttonDiv, properties);
-        buttonContainer.appendChild(buttonDiv);
+            };
+            drawButtonContent(printess, buttonDiv, properties);
+            buttonContainer.appendChild(buttonDiv);
+        }
     }
     scrollContainer.appendChild(buttonContainer);
     container.appendChild(scrollContainer);

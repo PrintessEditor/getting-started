@@ -13,15 +13,15 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
 
-  <link href="sketchy.css" rel="stylesheet">
+  <!--<link href="sketchy.css" rel="stylesheet">-->
 
   <link type="text/css" rel="stylesheet" href="external.css" />
 
 </head>
 
-<body style="margin: 0; padding: 0;background: yellow;">
+<body style="margin: 0; padding: 0;">
 
-  <nav class="navbar navbar-expand navbar-dark bg-primary" style="overflow: hidden;">
+  <nav class="desktop-navbar navbar navbar-expand navbar-dark bg-primary" style="overflow: hidden;">
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -216,6 +216,7 @@
 
     let printess;
     let currentGroupSnippets = [];
+    let templateTitle = "";
 
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
@@ -234,14 +235,16 @@
       }
     }
 
-    const loadingDoneCallback = function (spreads, properties) {
-      uiHelper.renderPageNavigation(printess, spreads, properties);
+    const loadingDoneCallback = function (spreads, title) {
+      uiHelper.renderPageNavigation(printess, spreads);
+      templateTitle = title;
       printess.resizePrintess();
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
 
-      uiHelper.renderMobilePagebar(printess);
+
+      uiHelper.renderMobileNavBar(printess);
 
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
@@ -273,6 +276,8 @@
 
       // state is "document" or "frames"
 
+
+
       const desktop = document.getElementById("desktop-properties");
       if (!desktop) {
         throw "#desktop-properties not found, please add to html.";
@@ -281,15 +286,21 @@
 
       const t = [];
 
-      // add mobile - ui 
-      const mobile = document.querySelector(".mobile-ui");
-      if (mobile) {
-        mobile.parentElement.removeChild(mobile);
+      // render mobile page navigation if document has properties 
+      if (state === "document") {
+        if (properties.length === 0) {
+          document.body.classList.add("inline-mobile-page-bar");
+        } else {
+          document.body.classList.remove("inline-mobile-page-bar");
+        }
       }
+
+      // add mobile - ui 
       uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
 
       if (state === "document") {
         //****** Show Document Wide Options
+        desktop.appendChild(uiHelper.getTitle(templateTitle))
         for (const p of properties) {
           t.push(JSON.stringify(p, undefined, 2));
           desktop.appendChild(uiHelper.getPropertyControl(printess, p));
@@ -297,6 +308,7 @@
         desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets, false))
 
       } else {
+        desktop.appendChild(uiHelper.getTitle(templateTitle))
         //****** Show Just the frame / text Properties
         let colorsContainer = null;
         for (const p of properties) {
@@ -382,7 +394,7 @@
 
       // listen to viual viewport changes to detect virtual keyboard on iOs
       if (window.visualViewport) {
-       // window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess))
+        // window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess))
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess))
       }
 

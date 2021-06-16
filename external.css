@@ -17,7 +17,11 @@
  
   --mobile-buttonbar-height: 78px;
   --mobile-pagebar-height: 40px;
-  --mobile-navbar-height: 40px;
+  --mobile-navbar-height: 48px;
+}
+
+body.inline-mobile-page-bar {
+  --mobile-pagebar-height: 0px;
 }
 
 hr {
@@ -730,6 +734,9 @@ input[type='range'] {
     font-size: var(--printess-labelSize);
 }
 
+.mobile-navbar {
+  display: none;
+}
 .mobile-pagebar {
   display: none;
   position: absolute;
@@ -799,8 +806,11 @@ input[type='range'] {
   .mobile-pagebar { 
     display: block;
   }
-  .navbar {
+  .desktop-navbar {
     display: none;
+  }
+  .mobile-navbar {
+    display: block;
   }
 }
  
