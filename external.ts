@@ -1331,6 +1331,8 @@ function getMobileNavbar(): HTMLElement {
   return mobileNav;
 }
 
+let firstRenderMobileCall: boolean = true;
+
 function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>) {
 
   const mobileUi = getMobileUiDiv();
@@ -1366,10 +1368,17 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
       return;
     }
   }
+  if (firstRenderMobileCall) {
+    // iphone does not get is so quickly:
+    firstRenderMobileCall = false;
+    window.setTimeout(() => {
+      resizeMobileUi(printess);
+    }, 500);
+  } else {
+    resizeMobileUi(printess);
+  }
 
-  resizeMobileUi(printess);
 }
-
 
 function getMobilePlusButton(printess: iPrintessApi, properties: Array<iExternalProperty>, groupSnippets: Array<iExternalSnippetCluster>): HTMLDivElement {
   const button = document.createElement("div");
@@ -1416,7 +1425,12 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
         type: "back"
       },
       {
-        type: "addToBasket"
+        type: "addToBasket",
+        callback: () => {
+          const p = document.getElementById("printessin");
+          console.warn("Resize Printess Height: " + p?.offsetHeight)
+          printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined)
+        }
       }
     ]
   }
@@ -1440,6 +1454,11 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
       btn.appendChild(ico);
     } else {
       btn.innerText = b.caption || b.type;
+    }
+    btn.onclick = () => {
+      if (b.callback) {
+        b.callback();
+      }
     }
     nav.appendChild(btn);
   }

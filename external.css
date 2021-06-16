@@ -405,13 +405,13 @@ input[type='range'] {
   overflow: hidden auto;
 }
 .mobile-control-sm {
-  height: 60px;
+  height: 80px;
 }
 .mobile-control-md {
-  height: 90px;
+  height: 120px;
 }
 .mobile-control-lg {
-  height: 140px;
+  height: 160px;
 }
 
 .mobile-control-host > .list-group {

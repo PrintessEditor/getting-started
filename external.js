@@ -1053,6 +1053,7 @@ function getMobileNavbar() {
     }
     return mobileNav;
 }
+let firstRenderMobileCall = true;
 function renderMobileUi(printess, properties, state, groupSnippets) {
     const mobileUi = getMobileUiDiv();
     mobileUi.innerHTML = "";
@@ -1080,7 +1081,15 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
             return;
         }
     }
-    resizeMobileUi(printess);
+    if (firstRenderMobileCall) {
+        firstRenderMobileCall = false;
+        window.setTimeout(() => {
+            resizeMobileUi(printess);
+        }, 500);
+    }
+    else {
+        resizeMobileUi(printess);
+    }
 }
 function getMobilePlusButton(printess, properties, groupSnippets) {
     const button = document.createElement("div");
@@ -1120,7 +1129,13 @@ function renderMobileNavBar(printess, buttons) {
                 type: "back"
             },
             {
-                type: "addToBasket"
+                type: "addToBasket",
+                callback: () => {
+                    var _a;
+                    const p = document.getElementById("printessin");
+                    console.warn("Resize Printess Height: " + (p === null || p === void 0 ? void 0 : p.offsetHeight));
+                    printess.resizePrintess(true, false, undefined, (_a = p === null || p === void 0 ? void 0 : p.offsetHeight) !== null && _a !== void 0 ? _a : undefined);
+                }
             }
         ];
     }
@@ -1145,6 +1160,11 @@ function renderMobileNavBar(printess, buttons) {
         else {
             btn.innerText = b.caption || b.type;
         }
+        btn.onclick = () => {
+            if (b.callback) {
+                b.callback();
+            }
+        };
         nav.appendChild(btn);
     }
     return nav;
