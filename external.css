@@ -414,6 +414,11 @@ input[type='range'] {
   height: 160px;
 }
 
+.no-mobile-button-bar .mobile-control-host {
+  /* add additional padding to control host, to increase space between control and back arrow */
+  padding-top: 30px;
+}
+
 .mobile-control-host > .list-group {
   /* mobile list elements occupie a fixed height */
   height: 140px;

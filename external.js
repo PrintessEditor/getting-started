@@ -1221,22 +1221,21 @@ function resizeMobileUi(printess, focusSelection = false) {
     const mobileUi = getMobileUiDiv();
     const controlHost = document.getElementById("mobile-control-host");
     if (mobileUi && controlHost) {
-        const control = controlHost;
-        const usedHeight = control ? control.offsetHeight : 0;
+        const controlHostHeight = controlHost.offsetHeight;
         const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
         const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
-        mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
+        mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight) + "px";
         const printessDiv = document.getElementById("printessin");
         const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
-        let printessHeight = viewPortHeight - usedHeight - mobileButtonBarHeight;
+        let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
         if (printessDiv) {
             let printessTop;
             if (viewPortTopOffset > 0) {
                 printessTop = viewPortTopOffset + "px";
             }
-            else if (usedHeight > 100 || viewPortTopOffset > 0) {
+            else if (controlHostHeight > 100 || viewPortTopOffset > 0) {
                 printessTop = "0";
                 window.setTimeout(() => {
                     const toolBar = document.querySelector(".mobile-navbar");
@@ -1258,12 +1257,12 @@ function resizeMobileUi(printess, focusSelection = false) {
                 if (pageBar)
                     pageBar.style.visibility = "visible";
             }
-            const printessBottom = mobileButtonBarHeight + usedHeight;
+            const printessBottom = mobileButtonBarHeight + controlHostHeight;
             if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
                 lastPrintessBottom = printessBottom;
                 lastPrintessTop = printessTop;
                 lastPrintessHeight = printessHeight;
-                printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
+                printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
                 printessDiv.style.top = printessTop;
                 printess.resizePrintess(true, focusSelection, undefined, printessHeight);
                 console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
@@ -1292,20 +1291,8 @@ function getMobileButtons(printess, properties) {
     else if (buttons.length === 1) {
         document.body.classList.add("no-mobile-button-bar");
         window.setTimeout(() => {
-            const controlHost = document.getElementById("mobile-control-host");
-            if (controlHost) {
-                const b = buttons[0];
-                controlHost.innerHTML = "";
-                if (b.newState.externalProperty) {
-                    controlHost.classList.remove("mobile-control-sm");
-                    controlHost.classList.remove("mobile-control-md");
-                    controlHost.classList.remove("mobile-control-lg");
-                    controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty));
-                    const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
-                    controlHost.appendChild(control);
-                    resizeMobileUi(printess, true);
-                }
-            }
+            const b = buttons[0];
+            renderMobileControlHost(printess, b.newState);
         }, 50);
     }
     else {
@@ -1320,20 +1307,8 @@ function getMobileButtons(printess, properties) {
                 buttonDiv.classList.toggle("selected");
                 buttonDiv.innerHTML = "";
                 drawButtonContent(printess, buttonDiv, properties);
-                const controlHost = document.getElementById("mobile-control-host");
-                if (controlHost) {
-                    controlHost.classList.remove("mobile-control-sm");
-                    controlHost.classList.remove("mobile-control-md");
-                    controlHost.classList.remove("mobile-control-lg");
-                    centerMobileButton(buttonDiv);
-                    controlHost.innerHTML = "";
-                    if (b.newState.externalProperty) {
-                        controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty));
-                        const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true);
-                        controlHost.appendChild(control);
-                        resizeMobileUi(printess, true);
-                    }
-                }
+                centerMobileButton(buttonDiv);
+                renderMobileControlHost(printess, b.newState);
             };
             drawButtonContent(printess, buttonDiv, properties);
             buttonContainer.appendChild(buttonDiv);
@@ -1347,6 +1322,21 @@ function getMobileButtons(printess, properties) {
     scrollContainer.appendChild(buttonContainer);
     container.appendChild(scrollContainer);
     return container;
+}
+function renderMobileControlHost(printess, state) {
+    const controlHost = document.getElementById("mobile-control-host");
+    if (controlHost) {
+        controlHost.classList.remove("mobile-control-sm");
+        controlHost.classList.remove("mobile-control-md");
+        controlHost.classList.remove("mobile-control-lg");
+        controlHost.innerHTML = "";
+        if (state.externalProperty) {
+            controlHost.classList.add(getMobileControlHeightClass(state.externalProperty, state.metaProperty));
+            const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
+            controlHost.appendChild(control);
+            resizeMobileUi(printess, true);
+        }
+    }
 }
 function getMobileControlHeightClass(property, meta) {
     switch (property.kind) {

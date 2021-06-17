@@ -1,5 +1,5 @@
 
-import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iExternalButton } from "./printess-editor";
+import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iExternalButton, iMobileUiState } from "./printess-editor";
 
 
 //declare const bootstrap: any;
@@ -1524,22 +1524,22 @@ let lastPrintessBottom = 0;
 
 function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false) {
   const mobileUi = getMobileUiDiv();
-  const controlHost = document.getElementById("mobile-control-host");
+  const controlHost: HTMLElement | null = document.getElementById("mobile-control-host");
   // determine used-height of current controls
   if (mobileUi && controlHost) {
-    const control = <HTMLDivElement>controlHost;
-    const usedHeight = control ? control.offsetHeight : 0;
+
+    const controlHostHeight = controlHost.offsetHeight;
     // read button bar height from CSS Variable.
     const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
     const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
     const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
 
 
-    mobileUi.style.height = (mobileButtonBarHeight + usedHeight) + "px";
+    mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight) + "px";
     const printessDiv = document.getElementById("printessin");
     const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
-    let printessHeight = viewPortHeight - usedHeight - mobileButtonBarHeight;
+    let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
     if (printessDiv) {
       let printessTop: string;
 
@@ -1547,7 +1547,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
         // counter-act view-port shift if iOS keyboard is visible
         printessTop = viewPortTopOffset + "px";
 
-      } else if (usedHeight > 100 || viewPortTopOffset > 0) {
+      } else if (controlHostHeight > 100 || viewPortTopOffset > 0) {
         // hide toolbar & pagebar to free up more space 
         printessTop = "0";
         window.setTimeout(() => {
@@ -1568,13 +1568,13 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
         if (pageBar) pageBar.style.visibility = "visible";
       }
 
-      const printessBottom = mobileButtonBarHeight + usedHeight;
+      const printessBottom = mobileButtonBarHeight + controlHostHeight;
 
       if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
         lastPrintessBottom = printessBottom;
         lastPrintessTop = printessTop;
         lastPrintessHeight = printessHeight;
-        printessDiv.style.bottom = (mobileButtonBarHeight + usedHeight) + "px";
+        printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
         printessDiv.style.top = printessTop;
         printess.resizePrintess(true, focusSelection, undefined, printessHeight);
         console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
@@ -1612,20 +1612,8 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
     // Auto jump to first button action: 
     document.body.classList.add("no-mobile-button-bar");
     window.setTimeout(() => {
-      const controlHost = document.getElementById("mobile-control-host");
-      if (controlHost) {
-        const b = buttons[0];
-        controlHost.innerHTML = "";
-        if (b.newState.externalProperty) {
-          controlHost.classList.remove("mobile-control-sm");
-          controlHost.classList.remove("mobile-control-md");
-          controlHost.classList.remove("mobile-control-lg");
-          controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty));
-          const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true)
-          controlHost.appendChild(control);
-          resizeMobileUi(printess, true);
-        }
-      }
+      const b = buttons[0];
+      renderMobileControlHost(printess, b.newState);
     }, 50);
   } else {
     document.body.classList.remove("no-mobile-button-bar");
@@ -1640,24 +1628,10 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
         buttonDiv.classList.toggle("selected");
         buttonDiv.innerHTML = "";
         drawButtonContent(printess, buttonDiv, properties);
+        centerMobileButton(buttonDiv);
 
-        // render control
-        const controlHost = document.getElementById("mobile-control-host");
-
-        if (controlHost) {
-          controlHost.classList.remove("mobile-control-sm");
-          controlHost.classList.remove("mobile-control-md");
-          controlHost.classList.remove("mobile-control-lg");
-
-          centerMobileButton(buttonDiv);
-          controlHost.innerHTML = "";
-          if (b.newState.externalProperty) {
-            controlHost.classList.add(getMobileControlHeightClass(b.newState.externalProperty, b.newState.metaProperty))
-            const control = getPropertyControl(printess, b.newState.externalProperty, b.newState.metaProperty, true)
-            controlHost.appendChild(control);
-            resizeMobileUi(printess, true);
-          }
-        }
+        // render control 
+        renderMobileControlHost(printess, b.newState);
       }
 
       drawButtonContent(printess, buttonDiv, properties);
@@ -1679,6 +1653,24 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   scrollContainer.appendChild(buttonContainer);
   container.appendChild(scrollContainer);
   return container;
+}
+
+function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState) {
+  const controlHost = document.getElementById("mobile-control-host");
+
+  if (controlHost) {
+    controlHost.classList.remove("mobile-control-sm");
+    controlHost.classList.remove("mobile-control-md");
+    controlHost.classList.remove("mobile-control-lg");
+    controlHost.innerHTML = "";
+   
+    if (state.externalProperty) {
+      controlHost.classList.add(getMobileControlHeightClass(state.externalProperty, state.metaProperty))
+      const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true)
+      controlHost.appendChild(control);
+      resizeMobileUi(printess, true);
+    }
+  }
 }
 
 function getMobileControlHeightClass(property: iExternalProperty, meta?: iExternalMetaPropertyKind): string {
