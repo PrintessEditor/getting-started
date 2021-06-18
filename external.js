@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 window.uiHelper = {
     getPropertyControl: getPropertyControl,
     renderGroupSnippets: renderGroupSnippets,
@@ -188,11 +179,14 @@ function getSingleLineTextBox(printess, p, forMobile) {
             drawButtonContent(printess, mobileButtonDiv, [p]);
         }
     };
-    const r = addLabel(inp, p);
     if (forMobile) {
-        r.classList.add("form-control");
+        inp.classList.add("form-control");
+        return inp;
     }
-    return r;
+    else {
+        const r = addLabel(inp, p);
+        return r;
+    }
 }
 function getTitle(title) {
     const container = document.createElement("div");
@@ -918,7 +912,7 @@ function getPaginationItem(printess, content, spread, page, isActive) {
     const a = document.createElement("li");
     a.className = "page-link";
     if (isActive) {
-        a.classList.add("active");
+        li.classList.add("active");
     }
     if (typeof content === "number") {
         a.innerText = spread.name ? spread.name : content.toString();
@@ -935,6 +929,7 @@ function getPaginationItem(printess, content, spread, page, isActive) {
     }
     li.onclick = () => {
         printess.selectSpread(spread.index, page);
+        li.classList.add("active");
     };
     return li;
 }
@@ -953,7 +948,7 @@ function renderPageNavigation(printess, spreads, info, container) {
                     const page = pageIndex === 0 ? "left-page" : "right-page";
                     let isActive = false;
                     if (info) {
-                        isActive = info.current === pageIndex;
+                        isActive = info.current === pageNo;
                     }
                     ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
                 }
@@ -1058,8 +1053,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
     const mobileUi = getMobileUiDiv();
     mobileUi.innerHTML = "";
     if (state === "add") {
-        const snippets = renderGroupSnippets(printess, groupSnippets, true);
-        mobileUi.appendChild(snippets);
+        renderMobileControlHost(printess, { state: "add" }, groupSnippets);
     }
     else {
         const buttonsOrPages = getMobileButtons(printess, properties);
@@ -1109,8 +1103,14 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
     button.className = "mobile-property-back-button";
     const circle = document.createElement("div");
     circle.className = "mobile-property-circle";
+    if (state === "details") {
+        circle.classList.add("back-to-frames");
+    }
     circle.onclick = () => {
-        if (state === "frames") {
+        if (state === "details") {
+            renderMobileUi(printess, properties, "frames", groupSnippets);
+        }
+        else if (state === "frames") {
             printess.clearSelection();
         }
         else if (state === "add") {
@@ -1129,12 +1129,30 @@ function renderMobileNavBar(printess, buttons) {
                 type: "back"
             },
             {
+                type: "undo"
+            },
+            {
+                type: "redo"
+            },
+            {
                 type: "addToBasket",
                 callback: () => {
                     var _a;
                     const p = document.getElementById("printessin");
                     console.warn("Resize Printess Height: " + (p === null || p === void 0 ? void 0 : p.offsetHeight));
                     printess.resizePrintess(true, false, undefined, (_a = p === null || p === void 0 ? void 0 : p.offsetHeight) !== null && _a !== void 0 ? _a : undefined);
+                    const list = document.getElementById("test-template-list");
+                    if (list) {
+                        list.style.zIndex = "1000";
+                        list.style.visibility = "visible";
+                        list.style.display = "block";
+                        list.style.left = "0";
+                        list.style.top = "0";
+                        list.style.bottom = "0";
+                        list.style.right = "0";
+                        list.style.padding = "20px";
+                        document.body.appendChild(list);
+                    }
                 }
             }
         ];
@@ -1151,16 +1169,39 @@ function renderMobileNavBar(printess, buttons) {
             btn.innerText = b.caption || "Add to Basket";
         }
         else if (b.type === "back") {
+            btn.classList.add("ms-2");
             const ico = printess.getIcon("arrow-left");
             ico.style.width = "20px";
             ico.style.height = "20px";
-            ico.style.fill = "white";
+            ico.style.color = "white";
+            btn.appendChild(ico);
+        }
+        else if (b.type === "undo") {
+            const ico = printess.getIcon("undo");
+            ico.style.width = "20px";
+            ico.style.height = "20px";
+            ico.style.color = "white";
+            btn.appendChild(ico);
+        }
+        else if (b.type === "redo") {
+            const ico = printess.getIcon("redo");
+            ico.style.width = "20px";
+            ico.style.height = "20px";
+            ico.style.color = "white";
             btn.appendChild(ico);
         }
         else {
             btn.innerText = b.caption || b.type;
         }
         btn.onclick = () => {
+            if (b.type === "undo") {
+                printess.undo();
+                return;
+            }
+            if (b.type === "redo") {
+                printess.redo();
+                return;
+            }
             if (b.callback) {
                 b.callback();
             }
@@ -1169,39 +1210,41 @@ function renderMobileNavBar(printess, buttons) {
     }
     return nav;
 }
+function getMobilePageBarDiv() {
+    let pagebar = document.querySelector(".mobile-pagebar");
+    if (!pagebar) {
+        pagebar = document.createElement("div");
+        pagebar.className = "mobile-pagebar";
+        document.body.appendChild(pagebar);
+    }
+    else {
+        pagebar.innerHTML = "";
+    }
+    return pagebar;
+}
 function renderMobilePagebar(printess) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let toolbar = document.querySelector(".mobile-pagebar");
-        if (!toolbar) {
-            toolbar = document.createElement("div");
-            toolbar.className = "mobile-pagebar";
-            document.body.appendChild(toolbar);
-        }
-        else {
-            toolbar.innerHTML = "";
-        }
-        const info = yield printess.pageInfo();
-        const page = document.createElement("div");
-        page.className = "mobile-pagebar-page-info";
-        if (!info.isFirst) {
-            const previousPage = printess.getIcon("arrow-left");
-            previousPage.classList.add("mobile-pagebar-page-previous");
-            previousPage.onclick = () => {
-                printess.previousPage();
-            };
-            toolbar.appendChild(previousPage);
-        }
-        if (!info.isLast) {
-            const nextPage = printess.getIcon("arrow-right");
-            nextPage.classList.add("mobile-pagebar-page-next");
-            nextPage.onclick = () => {
-                printess.nextPage();
-            };
-            toolbar.appendChild(nextPage);
-        }
-        page.innerHTML = "Page<br>" + info.current + " of " + info.max;
-        toolbar.appendChild(page);
-    });
+    const toolbar = getMobilePageBarDiv();
+    const info = printess.pageInfoSync();
+    const page = document.createElement("div");
+    page.className = "mobile-pagebar-page-info";
+    if (!info.isFirst) {
+        const previousPage = printess.getIcon("arrow-left");
+        previousPage.classList.add("mobile-pagebar-page-previous");
+        previousPage.onclick = () => {
+            printess.previousPage();
+        };
+        toolbar.appendChild(previousPage);
+    }
+    if (!info.isLast) {
+        const nextPage = printess.getIcon("arrow-right");
+        nextPage.classList.add("mobile-pagebar-page-next");
+        nextPage.onclick = () => {
+            printess.nextPage();
+        };
+        toolbar.appendChild(nextPage);
+    }
+    page.innerHTML = "Page<br>" + info.current + " of " + info.max;
+    toolbar.appendChild(page);
 }
 function getMobileSelectedProperty(properties) {
     const selectedButton = document.querySelector(".mobile-property-button.selected");
@@ -1225,7 +1268,7 @@ function resizeMobileUi(printess, focusSelection = false) {
         const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
         const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
-        mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight) + "px";
+        mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
         const printessDiv = document.getElementById("printessin");
         const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
@@ -1270,67 +1313,97 @@ function resizeMobileUi(printess, focusSelection = false) {
         }
     }
 }
-function getMobileButtons(printess, properties) {
-    var _a, _b, _c;
-    const container = document.createElement("div");
+function getMobileButtons(printess, properties, container, propertyIdFilter) {
+    var _a, _b, _c, _d;
+    container = container || document.createElement("div");
     container.className = "mobile-buttons-container";
     const scrollContainer = document.createElement("div");
     scrollContainer.className = "mobile-buttons-scroll-container";
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "mobile-buttons";
-    const buttons = printess.getMobileUiButtons(properties);
-    if (buttons.length === 0) {
-        document.body.classList.remove("no-mobile-button-bar");
+    const buttons = printess.getMobileUiButtons(properties, propertyIdFilter || "root");
+    const hasButtons = buttons.length > 0;
+    if (printess.spreadCount() > 1) {
         const spreads = printess.getAllSpreadsSync();
         const info = printess.pageInfoSync();
-        if (spreads.length <= 10) {
-            buttonContainer.style.width = "100%";
+        if (hasButtons) {
+            renderPageNavigation(printess, spreads, info, getMobilePageBarDiv());
         }
-        renderPageNavigation(printess, spreads, info, buttonContainer);
+        else {
+            document.body.classList.remove("no-mobile-button-bar");
+            if (info.max < 8) {
+                buttonContainer.style.width = "100%";
+            }
+            renderPageNavigation(printess, spreads, info, buttonContainer);
+        }
     }
-    else if (buttons.length === 1) {
+    if (buttons.length === 1 && !((_a = buttons[0].newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id.startsWith("FF_"))) {
         document.body.classList.add("no-mobile-button-bar");
         window.setTimeout(() => {
+            var _a;
             const b = buttons[0];
-            renderMobileControlHost(printess, b.newState);
+            if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
+                printess.selectBackground();
+            }
+            else {
+                renderMobileControlHost(printess, b.newState);
+            }
         }, 50);
     }
-    else {
+    else if (hasButtons) {
         document.body.classList.remove("no-mobile-button-bar");
         for (const b of buttons) {
             const buttonDiv = document.createElement("div");
-            buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + ":" + ((_c = b.newState.metaProperty) !== null && _c !== void 0 ? _c : "");
+            buttonDiv.id = ((_c = (_b = b.newState.externalProperty) === null || _b === void 0 ? void 0 : _b.id) !== null && _c !== void 0 ? _c : "") + ":" + ((_d = b.newState.metaProperty) !== null && _d !== void 0 ? _d : "");
             buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
             buttonDiv.onclick = (_e) => {
-                document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
-                document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-                buttonDiv.classList.toggle("selected");
-                buttonDiv.innerHTML = "";
-                drawButtonContent(printess, buttonDiv, properties);
-                centerMobileButton(buttonDiv);
+                var _a, _b;
+                if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
+                    printess.selectBackground();
+                }
+                else if (b.hasCollapsedMetaProperties === true && b.newState.externalProperty) {
+                    const buttonContainer = document.querySelector(".mobile-buttons-container");
+                    if (buttonContainer) {
+                        buttonContainer.innerHTML = "";
+                        getMobileButtons(printess, properties, container, b.newState.externalProperty.id);
+                        const backButton = document.querySelector(".mobile-property-back-button");
+                        if (backButton) {
+                            (_b = backButton.parentElement) === null || _b === void 0 ? void 0 : _b.removeChild(backButton);
+                        }
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
+                    }
+                }
+                else {
+                    document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
+                    document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+                    buttonDiv.classList.toggle("selected");
+                    buttonDiv.innerHTML = "";
+                    drawButtonContent(printess, buttonDiv, properties);
+                    centerMobileButton(buttonDiv);
+                }
                 renderMobileControlHost(printess, b.newState);
             };
             drawButtonContent(printess, buttonDiv, properties);
             buttonContainer.appendChild(buttonDiv);
-            if (buttons.length === 1) {
-                window.setTimeout(() => {
-                    buttonDiv.click();
-                }, 100);
-            }
         }
     }
     scrollContainer.appendChild(buttonContainer);
     container.appendChild(scrollContainer);
     return container;
 }
-function renderMobileControlHost(printess, state) {
+function renderMobileControlHost(printess, state, groupSnippets) {
     const controlHost = document.getElementById("mobile-control-host");
     if (controlHost) {
         controlHost.classList.remove("mobile-control-sm");
         controlHost.classList.remove("mobile-control-md");
         controlHost.classList.remove("mobile-control-lg");
         controlHost.innerHTML = "";
-        if (state.externalProperty) {
+        if (state.state === "add") {
+            controlHost.classList.add("mobile-control-lg");
+            const snippets = renderGroupSnippets(printess, groupSnippets || [], true);
+            controlHost.appendChild(snippets);
+        }
+        else if (state.externalProperty) {
             controlHost.classList.add(getMobileControlHeightClass(state.externalProperty, state.metaProperty));
             const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
             controlHost.appendChild(control);
@@ -1365,7 +1438,7 @@ function drawButtonContent(printess, buttonDiv, properties) {
     const property = properties.filter(p => p.id === propertyId)[0];
     if (!property)
         return;
-    const buttons = printess.getMobileUiButtons([property]);
+    const buttons = printess.getMobileUiButtons([property], propertyId);
     let b = undefined;
     for (const button of buttons) {
         if (((_b = button.newState.metaProperty) !== null && _b !== void 0 ? _b : "") === metaProperty) {

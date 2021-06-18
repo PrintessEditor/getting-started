@@ -3,7 +3,7 @@
   --printess-maxContrastColor: black;
   --printess-headlineColor: red;
 
-  --mobile-panel-background: white;
+  --mobile-panel-background: #f8f8f8;
   --mobile-button-background: yellow;
   --mobile-button-border: #bbb;
   --mobile-button-border-selected: red;
@@ -434,11 +434,13 @@ input[type='range'] {
     justify-content: center;
 }
 .list-group-grid-style > li {
-    width: 70px;
+    width: 50px;
     margin: 4px;
     border-width: 1px !important;
     border-radius: 4px;
     cursor: pointer;
+    padding: 0.5rem 0.5rem;
+    text-align: center;
 }
                 
 .mobile-buttons-container {
@@ -549,6 +551,9 @@ input[type='range'] {
   align-items: center;
   justify-content: center;
   z-index: 1;
+}
+.mobile-property-circle.back-to-frames {
+  background-color: lemonchiffon !important;
 }
 
 .circle-button-icon {
@@ -725,11 +730,8 @@ input[type='range'] {
 
 .mobile-text-area {
   padding-left: 10px;
-  position: absolute;
-  left: 0;
   width: 100%;
-  top: 0;
-  height: 140px;
+  height: 100%;
   border: none;
   resize: none;
 }
@@ -759,6 +761,7 @@ input[type='range'] {
   position: absolute;
   height: var(--mobile-pagebar-height);
   width: 100vw;
+  overflow: auto hidden;
   top: var(--mobile-navbar-height);
   left: 0;
   background-color: var(--mobile-panel-background);
@@ -827,7 +830,7 @@ input[type='range'] {
     display: none;
   }
   .mobile-navbar {
-    display: block;
+    display: flex;
   }
 }
  

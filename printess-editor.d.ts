@@ -153,6 +153,12 @@ export interface iPrintessApi {
    *  }
    */
   getAllSpreads(): Promise<Array<iExternalSpreadInfo>>;
+
+  /**
+   * Returns total number of spreads
+   */
+  spreadCount(): number
+
   /**
    * Sync method will not return thumbnails, only spread infos.
    */
@@ -164,7 +170,7 @@ export interface iPrintessApi {
   getAllRequiredPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
   getAllRequiredPropertiesBySpreadIdSync(spreadId: string): Array<Array<iExternalProperty>>;
 
-  getMobileUiButtons(properties: Array<iExternalProperty>): Array<iMobileUIButton>;
+  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string ): Array<iMobileUIButton>;
 
 
   getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
@@ -386,7 +392,7 @@ export interface iExternalImage {
   height: number;
 }
 export interface iExternalButton {
-  type: "callback" | "print" | "back" | "addToBasket",
+  type: "callback" | "print" | "back" | "addToBasket" | "undo" | "redo",
   callback?: () => void,
   caption?: string
 }
@@ -398,6 +404,7 @@ export interface iMobileUIButton {
   circleStyle?: string;
   ffCircleCaption?: string,
   caption: string,
+  hasCollapsedMetaProperties?: boolean,
   newState: iMobileUiState
 }
 
@@ -408,7 +415,7 @@ export interface iMobileUiState {
 }
 
  
-export type MobileUiState = "document" | "frames" | "add";
+export type MobileUiState = "document" | "frames" | "add" | "details";
 
 export interface iButtonCircle {
   hasSvgCircle: boolean,

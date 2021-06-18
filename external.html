@@ -45,24 +45,26 @@
             aria-haspopup="true" aria-expanded="false">
             Open
           </a>
-          <div class="dropdown-menu" aria-labelledby="temlateDropdown">
+          <div class="dropdown-menu" id="test-template-list" aria-labelledby="temlateDropdown">
             <a class="dropdown-item" href="#Children%27s%20book">Children's book</a>
             <a class="dropdown-item" href="#Retro%20Sign">Retro Sign</a>
             <a class="dropdown-item" href="#Business%20Card">Business Card</a>
             <a class="dropdown-item" href="#Greeting%20Card">Greeting Card</a>
             <a class="dropdown-item" href="#Chocolate%20Bar">Chocolate Bar</a>
-            <a class="dropdown-item" href="#Photo-Calendar%201">
-              <Photo-Calendar 1/a>
-                <a class="dropdown-item" href="#Calendar">Calendar</a>
-                <a class="dropdown-item" href="#Newborn%20Card">Newborn Card</a>
-                <a class="dropdown-item" href="#Phone-Case">Phone-Case</a>
-                <a class="dropdown-item" href="#Puzzle">Puzzle</a>
-                <a class="dropdown-item" href="#T-Shirt">T-Shirt</a>
-                <a class="dropdown-item" href="#Coffee %20Mug">Coffee Mug</a>
+            <a class="dropdown-item" href="#Photo-Calendar">Photo-Calendar</a>
+            <a class="dropdown-item" href="#Calendar">Calendar</a>
+            <a class="dropdown-item" href="#Newborn%20Card">Newborn Card</a>
+            <a class="dropdown-item" href="#Phone-Case">Phone-Case</a>
+            <a class="dropdown-item" href="#Puzzle">Puzzle</a>
+            <a class="dropdown-item" href="#T-Shirt">T-Shirt</a>
+            <a class="dropdown-item" href="#Coffee %20Mug">Coffee Mug</a>
 
-                <div class="dropdown-divider">Multi-Line Test Templates</div>
-                <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel">Rich Editing with Fallback to Paragraph</a>
-                <a class="dropdown-item" href="#BuyerText-No-Eddi">Form Editing with Paragraph Split</a>
+            <div class="dropdown-divider">UI Test Templates</div>
+            <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel">Rich Editing with Fallback to Paragraph</a>
+            <a class="dropdown-item" href="#BuyerText-No-Eddi">Form Editing with and without Paragraph Split</a>
+            <a class="dropdown-item" href="#8Pages">8 Pages</a>
+            <a class="dropdown-item" href="#8DoublePages">14 Facing Pages</a>
+            <a class="dropdown-item" href="#8DoublePagesFF">14 Facing Pages w. FormField</a>
           </div>
         </li>
         <li class="nav-item" style="flex-grow: 1;"></li>
@@ -217,7 +219,7 @@
     let printess;
     let currentGroupSnippets = [];
     let templateTitle = "";
-
+   
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
         addEventListener('WebComponentsReady', cb)
@@ -242,8 +244,7 @@
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
-
-
+ 
       uiHelper.renderMobileNavBar(printess);
 
       // remember groupSnippets for showing as add-able items
@@ -270,14 +271,12 @@
            console.warn("ALL PROPERTIES:", props);
          })*/
 
+
     }
 
     const selectionChangeCallback = (properties, state) => {
 
       // state is "document" or "frames"
-
-
-
       const desktop = document.getElementById("desktop-properties");
       if (!desktop) {
         throw "#desktop-properties not found, please add to html.";
@@ -446,6 +445,10 @@
 
     window.addEventListener('hashchange', function () {
       const id = decodeURIComponent(window.location.hash.substr(1));
+      const list = document.getElementById("test-template-list");
+      if (list) list.style.display = "none";
+      let pagebar = document.querySelector(".mobile-pagebar");
+      if (pagebar) pagebar.parentElement.removeChild(pagebar); // will be re-attached when needed
       if (id) printess.loadTemplate(decodeURIComponent(window.location.hash.substr(1)));
     }, false);
 

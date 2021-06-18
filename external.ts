@@ -267,14 +267,18 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
     }
   }
 
-  const r = addLabel(inp, p);
+
   if (forMobile) {
-    r.classList.add("form-control");
+    inp.classList.add("form-control");
+    return inp;
+  } else {
+    const r = addLabel(inp, p);
+    return r;
   }
   /* window.setTimeout(() => {
      inp.focus();
    }, 100)*/
-  return r;
+
 }
 
 function getTitle(title: string): HTMLElement {
@@ -1163,7 +1167,7 @@ function getPaginationItem(printess: iPrintessApi, content: number | "previous" 
   a.className = "page-link";
 
   if (isActive) {
-    a.classList.add("active");
+    li.classList.add("active");
   }
 
   if (typeof content === "number") {
@@ -1180,6 +1184,7 @@ function getPaginationItem(printess: iPrintessApi, content: number | "previous" 
   }
   li.onclick = () => {
     printess.selectSpread(spread.index, page);
+    li.classList.add("active");
   }
 
   return li;
@@ -1202,7 +1207,7 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
           const page = pageIndex === 0 ? "left-page" : "right-page";
           let isActive = false;
           if (info) {
-            isActive = info.current === pageIndex;
+            isActive = info.current === pageNo;
           }
           ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
         }
@@ -1340,8 +1345,7 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
 
   if (state === "add") {
     // render list of group snippets
-    const snippets = renderGroupSnippets(printess, groupSnippets, true);
-    mobileUi.appendChild(snippets);
+    renderMobileControlHost(printess, { state: "add" }, groupSnippets)
   } else {
     // render properties UI
     const buttonsOrPages = getMobileButtons(printess, properties);
@@ -1403,8 +1407,13 @@ function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternal
 
   const circle = document.createElement("div");
   circle.className = "mobile-property-circle";
+  if (state === "details") {
+    circle.classList.add("back-to-frames");
+  }
   circle.onclick = () => {
-    if (state === "frames") {
+    if (state === "details") {
+      renderMobileUi(printess, properties, "frames", groupSnippets)
+    } else if (state === "frames") {
       printess.clearSelection();
     } else if (state === "add") {
       renderMobileUi(printess, properties, "document", groupSnippets)
@@ -1425,11 +1434,30 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
         type: "back"
       },
       {
+        type: "undo"
+      },
+      {
+        type: "redo"
+      },
+      {
         type: "addToBasket",
         callback: () => {
           const p = document.getElementById("printessin");
           console.warn("Resize Printess Height: " + p?.offsetHeight)
-          printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined)
+          printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
+
+          const list = document.getElementById("test-template-list");
+          if (list) {
+            list.style.zIndex = "1000";
+            list.style.visibility = "visible";
+            list.style.display = "block";
+            list.style.left = "0";
+            list.style.top = "0";
+            list.style.bottom = "0";
+            list.style.right = "0";
+            list.style.padding = "20px";
+            document.body.appendChild(list);
+          }
         }
       }
     ]
@@ -1447,15 +1475,39 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
       btn.classList.add("btn-outline-light");
       btn.innerText = b.caption || "Add to Basket";
     } else if (b.type === "back") {
+      btn.classList.add("ms-2");
       const ico = printess.getIcon("arrow-left");
       ico.style.width = "20px";
       ico.style.height = "20px";
-      ico.style.fill = "white";
+      ico.style.color = "white";
       btn.appendChild(ico);
+
+    } else if (b.type === "undo") {
+      const ico = printess.getIcon("undo");
+      ico.style.width = "20px";
+      ico.style.height = "20px";
+      ico.style.color = "white";
+      btn.appendChild(ico);
+
+    } else if (b.type === "redo") {
+      const ico = printess.getIcon("redo");
+      ico.style.width = "20px";
+      ico.style.height = "20px";
+      ico.style.color = "white";
+      btn.appendChild(ico);
+
     } else {
       btn.innerText = b.caption || b.type;
     }
     btn.onclick = () => {
+      if (b.type === "undo") {
+        printess.undo();
+        return;
+      }
+      if (b.type === "redo") {
+        printess.redo();
+        return;
+      }
       if (b.callback) {
         b.callback();
       }
@@ -1465,18 +1517,23 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
   return nav;
 }
 
-async function renderMobilePagebar(printess: iPrintessApi) {
-
-  let toolbar = document.querySelector(".mobile-pagebar");
-  if (!toolbar) {
-    toolbar = document.createElement("div");
-    toolbar.className = "mobile-pagebar";
-    document.body.appendChild(toolbar);
+function getMobilePageBarDiv(): HTMLDivElement {
+  let pagebar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
+  if (!pagebar) {
+    pagebar = document.createElement("div");
+    pagebar.className = "mobile-pagebar";
+    document.body.appendChild(pagebar);
   } else {
-    toolbar.innerHTML = "";
+    pagebar.innerHTML = "";
   }
+  return pagebar;
+}
 
-  const info = await printess.pageInfo();
+function renderMobilePagebar(printess: iPrintessApi) {
+
+  const toolbar = getMobilePageBarDiv();
+
+  const info = printess.pageInfoSync();
 
   const page = document.createElement("div");
   page.className = "mobile-pagebar-page-info";
@@ -1535,7 +1592,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
     const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
 
 
-    mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight) + "px";
+    mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px"; // +2 = border-top
     const printessDiv = document.getElementById("printessin");
     const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
@@ -1584,8 +1641,8 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
 
 }
 
-function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalProperty>): HTMLDivElement {
-  const container = document.createElement("div");
+function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalProperty>, container?: HTMLDivElement, propertyIdFilter?: string): HTMLDivElement {
+  container = container || document.createElement("div");
   container.className = "mobile-buttons-container";
 
   const scrollContainer = document.createElement("div");
@@ -1596,39 +1653,82 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   buttonContainer.className = "mobile-buttons";
 
 
-  const buttons = printess.getMobileUiButtons(properties);
+  const buttons = printess.getMobileUiButtons(properties, propertyIdFilter || "root");
 
-  if (buttons.length === 0) {
-    // if we have no properties on document level, we can render the page navigation
-    document.body.classList.remove("no-mobile-button-bar");
+  const hasButtons = buttons.length > 0;
+
+  if (printess.spreadCount() > 1) {
     const spreads = printess.getAllSpreadsSync();
     const info = printess.pageInfoSync();
-    if (spreads.length <= 10) {
-      buttonContainer.style.width = "100%" // centers the page navigation
-    }
-    renderPageNavigation(printess, spreads, info, buttonContainer);
+    if (hasButtons) {
+      renderPageNavigation(printess, spreads, info, getMobilePageBarDiv());
 
-  } else if (buttons.length === 1) {
+      // render page navigation on top under nav-bar 
+      //    renderMobilePagebar(printess);
+    } else {
+      // if we have no properties on document level, we can render the page navigation in the button bar 
+      document.body.classList.remove("no-mobile-button-bar");
+
+      if (info.max < 8) { // fits on iphone 5SE
+        buttonContainer.style.width = "100%" // centers the page navigation
+      }
+      renderPageNavigation(printess, spreads, info, buttonContainer);
+
+    }
+  }
+
+
+  if (buttons.length === 1 && !buttons[0].newState.externalProperty?.id.startsWith("FF_")) {
     // Auto jump to first button action: 
     document.body.classList.add("no-mobile-button-bar");
+
     window.setTimeout(() => {
       const b = buttons[0];
-      renderMobileControlHost(printess, b.newState);
+      if (b.newState.externalProperty?.kind === "background-button") {
+        // jump directly to background frames 
+        printess.selectBackground();
+      } else {
+        renderMobileControlHost(printess, b.newState);
+      }
+
     }, 50);
-  } else {
+
+  } else if (hasButtons) {
     document.body.classList.remove("no-mobile-button-bar");
+
+    // if the selection contains multiple frames it might be better to show a 2 level ui, first the main features and then the meta-properties 
+
+
     for (const b of buttons) {
       const buttonDiv = document.createElement("div");
       buttonDiv.id = (b.newState.externalProperty?.id ?? "") + ":" + (b.newState.metaProperty ?? "");
       buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
 
       buttonDiv.onclick = (_e: MouseEvent) => {
-        document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
-        document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-        buttonDiv.classList.toggle("selected");
-        buttonDiv.innerHTML = "";
-        drawButtonContent(printess, buttonDiv, properties);
-        centerMobileButton(buttonDiv);
+
+        if (b.newState.externalProperty?.kind === "background-button") {
+          printess.selectBackground();
+        } else if (b.hasCollapsedMetaProperties === true && b.newState.externalProperty) {
+          // render detaile button bar with meta-properties for images and stories 
+          const buttonContainer = document.querySelector(".mobile-buttons-container");
+          if (buttonContainer) {
+            buttonContainer.innerHTML = "";
+            getMobileButtons(printess, properties, container, b.newState.externalProperty.id);
+            const backButton = document.querySelector(".mobile-property-back-button");
+            if (backButton) {
+              backButton.parentElement?.removeChild(backButton);
+            }
+
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", [])); // group-snippets are only used with  "add" state
+          }
+        } else {
+          document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
+          document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+          buttonDiv.classList.toggle("selected");
+          buttonDiv.innerHTML = "";
+          drawButtonContent(printess, buttonDiv, properties);
+          centerMobileButton(buttonDiv);
+        }
 
         // render control 
         renderMobileControlHost(printess, b.newState);
@@ -1638,13 +1738,6 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
 
       buttonContainer.appendChild(buttonDiv);
 
-      if (buttons.length === 1) {
-        // press this button immediately
-        window.setTimeout(() => {
-          buttonDiv.click();
-        }, 100)
-
-      }
     }
 
   }
@@ -1655,7 +1748,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   return container;
 }
 
-function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState) {
+function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState, groupSnippets?: Array<iExternalSnippetCluster>) {
   const controlHost = document.getElementById("mobile-control-host");
 
   if (controlHost) {
@@ -1663,8 +1756,11 @@ function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState) 
     controlHost.classList.remove("mobile-control-md");
     controlHost.classList.remove("mobile-control-lg");
     controlHost.innerHTML = "";
-   
-    if (state.externalProperty) {
+    if (state.state === "add") {
+      controlHost.classList.add("mobile-control-lg");
+      const snippets = renderGroupSnippets(printess, groupSnippets || [], true);
+      controlHost.appendChild(snippets);
+    } else if (state.externalProperty) {
       controlHost.classList.add(getMobileControlHeightClass(state.externalProperty, state.metaProperty))
       const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true)
       controlHost.appendChild(control);
@@ -1704,7 +1800,7 @@ function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, pr
   const property = properties.filter(p => p.id === propertyId)[0];
   if (!property) return
 
-  const buttons = printess.getMobileUiButtons([property]);
+  const buttons = printess.getMobileUiButtons([property], propertyId);
   let b: iMobileUIButton | undefined = undefined;
   for (const button of buttons) {
     if ((button.newState.metaProperty ?? "") === metaProperty) {
