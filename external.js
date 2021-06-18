@@ -973,8 +973,8 @@ function renderGroupSnippets(printess, groupSnippets, forMobile) {
                 const thumb = document.createElement("img");
                 thumb.src = snippet.thumbUrl;
                 thumb.style.backgroundColor = snippet.bgColor;
-                thumb.style.width = "100px";
-                thumb.style.height = "100%";
+                thumb.style.width = forMobile ? "60px" : "100px";
+                thumb.style.height = forMobile ? "60px" : "100%";
                 thumb.style.margin = "5px";
                 thumb.onclick = () => {
                     if (forMobile) {
@@ -989,6 +989,7 @@ function renderGroupSnippets(printess, groupSnippets, forMobile) {
     if (forMobile) {
         const mobile = document.createElement("div");
         mobile.className = "mobile-group-snippets-container";
+        div.style.marginTop = "-35px";
         mobile.appendChild(div);
         return mobile;
     }
@@ -1052,17 +1053,18 @@ let firstRenderMobileCall = true;
 function renderMobileUi(printess, properties, state, groupSnippets) {
     const mobileUi = getMobileUiDiv();
     mobileUi.innerHTML = "";
-    if (state === "add") {
-        renderMobileControlHost(printess, { state: "add" }, groupSnippets);
-    }
-    else {
+    if (state !== "add") {
         const buttonsOrPages = getMobileButtons(printess, properties);
         mobileUi.innerHTML = "";
         mobileUi.appendChild(buttonsOrPages);
-        const controlHost = document.createElement("div");
-        controlHost.className = "mobile-control-host";
-        controlHost.id = "mobile-control-host";
-        mobileUi.appendChild(controlHost);
+    }
+    const controlHost = document.createElement("div");
+    controlHost.className = "mobile-control-host";
+    controlHost.id = "mobile-control-host";
+    mobileUi.appendChild(controlHost);
+    if (state === "add") {
+        document.body.classList.add("no-mobile-button-bar");
+        renderMobileControlHost(printess, { state: "add" }, groupSnippets);
     }
     if (groupSnippets.length > 0 && state !== "add") {
         mobileUi.appendChild(getMobilePlusButton(printess, properties, groupSnippets));

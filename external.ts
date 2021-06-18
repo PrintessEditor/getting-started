@@ -1248,8 +1248,8 @@ function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExter
         const thumb = document.createElement("img");
         thumb.src = snippet.thumbUrl;
         thumb.style.backgroundColor = snippet.bgColor;
-        thumb.style.width = "100px";
-        thumb.style.height = "100%";
+        thumb.style.width = forMobile ? "60px" : "100px";
+        thumb.style.height = forMobile ? "60px" : "100%";
         thumb.style.margin = "5px";
         //  thumb.classList.add("image-icon");
         thumb.onclick = () => {
@@ -1268,6 +1268,7 @@ function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExter
   if (forMobile) {
     const mobile = document.createElement("div");
     mobile.className = "mobile-group-snippets-container";
+    div.style.marginTop = "-35px";
     mobile.appendChild(div);
     return mobile;
   } else {
@@ -1342,20 +1343,22 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
 
   const mobileUi = getMobileUiDiv();
   mobileUi.innerHTML = "";
-
-  if (state === "add") {
-    // render list of group snippets
-    renderMobileControlHost(printess, { state: "add" }, groupSnippets)
-  } else {
+  if (state !== "add") {
     // render properties UI
     const buttonsOrPages = getMobileButtons(printess, properties);
     mobileUi.innerHTML = "";
     mobileUi.appendChild(buttonsOrPages);
+  }
 
-    const controlHost = document.createElement("div");
-    controlHost.className = "mobile-control-host";
-    controlHost.id = "mobile-control-host";
-    mobileUi.appendChild(controlHost);
+  const controlHost = document.createElement("div");
+  controlHost.className = "mobile-control-host";
+  controlHost.id = "mobile-control-host";
+  mobileUi.appendChild(controlHost);
+
+  if (state === "add") {
+    // render list of group snippets
+    document.body.classList.add("no-mobile-button-bar");
+    renderMobileControlHost(printess, { state: "add" }, groupSnippets)
   }
 
   // Buttons for "add" and "back ""
