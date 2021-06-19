@@ -517,6 +517,10 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
       a.classList.add("dropdown-item");
       a.onclick = () => {
         printess.setProperty(p.id, entry.key);
+        const mobileButtonDiv = document.getElementById(p.id + ":" );
+        if (mobileButtonDiv) {
+          drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        }
         if (p.listMeta) {
           button.innerHTML = "";
           button.appendChild(getDropdownItemContent(p.listMeta, entry));

@@ -379,6 +379,10 @@ function getDropDown(printess, p, asList) {
             a.classList.add("dropdown-item");
             a.onclick = () => {
                 printess.setProperty(p.id, entry.key);
+                const mobileButtonDiv = document.getElementById(p.id + ":");
+                if (mobileButtonDiv) {
+                    drawButtonContent(printess, mobileButtonDiv, [p]);
+                }
                 if (p.listMeta) {
                     button.innerHTML = "";
                     button.appendChild(getDropdownItemContent(p.listMeta, entry));
