@@ -1462,11 +1462,12 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
         type: "redo"
       },
       {
-        type: "addToBasket",
+        type: "callback",
+        caption: "Open",
         callback: () => {
-          const p = document.getElementById("printessin");
-          console.warn("Resize Printess Height: " + p?.offsetHeight)
-          printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
+        //  const p = document.getElementById("printessin");
+         // console.warn("Resize Printess Height: " + p?.offsetHeight)
+         // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
 
           const list = document.getElementById("test-template-list");
           if (list) {
@@ -1481,7 +1482,11 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
             document.body.appendChild(list);
           }
         }
-      }
+      }/*,
+      {
+        type: "addToBasket",
+       
+      }*/
     ]
   }
 
@@ -1495,7 +1500,7 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
     btn.classList.add("me-2");
     if (b.type === "addToBasket") {
       btn.classList.add("btn-outline-light");
-      btn.innerText = b.caption || "Add to Basket";
+      btn.innerText = b.caption ||  "Add to Basket";
     } else if (b.type === "back") {
       btn.classList.add("ms-2");
       const ico = printess.getIcon("arrow-left");
@@ -1519,6 +1524,7 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
       btn.appendChild(ico);
 
     } else {
+      btn.classList.add("btn-outline-light");
       btn.innerText = b.caption || b.type;
     }
     btn.onclick = () => {

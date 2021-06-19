@@ -1154,12 +1154,9 @@ function renderMobileNavBar(printess, buttons) {
                 type: "redo"
             },
             {
-                type: "addToBasket",
+                type: "callback",
+                caption: "Open",
                 callback: () => {
-                    var _a;
-                    const p = document.getElementById("printessin");
-                    console.warn("Resize Printess Height: " + (p === null || p === void 0 ? void 0 : p.offsetHeight));
-                    printess.resizePrintess(true, false, undefined, (_a = p === null || p === void 0 ? void 0 : p.offsetHeight) !== null && _a !== void 0 ? _a : undefined);
                     const list = document.getElementById("test-template-list");
                     if (list) {
                         list.style.zIndex = "1000";
@@ -1210,6 +1207,7 @@ function renderMobileNavBar(printess, buttons) {
             btn.appendChild(ico);
         }
         else {
+            btn.classList.add("btn-outline-light");
             btn.innerText = b.caption || b.type;
         }
         btn.onclick = () => {
