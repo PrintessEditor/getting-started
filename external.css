@@ -226,15 +226,14 @@ input[type='range'] {
 
 .image-select-list-wrapper {
   width: 100%;
-  overflow: scroll;
+  height: 100%;
 }
 
 .image-select-list {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  width: max-content;
-  padding: 5px;
+  width: 100%;
 }
 
 .image-select-list>* {
@@ -346,6 +345,11 @@ input[type='range'] {
    display: flex;
    flex-direction: row;
  }
+ /* overide bootstrap behaviour */
+ .list-group-item .dropdown-item:focus, .list-group-item .dropdown-item:hover {
+  background-color: transparent;
+ }
+
 .color-picker-button {
   width: 30px;
   height: 30px;

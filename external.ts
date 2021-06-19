@@ -128,7 +128,7 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
       return getDropDown(printess, p, forMobile);
 
     case "image-list":
-      return getImageSelectList(printess, p);
+      return getImageSelectList(printess, p, forMobile);
 
   }
 
@@ -346,7 +346,7 @@ function addLabel(input: HTMLElement, p: iExternalProperty, label?: string): HTM
 
 
 
-function getImageSelectList(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
+function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
   const container = document.createElement("div");
   if (p.listMeta && p.listMeta.list) {
 
@@ -374,13 +374,24 @@ function getImageSelectList(printess: iPrintessApi, p: iExternalProperty): HTMLE
         printess.setProperty(p.id, entry.key);
         imageList.childNodes.forEach((c) => (<HTMLDivElement>c).classList.remove("selected"));
         thumb.classList.add("selected");
+        p.value = entry.key;
+        const mobileButtonDiv = document.getElementById(p.id + ":");
+        if (mobileButtonDiv) {
+          drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        }
+
       }
       imageList.appendChild(thumb);
     }
     container.appendChild(imageList);
   }
+  if (forMobile) {
+    return container;
+  } else {
+    return addLabel(container, p);
+  }
 
-  return container;
+
 }
 
 
@@ -533,11 +544,19 @@ function getDropdownItemContent(meta: iExternalListMeta, entry: iExternalFieldLi
   div.classList.add("dropdown-list-entry");
 
   if (entry.imageUrl) {
+    let tw = meta.thumbWidth;
+    let th = meta.thumbHeight;
+    const aspect = tw / th;
+    if (th > 50) { // max for mobile
+      th = 50;
+      tw = th * aspect;
+    }
+
     const img = document.createElement("div");
     img.classList.add("dropdown-list-image");
     img.style.backgroundImage = `url('${entry.imageUrl}')`;
-    img.style.width = meta.thumbWidth + "px";
-    img.style.height = meta.thumbHeight + "px";
+    img.style.width = tw + "px";
+    img.style.height = th + "px";
     img.style.marginRight = "10px";
     div.appendChild(img);
   }
@@ -701,14 +720,14 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
 
   /*** SCALE ***/
   let scaleControl: HTMLElement | undefined = undefined;
-  if (!forMobile) {
-    container.appendChild(imagePanel);
-    scaleControl = getImageScaleControl(printess, p);
-    container.appendChild(scaleControl)
-    return container;
-  } else {
+  if (forMobile) {
     container.classList.add("form-control");
     container.appendChild(imageList);
+    return container;
+  } else {
+    container.appendChild(imagePanel);
+    scaleControl = getImageScaleControl(printess, p);
+    container.appendChild(scaleControl);
     return container;
   }
 
@@ -1418,7 +1437,7 @@ function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternal
       renderMobileUi(printess, properties, "frames", groupSnippets)
     } else if (state === "frames") {
       printess.clearSelection();
-    } else if (state === "add") {
+    } else if (state === "add" || state === "document") {
       renderMobileUi(printess, properties, "document", groupSnippets)
     }
   }
@@ -1721,7 +1740,6 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
             if (backButton) {
               backButton.parentElement?.removeChild(backButton);
             }
-
             getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", [])); // group-snippets are only used with  "add" state
           }
         } else {
@@ -1731,6 +1749,13 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           buttonDiv.innerHTML = "";
           drawButtonContent(printess, buttonDiv, properties);
           centerMobileButton(buttonDiv);
+
+          // if a form field on doc level was selectected, we might not have a back button, so add one just in case 
+          const backButton = document.querySelector(".mobile-property-back-button");
+          if (backButton) {
+            backButton.parentElement?.removeChild(backButton);
+          }
+          getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
         }
 
         // render control 
@@ -1787,6 +1812,7 @@ function getMobileControlHeightClass(property: iExternalProperty, meta?: iExtern
     case "color":
     case "text-area":
     case "select-list":
+    case "image-list":
       return "mobile-control-lg"
   }
 

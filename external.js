@@ -91,7 +91,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
         case "select-list":
             return getDropDown(printess, p, forMobile);
         case "image-list":
-            return getImageSelectList(printess, p);
+            return getImageSelectList(printess, p, forMobile);
     }
     const div = document.createElement("div");
     div.innerText = "Property not found: " + p.kind;
@@ -235,7 +235,7 @@ function addLabel(input, p, label) {
     container.appendChild(input);
     return container;
 }
-function getImageSelectList(printess, p) {
+function getImageSelectList(printess, p, forMobile) {
     const container = document.createElement("div");
     if (p.listMeta && p.listMeta.list) {
         if (p.listMeta.imageCss) {
@@ -260,12 +260,22 @@ function getImageSelectList(printess, p) {
                 printess.setProperty(p.id, entry.key);
                 imageList.childNodes.forEach((c) => c.classList.remove("selected"));
                 thumb.classList.add("selected");
+                p.value = entry.key;
+                const mobileButtonDiv = document.getElementById(p.id + ":");
+                if (mobileButtonDiv) {
+                    drawButtonContent(printess, mobileButtonDiv, [p]);
+                }
             };
             imageList.appendChild(thumb);
         }
         container.appendChild(imageList);
     }
-    return container;
+    if (forMobile) {
+        return container;
+    }
+    else {
+        return addLabel(container, p);
+    }
 }
 function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
     if (!dropdown) {
@@ -395,11 +405,18 @@ function getDropdownItemContent(meta, entry) {
     const div = document.createElement("div");
     div.classList.add("dropdown-list-entry");
     if (entry.imageUrl) {
+        let tw = meta.thumbWidth;
+        let th = meta.thumbHeight;
+        const aspect = tw / th;
+        if (th > 50) {
+            th = 50;
+            tw = th * aspect;
+        }
         const img = document.createElement("div");
         img.classList.add("dropdown-list-image");
         img.style.backgroundImage = `url('${entry.imageUrl}')`;
-        img.style.width = meta.thumbWidth + "px";
-        img.style.height = meta.thumbHeight + "px";
+        img.style.width = tw + "px";
+        img.style.height = th + "px";
         img.style.marginRight = "10px";
         div.appendChild(img);
     }
@@ -520,15 +537,15 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
     imageListWrapper.appendChild(imageList);
     imagePanel.appendChild(imageListWrapper);
     let scaleControl = undefined;
-    if (!forMobile) {
-        container.appendChild(imagePanel);
-        scaleControl = getImageScaleControl(printess, p);
-        container.appendChild(scaleControl);
+    if (forMobile) {
+        container.classList.add("form-control");
+        container.appendChild(imageList);
         return container;
     }
     else {
-        container.classList.add("form-control");
-        container.appendChild(imageList);
+        container.appendChild(imagePanel);
+        scaleControl = getImageScaleControl(printess, p);
+        container.appendChild(scaleControl);
         return container;
     }
 }
@@ -1115,7 +1132,7 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
         else if (state === "frames") {
             printess.clearSelection();
         }
-        else if (state === "add") {
+        else if (state === "add" || state === "document") {
             renderMobileUi(printess, properties, "document", groupSnippets);
         }
     };
@@ -1359,7 +1376,7 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
             buttonDiv.id = ((_c = (_b = b.newState.externalProperty) === null || _b === void 0 ? void 0 : _b.id) !== null && _c !== void 0 ? _c : "") + ":" + ((_d = b.newState.metaProperty) !== null && _d !== void 0 ? _d : "");
             buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
             buttonDiv.onclick = (_e) => {
-                var _a, _b;
+                var _a, _b, _c;
                 if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
                     printess.selectBackground();
                 }
@@ -1382,6 +1399,11 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
                     buttonDiv.innerHTML = "";
                     drawButtonContent(printess, buttonDiv, properties);
                     centerMobileButton(buttonDiv);
+                    const backButton = document.querySelector(".mobile-property-back-button");
+                    if (backButton) {
+                        (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
+                    }
+                    getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
                 }
                 renderMobileControlHost(printess, b.newState);
             };
@@ -1428,6 +1450,7 @@ function getMobileControlHeightClass(property, meta) {
         case "color":
         case "text-area":
         case "select-list":
+        case "image-list":
             return "mobile-control-lg";
     }
     return "mobile-control-sm";
