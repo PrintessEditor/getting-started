@@ -16,7 +16,7 @@
   --mobile-button-image-border: var(--mobile-button-border); /* rgba(255, 255, 255, 0.5);*/
  
   --mobile-buttonbar-height: 78px;
-  --mobile-pagebar-height: 40px;
+  --mobile-pagebar-height: 48px;
   --mobile-navbar-height: 48px;
 }
 
@@ -765,12 +765,20 @@ input[type='range'] {
   display: none;
   position: absolute;
   height: var(--mobile-pagebar-height);
-  width: 100vw;
+  width: 100%;
+  padding: 4px;
   overflow: auto hidden;
   top: var(--mobile-navbar-height);
   left: 0;
   background-color: var(--mobile-panel-background);
   border-bottom: 2px solid black;
+}
+/* BS override: change aspect auf page-links to save spave on mobile and make it more look like a page */
+.pagination-lg .page-link {
+  padding: .75rem 1rem;
+}
+.pagination-lg .page-ellipsis {
+  padding: .75rem 0;
 }
  
 .mobile-pagebar-page-info { 

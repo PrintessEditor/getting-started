@@ -517,7 +517,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
       a.classList.add("dropdown-item");
       a.onclick = () => {
         printess.setProperty(p.id, entry.key);
-        const mobileButtonDiv = document.getElementById(p.id + ":" );
+        const mobileButtonDiv = document.getElementById(p.id + ":");
         if (mobileButtonDiv) {
           drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
         }
@@ -1182,38 +1182,54 @@ function getFontSizeBox(printess: iPrintessApi, p: iExternalProperty) {
  */
 
 
-function getPaginationItem(printess: iPrintessApi, content: number | "previous" | "next", spread: iExternalSpreadInfo, page: "left-page" | "right-page", isActive: boolean): HTMLLIElement {
+function getPaginationItem(printess: iPrintessApi, content: number | "previous" | "next" | "ellipsis", spread?: iExternalSpreadInfo, page?: "left-page" | "right-page", isActive?: boolean): HTMLLIElement {
   const li = document.createElement("li");
   li.className = "page-item";
 
-  const a = document.createElement("li");
+  const a = document.createElement("div");
   a.className = "page-link";
 
   if (isActive) {
     li.classList.add("active");
   }
 
-  if (typeof content === "number") {
+  if (typeof content === "number" && spread) {
     a.innerText = spread.name ? spread.name : content.toString();
   } else if (content === "previous") {
-    a.innerText = "&laquo";
+    a.innerHTML = "&laquo";
   } else if (content === "next") {
-    a.innerText = "&raquo";
+    a.innerHTML = "&raquo";
+  } else if (content === "ellipsis") {
+    a.innerHTML = "&#8230";
+    a.className = "page-ellipsis disabled";
+    li.style.opacity = "0.4";
   }
   li.appendChild(a);
 
-  if ((page === "left-page" && spread.pages === 1) || (page === "right-page" && spread.pages === 2)) {
+  if (
+    content === "ellipsis" || content === "previous" ||
+    (spread &&
+      ((page === "left-page" && spread.pages === 1) || (page === "right-page" && spread.pages === 2))
+    )
+  ) {
     li.classList.add("me-2");
   }
   li.onclick = () => {
-    printess.selectSpread(spread.index, page);
-    li.classList.add("active");
+    if (content === "previous") {
+      printess.previousPage();
+    } else if (content === "next") {
+      printess.nextPage();
+    } else if (spread) {
+      printess.selectSpread(spread.index, page);
+      li.classList.add("active");
+    }
+
   }
 
   return li;
 }
 
-function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSpreadInfo>, info?: { current: number, max: number, isFirst: boolean, isLast: boolean }, container?: HTMLDivElement): void {
+function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSpreadInfo>, info?: { current: number, max: number, isFirst: boolean, isLast: boolean }, container?: HTMLDivElement, large: boolean = false): void {
   console.log("All Spreads", spreads);
 
   // draw pages ui
@@ -1222,20 +1238,80 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
     let pageNo = 0;
     pages.innerHTML = "";
     const ul = document.createElement("ul");
-    ul.className = "pagination";
+    ul.className = "pagination justify-content-center";
+    if (large) {
+      ul.classList.add("pagination-lg");
+    }
+
     if (spreads.length > 1) {
-      for (const spread of spreads) {
-        for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
-          pageNo++;
-          const page = pageIndex === 0 ? "left-page" : "right-page";
-          let isActive = false;
-          if (info) {
-            isActive = info.current === pageNo;
+      const prev = getPaginationItem(printess, "previous");
+      if (info && info.isFirst) {
+        prev.classList.add("disabled");
+      }
+      ul.appendChild(prev);
+    }
+
+    const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
+   // const hasFacingPages = spreads.reduce((prev, cur) => prev || (cur.pages > 1 ? 1 : 0), 0);
+    const current = info?.current || 1;
+    let lastPos: "start" | "current" | "end" | "skip" = "start";
+    for (const spread of spreads) {
+      for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
+        pageNo++;
+        const page = pageIndex === 0 ? "left-page" : "right-page";
+        const isActive = current === pageNo;
+
+        let pos: "start" | "current" | "end" | "skip" = "skip";
+        if (pageNo === 1) pos = "start";
+        if (pageNo === count) pos = "end";
+        if (current === 1) {
+          // 1 23 45 67 89 N
+          // * --          -
+          if (pageNo === current + 1 || pageNo === current + 2) {
+            pos = "current";
           }
+        } else if (current === count) {
+          // 1 23 45 67 89 N
+          //            -- *  
+          if (pageNo === current - 1 || pageNo === current - 2) {
+            pos = "current";
+          }
+        } else if (current % 2 === 0) {
+          // 1 23 45 67 89 N
+          // - *-          -
+          // even number, the next 4 
+          if (pageNo === current || pageNo === current + 1) {
+            pos = "current";
+          }
+        } else {
+          // 1 23 45 67 89 N
+          // -       -*    -
+          // uneven 
+          if (pageNo === current - 1 || pageNo === current) {
+            pos = "current";
+          }
+        }
+
+        if (pos === "skip") {
+          if (lastPos !== "skip") {
+            ul.appendChild( getPaginationItem(printess, "ellipsis"));
+          }
+        } else {
           ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
         }
+
+        lastPos = pos;
       }
     }
+
+    if (spreads.length > 1) {
+      const next = getPaginationItem(printess, "next");
+      if (info && info.isLast) {
+        next.classList.add("disabled");
+      }
+      ul.appendChild(next);
+    }
+
     pages.appendChild(ul);
   }
 
@@ -1469,9 +1545,9 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
         type: "callback",
         caption: "Open",
         callback: () => {
-        //  const p = document.getElementById("printessin");
-         // console.warn("Resize Printess Height: " + p?.offsetHeight)
-         // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
+          //  const p = document.getElementById("printessin");
+          // console.warn("Resize Printess Height: " + p?.offsetHeight)
+          // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
 
           const list = document.getElementById("test-template-list");
           if (list) {
@@ -1504,7 +1580,7 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
     btn.classList.add("me-2");
     if (b.type === "addToBasket") {
       btn.classList.add("btn-outline-light");
-      btn.innerText = b.caption ||  "Add to Basket";
+      btn.innerText = b.caption || "Add to Basket";
     } else if (b.type === "back") {
       btn.classList.add("ms-2");
       const ico = printess.getIcon("arrow-left");
@@ -1698,13 +1774,12 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
       // render page navigation on top under nav-bar 
       //    renderMobilePagebar(printess);
     } else {
-      // if we have no properties on document level, we can render the page navigation in the button bar 
+      // if we have no properties on document level, we can render an even larger page navigation in the button bar 
       document.body.classList.remove("no-mobile-button-bar");
 
-      if (info.max < 8) { // fits on iphone 5SE
-        buttonContainer.style.width = "100%" // centers the page navigation
-      }
-      renderPageNavigation(printess, spreads, info, buttonContainer);
+      buttonContainer.style.width = "100%" // centers the page navigation
+    
+      renderPageNavigation(printess, spreads, info, buttonContainer, true);
 
     }
   }

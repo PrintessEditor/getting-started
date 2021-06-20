@@ -930,50 +930,113 @@ function getFontSizeBox(printess, p) {
 function getPaginationItem(printess, content, spread, page, isActive) {
     const li = document.createElement("li");
     li.className = "page-item";
-    const a = document.createElement("li");
+    const a = document.createElement("div");
     a.className = "page-link";
     if (isActive) {
         li.classList.add("active");
     }
-    if (typeof content === "number") {
+    if (typeof content === "number" && spread) {
         a.innerText = spread.name ? spread.name : content.toString();
     }
     else if (content === "previous") {
-        a.innerText = "&laquo";
+        a.innerHTML = "&laquo";
     }
     else if (content === "next") {
-        a.innerText = "&raquo";
+        a.innerHTML = "&raquo";
+    }
+    else if (content === "ellipsis") {
+        a.innerHTML = "&#8230";
+        a.className = "page-ellipsis disabled";
+        li.style.opacity = "0.4";
     }
     li.appendChild(a);
-    if ((page === "left-page" && spread.pages === 1) || (page === "right-page" && spread.pages === 2)) {
+    if (content === "ellipsis" || content === "previous" ||
+        (spread &&
+            ((page === "left-page" && spread.pages === 1) || (page === "right-page" && spread.pages === 2)))) {
         li.classList.add("me-2");
     }
     li.onclick = () => {
-        printess.selectSpread(spread.index, page);
-        li.classList.add("active");
+        if (content === "previous") {
+            printess.previousPage();
+        }
+        else if (content === "next") {
+            printess.nextPage();
+        }
+        else if (spread) {
+            printess.selectSpread(spread.index, page);
+            li.classList.add("active");
+        }
     };
     return li;
 }
-function renderPageNavigation(printess, spreads, info, container) {
+function renderPageNavigation(printess, spreads, info, container, large = false) {
     console.log("All Spreads", spreads);
     const pages = container || document.querySelector(".page-buttons");
     if (pages) {
         let pageNo = 0;
         pages.innerHTML = "";
         const ul = document.createElement("ul");
-        ul.className = "pagination";
+        ul.className = "pagination justify-content-center";
+        if (large) {
+            ul.classList.add("pagination-lg");
+        }
         if (spreads.length > 1) {
-            for (const spread of spreads) {
-                for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
-                    pageNo++;
-                    const page = pageIndex === 0 ? "left-page" : "right-page";
-                    let isActive = false;
-                    if (info) {
-                        isActive = info.current === pageNo;
+            const prev = getPaginationItem(printess, "previous");
+            if (info && info.isFirst) {
+                prev.classList.add("disabled");
+            }
+            ul.appendChild(prev);
+        }
+        const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
+        const current = (info === null || info === void 0 ? void 0 : info.current) || 1;
+        let lastPos = "start";
+        for (const spread of spreads) {
+            for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
+                pageNo++;
+                const page = pageIndex === 0 ? "left-page" : "right-page";
+                const isActive = current === pageNo;
+                let pos = "skip";
+                if (pageNo === 1)
+                    pos = "start";
+                if (pageNo === count)
+                    pos = "end";
+                if (current === 1) {
+                    if (pageNo === current + 1 || pageNo === current + 2) {
+                        pos = "current";
                     }
+                }
+                else if (current === count) {
+                    if (pageNo === current - 1 || pageNo === current - 2) {
+                        pos = "current";
+                    }
+                }
+                else if (current % 2 === 0) {
+                    if (pageNo === current || pageNo === current + 1) {
+                        pos = "current";
+                    }
+                }
+                else {
+                    if (pageNo === current - 1 || pageNo === current) {
+                        pos = "current";
+                    }
+                }
+                if (pos === "skip") {
+                    if (lastPos !== "skip") {
+                        ul.appendChild(getPaginationItem(printess, "ellipsis"));
+                    }
+                }
+                else {
                     ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
                 }
+                lastPos = pos;
             }
+        }
+        if (spreads.length > 1) {
+            const next = getPaginationItem(printess, "next");
+            if (info && info.isLast) {
+                next.classList.add("disabled");
+            }
+            ul.appendChild(next);
         }
         pages.appendChild(ul);
     }
@@ -1352,10 +1415,8 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
         }
         else {
             document.body.classList.remove("no-mobile-button-bar");
-            if (info.max < 8) {
-                buttonContainer.style.width = "100%";
-            }
-            renderPageNavigation(printess, spreads, info, buttonContainer);
+            buttonContainer.style.width = "100%";
+            renderPageNavigation(printess, spreads, info, buttonContainer, true);
         }
     }
     if (buttons.length === 1 && !((_a = buttons[0].newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id.startsWith("FF_"))) {
