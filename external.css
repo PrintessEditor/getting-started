@@ -252,6 +252,22 @@ input[type='range'] {
   width: 100%;
   justify-content: space-between;
 }
+
+
+.step-badge {
+  
+  background-color: red;
+  color: white;
+  width: 32px;  
+  height: 32px;
+  font-size: 20px;
+  font-family: Roboto, sans-serif;
+  text-align: center;
+  padding-top: 2px;
+  border-radius: 50%;
+  margin-top: 2px;
+  margin-right: 7px;
+}
  
 
 
@@ -809,8 +825,9 @@ input[type='range'] {
 }
 
 
+/* Breakpoints force iPad and Mobile phones in landscape mode to show touch optimized mobile ui */
 
-@media screen and (min-width: 768px) {
+@media screen and (min-width: 897px) {
   .token-warning {
     left: calc(50% - 190px);
     bottom: -3px;
@@ -818,7 +835,7 @@ input[type='range'] {
   }
 }
 
-@media screen and (max-width: 767px) {
+@media screen and (max-width: 896px) {
   #printessin {
     top:calc(var(--mobile-navbar-height) + var(--mobile-pagebar-height));
     left: 0;

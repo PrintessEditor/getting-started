@@ -14,6 +14,7 @@ import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty
   getOverlay: getOverlay,
   getDoneButton: getDoneButton,
   getTitle: getTitle,
+  getStepsUi: getStepsUi,
   renderPageNavigation: renderPageNavigation,
   renderMobileUi: renderMobileUi,
   getMobileButtons: getMobileButtons,
@@ -291,6 +292,65 @@ function getTitle(title: string): HTMLElement {
   h1.innerText = title;
 
   container.appendChild(h1);
+  container.appendChild(hr);
+  return container;
+}
+
+function getStepsUi(printess: iPrintessApi): HTMLElement {
+  const container = document.createElement("div");
+
+  const hr = document.createElement("hr");
+  container.appendChild(hr);
+
+  const flex = document.createElement("div");
+  flex.className = "mb-2 align-items-center";
+  flex.style.display = "flex";
+
+
+  if (printess.hasPreviousStep()) {
+    const prevStep = document.createElement("button");
+    prevStep.className = "btn";
+    const svg = printess.getIcon("carret-left-solid");
+    svg.style.width = "8px";
+    prevStep.appendChild(svg);
+    prevStep.onclick = () => printess.previousStep();
+    flex.appendChild(prevStep);
+  }
+
+  const cur = printess.getStep();
+  if (cur && printess.isCurrentStepActive()) {
+    const badge = document.createElement("div");
+    badge.className = "step-badge";
+    badge.innerText = (cur.index + 1).toString();
+    flex.appendChild(badge);
+
+
+    const h1 = document.createElement("h2");
+    h1.style.flexGrow = "1";
+    h1.className = "mb-0";
+    h1.innerText = cur.title || "Step " + (cur.index + 1);
+    flex.appendChild(h1);
+
+  } else {
+    flex.style.justifyContent = "space-between";
+  }
+
+  if (printess.hasNextStep()) {
+    const nextStep = document.createElement("button");
+    nextStep.className = "btn btn-outline-primary";
+    nextStep.innerText = "Next Step";
+    nextStep.onclick = () => printess.nextStep();
+    flex.appendChild(nextStep);
+  } else {
+    // put to basket callback?
+    const nextStep = document.createElement("button");
+    nextStep.className = "btn btn-primary";
+    nextStep.innerText = "Add to Basket";
+    nextStep.onclick = () => alert("Show Shopping Basket");
+    flex.appendChild(nextStep);
+  }
+
+  container.appendChild(flex);
   container.appendChild(hr);
   return container;
 }
@@ -1252,7 +1312,7 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
     }
 
     const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
-   // const hasFacingPages = spreads.reduce((prev, cur) => prev || (cur.pages > 1 ? 1 : 0), 0);
+    // const hasFacingPages = spreads.reduce((prev, cur) => prev || (cur.pages > 1 ? 1 : 0), 0);
     const current = info?.current || 1;
     let lastPos: "start" | "current" | "end" | "skip" = "start";
     for (const spread of spreads) {
@@ -1294,7 +1354,7 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
 
         if (pos === "skip") {
           if (lastPos !== "skip") {
-            ul.appendChild( getPaginationItem(printess, "ellipsis"));
+            ul.appendChild(getPaginationItem(printess, "ellipsis"));
           }
         } else {
           ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
@@ -1481,7 +1541,14 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
       resizeMobileUi(printess);
     }, 500);
   } else {
-    resizeMobileUi(printess);
+    if (printess.isCurrentStepActive()) {
+      // when step is active zoom has already happened
+      // but not the other stuff ... hmmm
+     // const step= printess.getStep();
+     // resizeMobileUi(printess,);
+    } else {
+      resizeMobileUi(printess);
+    }
   }
 
 }
@@ -1562,7 +1629,11 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
             document.body.appendChild(list);
           }
         }
-      }/*,
+      },
+      {
+        type: "next"
+      }
+      /*,
       {
         type: "addToBasket",
        
@@ -1581,6 +1652,21 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
     if (b.type === "addToBasket") {
       btn.classList.add("btn-outline-light");
       btn.innerText = b.caption || "Add to Basket";
+
+    } else if (b.type === "next") {
+      btn.classList.add("btn-outline-light");
+      if (printess.hasNextStep()) {
+        btn.innerText = "Next Step";
+        const curStep = printess.getStep();
+        const maxStep = printess.maxStep();
+        if (curStep && maxStep) {
+          btn.title = "Step " + curStep.index + " of " + maxStep.index;
+        }
+
+      } else {
+        btn.innerText = b.caption || "Add to Basket";
+      }
+
     } else if (b.type === "back") {
       btn.classList.add("ms-2");
       const ico = printess.getIcon("arrow-left");
@@ -1615,6 +1701,21 @@ function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButt
       if (b.type === "redo") {
         printess.redo();
         return;
+      }
+      if (b.type === "next") {
+        if (printess.hasNextStep()) {
+          printess.nextStep();
+        } else {
+
+          alert("Add to basket")
+        }
+      }
+      if (b.type === "back") {
+        if (printess.hasPreviousStep()) {
+          printess.previousStep();
+        } else {
+          alert("Back to catalog")
+        }
       }
       if (b.callback) {
         b.callback();
@@ -1778,7 +1879,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
       document.body.classList.remove("no-mobile-button-bar");
 
       buttonContainer.style.width = "100%" // centers the page navigation
-    
+
       renderPageNavigation(printess, spreads, info, buttonContainer, true);
 
     }

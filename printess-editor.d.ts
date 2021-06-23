@@ -170,7 +170,7 @@ export interface iPrintessApi {
   getAllRequiredPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
   getAllRequiredPropertiesBySpreadIdSync(spreadId: string): Array<Array<iExternalProperty>>;
 
-  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string ): Array<iMobileUIButton>;
+  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string): Array<iMobileUIButton>;
 
 
   getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
@@ -232,9 +232,35 @@ export interface iPrintessApi {
   redo(): void;
 
   renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
+
+  isMobile(): boolean;
+
+  getStep(): iBuyerStep | null;
+  /**
+   * Indicates if the current step has become inactive, because the user has selected other frames 
+   * TRUE if the current step is part of the selection.
+   */
+  isCurrentStepActive(): boolean;
+  /**
+   * Indicates if the current template has buyer-steps 
+   */
+  hasSteps(): boolean
+  maxStep(): iBuyerStep | null;
+  hasNextStep(): boolean;
+  hasPreviousStep(): boolean;
+  async nextStep(): Promise<void>;
+  async previousStep(): Promise<void>;
+
+
+
 }
 
-
+export interface iBuyerStep {
+  index: number,
+  boxId?: string,
+  docId: string,
+  title: string
+}
 
 
 
@@ -392,7 +418,7 @@ export interface iExternalImage {
   height: number;
 }
 export interface iExternalButton {
-  type: "callback" | "print" | "back" | "addToBasket" | "undo" | "redo",
+  type: "callback" | "print" | "back" | "next" | "addToBasket" | "undo" | "redo",
   callback?: () => void,
   caption?: string
 }
@@ -414,7 +440,7 @@ export interface iMobileUiState {
   metaProperty?: iExternalMetaPropertyKind
 }
 
- 
+
 export type MobileUiState = "document" | "frames" | "add" | "details";
 
 export interface iButtonCircle {

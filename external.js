@@ -5,6 +5,7 @@ window.uiHelper = {
     getOverlay: getOverlay,
     getDoneButton: getDoneButton,
     getTitle: getTitle,
+    getStepsUi: getStepsUi,
     renderPageNavigation: renderPageNavigation,
     renderMobileUi: renderMobileUi,
     getMobileButtons: getMobileButtons,
@@ -195,6 +196,55 @@ function getTitle(title) {
     const h1 = document.createElement("h2");
     h1.innerText = title;
     container.appendChild(h1);
+    container.appendChild(hr);
+    return container;
+}
+function getStepsUi(printess) {
+    const container = document.createElement("div");
+    const hr = document.createElement("hr");
+    container.appendChild(hr);
+    const flex = document.createElement("div");
+    flex.className = "mb-2 align-items-center";
+    flex.style.display = "flex";
+    if (printess.hasPreviousStep()) {
+        const prevStep = document.createElement("button");
+        prevStep.className = "btn";
+        const svg = printess.getIcon("carret-left-solid");
+        svg.style.width = "8px";
+        prevStep.appendChild(svg);
+        prevStep.onclick = () => printess.previousStep();
+        flex.appendChild(prevStep);
+    }
+    const cur = printess.getStep();
+    if (cur && printess.isCurrentStepActive()) {
+        const badge = document.createElement("div");
+        badge.className = "step-badge";
+        badge.innerText = (cur.index + 1).toString();
+        flex.appendChild(badge);
+        const h1 = document.createElement("h2");
+        h1.style.flexGrow = "1";
+        h1.className = "mb-0";
+        h1.innerText = cur.title || "Step " + (cur.index + 1);
+        flex.appendChild(h1);
+    }
+    else {
+        flex.style.justifyContent = "space-between";
+    }
+    if (printess.hasNextStep()) {
+        const nextStep = document.createElement("button");
+        nextStep.className = "btn btn-outline-primary";
+        nextStep.innerText = "Next Step";
+        nextStep.onclick = () => printess.nextStep();
+        flex.appendChild(nextStep);
+    }
+    else {
+        const nextStep = document.createElement("button");
+        nextStep.className = "btn btn-primary";
+        nextStep.innerText = "Add to Basket";
+        nextStep.onclick = () => alert("Show Shopping Basket");
+        flex.appendChild(nextStep);
+    }
+    container.appendChild(flex);
     container.appendChild(hr);
     return container;
 }
@@ -1168,7 +1218,11 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         }, 500);
     }
     else {
-        resizeMobileUi(printess);
+        if (printess.isCurrentStepActive()) {
+        }
+        else {
+            resizeMobileUi(printess);
+        }
     }
 }
 function getMobilePlusButton(printess, properties, groupSnippets) {
@@ -1237,6 +1291,9 @@ function renderMobileNavBar(printess, buttons) {
                         document.body.appendChild(list);
                     }
                 }
+            },
+            {
+                type: "next"
             }
         ];
     }
@@ -1250,6 +1307,20 @@ function renderMobileNavBar(printess, buttons) {
         if (b.type === "addToBasket") {
             btn.classList.add("btn-outline-light");
             btn.innerText = b.caption || "Add to Basket";
+        }
+        else if (b.type === "next") {
+            btn.classList.add("btn-outline-light");
+            if (printess.hasNextStep()) {
+                btn.innerText = "Next Step";
+                const curStep = printess.getStep();
+                const maxStep = printess.maxStep();
+                if (curStep && maxStep) {
+                    btn.title = "Step " + curStep.index + " of " + maxStep.index;
+                }
+            }
+            else {
+                btn.innerText = b.caption || "Add to Basket";
+            }
         }
         else if (b.type === "back") {
             btn.classList.add("ms-2");
@@ -1285,6 +1356,22 @@ function renderMobileNavBar(printess, buttons) {
             if (b.type === "redo") {
                 printess.redo();
                 return;
+            }
+            if (b.type === "next") {
+                if (printess.hasNextStep()) {
+                    printess.nextStep();
+                }
+                else {
+                    alert("Add to basket");
+                }
+            }
+            if (b.type === "back") {
+                if (printess.hasPreviousStep()) {
+                    printess.previousStep();
+                }
+                else {
+                    alert("Back to catalog");
+                }
             }
             if (b.callback) {
                 b.callback();

@@ -21,7 +21,7 @@
 
 <body style="margin: 0; padding: 0;">
 
-  <nav class="desktop-navbar navbar navbar-expand navbar-dark bg-primary" >
+  <nav class="desktop-navbar navbar navbar-expand navbar-dark bg-primary">
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -220,7 +220,7 @@
     let printess;
     let currentGroupSnippets = [];
     let templateTitle = "";
-   
+
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
         addEventListener('WebComponentsReady', cb)
@@ -245,7 +245,7 @@
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
- 
+
       uiHelper.renderMobileNavBar(printess);
 
       // remember groupSnippets for showing as add-able items
@@ -284,6 +284,14 @@
       }
       desktop.innerHTML = "";
 
+
+      if (printess.hasSteps()) {
+        // if document has steps, display current step:
+        desktop.appendChild(uiHelper.getStepsUi(printess));
+      } else {
+        // display template name
+        desktop.appendChild(uiHelper.getTitle(templateTitle))
+      }
       const t = [];
 
       // render mobile page navigation if document has properties 
@@ -297,11 +305,13 @@
       }
 
       // add mobile - ui 
-      uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
-
+      if (printess.isMobile()) {
+        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
+      }
+      
       if (state === "document") {
+
         //****** Show Document Wide Options
-        desktop.appendChild(uiHelper.getTitle(templateTitle))
         for (const p of properties) {
           t.push(JSON.stringify(p, undefined, 2));
           desktop.appendChild(uiHelper.getPropertyControl(printess, p));
@@ -309,7 +319,7 @@
         desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets, false))
 
       } else {
-        desktop.appendChild(uiHelper.getTitle(templateTitle))
+
         //****** Show Just the frame / text Properties
         let colorsContainer = null;
         for (const p of properties) {
