@@ -264,31 +264,15 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   inp.autocapitalize = "off";
   inp.spellcheck = false;
 
-  let lastValue: string | null = p.value.toString();
-
+  // Key-up does not fire when autocomplete happens
   inp.oninput = () => {
-    console.warn("On Input="+ inp.value + " lastValue=" + lastValue);
-    if (lastValue !== inp.value) {
-      lastValue = inp.value;
       printess.setProperty(p.id, inp.value);
       const mobileButtonDiv = document.getElementById(p.id + ":");
       if (mobileButtonDiv) {
         p.value = inp.value;
         drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
       }
-    }
-  }
-  inp.onchange = () => {
-    if (lastValue !== inp.value) {
-      lastValue = inp.value;
-      printess.setProperty(p.id, inp.value);
-      const mobileButtonDiv = document.getElementById(p.id + ":");
-      if (mobileButtonDiv) {
-        p.value = inp.value;
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
-      }
-    }
-  }
+  } 
 
 
   if (forMobile) {
@@ -383,7 +367,7 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
   const inp = document.createElement("textarea");
   inp.value = p.value.toString();
   inp.autocomplete = "off";
-  inp.onkeyup = () => {
+  inp.oninput = () => {
     printess.setProperty(p.id, inp.value);
     const mobileButtonDiv = document.getElementById(p.id + ":");
     if (mobileButtonDiv) {
