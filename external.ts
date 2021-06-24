@@ -263,12 +263,29 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   inp.autocomplete = "off";
   inp.autocapitalize = "off";
   inp.spellcheck = false;
+
+  let lastValue: string | null = p.value.toString();
+
   inp.onkeyup = () => {
-    printess.setProperty(p.id, inp.value);
-    const mobileButtonDiv = document.getElementById(p.id + ":");
-    if (mobileButtonDiv) {
-      p.value = inp.value;
-      drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+    if (lastValue !== inp.value) {
+      lastValue = inp.value;
+      printess.setProperty(p.id, inp.value);
+      const mobileButtonDiv = document.getElementById(p.id + ":");
+      if (mobileButtonDiv) {
+        p.value = inp.value;
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+      }
+    }
+  }
+  inp.onchange = () => {
+    if (lastValue !== inp.value) {
+      lastValue = inp.value;
+      printess.setProperty(p.id, inp.value);
+      const mobileButtonDiv = document.getElementById(p.id + ":");
+      if (mobileButtonDiv) {
+        p.value = inp.value;
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+      }
     }
   }
 
@@ -360,7 +377,7 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
 }
 
 
-function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean):  HTMLElement  {
+function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
 
   const inp = document.createElement("textarea");
   inp.value = p.value.toString();

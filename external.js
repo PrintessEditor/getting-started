@@ -175,12 +175,27 @@ function getSingleLineTextBox(printess, p, forMobile) {
     inp.autocomplete = "off";
     inp.autocapitalize = "off";
     inp.spellcheck = false;
+    let lastValue = p.value.toString();
     inp.onkeyup = () => {
-        printess.setProperty(p.id, inp.value);
-        const mobileButtonDiv = document.getElementById(p.id + ":");
-        if (mobileButtonDiv) {
-            p.value = inp.value;
-            drawButtonContent(printess, mobileButtonDiv, [p]);
+        if (lastValue !== inp.value) {
+            lastValue = inp.value;
+            printess.setProperty(p.id, inp.value);
+            const mobileButtonDiv = document.getElementById(p.id + ":");
+            if (mobileButtonDiv) {
+                p.value = inp.value;
+                drawButtonContent(printess, mobileButtonDiv, [p]);
+            }
+        }
+    };
+    inp.onchange = () => {
+        if (lastValue !== inp.value) {
+            lastValue = inp.value;
+            printess.setProperty(p.id, inp.value);
+            const mobileButtonDiv = document.getElementById(p.id + ":");
+            if (mobileButtonDiv) {
+                p.value = inp.value;
+                drawButtonContent(printess, mobileButtonDiv, [p]);
+            }
         }
     };
     if (forMobile) {
