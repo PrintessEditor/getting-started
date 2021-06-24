@@ -261,6 +261,8 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   inp.type = "text";
   inp.value = p.value.toString();
   inp.autocomplete = "off";
+  inp.autocapitalize = "off";
+  inp.spellcheck = false;
   inp.onkeyup = () => {
     printess.setProperty(p.id, inp.value);
     const mobileButtonDiv = document.getElementById(p.id + ":");
