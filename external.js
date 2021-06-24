@@ -172,6 +172,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
     const inp = document.createElement("input");
     inp.type = "text";
     inp.value = p.value.toString();
+    inp.autocomplete = "off";
     inp.onkeyup = () => {
         printess.setProperty(p.id, inp.value);
         const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -251,6 +252,7 @@ function getStepsUi(printess) {
 function getTextArea(printess, p, forMobile) {
     const inp = document.createElement("textarea");
     inp.value = p.value.toString();
+    inp.autocomplete = "off";
     inp.onkeyup = () => {
         printess.setProperty(p.id, inp.value);
         const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -1014,6 +1016,7 @@ function getPaginationItem(printess, content, spread, page, isActive) {
         }
         else if (spread) {
             printess.selectSpread(spread.index, page);
+            document.querySelectorAll(".page-item").forEach(pi => pi.classList.remove("active"));
             li.classList.add("active");
         }
     };
@@ -1021,7 +1024,7 @@ function getPaginationItem(printess, content, spread, page, isActive) {
 }
 function renderPageNavigation(printess, spreads, info, container, large = false) {
     console.log("All Spreads", spreads);
-    const pages = container || document.querySelector(".page-buttons");
+    const pages = container || document.querySelector(".desktop-pagebar");
     if (pages) {
         let pageNo = 0;
         pages.innerHTML = "";
@@ -1030,13 +1033,14 @@ function renderPageNavigation(printess, spreads, info, container, large = false)
         if (large) {
             ul.classList.add("pagination-lg");
         }
-        if (spreads.length > 1) {
-            const prev = getPaginationItem(printess, "previous");
-            if (info && info.isFirst) {
-                prev.classList.add("disabled");
-            }
-            ul.appendChild(prev);
+        if (spreads.length <= 1) {
+            return;
         }
+        const prev = getPaginationItem(printess, "previous");
+        if (info && info.isFirst) {
+            prev.classList.add("disabled");
+        }
+        ul.appendChild(prev);
         const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
         const current = (info === null || info === void 0 ? void 0 : info.current) || 1;
         let lastPos = "start";
@@ -1108,7 +1112,7 @@ function renderGroupSnippets(printess, groupSnippets, forMobile) {
                 thumb.src = snippet.thumbUrl;
                 thumb.style.backgroundColor = snippet.bgColor;
                 thumb.style.width = forMobile ? "60px" : "100px";
-                thumb.style.height = forMobile ? "60px" : "100%";
+                thumb.style.height = "";
                 thumb.style.margin = "5px";
                 thumb.onclick = () => {
                     if (forMobile) {
@@ -1262,7 +1266,117 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
     button.appendChild(circle);
     return button;
 }
-function renderMobileNavBar(printess, buttons) {
+function renderMobileNavBar(printess) {
+    const buttons = ["basket", "back", "undo", "redo", "step", "next"];
+    const nav = getMobileNavbar();
+    nav.innerHTML = "";
+    for (const b of buttons) {
+        const btn = document.createElement("button");
+        btn.classList.add("btn");
+        btn.classList.add("btn-sm");
+        btn.classList.add("me-2");
+        if (b === "next") {
+            btn.classList.add("btn-outline-light");
+            if (printess.hasNextStep()) {
+                btn.innerText = "Next Step";
+                const curStep = printess.getStep();
+                const maxStep = printess.maxStep();
+                if (curStep && maxStep) {
+                    btn.title = "Step " + curStep.index + " of " + maxStep.index;
+                }
+            }
+            else {
+                btn.innerText = "Add to Basket";
+            }
+            btn.onclick = () => {
+                const callback = printess.getAddToBasketCallback();
+                if (printess.hasNextStep()) {
+                    printess.nextStep();
+                    renderMobileNavBar(printess);
+                }
+                else if (callback) {
+                    printess.saveJson().then((token) => {
+                        callback(token);
+                    });
+                }
+                else {
+                    alert("Please add your callback in attachPrintess. [addToBasketCallback]");
+                }
+            };
+            nav.appendChild(btn);
+        }
+        else if (b === "back") {
+            btn.classList.add("ms-2");
+            const ico = printess.getIcon("arrow-left");
+            ico.style.width = "20px";
+            ico.style.height = "20px";
+            ico.style.color = "white";
+            btn.appendChild(ico);
+            btn.onclick = () => {
+                const callback = printess.getBackButtonCallback();
+                if (printess.hasPreviousStep()) {
+                    printess.previousStep();
+                    renderMobileNavBar(printess);
+                }
+                else if (callback) {
+                    printess.saveJson().then((token) => {
+                        callback(token);
+                    });
+                }
+                else {
+                    const offcanvas = document.getElementById("templateOffcanvas");
+                    const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
+                    bsOffcanvas.show();
+                }
+            };
+            nav.appendChild(btn);
+        }
+        else if (b === "step") {
+            const step = document.createElement("div");
+            step.style.flexGrow = "1";
+            step.style.display = "flex";
+            step.style.alignItems = "center";
+            step.style.justifyContent = "center";
+            const s = printess.getStep();
+            if (s && printess.isCurrentStepActive()) {
+                const badge = document.createElement("div");
+                badge.className = "step-badge step-badge-sm";
+                badge.innerText = (s.index + 1).toString();
+                step.appendChild(badge);
+                const h6 = document.createElement("h6");
+                h6.innerText = s.title;
+                h6.style.margin = "0";
+                h6.className = "text-light";
+                step.appendChild(h6);
+            }
+            nav.appendChild(step);
+        }
+        else if (b === "undo") {
+            const ico = printess.getIcon("undo");
+            ico.style.width = "20px";
+            ico.style.height = "20px";
+            ico.style.color = "white";
+            btn.onclick = () => {
+                printess.undo();
+            };
+            btn.appendChild(ico);
+            nav.appendChild(btn);
+        }
+        else if (b === "redo") {
+            const ico = printess.getIcon("redo");
+            ico.style.width = "20px";
+            ico.style.height = "20px";
+            ico.style.color = "white";
+            btn.onclick = () => {
+                printess.redo();
+            };
+            btn.appendChild(ico);
+            nav.appendChild(btn);
+        }
+    }
+    return nav;
+}
+function renderMobileNavBarFlexible(printess, buttons) {
     if (!buttons || buttons.length === 0) {
         buttons = [
             {
@@ -1774,4 +1888,5 @@ function getOverlay(printess, properties) {
     }
     return hdiv;
 }
+export {};
 //# sourceMappingURL=getting-started-external.js.map

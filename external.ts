@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iExternalButton, iMobileUiState } from "./printess-editor";
 
@@ -259,6 +260,7 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   const inp = document.createElement("input");
   inp.type = "text";
   inp.value = p.value.toString();
+  inp.autocomplete = "off";
   inp.onkeyup = () => {
     printess.setProperty(p.id, inp.value);
     const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -356,10 +358,11 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
 }
 
 
-function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
+function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean):  HTMLElement  {
 
   const inp = document.createElement("textarea");
   inp.value = p.value.toString();
+  inp.autocomplete = "off";
   inp.onkeyup = () => {
     printess.setProperty(p.id, inp.value);
     const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -1281,6 +1284,7 @@ function getPaginationItem(printess: iPrintessApi, content: number | "previous" 
       printess.nextPage();
     } else if (spread) {
       printess.selectSpread(spread.index, page);
+      document.querySelectorAll(".page-item").forEach(pi => pi.classList.remove("active"));
       li.classList.add("active");
     }
 
@@ -1293,7 +1297,7 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
   console.log("All Spreads", spreads);
 
   // draw pages ui
-  const pages = container || document.querySelector(".page-buttons");
+  const pages = container || document.querySelector(".desktop-pagebar");
   if (pages) {
     let pageNo = 0;
     pages.innerHTML = "";
@@ -1303,13 +1307,16 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
       ul.classList.add("pagination-lg");
     }
 
-    if (spreads.length > 1) {
-      const prev = getPaginationItem(printess, "previous");
-      if (info && info.isFirst) {
-        prev.classList.add("disabled");
-      }
-      ul.appendChild(prev);
+    if (spreads.length <= 1) {
+      return
     }
+
+    const prev = getPaginationItem(printess, "previous");
+    if (info && info.isFirst) {
+      prev.classList.add("disabled");
+    }
+    ul.appendChild(prev);
+
 
     const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
     // const hasFacingPages = spreads.reduce((prev, cur) => prev || (cur.pages > 1 ? 1 : 0), 0);
@@ -1385,11 +1392,8 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
 
 function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExternalSnippetCluster>, forMobile: boolean): HTMLElement {
 
-
   const div = document.createElement("div");
   div.className = "group-snippets";
-
-
 
   if (groupSnippets.length > 0) {
     // no selection, show add-able snippets instead
@@ -1408,7 +1412,7 @@ function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExter
         thumb.src = snippet.thumbUrl;
         thumb.style.backgroundColor = snippet.bgColor;
         thumb.style.width = forMobile ? "60px" : "100px";
-        thumb.style.height = forMobile ? "60px" : "100%";
+        thumb.style.height = ""; // forMobile ? "60px" : "";
         thumb.style.margin = "5px";
         //  thumb.classList.add("image-icon");
         thumb.onclick = () => {
@@ -1544,8 +1548,8 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
     if (printess.isCurrentStepActive()) {
       // when step is active zoom has already happened
       // but not the other stuff ... hmmm
-     // const step= printess.getStep();
-     // resizeMobileUi(printess,);
+      // const step= printess.getStep();
+      // resizeMobileUi(printess,);
     } else {
       resizeMobileUi(printess);
     }
@@ -1596,7 +1600,131 @@ function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternal
   return button;
 }
 
-function renderMobileNavBar(printess: iPrintessApi, buttons: Array<iExternalButton>) {
+function renderMobileNavBar(printess: iPrintessApi) {
+
+  const buttons = <const>["basket", "back", "undo", "redo", "step", "next"];
+
+
+
+  //  const p = document.getElementById("printessin");
+  // console.warn("Resize Printess Height: " + p?.offsetHeight)
+  // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
+
+
+  const nav = getMobileNavbar();
+  nav.innerHTML = "";
+  for (const b of buttons) {
+    const btn = document.createElement("button");
+    btn.classList.add("btn");
+    btn.classList.add("btn-sm");
+    // btn.classList.add("btn-outline");
+    btn.classList.add("me-2");
+
+    if (b === "next") {
+      btn.classList.add("btn-outline-light");
+      if (printess.hasNextStep()) {
+        btn.innerText = "Next Step";
+        const curStep = printess.getStep();
+        const maxStep = printess.maxStep();
+        if (curStep && maxStep) {
+          btn.title = "Step " + curStep.index + " of " + maxStep.index;
+        }
+      } else {
+        btn.innerText = "Add to Basket";
+      }
+      btn.onclick = () => {
+        const callback = printess.getAddToBasketCallback();
+        if (printess.hasNextStep()) {
+          printess.nextStep();
+          renderMobileNavBar(printess);
+        } else if (callback) {
+          printess.saveJson().then((token) => {
+            callback(token);
+          })
+        } else {
+          alert("Please add your callback in attachPrintess. [addToBasketCallback]")
+        }
+      }
+      nav.appendChild(btn);
+
+    } else if (b === "back") {
+      btn.classList.add("ms-2");
+      const ico = printess.getIcon("arrow-left");
+      ico.style.width = "20px";
+      ico.style.height = "20px";
+      ico.style.color = "white";
+      btn.appendChild(ico);
+      btn.onclick = () => {
+        const callback = printess.getBackButtonCallback();
+        if (printess.hasPreviousStep()) {
+          printess.previousStep();
+          renderMobileNavBar(printess);
+        } else if (callback) {
+          printess.saveJson().then((token) => {
+            callback(token);
+          })
+        } else {
+          // show sample load ui
+
+          const offcanvas = document.getElementById("templateOffcanvas");
+          //@ts-ignore
+          const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
+          //@ts-ignore
+          bsOffcanvas.show()
+
+        }
+      }
+      nav.appendChild(btn);
+
+    } else if (b === "step") {
+      const step = document.createElement("div");
+      step.style.flexGrow = "1";
+      step.style.display = "flex";
+      step.style.alignItems = "center";
+      step.style.justifyContent = "center";
+      const s = printess.getStep();
+      if (s && printess.isCurrentStepActive()) {
+        const badge = document.createElement("div");
+        badge.className = "step-badge step-badge-sm";
+        badge.innerText = (s.index + 1).toString();
+
+        step.appendChild(badge);
+        const h6 = document.createElement("h6");
+        h6.innerText = s.title;
+        h6.style.margin = "0";
+        h6.className = "text-light";
+        step.appendChild(h6)
+      }
+      nav.appendChild(step);
+
+    } else if (b === "undo") {
+      const ico = printess.getIcon("undo");
+      ico.style.width = "20px";
+      ico.style.height = "20px";
+      ico.style.color = "white";
+      btn.onclick = () => {
+        printess.undo();
+      }
+      btn.appendChild(ico);
+      nav.appendChild(btn);
+    } else if (b === "redo") {
+      const ico = printess.getIcon("redo");
+      ico.style.width = "20px";
+      ico.style.height = "20px";
+      ico.style.color = "white";
+      btn.onclick = () => {
+        printess.redo();
+      }
+      btn.appendChild(ico);
+      nav.appendChild(btn);
+    }
+
+
+  }
+  return nav;
+}
+
+function renderMobileNavBarFlexible(printess: iPrintessApi, buttons: Array<iExternalButton>) {
   if (!buttons || buttons.length === 0) {
     buttons = [
       {
@@ -1790,6 +1918,7 @@ let lastPrintessBottom = 0;
 
 function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false) {
   const mobileUi = getMobileUiDiv();
+  // const mobilePagebarDiv = getMobilePageBarDiv();
   const controlHost: HTMLElement | null = document.getElementById("mobile-control-host");
   // determine used-height of current controls
   if (mobileUi && controlHost) {
@@ -1800,6 +1929,11 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
     const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
     const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
 
+    /* if (mobileButtonBarHeight === 0 && mobilePagebarDiv) {
+       mobilePagebarDiv.style.display = "none";
+     } else {
+       mobilePagebarDiv.style.display = "block";
+     }*/
 
     mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px"; // +2 = border-top
     const printessDiv = document.getElementById("printessin");

@@ -114,6 +114,18 @@ export interface printessAttachParameters {
    * hard-code the required buttons.
    */
   buttons?: Array<iExternalButton>;
+
+
+  /**
+   * Provide a callback function which is called when the buyer presses the [Add to Basket] button
+   * Design is automtically saved and function gets a [token] to load or print this design
+   */
+  addToBasketCallback?: (saveToken: string) => void,
+  /**
+   * Provide a callback function which is called when the buyer presses the [Back] button
+   * Design is automtically saved and function gets a [token] to load or print this design
+   */
+   backButtonCallback?: (saveToken: string) => void,
 }
 
 /**
@@ -124,11 +136,18 @@ export interface iPrintessApi {
   getJson(): string;
   setJson(jsonString: string): Promise<void>;
 
-  loadTemplate(templateName: string): Promise<void>;
+  /**
+   * Load a template to the Printess editor.
+   * @param templateNameOrToken can be either the name of a template (case sensitive) or the save-token received as a result of a user design save. 
+   */
+  loadTemplate(templateNameOrToken: string): Promise<void>;
 
   saveJson(): Promise<string>;
   loadJson(id: string): Promise<void>;
   unexpireJson(id: string): Promise<void>;
+
+  getAddToBasketCallback(): null | ((saveToken: string) => void);
+  getBackButtonCallback(): null | ((saveToken: string) => void) ;
 
   clearSelection(): Promise<void>;
   deleteSelectedFrames(): Promise<boolean>;
@@ -519,6 +538,7 @@ export type iconName =
   | "arrows-v"
   | "carret-down-solid"
   | "carret-right-solid"
+  | "carret-left-solid"
   | "text-size"
   | "text-width"
   | "line-height"

@@ -22,15 +22,9 @@
 <body style="margin: 0; padding: 0;">
 
   <nav class="desktop-navbar navbar navbar-expand navbar-dark bg-primary">
-
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
-      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav mr-auto" style="width: 100%;">
-        <li class="nav-item dropdown">
+        <!--<li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown"
             aria-haspopup="true" aria-expanded="false">
             Ui
@@ -39,34 +33,12 @@
             <a class="dropdown-item" href="index.html">Printess Ui</a>
             <a class="dropdown-item" href="external.html">Custom Ui</a>
           </div>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="temlateDropdown" role="button" data-bs-toggle="dropdown"
-            aria-haspopup="true" aria-expanded="false">
-            Open
+        </li>-->
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnShowJson" title="Show Properties JSON" data-bs-toggle="offcanvas"
+            data-bs-target="#templateOffcanvas">
+            open
           </a>
-          <div class="dropdown-menu" id="test-template-list" aria-labelledby="temlateDropdown">
-            <a class="dropdown-item" href="#Children%27s%20book">Children's book</a>
-            <a class="dropdown-item" href="#Retro%20Sign">Retro Sign</a>
-            <a class="dropdown-item" href="#Business%20Card">Business Card</a>
-            <a class="dropdown-item" href="#Greeting%20Card">Greeting Card</a>
-            <a class="dropdown-item" href="#Chocolate%20Bar">Chocolate Bar</a>
-            <a class="dropdown-item" href="#Photo-Calendar%201">Photo-Calendar</a>
-            <a class="dropdown-item" href="#Calendar">Calendar</a>
-            <a class="dropdown-item" href="#Newborn%20Card">Newborn Card</a>
-            <a class="dropdown-item" href="#Phone-Case">Phone-Case</a>
-            <a class="dropdown-item" href="#Puzzle">Puzzle</a>
-            <a class="dropdown-item" href="#T-shirt%202">T-Shirt</a>
-            <a class="dropdown-item" href="#Coffee%20Mug">Coffee Mug</a>
-
-            <div class="dropdown-divider">UI Test Templates</div>
-            <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel">Rich Editing with Fallback to Paragraph</a>
-            <a class="dropdown-item" href="#BuyerText-No-Eddi">Form Editing with and without Paragraph Split</a>
-            <a class="dropdown-item" href="#8Pages">8 Pages</a>
-            <a class="dropdown-item" href="#8DoublePages">14 Facing Pages</a>
-            <a class="dropdown-item" href="#8DoublePagesFF">14 Facing Pages w. FormField</a>
-            <a class="dropdown-item" href="#Avatar">Avatar-Test</a>
-          </div>
         </li>
         <li class="nav-item" style="flex-grow: 1;"></li>
         <li class="nav-item">
@@ -157,10 +129,6 @@
     </div>
   </nav>
 
-
-  <nav class="page-buttons">
-  </nav>
-
   <button class="show-layouts-button btn btn-primary" type="button" data-bs-toggle="offcanvas"
     data-bs-target="#layoutOffcanvas" aria-controls="layoutOffcanvas">
     Change Layout
@@ -177,8 +145,7 @@
     </div>
   </div>
 
-  <!-- JSON DEBUG VIEW -->
-
+  <!-- FOR TESTING ONLY: JSON DEBUG VIEW -->
   <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="jsonOffcanvas"
     aria-labelledby="offcanvasLabel">
     <div class="offcanvas-header">
@@ -190,12 +157,49 @@
     </pre>
   </div>
 
-  <div id="desktop-properties"></div>
+  <!-- FOR TESTING ONLY: SELECT TEMPLATE VIEW-->
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="templateOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header" style="align-items: start;">
+      <div class="offcanvas-title">
+        <h5  id="offcanvasLabel">Load Template</h5>
+        <p class="text-muted" id="offcanvasLabel">For mobile please add your own [backButtonCallback] as an attachPrintess parameter.</p>
+      </div>
+      <button type="button" class="btn-close text-reset" id="closeTemplateOffCanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <a class="dropdown-item" href="#Children%27s%20book">Children's book</a>
+      <a class="dropdown-item" href="#Retro%20Sign">Retro Sign</a>
+      <a class="dropdown-item" href="#Business%20Card">Business Card</a>
+      <a class="dropdown-item" href="#Greeting%20Card">Greeting Card</a>
+      <a class="dropdown-item" href="#Chocolate%20Bar">Chocolate Bar</a>
+      <a class="dropdown-item" href="#Photo-Calendar%201">Photo-Calendar</a>
+      <a class="dropdown-item" href="#Calendar">Calendar</a>
+      <a class="dropdown-item" href="#Newborn%20Card">Newborn Card</a>
+      <a class="dropdown-item" href="#Phone-Case">Phone-Case</a>
+      <a class="dropdown-item" href="#Puzzle">Puzzle</a>
+      <a class="dropdown-item" href="#T-shirt%202">T-Shirt</a>
+      <a class="dropdown-item" href="#Coffee%20Mug">Coffee Mug</a>
+
+      <div class="dropdown-divider">UI Test Templates</div>
+      <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel">Rich Editing with Fallback to Paragraph</a>
+      <a class="dropdown-item" href="#BuyerText-No-Eddi">Form Editing with and without Paragraph Split</a>
+      <a class="dropdown-item" href="#8Pages">8 Pages</a>
+      <a class="dropdown-item" href="#8DoublePages">14 Facing Pages</a>
+      <a class="dropdown-item" href="#8DoublePagesFF">14 Facing Pages w. FormField</a>
+      <a class="dropdown-item" href="#Avatar">Avatar-Test</a>
+      <a class="dropdown-item" href="#Newborn-Steps">Newborn Card with Steps</a>
+    </div>
+  </div>
 
 
-  <div id="printessin"></div>
-
-
+  <!-- MAIN PRINTES UI-COMPONENTS -->
+  <div class="printess-desktop-grid">
+    <nav class="desktop-pagebar"></nav>
+    <div id="desktop-properties"></div>
+    <div id="printessin"></div>
+  </div>
 
 
   <div class="token-warning">
@@ -251,13 +255,16 @@
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
 
-      const desktop = document.getElementById("desktop-properties");
-
-      if (!desktop) {
-        throw "#desktop-properties not found, please add to html.";
+      if (!printess.isMobile()) {
+        const desktop = document.getElementById("desktop-properties");
+        if (!desktop) {
+          throw "#desktop-properties not found, please add to html.";
+        }
+        desktop.innerHTML = "";
+        const spreads = printess.getAllSpreadsSync();
+        const info = printess.pageInfoSync();
+        uiHelper.renderPageNavigation(printess, spreads, info);
       }
-      desktop.innerHTML = "";
-
 
       const layoutSnippetsDiv = document.getElementById("layoutSnippets");
       layoutSnippetsDiv.innerHTML = "";
@@ -272,26 +279,12 @@
            console.warn("ALL PROPERTIES:", props);
          })*/
 
-
     }
 
     const selectionChangeCallback = (properties, state) => {
 
       // state is "document" or "frames"
-      const desktop = document.getElementById("desktop-properties");
-      if (!desktop) {
-        throw "#desktop-properties not found, please add to html.";
-      }
-      desktop.innerHTML = "";
 
-
-      if (printess.hasSteps()) {
-        // if document has steps, display current step:
-        desktop.appendChild(uiHelper.getStepsUi(printess));
-      } else {
-        // display template name
-        desktop.appendChild(uiHelper.getTitle(templateTitle))
-      }
       const t = [];
 
       // render mobile page navigation if document has properties 
@@ -304,41 +297,56 @@
         }
       }
 
-      // add mobile - ui 
-      if (printess.isMobile()) {
-        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
-      }
       
-      if (state === "document") {
-
-        //****** Show Document Wide Options
-        for (const p of properties) {
-          t.push(JSON.stringify(p, undefined, 2));
-          desktop.appendChild(uiHelper.getPropertyControl(printess, p));
-        }
-        desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets, false))
-
+      if (printess.isMobile()) {
+        // **** add mobile-ui *****
+        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
+        uiHelper.renderMobileNavBar(printess);
+      
       } else {
+        // ***** add desktop-ui *****
+        const desktop = document.getElementById("desktop-properties");
+        if (!desktop) {
+          throw "#desktop-properties not found, please add to html.";
+        }
+        desktop.innerHTML = "";
 
-        //****** Show Just the frame / text Properties
-        let colorsContainer = null;
-        for (const p of properties) {
-          if (p.kind === "color") {
-            if (!colorsContainer) {
-              colorsContainer = document.createElement("div");
-              colorsContainer.className = "color-drop-down-list";
-              desktop.appendChild(colorsContainer);
-            }
-            colorsContainer.appendChild(uiHelper.getPropertyControl(printess, p))
-          } else {
-            colorsContainer = null;
+        if (printess.hasSteps()) {
+          // if document has steps, display current step:
+          desktop.appendChild(uiHelper.getStepsUi(printess));
+        } else {
+          // display template name
+          desktop.appendChild(uiHelper.getTitle(templateTitle))
+        }
+
+        if (state === "document") {
+          //****** Show Document Wide Options
+          for (const p of properties) {
+            t.push(JSON.stringify(p, undefined, 2));
             desktop.appendChild(uiHelper.getPropertyControl(printess, p));
           }
-          t.push(JSON.stringify(p, undefined, 2));
+          desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets, false))
+        } else {
+          //****** Show Just the frame / text Properties
+          let colorsContainer = null;
+          for (const p of properties) {
+            if (p.kind === "color") {
+              if (!colorsContainer) {
+                colorsContainer = document.createElement("div");
+                colorsContainer.className = "color-drop-down-list";
+                desktop.appendChild(colorsContainer);
+              }
+              colorsContainer.appendChild(uiHelper.getPropertyControl(printess, p))
+            } else {
+              colorsContainer = null;
+              desktop.appendChild(uiHelper.getPropertyControl(printess, p));
+            }
+            t.push(JSON.stringify(p, undefined, 2));
+          }
+          const hr = document.createElement("hr");
+          desktop.appendChild(hr);
+          desktop.appendChild(uiHelper.getDoneButton(printess));
         }
-        const hr = document.createElement("hr");
-        desktop.appendChild(hr);
-        desktop.appendChild(uiHelper.getDoneButton(printess));
       }
 
       // print json for debug purposes
@@ -422,7 +430,7 @@
     };
 
     document.getElementById("btnSelect").onclick = () => {
-      const id = prompt("Paste propertyId ...");
+      const id = prompt("Select Frames by propertyId:");
       if (id) {
         printess.selectFrames(id);
       }
@@ -457,11 +465,11 @@
 
     window.addEventListener('hashchange', function () {
       const id = decodeURIComponent(window.location.hash.substr(1));
-      const list = document.getElementById("test-template-list");
-      if (list) list.style.display = "none";
+      const offcanvas = document.getElementById("templateOffcanvas");
+      if (offcanvas) offcanvas.style.visibility = "";
       let pagebar = document.querySelector(".mobile-pagebar");
-      if (pagebar) pagebar.parentElement.removeChild(pagebar); // will be re-attached when needed
-      if (id) printess.loadTemplate(decodeURIComponent(window.location.hash.substr(1)));
+      if (pagebar) pagebar.parentElement.removeChild(pagebar); // will be re-attached on load callback
+      if (id && printess) printess.loadTemplate(decodeURIComponent(window.location.hash.substr(1)));
     }, false);
 
 
