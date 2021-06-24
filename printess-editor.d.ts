@@ -267,10 +267,8 @@ export interface iPrintessApi {
   maxStep(): iBuyerStep | null;
   hasNextStep(): boolean;
   hasPreviousStep(): boolean;
-  async nextStep(): Promise<void>;
-  async previousStep(): Promise<void>;
-
-
+  nextStep(): Promise<void>;
+  previousStep(): Promise<void>;
 
 }
 

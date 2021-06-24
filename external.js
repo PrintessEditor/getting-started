@@ -1888,5 +1888,4 @@ function getOverlay(printess, properties) {
     }
     return hdiv;
 }
-export {};
 //# sourceMappingURL=getting-started-external.js.map
