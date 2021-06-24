@@ -13,7 +13,7 @@ window.uiHelper = {
     renderMobileNavBar: renderMobileNavBar,
     viewPortScroll: viewPortScroll
 };
-console.log("helpers loaded");
+console.log("Printess ui-helper loaded");
 function viewPortScroll(printess) {
     console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
     const printessDiv = document.getElementById("printessin");
@@ -25,10 +25,6 @@ function viewPortScroll(printess) {
             resizeMobileUi(printess, false);
         }
     }
-}
-function getMobilePropertyControl(printess, p, metaProperty) {
-    const control = getPropertyControl(printess, p, metaProperty, true);
-    return control;
 }
 function getPropertyControl(printess, p, metaProperty, forMobile = false) {
     switch (p.kind) {
@@ -1025,7 +1021,6 @@ function getPaginationItem(printess, content, spread, page, isActive) {
     return li;
 }
 function renderPageNavigation(printess, spreads, info, container, large = false) {
-    console.log("All Spreads", spreads);
     const pages = container || document.querySelector(".desktop-pagebar");
     if (pages) {
         let pageNo = 0;
@@ -1595,7 +1590,6 @@ function resizeMobileUi(printess, focusSelection = false) {
                 printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
                 printessDiv.style.top = printessTop;
                 printess.resizePrintess(true, focusSelection, undefined, printessHeight);
-                console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
             }
         }
     }
@@ -1848,7 +1842,6 @@ function easeInOutQuad(t, b, c, d) {
     return -c / 2 * (t * (t - 2) - 1) + b;
 }
 function getOverlay(printess, properties) {
-    console.log("+++++++Properties", properties);
     const isSingleLineText = properties.filter(p => p.kind === "single-line-text").length > 0;
     const isImage = properties.filter(p => p.kind === "image").length > 0;
     const isColor = properties.filter(p => p.kind === "color").length > 0;

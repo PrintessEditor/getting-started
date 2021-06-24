@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
+
 
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iExternalButton, iMobileUiState } from "./printess-editor";
 
-
-//declare const bootstrap: any;
+declare const bootstrap: any;
 
 //const textStyleMode: textStyleModeEnum = "default"; //  "default" | "all-paragraphs" | "all-paragraphs-if-no-selection"
-
 
 (<any>window).uiHelper = {
   getPropertyControl: getPropertyControl,
@@ -23,7 +21,7 @@ import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty
   renderMobileNavBar: renderMobileNavBar,
   viewPortScroll: viewPortScroll
 }
-console.log("helpers loaded");
+console.log("Printess ui-helper loaded");
 
 
 function viewPortScroll(printess: iPrintessApi) {
@@ -31,26 +29,12 @@ function viewPortScroll(printess: iPrintessApi) {
   const printessDiv = document.getElementById("printessin");
   if (printessDiv) {
     if (window.visualViewport.offsetTop > 0) {
-      // system has auto scrolled conten, so we adjust printess-editor to fit
-      //printessDiv.style.top = window.visualViewport.offsetTop + "px";
+      // system has auto scrolled content, so we adjust printess-editor to fit
       resizeMobileUi(printess, true);
-      //  printess.resizePrintess(false, true);
     } else {
-      //  console.log("Setting printess top to initial");
-      // printessDiv.style.top = "";
       resizeMobileUi(printess, false);
-      // printess.resizePrintess(true);
     }
   }
-}
-
-/*
- * Renders a control for a given property 
- */
-function getMobilePropertyControl(printess: iPrintessApi, p: iExternalProperty, metaProperty?: iExternalMetaPropertyKind): HTMLElement {
-  const control = getPropertyControl(printess, p, metaProperty, true);
-
-  return control;
 }
 
 /*
@@ -471,14 +455,6 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
   }
 
   const colors = printess.getColors(p.id);
-
-  /*
-  select.onchange = () => {
-    // alert(p.id + "has changed to " + select.value);
-    printess.setTextStyleProperty(p.id, "color", select.value, textStyleMode)
-  }*/
-
-  //const selectedItem = colors.filter(itm => itm.name === p.value || itm.color === p.value)[0] ?? null;
 
   const button = document.createElement("button");
 
@@ -1298,8 +1274,7 @@ function getPaginationItem(printess: iPrintessApi, content: number | "previous" 
 }
 
 function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSpreadInfo>, info?: { current: number, max: number, isFirst: boolean, isLast: boolean }, container?: HTMLDivElement, large: boolean = false): void {
-  console.log("All Spreads", spreads);
-
+   
   // draw pages ui
   const pages = container || document.querySelector(".desktop-pagebar");
   if (pages) {
@@ -1671,9 +1646,9 @@ function renderMobileNavBar(printess: iPrintessApi) {
           // show sample load ui
 
           const offcanvas = document.getElementById("templateOffcanvas");
-          //@ts-ignore
+         
           const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
-          //@ts-ignore
+    
           bsOffcanvas.show()
 
         }
@@ -1981,7 +1956,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
         printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
         printessDiv.style.top = printessTop;
         printess.resizePrintess(true, focusSelection, undefined, printessHeight);
-        console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
+        // console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
       }
     }
   }
@@ -2309,7 +2284,7 @@ function easeInOutQuad(t: number, b: number, c: number, d: number) {
  */
 // TODO get overlay style injection 
 function getOverlay(printess: iPrintessApi, properties: Array<iExternalProperty>): HTMLElement {
-  console.log("+++++++Properties", properties);
+  // console.log("+++++++Properties", properties);
   const isSingleLineText = properties.filter(p => p.kind === "single-line-text").length > 0;
   const isImage = properties.filter(p => p.kind === "image").length > 0;
   const isColor = properties.filter(p => p.kind === "color").length > 0;
