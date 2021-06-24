@@ -176,7 +176,8 @@ function getSingleLineTextBox(printess, p, forMobile) {
     inp.autocapitalize = "off";
     inp.spellcheck = false;
     let lastValue = p.value.toString();
-    inp.onkeyup = () => {
+    inp.oninput = () => {
+        console.warn("On Input=" + inp.value + " lastValue=" + lastValue);
         if (lastValue !== inp.value) {
             lastValue = inp.value;
             printess.setProperty(p.id, inp.value);

@@ -266,7 +266,8 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
 
   let lastValue: string | null = p.value.toString();
 
-  inp.onkeyup = () => {
+  inp.oninput = () => {
+    console.warn("On Input="+ inp.value + " lastValue=" + lastValue);
     if (lastValue !== inp.value) {
       lastValue = inp.value;
       printess.setProperty(p.id, inp.value);
