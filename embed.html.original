@@ -30,7 +30,7 @@
             alert("Back to catalog. save-token:" + event.data.token);
             break;
           case "basket":
-            alert("Proceed to checkout. save-token:" + event.data.token);
+            prompt("Proceed to checkout.\nsave-token:\n" + event.data.token +  "\nThumbnailUrl:",event.data.thumbnailUrl );
             break;
         }
       });

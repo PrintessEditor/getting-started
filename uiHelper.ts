@@ -1,6 +1,7 @@
 
 
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iExternalButton, iMobileUiState } from "./printess-editor";
+import { printess } from "./printess-editor/wasm/printessWasmInit";
 
 declare const bootstrap: any;
 
@@ -25,6 +26,20 @@ declare const bootstrap: any;
 }
 console.log("Printess ui-helper loaded");
 
+function addToBasket(printess: iPrintessApi) {
+  const callback = printess.getAddToBasketCallback();
+  if (callback) {
+   printess.showOverlay("Saving Your Design ...")
+    printess.saveJson().then((token) => {
+      printess.renderFirstPageImage("thumbnail").then((url: string) => {
+        callback(token, url);
+        printess.hideOverlay();
+      })
+    })
+  } else {
+    alert("Please add your callback in attachPrintess. [addToBasketCallback]")
+  }
+}
 
 function viewPortScroll(printess: iPrintessApi) {
   console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
@@ -57,7 +72,7 @@ function renderDesktopUi(printess: iPrintessApi, container: HTMLDivElement, prop
     container.appendChild(getStepsUi(printess));
   } else {
     // display template name
-    container.appendChild(getTitle(templateTitle))
+    container.appendChild(getTitle(printess, templateTitle))
   }
 
   if (state === "document") {
@@ -330,7 +345,7 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
 
 }
 
-function getTitle(title: string): HTMLElement {
+function getTitle(printess: iPrintessApi, title: string): HTMLElement {
   const container = document.createElement("div");
 
   const hr = document.createElement("hr");
@@ -346,7 +361,7 @@ function getTitle(title: string): HTMLElement {
   const basketBtn = document.createElement("button");
   basketBtn.className = "btn btn-primary";
   basketBtn.innerText = "Add to Basket";
-  basketBtn.onclick = () => alert("Show Shopping Basket");
+  basketBtn.onclick = () => addToBasket(printess)
   inner.appendChild(basketBtn);
 
 
@@ -405,7 +420,7 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
     const nextStep = document.createElement("button");
     nextStep.className = "btn btn-primary";
     nextStep.innerText = "Add to Basket";
-    nextStep.onclick = () => alert("Show Shopping Basket");
+    nextStep.onclick = () => addToBasket(printess);
     flex.appendChild(nextStep);
   }
 
@@ -1792,22 +1807,17 @@ function renderMobileNavBar(printess: iPrintessApi) {
           if (curStep && maxStep) {
             btn.title = "Step " + curStep.index + " of " + maxStep.index;
           }
-        } else {
-          btn.innerText = "Add to Basket";
-        }
-        btn.onclick = () => {
-          const callback = printess.getAddToBasketCallback();
-          if (printess.hasNextStep()) {
+          btn.onclick = () => {
             printess.nextStep();
             renderMobileNavBar(printess);
-          } else if (callback) {
-            printess.saveJson().then((token) => {
-              callback(token);
-            })
-          } else {
-            alert("Please add your callback in attachPrintess. [addToBasketCallback]")
           }
+        } else {
+          btn.innerText = "Add to Basket";
+          btn.onclick = () => addToBasket(printess);
         }
+
+       
+
         nav.appendChild(btn);
         break;
 

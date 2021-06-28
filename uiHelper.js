@@ -16,6 +16,21 @@ window.uiHelper = {
     viewPortScroll: viewPortScroll
 };
 console.log("Printess ui-helper loaded");
+function addToBasket(printess) {
+    const callback = printess.getAddToBasketCallback();
+    if (callback) {
+        printess.showOverlay("Saving Your Design ...");
+        printess.saveJson().then((token) => {
+            printess.renderFirstPageImage("thumbnail").then((url) => {
+                callback(token, url);
+                printess.hideOverlay();
+            });
+        });
+    }
+    else {
+        alert("Please add your callback in attachPrintess. [addToBasketCallback]");
+    }
+}
 function viewPortScroll(printess) {
     console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
     const printessDiv = document.getElementById("printessin");
@@ -42,7 +57,7 @@ function renderDesktopUi(printess, container, properties, state, groupSnippets, 
         container.appendChild(getStepsUi(printess));
     }
     else {
-        container.appendChild(getTitle(templateTitle));
+        container.appendChild(getTitle(printess, templateTitle));
     }
     if (state === "document") {
         for (const p of properties) {
@@ -241,7 +256,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
         return r;
     }
 }
-function getTitle(title) {
+function getTitle(printess, title) {
     const container = document.createElement("div");
     const hr = document.createElement("hr");
     container.appendChild(hr);
@@ -253,7 +268,7 @@ function getTitle(title) {
     const basketBtn = document.createElement("button");
     basketBtn.className = "btn btn-primary";
     basketBtn.innerText = "Add to Basket";
-    basketBtn.onclick = () => alert("Show Shopping Basket");
+    basketBtn.onclick = () => addToBasket(printess);
     inner.appendChild(basketBtn);
     container.appendChild(inner);
     container.appendChild(hr);
@@ -301,7 +316,7 @@ function getStepsUi(printess) {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-primary";
         nextStep.innerText = "Add to Basket";
-        nextStep.onclick = () => alert("Show Shopping Basket");
+        nextStep.onclick = () => addToBasket(printess);
         flex.appendChild(nextStep);
     }
     container.appendChild(flex);
@@ -1447,25 +1462,15 @@ function renderMobileNavBar(printess) {
                     if (curStep && maxStep) {
                         btn.title = "Step " + curStep.index + " of " + maxStep.index;
                     }
+                    btn.onclick = () => {
+                        printess.nextStep();
+                        renderMobileNavBar(printess);
+                    };
                 }
                 else {
                     btn.innerText = "Add to Basket";
+                    btn.onclick = () => addToBasket(printess);
                 }
-                btn.onclick = () => {
-                    const callback = printess.getAddToBasketCallback();
-                    if (printess.hasNextStep()) {
-                        printess.nextStep();
-                        renderMobileNavBar(printess);
-                    }
-                    else if (callback) {
-                        printess.saveJson().then((token) => {
-                            callback(token);
-                        });
-                    }
-                    else {
-                        alert("Please add your callback in attachPrintess. [addToBasketCallback]");
-                    }
-                };
                 nav.appendChild(btn);
                 break;
             case "step": {

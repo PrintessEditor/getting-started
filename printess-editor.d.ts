@@ -146,7 +146,7 @@ export interface iPrintessApi {
   loadJson(id: string): Promise<void>;
   unexpireJson(id: string): Promise<void>;
 
-  getAddToBasketCallback(): null | ((saveToken: string) => void);
+  getAddToBasketCallback(): null | ((saveToken: string, url: string) => void);
   getBackButtonCallback(): null | ((saveToken: string) => void) ;
 
   clearSelection(): Promise<void>;
@@ -287,6 +287,8 @@ export interface iPrintessApi {
   nextStep(): Promise<void>;
   previousStep(): Promise<void>;
 
+  showOverlay(message: string): void;
+  hideOverlay(): void ;
 }
 
 export interface iBuyerStep {
