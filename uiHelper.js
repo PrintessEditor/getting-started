@@ -9,6 +9,7 @@ window.uiHelper = {
     renderPageNavigation: renderPageNavigation,
     renderMobileUi: renderMobileUi,
     renderDesktopUi: renderDesktopUi,
+    refreshUndoRedoState: refreshUndoRedoState,
     getMobileButtons: getMobileButtons,
     renderMobilePagebar: renderMobilePagebar,
     renderMobileNavBar: renderMobileNavBar,
@@ -28,8 +29,15 @@ function viewPortScroll(printess) {
     }
 }
 function renderDesktopUi(printess, container, properties, state, groupSnippets, templateTitle) {
+    var _a;
     container.innerHTML = "";
     const t = [];
+    const nav = getMobileNavbar();
+    if (nav)
+        (_a = nav.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(nav);
+    const spreads = printess.getAllSpreadsSync();
+    const info = printess.pageInfoSync();
+    renderPageNavigation(printess, spreads, info);
     if (printess.hasSteps()) {
         container.appendChild(getStepsUi(printess));
     }
@@ -151,7 +159,12 @@ function getDoneButton(printess) {
     ok.style.alignSelf = "start";
     ok.style.padding = "5px";
     ok.onclick = () => {
-        printess.clearSelection();
+        if (printess.hasNextStep()) {
+            printess.nextStep();
+        }
+        else {
+            printess.clearSelection();
+        }
     };
     return ok;
 }
@@ -232,9 +245,17 @@ function getTitle(title) {
     const container = document.createElement("div");
     const hr = document.createElement("hr");
     container.appendChild(hr);
-    const h1 = document.createElement("h2");
-    h1.innerText = title;
-    container.appendChild(h1);
+    const inner = document.createElement("div");
+    inner.className = "desktop-title-bar mb-2";
+    const h2 = document.createElement("h2");
+    h2.innerText = title;
+    inner.appendChild(h2);
+    const basketBtn = document.createElement("button");
+    basketBtn.className = "btn btn-primary";
+    basketBtn.innerText = "Add to Basket";
+    basketBtn.onclick = () => alert("Show Shopping Basket");
+    inner.appendChild(basketBtn);
+    container.appendChild(inner);
     container.appendChild(hr);
     return container;
 }
@@ -375,7 +396,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
     const colors = printess.getColors(p.id);
     const button = document.createElement("button");
     if (!forMobile) {
-        button.className = "btn btn-light dropdown-toggle";
+        button.className = "btn btn-light dropdown-toggle btn-color-select";
         button.dataset.bsToggle = "dropdown";
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
@@ -385,7 +406,6 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
         else {
             button.style.backgroundColor = p.value.toString();
         }
-        button.innerHTML = "&nbsp;";
         dropdown.appendChild(button);
     }
     const ddContent = document.createElement("div");
@@ -1060,69 +1080,142 @@ function getPaginationItem(printess, content, spread, page, isActive) {
     };
     return li;
 }
-function renderPageNavigation(printess, spreads, info, container, large = false) {
+function refreshUndoRedoState(printess) {
+    const btnUndo = document.querySelector(".undo-button");
+    if (btnUndo) {
+        if (printess.undoCount() === 0) {
+            btnUndo.disabled = true;
+        }
+        else {
+            btnUndo.disabled = false;
+        }
+    }
+    const btnRedo = document.querySelector(".redo-button");
+    if (btnRedo) {
+        if (printess.redoCount() === 0) {
+            btnRedo.disabled = true;
+        }
+        else {
+            btnRedo.disabled = false;
+        }
+    }
+}
+function renderPageNavigation(printess, spreads, info, container, large = false, forMobile = false) {
     const pages = container || document.querySelector(".desktop-pagebar");
     if (pages) {
         let pageNo = 0;
         pages.innerHTML = "";
+        if (!forMobile) {
+            const miniBar = document.createElement("div");
+            const btnBack = document.createElement("button");
+            btnBack.className = "btn btn-sm";
+            if (printess.hasPreviousStep()) {
+                const icoBack = printess.getIcon("arrow-left");
+                icoBack.classList.add("icon");
+                btnBack.appendChild(icoBack);
+            }
+            else {
+                btnBack.classList.add("btn-outline-secondary");
+                btnBack.innerText = "Back";
+            }
+            btnBack.onclick = () => {
+                const callback = printess.getBackButtonCallback();
+                if (printess.hasPreviousStep()) {
+                    printess.previousStep();
+                    renderMobileNavBar(printess);
+                }
+                else if (callback) {
+                    printess.saveJson().then((token) => {
+                        callback(token);
+                    });
+                }
+                else {
+                    alert("Please add your callback in attachPrintess. [backButtonCallback]");
+                }
+            };
+            miniBar.appendChild(btnBack);
+            const btnUndo = document.createElement("button");
+            btnUndo.className = "btn btn-sm undo-button";
+            if (printess.undoCount() === 0) {
+                btnUndo.disabled = true;
+            }
+            const icoUndo = printess.getIcon("undo");
+            icoUndo.classList.add("icon");
+            btnUndo.onclick = () => {
+                printess.undo();
+            };
+            btnUndo.appendChild(icoUndo);
+            miniBar.appendChild(btnUndo);
+            const btnRedo = document.createElement("button");
+            btnRedo.className = "btn btn-sm me-2 redo-button";
+            const iconRedo = printess.getIcon("redo");
+            iconRedo.classList.add("icon");
+            if (printess.redoCount() === 0) {
+                btnRedo.disabled = true;
+            }
+            btnRedo.onclick = () => {
+                printess.redo();
+            };
+            btnRedo.appendChild(iconRedo);
+            miniBar.appendChild(btnRedo);
+            miniBar.className = "undo-redo-bar";
+            pages.appendChild(miniBar);
+        }
         const ul = document.createElement("ul");
         ul.className = "pagination justify-content-center";
         if (large) {
             ul.classList.add("pagination-lg");
         }
-        if (spreads.length <= 1) {
-            return;
-        }
-        const prev = getPaginationItem(printess, "previous");
-        if (info && info.isFirst) {
-            prev.classList.add("disabled");
-        }
-        ul.appendChild(prev);
-        const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
-        const current = (info === null || info === void 0 ? void 0 : info.current) || 1;
-        let lastPos = "start";
-        for (const spread of spreads) {
-            for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
-                pageNo++;
-                const page = pageIndex === 0 ? "left-page" : "right-page";
-                const isActive = current === pageNo;
-                let pos = "skip";
-                if (pageNo === 1)
-                    pos = "start";
-                if (pageNo === count)
-                    pos = "end";
-                if (current === 1) {
-                    if (pageNo === current + 1 || pageNo === current + 2) {
-                        pos = "current";
-                    }
-                }
-                else if (current === count) {
-                    if (pageNo === current - 1 || pageNo === current - 2) {
-                        pos = "current";
-                    }
-                }
-                else if (current % 2 === 0) {
-                    if (pageNo === current || pageNo === current + 1) {
-                        pos = "current";
-                    }
-                }
-                else {
-                    if (pageNo === current - 1 || pageNo === current) {
-                        pos = "current";
-                    }
-                }
-                if (pos === "skip") {
-                    if (lastPos !== "skip") {
-                        ul.appendChild(getPaginationItem(printess, "ellipsis"));
-                    }
-                }
-                else {
-                    ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
-                }
-                lastPos = pos;
-            }
-        }
         if (spreads.length > 1) {
+            const prev = getPaginationItem(printess, "previous");
+            if (info && info.isFirst) {
+                prev.classList.add("disabled");
+            }
+            ul.appendChild(prev);
+            const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
+            const current = (info === null || info === void 0 ? void 0 : info.current) || 1;
+            let lastPos = "start";
+            for (const spread of spreads) {
+                for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
+                    pageNo++;
+                    const page = pageIndex === 0 ? "left-page" : "right-page";
+                    const isActive = current === pageNo;
+                    let pos = "skip";
+                    if (pageNo === 1)
+                        pos = "start";
+                    if (pageNo === count)
+                        pos = "end";
+                    if (current === 1) {
+                        if (pageNo === current + 1 || pageNo === current + 2) {
+                            pos = "current";
+                        }
+                    }
+                    else if (current === count) {
+                        if (pageNo === current - 1 || pageNo === current - 2) {
+                            pos = "current";
+                        }
+                    }
+                    else if (current % 2 === 0) {
+                        if (pageNo === current || pageNo === current + 1) {
+                            pos = "current";
+                        }
+                    }
+                    else {
+                        if (pageNo === current - 1 || pageNo === current) {
+                            pos = "current";
+                        }
+                    }
+                    if (pos === "skip") {
+                        if (lastPos !== "skip") {
+                            ul.appendChild(getPaginationItem(printess, "ellipsis"));
+                        }
+                    }
+                    else {
+                        ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
+                    }
+                    lastPos = pos;
+                }
+            }
             const next = getPaginationItem(printess, "next");
             if (info && info.isLast) {
                 next.classList.add("disabled");
@@ -1149,7 +1242,9 @@ function renderGroupSnippets(printess, groupSnippets, forMobile) {
                 thumb.src = snippet.thumbUrl;
                 thumb.style.backgroundColor = snippet.bgColor;
                 thumb.style.width = forMobile ? "60px" : "100px";
-                thumb.style.height = "";
+                thumb.style.height = "fit-content";
+                if (forMobile)
+                    thumb.style.maxHeight = "60px";
                 thumb.style.margin = "5px";
                 thumb.onclick = () => {
                     if (forMobile) {
@@ -1164,7 +1259,7 @@ function renderGroupSnippets(printess, groupSnippets, forMobile) {
     if (forMobile) {
         const mobile = document.createElement("div");
         mobile.className = "mobile-group-snippets-container";
-        div.style.marginTop = "-35px";
+        div.style.marginTop = "-20px";
         mobile.appendChild(div);
         return mobile;
     }
@@ -1304,7 +1399,7 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
     return button;
 }
 function renderMobileNavBar(printess) {
-    const buttons = ["basket", "back", "undo", "redo", "step", "next"];
+    const buttons = ["back", "undo", "redo", "step", "next"];
     const nav = getMobileNavbar();
     nav.innerHTML = "";
     for (const b of buttons) {
@@ -1312,103 +1407,109 @@ function renderMobileNavBar(printess) {
         btn.classList.add("btn");
         btn.classList.add("btn-sm");
         btn.classList.add("me-2");
-        if (b === "next") {
-            btn.classList.add("btn-outline-light");
-            if (printess.hasNextStep()) {
-                btn.innerText = "Next Step";
-                const curStep = printess.getStep();
-                const maxStep = printess.maxStep();
-                if (curStep && maxStep) {
-                    btn.title = "Step " + curStep.index + " of " + maxStep.index;
-                }
-            }
-            else {
-                btn.innerText = "Add to Basket";
-            }
-            btn.onclick = () => {
-                const callback = printess.getAddToBasketCallback();
-                if (printess.hasNextStep()) {
-                    printess.nextStep();
-                    renderMobileNavBar(printess);
-                }
-                else if (callback) {
-                    printess.saveJson().then((token) => {
-                        callback(token);
-                    });
-                }
-                else {
-                    alert("Please add your callback in attachPrintess. [addToBasketCallback]");
-                }
-            };
-            nav.appendChild(btn);
-        }
-        else if (b === "back") {
-            btn.classList.add("ms-2");
-            const ico = printess.getIcon("arrow-left");
-            ico.style.width = "20px";
-            ico.style.height = "20px";
-            ico.style.color = "white";
-            btn.appendChild(ico);
-            btn.onclick = () => {
-                const callback = printess.getBackButtonCallback();
+        switch (b) {
+            case "back":
+                btn.classList.add("ms-2");
                 if (printess.hasPreviousStep()) {
-                    printess.previousStep();
-                    renderMobileNavBar(printess);
-                }
-                else if (callback) {
-                    printess.saveJson().then((token) => {
-                        callback(token);
-                    });
+                    const ico = printess.getIcon("arrow-left");
+                    ico.classList.add("icon");
+                    btn.appendChild(ico);
                 }
                 else {
-                    const offcanvas = document.getElementById("templateOffcanvas");
-                    const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
-                    bsOffcanvas.show();
+                    btn.classList.add("btn-outline-light");
+                    btn.innerText = "Back";
                 }
-            };
-            nav.appendChild(btn);
-        }
-        else if (b === "step") {
-            const step = document.createElement("div");
-            step.style.flexGrow = "1";
-            step.style.display = "flex";
-            step.style.alignItems = "center";
-            step.style.justifyContent = "center";
-            const s = printess.getStep();
-            if (s && printess.isCurrentStepActive()) {
-                const badge = document.createElement("div");
-                badge.className = "step-badge step-badge-sm";
-                badge.innerText = (s.index + 1).toString();
-                step.appendChild(badge);
-                const h6 = document.createElement("h6");
-                h6.innerText = s.title;
-                h6.style.margin = "0";
-                h6.className = "text-light";
-                step.appendChild(h6);
+                btn.onclick = () => {
+                    const callback = printess.getBackButtonCallback();
+                    if (printess.hasPreviousStep()) {
+                        printess.previousStep();
+                        renderMobileNavBar(printess);
+                    }
+                    else if (callback) {
+                        printess.saveJson().then((token) => {
+                            callback(token);
+                        });
+                    }
+                    else {
+                        const offcanvas = document.getElementById("templateOffcanvas");
+                        const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
+                        bsOffcanvas.show();
+                    }
+                };
+                nav.appendChild(btn);
+                break;
+            case "next":
+                btn.classList.add("btn-outline-light");
+                if (printess.hasNextStep()) {
+                    btn.innerText = "Next Step";
+                    const curStep = printess.getStep();
+                    const maxStep = printess.maxStep();
+                    if (curStep && maxStep) {
+                        btn.title = "Step " + curStep.index + " of " + maxStep.index;
+                    }
+                }
+                else {
+                    btn.innerText = "Add to Basket";
+                }
+                btn.onclick = () => {
+                    const callback = printess.getAddToBasketCallback();
+                    if (printess.hasNextStep()) {
+                        printess.nextStep();
+                        renderMobileNavBar(printess);
+                    }
+                    else if (callback) {
+                        printess.saveJson().then((token) => {
+                            callback(token);
+                        });
+                    }
+                    else {
+                        alert("Please add your callback in attachPrintess. [addToBasketCallback]");
+                    }
+                };
+                nav.appendChild(btn);
+                break;
+            case "step": {
+                const step = document.createElement("div");
+                step.style.flexGrow = "1";
+                step.style.display = "flex";
+                step.style.alignItems = "center";
+                step.style.justifyContent = "center";
+                const s = printess.getStep();
+                if (s && printess.isCurrentStepActive()) {
+                    const badge = document.createElement("div");
+                    badge.className = "step-badge step-badge-sm";
+                    badge.innerText = (s.index + 1).toString();
+                    step.appendChild(badge);
+                    const h6 = document.createElement("h6");
+                    h6.innerText = s.title;
+                    h6.style.margin = "0";
+                    h6.className = "text-light";
+                    step.appendChild(h6);
+                }
+                nav.appendChild(step);
+                break;
             }
-            nav.appendChild(step);
-        }
-        else if (b === "undo") {
-            const ico = printess.getIcon("undo");
-            ico.style.width = "20px";
-            ico.style.height = "20px";
-            ico.style.color = "white";
-            btn.onclick = () => {
-                printess.undo();
-            };
-            btn.appendChild(ico);
-            nav.appendChild(btn);
-        }
-        else if (b === "redo") {
-            const ico = printess.getIcon("redo");
-            ico.style.width = "20px";
-            ico.style.height = "20px";
-            ico.style.color = "white";
-            btn.onclick = () => {
-                printess.redo();
-            };
-            btn.appendChild(ico);
-            nav.appendChild(btn);
+            case "undo": {
+                const ico = printess.getIcon("undo");
+                ico.classList.add("icon");
+                btn.onclick = () => {
+                    printess.undo();
+                };
+                btn.appendChild(ico);
+                nav.appendChild(btn);
+                break;
+            }
+            case "redo": {
+                btn.classList.remove("me-2");
+                const ico = printess.getIcon("redo");
+                ico.classList.add("icon");
+                btn.onclick = () => {
+                    printess.redo();
+                };
+                btn.appendChild(ico);
+                nav.appendChild(btn);
+                break;
+            }
         }
     }
     return nav;
@@ -1648,12 +1749,12 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
         const spreads = printess.getAllSpreadsSync();
         const info = printess.pageInfoSync();
         if (hasButtons) {
-            renderPageNavigation(printess, spreads, info, getMobilePageBarDiv());
+            renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
         }
         else {
             document.body.classList.remove("no-mobile-button-bar");
             buttonContainer.style.width = "100%";
-            renderPageNavigation(printess, spreads, info, buttonContainer, true);
+            renderPageNavigation(printess, spreads, info, buttonContainer, true, true);
         }
     }
     if (buttons.length === 1 && !((_a = buttons[0].newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id.startsWith("FF_"))) {
@@ -1721,9 +1822,10 @@ function renderMobileControlHost(printess, state, groupSnippets) {
         controlHost.classList.remove("mobile-control-sm");
         controlHost.classList.remove("mobile-control-md");
         controlHost.classList.remove("mobile-control-lg");
+        controlHost.classList.remove("mobile-control-xl");
         controlHost.innerHTML = "";
         if (state.state === "add") {
-            controlHost.classList.add("mobile-control-lg");
+            controlHost.classList.add("mobile-control-xl");
             const snippets = renderGroupSnippets(printess, groupSnippets || [], true);
             controlHost.appendChild(snippets);
         }
@@ -1923,4 +2025,4 @@ function getOverlay(printess, properties) {
     }
     return hdiv;
 }
-//# sourceMappingURL=getting-started-external.js.map
+//# sourceMappingURL=uiHelper.js.map

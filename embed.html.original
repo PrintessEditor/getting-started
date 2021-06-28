@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>Printess iFrame Example</title>
+
+  <meta charset="utf-8">
+
+  <!--Please always add the correct viewport to ensure Printess works fine on mobile devices-->
+  <meta name="viewport" content="width=device-width">
+
+</head>
+
+<body style="margin: 0; padding: 0;">
+
+  
+  <iframe style="width: 100vw; height: 100vh; border: none; display: block;" id="printess" src="embed.html"></iframe>
+
+  <script>
+    const iframe = document.querySelector("#printess");
+    iframe.onload = () => {
+
+      /* **************************** */
+      /* listen to printess callbacks */
+      /* **************************** */
+      window.addEventListener("message", () => {
+        switch (event.data.cmd) {
+          case "back":
+            alert("Back to catalog. save-token:" + event.data.token);
+            break;
+          case "basket":
+            alert("Proceed to checkout. save-token:" + event.data.token);
+            break;
+        }
+      });
+
+      /* *************************** */
+      /*    load Printess editor     */
+      /* *************************** */
+      iframe.contentWindow.postMessage({
+        cmd: "attach", properties: {
+          templateName:"Newborn-Steps", // "Greeting Card", // name of the template to load. You can also pass a save-token here. 
+          //cssUrl: window.location.origin + "/sketchy.css"
+        }
+      }, "*");
+    }
+
+    /* *************************** */
+    /* Additional helper funktions */
+    /* *************************** */
+
+    /* store the current state of the editor  */
+    async function printessSaveWork() {
+      return new Promise((resolve, reject) => {
+        const iframe = document.querySelector("#printess");
+        if (iframe) {
+          window.addEventListener("message", () => {
+            const savedWorkid = event.data.id;
+            resolve(savedWorkid);
+          }, { once: true });
+          iframe.contentWindow.postMessage({ cmd: "saveJson" }, "*");
+        } else {
+          reject("Printess not found");
+        }
+      });
+    };
+
+    /* load a previously saved state of the editor  */
+    function printessLoadWork(savedWorkId) {
+      const iframe = document.querySelector("#printess");
+      if (iframe) {
+        const savedWorkId = localStorage.getItem("last-saved-work-id");
+        if (!savedWorkId) {
+          alert("No [savedWorkId] to load from");
+        } else {
+          iframe.contentWindow.postMessage({ cmd: "loadJson", id: savedWorkId }, "*");
+        }
+      } else {
+        alert("Printess not found");
+      }
+    }
+
+  </script>
+
+  <!-- Example how to load and save work from Printess -->
+  <!--
+    <button onclick="printessSaveWork().then((id)=>localStorage.setItem('last-saved-work-id', id))">
+      Save Current Work</button>
+    <button onclick="printessLoadWork(localStorage.getItem('last-saved-work-id'))">
+      Load saved Work</button>
+  -->
+
+</body>
+
+</html>

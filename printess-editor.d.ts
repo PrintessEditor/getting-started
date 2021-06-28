@@ -247,8 +247,25 @@ export interface iPrintessApi {
   insertLayoutSnippet(snippetUrl: string): Promise<void>;
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
+  /**
+   * Executes an undo step if available.
+   */
   undo(): void;
+
+  /**
+   * Executes an redo step if available.
+   */
   redo(): void;
+
+  /**
+   * Returns number of available undo steps
+   */
+  undoCount(): number
+
+  /**
+   * Returns number of available redo steps
+   */
+  redoCount(): number
 
   renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
 

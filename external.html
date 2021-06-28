@@ -15,7 +15,7 @@
 
   <!--<link href="sketchy.css" rel="stylesheet">-->
 
-  <link type="text/css" rel="stylesheet" href="external.css" />
+  <link type="text/css" rel="stylesheet" href="bs-layout.css" />
 
 </head>
 
@@ -162,8 +162,9 @@
     aria-labelledby="offcanvasLabel">
     <div class="offcanvas-header" style="align-items: start;">
       <div class="offcanvas-title">
-        <h5  id="offcanvasLabel">Load Template</h5>
-        <p class="text-muted" id="offcanvasLabel">For mobile please add your own [backButtonCallback] as an attachPrintess parameter.</p>
+        <h5 id="offcanvasLabel">Load Template</h5>
+        <p class="text-muted" id="offcanvasLabel">For mobile please add your own [backButtonCallback] as an
+          attachPrintess parameter.</p>
       </div>
       <button type="button" class="btn-close text-reset" id="closeTemplateOffCanvas" data-bs-dismiss="offcanvas"
         aria-label="Close"></button>
@@ -216,7 +217,7 @@
   <!-- Load polyfills -->
   <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 
-  <script src="external.js"></script>
+  <script src="uiHelper.js"></script>
 
   <!-- Load components via WebComponents.waitFor -->
   <script>
@@ -231,31 +232,30 @@
       }
     };
 
-
     window.addEventListener("resize", () => resizePrintess());
 
     function resizePrintess() {
       if (printess) {
         printess.resizePrintess();
+        printess.clearSelection();
       } else {
         window.setTimeout(resizePrintess, 100);
       }
     }
 
     const loadingDoneCallback = function (spreads, title) {
-      uiHelper.renderPageNavigation(printess, spreads);
+      // uiHelper.renderPageNavigation(printess, spreads);
       templateTitle = title;
       printess.resizePrintess();
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
 
-      uiHelper.renderMobileNavBar(printess);
-
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets
 
       if (!printess.isMobile()) {
+        uiHelper.renderMobileNavBar(printess);
         const desktop = document.getElementById("desktop-properties");
         if (!desktop) {
           throw "#desktop-properties not found, please add to html.";
@@ -263,7 +263,7 @@
         desktop.innerHTML = "";
         const spreads = printess.getAllSpreadsSync();
         const info = printess.pageInfoSync();
-        uiHelper.renderPageNavigation(printess, spreads, info);
+        uiHelper.renderPageNavigation(printess, spreads, info, false, false);
       }
 
       const layoutSnippetsDiv = document.getElementById("layoutSnippets");
@@ -273,19 +273,10 @@
 
       uiHelper.renderLayoutSnippets(printess, layoutSnippets)
 
-      /* Get Information of all properties on this spread */
-      /* printess.getAllPropertiesBySpreadId(spread.id)
-         .then((props) => {
-           console.warn("ALL PROPERTIES:", props);
-         })*/
-
     }
 
     const selectionChangeCallback = (properties, state) => {
-
       // state is "document" or "frames"
-
-      const t = [];
 
       // render mobile page navigation if document has properties 
       if (state === "document") {
@@ -297,63 +288,27 @@
         }
       }
 
-      
+
       if (printess.isMobile()) {
         // **** add mobile-ui *****
         uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
         uiHelper.renderMobileNavBar(printess);
-      
+
       } else {
         // ***** add desktop-ui *****
-        const desktop = document.getElementById("desktop-properties");
-        if (!desktop) {
+        const desktopPropertiesDiv = document.getElementById("desktop-properties");
+        if (!desktopPropertiesDiv) {
           throw "#desktop-properties not found, please add to html.";
         }
-        desktop.innerHTML = "";
-
-        if (printess.hasSteps()) {
-          // if document has steps, display current step:
-          desktop.appendChild(uiHelper.getStepsUi(printess));
-        } else {
-          // display template name
-          desktop.appendChild(uiHelper.getTitle(templateTitle))
-        }
-
-        if (state === "document") {
-          //****** Show Document Wide Options
-          for (const p of properties) {
-            t.push(JSON.stringify(p, undefined, 2));
-            desktop.appendChild(uiHelper.getPropertyControl(printess, p));
-          }
-          desktop.appendChild(uiHelper.renderGroupSnippets(printess, currentGroupSnippets, false))
-        } else {
-          //****** Show Just the frame / text Properties
-          let colorsContainer = null;
-          for (const p of properties) {
-            if (p.kind === "color") {
-              if (!colorsContainer) {
-                colorsContainer = document.createElement("div");
-                colorsContainer.className = "color-drop-down-list";
-                desktop.appendChild(colorsContainer);
-              }
-              colorsContainer.appendChild(uiHelper.getPropertyControl(printess, p))
-            } else {
-              colorsContainer = null;
-              desktop.appendChild(uiHelper.getPropertyControl(printess, p));
-            }
-            t.push(JSON.stringify(p, undefined, 2));
-          }
-          const hr = document.createElement("hr");
-          desktop.appendChild(hr);
-          desktop.appendChild(uiHelper.getDoneButton(printess));
+        const t = uiHelper.renderDesktopUi(printess, desktopPropertiesDiv, properties, state, currentGroupSnippets, templateTitle);
+        uiHelper.refreshUndoRedoState(printess);
+        // print json for debug purposes
+        const jsonPre = document.getElementById("propertiesJson");
+        if (jsonPre) {
+          jsonPre.innerHTML = t.join("<br/>");
         }
       }
 
-      // print json for debug purposes
-      const jsonPre = document.getElementById("propertiesJson");
-      if (jsonPre) {
-        jsonPre.innerHTML = t.join("<br/>");
-      }
     }
 
 
