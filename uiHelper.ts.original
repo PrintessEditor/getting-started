@@ -453,7 +453,7 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
     flex.appendChild(h1);
 
   } else {
-   // debugger;
+    // debugger;
     flex.style.justifyContent = "space-between";
   }
 
@@ -1053,7 +1053,7 @@ function getFontSizeSelect(printess: iPrintessApi, p: iExternalProperty) {
 
 }
 
-function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean= false): HTMLElement {
+function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean = false): HTMLElement {
 
   if (!dropdown) {
     dropdown = document.createElement("div");
@@ -1746,16 +1746,16 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
   } else {
     // die optimierung führt dazu, das ganz oft die toolbar nicht eingeblendet wird, 
     // weil der control-host ändert sich unabhämgig von der selection.
-    //if (printess.isCurrentStepActive() && state !== "frames") {
+    if (printess.isCurrentStepActive() && state !== "frames") {
       // when coming from state details->frames, resize is needed because of new control host with same step. 
 
       // when step is active zoom has already happened
       // but not the other stuff ... hmmm
       // const step= printess.getStep();
       // resizeMobileUi(printess,);
-  //  } else {
+    } else {
       resizeMobileUi(printess);
-  //  }
+    }
   }
 
 }
@@ -2289,7 +2289,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           } else {
             getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
           }
-        
+
         }
 
         // render control 

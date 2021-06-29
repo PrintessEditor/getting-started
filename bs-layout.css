@@ -908,6 +908,7 @@ body.inline-mobile-page-bar .mobile-pagebar {
     grid-template-rows: 0 0;
     grid-template-columns: 0 0;
     column-gap: 0;
+    height: 100px !important; /* to ensure its not bigger than the viewport */
   }
   #printessin {
     position: absolute;
