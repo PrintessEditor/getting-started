@@ -6,8 +6,8 @@
   --editor-margin-left: 30px;
   --editor-margin-top: 30px;
   --editor-margin-bottom: 30px;
-  --editor-margin-right: 25px;
-
+  --editor-margin-right: 15px;
+  --editor-space-between: 25px;
 
   --mobile-panel-background: #f8f8f8;
   --mobile-button-background: yellow;
@@ -54,7 +54,7 @@ hr {
   display: grid;
   grid-template-rows: calc(50px + var(--editor-margin-top)) 1fr var(--editor-margin-bottom);
   grid-template-columns: 1fr 450px;
-  column-gap: var(--editor-margin-right);
+  column-gap: var(--editor-space-between);
 }
 
 .desktop-pagebar {
@@ -86,6 +86,7 @@ hr {
   padding-right: 5px;
   padding-top: var(--editor-margin-top);
   overflow-y: auto;
+  padding-right: var(--editor-margin-right);
 }
 
 .desktop-title-bar {
@@ -151,8 +152,19 @@ input[type="radio"]:checked+label > svg {
   flex-direction: row;
 }
 
-.group-snippets > img {
+.group-snippets > .snippet-thumb {
   cursor:pointer;
+  width: 100px; 
+  height: 100px;
+  margin: 2px;
+  border: 1px solid transparent ;
+}
+.group-snippets > .snippet-thumb:hover {
+  border: 1px solid var(--mobile-button-border);
+}
+.group-snippets > .snippet-thumb  > img{
+  max-width: 100%; 
+  max-height: 100%;
 }
 
 .snippet-cluster-name {
@@ -939,5 +951,10 @@ body.inline-mobile-page-bar .mobile-pagebar {
   .mobile-navbar {
     display: flex;
   }
+  .group-snippets > .snippet-thumb {
+    width: 60px; 
+    height: 60px;
+  }
+  
 }
  

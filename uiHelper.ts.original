@@ -1,7 +1,6 @@
 
 
-import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iExternalButton, iMobileUiState } from "./getting-started-printess-editor";
-import { printess } from "./printess-editor/wasm/printessWasmInit";
+import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState } from "./getting-started-printess-editor";
 
 declare const bootstrap: any;
 
@@ -15,7 +14,6 @@ declare const bootstrap: any;
   getDoneButton: getDoneButton,
   getTitle: getTitle,
   getStepsUi: getStepsUi,
-  renderPageNavigation: renderPageNavigation,
   renderMobileUi: renderMobileUi,
   renderDesktopUi: renderDesktopUi,
   refreshUndoRedoState: refreshUndoRedoState,
@@ -59,7 +57,7 @@ function renderDesktopUi(printess: iPrintessApi, container: HTMLDivElement, prop
   container.innerHTML = "";
   const t = [];
 
-  const nav = getMobileNavbar();
+  const nav = getMobileNavbarDiv();
   if (nav) nav.parentElement?.removeChild(nav);
 
 
@@ -255,60 +253,13 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
     getColorDropDown(printess, p, "color", false, pre1);
   }
   if (p.textStyle.allows.indexOf("size") >= 0) {
-    getFontSizeDropDown(printess, p, false, pre1);
+    getFontSizeDropDown(printess, p, false, pre1, false);
   }
 
   group1.appendChild(pre1);
 
   if (p.textStyle.allows.indexOf("font") >= 0) {
-    getFontDropDown(printess, p, false, group1);
-  }
-
-  textPropertiesDiv.appendChild(group1);
-
-  const group2 = document.createElement("div");
-  group2.className = "input-group mb-3";
-
-  const pre2 = document.createElement("div");
-  pre2.className = "input-group-prepend";
-
-  if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
-    group2.appendChild(getHAlignControl(printess, p, false));
-  }
-
-  const spacer = document.createElement("div");
-  spacer.style.width = "10px";
-  group2.appendChild(spacer);
-  if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
-    group2.appendChild(getVAlignControl(printess, p, false));
-  }
-  textPropertiesDiv.appendChild(group2);
-
-  return textPropertiesDiv;
-}
-function getTextStyleControlOLD(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
-  const textPropertiesDiv = document.createElement("div");
-  textPropertiesDiv.classList.add("mb-3");
-
-  if (!p.textStyle) {
-    return textPropertiesDiv;
-  }
-
-  const group1 = document.createElement("div");
-  group1.className = "input-group mb-3";
-  const pre1 = document.createElement("div");
-  pre1.className = "input-group-prepend";
-  if (p.textStyle.allows.indexOf("color") >= 0) {
-    getColorDropDown(printess, p, "color", false, pre1);
-  }
-  if (p.textStyle.allows.indexOf("size") >= 0) {
-    getFontSizeDropDown(printess, p, false, pre1);
-  }
-
-  group1.appendChild(pre1);
-
-  if (p.textStyle.allows.indexOf("font") >= 0) {
-    getFontDropDown(printess, p, false, group1);
+    getFontDropDown(printess, p, false, group1, false);
   }
 
   textPropertiesDiv.appendChild(group1);
@@ -460,7 +411,7 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
   if (printess.hasNextStep()) {
     const nextStep = document.createElement("button");
     nextStep.className = "btn btn-outline-primary";
-    nextStep.innerText = "Next Step";
+    nextStep.innerText =  printess.isNextStepPreview() ? "Preview" : "Next Step";
     nextStep.onclick = () => printess.nextStep();
     flex.appendChild(nextStep);
   } else {
@@ -652,7 +603,7 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
   }
 }
 
-function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, fullWidth: boolean = false): HTMLElement {
+function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, fullWidth: boolean = true): HTMLElement {
 
   const dropdown = document.createElement("div");
   dropdown.classList.add("btn-group");
@@ -916,38 +867,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
 }
 
 
-function getImageScaleControlOld(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
-  const scaleRangeLabel = document.createElement("label");
-  const scaleRangeLabelCaption = document.createElement("span");
-  const scaleRange: HTMLInputElement = document.createElement("input");
-  scaleRange.type = "range";
-  scaleRange.min = p.imageMeta?.scaleHints.min.toString() ?? "0";
-  scaleRange.max = p.imageMeta?.scaleHints.max.toString() ?? "0";
-  scaleRange.step = "0.01";
-  scaleRange.value = p.imageMeta?.scale.toString() ?? "0";
-  scaleRange.oninput = () => {
-    const newScale = parseFloat(scaleRange.value);
-    printess.setImageMetaProperty(p.id, "scale", newScale);
-    if (p.imageMeta) {
-      p.imageMeta.scale = newScale;
-      scaleRangeLabelCaption.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale) + "dpi)";
-      const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
-      if (mobileButtonDiv) {
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
-      }
 
-    }
-
-  }
-  if (p.imageMeta) {
-    scaleRangeLabelCaption.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale) + "dpi)";
-  }
-  scaleRangeLabel.style.width = "100%";
-  scaleRange.style.width = "80%";
-  scaleRangeLabel.appendChild(scaleRangeLabelCaption);
-  scaleRangeLabel.appendChild(scaleRange);
-  return scaleRangeLabel;
-}
 
 function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean = false): HTMLElement {
 
@@ -1028,32 +948,9 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
 
 
 
-function getFontSizeSelect(printess: iPrintessApi, p: iExternalProperty) {
-  // alternativey show slider: return getNumberSlider(p, "text-style-size");
 
-  const select = document.createElement("select");
-  select.className = "form-control";
-  select.style.width = "60px";
 
-  select.value = p.textStyle?.size ?? "12pt";
-  select.onchange = () => {
-    printess.setTextStyleProperty(p.id, "size", select.value)
-  }
-  if (!document.getElementById("font-size-data-list")) {
-    const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt"];
-    for (const s of sizes) {
-      const option = document.createElement("option");
-      option.value = s;
-      option.innerText = s;
-      select.appendChild(option);
-    }
-  }
-
-  return select;
-
-}
-
-function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean = false): HTMLElement {
+function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean = true): HTMLElement {
 
   if (!dropdown) {
     dropdown = document.createElement("div");
@@ -1137,7 +1034,7 @@ function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asLis
 
 }
 
-function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean = false): HTMLElement {
+function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean = true): HTMLElement {
 
   if (!dropdown) {
     dropdown = document.createElement("div");
@@ -1606,24 +1503,21 @@ function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExter
       div.appendChild(hr);
 
       for (const snippet of cluster.snippets) {
+        const thumbDiv = document.createElement("div");
+        thumbDiv.className = "snippet-thumb";
         const thumb = document.createElement("img");
         thumb.src = snippet.thumbUrl;
         thumb.style.backgroundColor = snippet.bgColor;
-        thumb.style.width = forMobile ? "60px" : "100px";
-        thumb.style.height = "fit-content";// todo: does not work in safari
-        if (forMobile) thumb.style.maxHeight = "60px";
-        thumb.style.margin = "5px";
-        //  thumb.classList.add("image-icon");
-        thumb.onclick = () => {
+        thumbDiv.appendChild(thumb);
+  
+        thumbDiv.onclick = () => {
           if (forMobile) {
             div.innerHTML === "";
-          }
+          } 
           printess.insertGroupSnippet(snippet.snippetUrl);
-
-          //  alert(JSON.stringify(aw));
-          //printess.setProperty(p.id, im.id);
         }
-        div.appendChild(thumb);
+       
+        div.appendChild(thumbDiv);
       }
     }
   }
@@ -1689,7 +1583,7 @@ function getMobileUiDiv(): HTMLDivElement {
   }
   return mobileUi;
 }
-function getMobileNavbar(): HTMLElement {
+function getMobileNavbarDiv(): HTMLElement {
   let mobileNav: HTMLElement | null = document.querySelector(".mobile-navbar");
   if (!mobileNav) {
     mobileNav = document.createElement("nav");
@@ -1750,9 +1644,7 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
       // when coming from state details->frames, resize is needed because of new control host with same step. 
 
       // when step is active zoom has already happened
-      // but not the other stuff ... hmmm
-      // const step= printess.getStep();
-      // resizeMobileUi(printess,);
+     
     } else {
       resizeMobileUi(printess);
     }
@@ -1814,7 +1706,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
   // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
 
 
-  const nav = getMobileNavbar();
+  const nav = getMobileNavbarDiv();
   nav.innerHTML = "";
   for (const b of buttons) {
 
@@ -1862,7 +1754,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
       case "next":
         btn.classList.add("btn-outline-light");
         if (printess.hasNextStep()) {
-          btn.innerText = "Next Step";
+          btn.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
           const curStep = printess.getStep();
           const maxStep = printess.maxStep();
           if (curStep && maxStep) {
@@ -1932,135 +1824,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
   return nav;
 }
 
-function renderMobileNavBarFlexible(printess: iPrintessApi, buttons: Array<iExternalButton>) {
-  if (!buttons || buttons.length === 0) {
-    buttons = [
-      {
-        type: "back"
-      },
-      {
-        type: "undo"
-      },
-      {
-        type: "redo"
-      },
-      {
-        type: "callback",
-        caption: "Open",
-        callback: () => {
-          //  const p = document.getElementById("printessin");
-          // console.warn("Resize Printess Height: " + p?.offsetHeight)
-          // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
 
-          const list = document.getElementById("test-template-list");
-          if (list) {
-            list.style.zIndex = "1000";
-            list.style.visibility = "visible";
-            list.style.display = "block";
-            list.style.left = "0";
-            list.style.top = "0";
-            list.style.bottom = "0";
-            list.style.right = "0";
-            list.style.padding = "20px";
-            document.body.appendChild(list);
-          }
-        }
-      },
-      {
-        type: "next"
-      }
-      /*,
-      {
-        type: "addToBasket",
-       
-      }*/
-    ]
-  }
-
-  const nav = getMobileNavbar();
-  nav.innerHTML = "";
-  for (const b of buttons) {
-    const btn = document.createElement("button");
-    btn.classList.add("btn");
-    btn.classList.add("btn-sm");
-    // btn.classList.add("btn-outline");
-    btn.classList.add("me-2");
-    if (b.type === "addToBasket") {
-      btn.classList.add("btn-outline-light");
-      btn.innerText = b.caption || "Add to Basket";
-
-    } else if (b.type === "next") {
-      btn.classList.add("btn-outline-light");
-      if (printess.hasNextStep()) {
-        btn.innerText = "Next Step";
-        const curStep = printess.getStep();
-        const maxStep = printess.maxStep();
-        if (curStep && maxStep) {
-          btn.title = "Step " + curStep.index + " of " + maxStep.index;
-        }
-
-      } else {
-        btn.innerText = b.caption || "Add to Basket";
-      }
-
-    } else if (b.type === "back") {
-      btn.classList.add("ms-2");
-      const ico = printess.getIcon("arrow-left");
-      ico.style.width = "20px";
-      ico.style.height = "20px";
-      ico.style.color = "white";
-      btn.appendChild(ico);
-
-    } else if (b.type === "undo") {
-      const ico = printess.getIcon("undo");
-      ico.style.width = "20px";
-      ico.style.height = "20px";
-      ico.style.color = "white";
-      btn.appendChild(ico);
-
-    } else if (b.type === "redo") {
-      const ico = printess.getIcon("redo");
-      ico.style.width = "20px";
-      ico.style.height = "20px";
-      ico.style.color = "white";
-      btn.appendChild(ico);
-
-    } else {
-      btn.classList.add("btn-outline-light");
-      btn.innerText = b.caption || b.type;
-    }
-    btn.onclick = () => {
-      if (b.type === "undo") {
-        printess.undo();
-        return;
-      }
-      if (b.type === "redo") {
-        printess.redo();
-        return;
-      }
-      if (b.type === "next") {
-        if (printess.hasNextStep()) {
-          printess.nextStep();
-        } else {
-
-          alert("Add to basket")
-        }
-      }
-      if (b.type === "back") {
-        if (printess.hasPreviousStep()) {
-          printess.previousStep();
-        } else {
-          alert("Back to catalog")
-        }
-      }
-      if (b.callback) {
-        b.callback();
-      }
-    }
-    nav.appendChild(btn);
-  }
-  return nav;
-}
 
 function getMobilePageBarDiv(): HTMLDivElement {
   let pagebar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
@@ -2558,7 +2322,7 @@ function getOverlay(printess: iPrintessApi, properties: Array<iExternalProperty>
     tdiv.style.padding = "4px"
     hdiv.appendChild(tdiv);
   }
-  return hdiv;
+  return hdiv; 
 }
 
 

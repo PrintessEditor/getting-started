@@ -45,51 +45,8 @@
         }
       }, "*");
     }
-
-    /* *************************** */
-    /* Additional helper funktions */
-    /* *************************** */
-
-    /* store the current state of the editor  */
-    async function printessSaveWork() {
-      return new Promise((resolve, reject) => {
-        const iframe = document.querySelector("#printess");
-        if (iframe) {
-          window.addEventListener("message", () => {
-            const savedWorkid = event.data.id;
-            resolve(savedWorkid);
-          }, { once: true });
-          iframe.contentWindow.postMessage({ cmd: "saveJson" }, "*");
-        } else {
-          reject("Printess not found");
-        }
-      });
-    };
-
-    /* load a previously saved state of the editor  */
-    function printessLoadWork(savedWorkId) {
-      const iframe = document.querySelector("#printess");
-      if (iframe) {
-        const savedWorkId = localStorage.getItem("last-saved-work-id");
-        if (!savedWorkId) {
-          alert("No [savedWorkId] to load from");
-        } else {
-          iframe.contentWindow.postMessage({ cmd: "loadJson", id: savedWorkId }, "*");
-        }
-      } else {
-        alert("Printess not found");
-      }
-    }
-
+    
   </script>
-
-  <!-- Example how to load and save work from Printess -->
-  <!--
-    <button onclick="printessSaveWork().then((id)=>localStorage.setItem('last-saved-work-id', id))">
-      Save Current Work</button>
-    <button onclick="printessLoadWork(localStorage.getItem('last-saved-work-id'))">
-      Load saved Work</button>
-  -->
 
 </body>
 

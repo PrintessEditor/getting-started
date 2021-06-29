@@ -6,7 +6,6 @@ window.uiHelper = {
     getDoneButton: getDoneButton,
     getTitle: getTitle,
     getStepsUi: getStepsUi,
-    renderPageNavigation: renderPageNavigation,
     renderMobileUi: renderMobileUi,
     renderDesktopUi: renderDesktopUi,
     refreshUndoRedoState: refreshUndoRedoState,
@@ -47,7 +46,7 @@ function renderDesktopUi(printess, container, properties, state, groupSnippets, 
     var _a;
     container.innerHTML = "";
     const t = [];
-    const nav = getMobileNavbar();
+    const nav = getMobileNavbarDiv();
     if (nav)
         (_a = nav.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(nav);
     const spreads = printess.getAllSpreadsSync();
@@ -197,48 +196,11 @@ function getTextStyleControl(printess, p) {
         getColorDropDown(printess, p, "color", false, pre1);
     }
     if (p.textStyle.allows.indexOf("size") >= 0) {
-        getFontSizeDropDown(printess, p, false, pre1);
+        getFontSizeDropDown(printess, p, false, pre1, false);
     }
     group1.appendChild(pre1);
     if (p.textStyle.allows.indexOf("font") >= 0) {
-        getFontDropDown(printess, p, false, group1);
-    }
-    textPropertiesDiv.appendChild(group1);
-    const group2 = document.createElement("div");
-    group2.className = "input-group mb-3";
-    const pre2 = document.createElement("div");
-    pre2.className = "input-group-prepend";
-    if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
-        group2.appendChild(getHAlignControl(printess, p, false));
-    }
-    const spacer = document.createElement("div");
-    spacer.style.width = "10px";
-    group2.appendChild(spacer);
-    if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
-        group2.appendChild(getVAlignControl(printess, p, false));
-    }
-    textPropertiesDiv.appendChild(group2);
-    return textPropertiesDiv;
-}
-function getTextStyleControlOLD(printess, p) {
-    const textPropertiesDiv = document.createElement("div");
-    textPropertiesDiv.classList.add("mb-3");
-    if (!p.textStyle) {
-        return textPropertiesDiv;
-    }
-    const group1 = document.createElement("div");
-    group1.className = "input-group mb-3";
-    const pre1 = document.createElement("div");
-    pre1.className = "input-group-prepend";
-    if (p.textStyle.allows.indexOf("color") >= 0) {
-        getColorDropDown(printess, p, "color", false, pre1);
-    }
-    if (p.textStyle.allows.indexOf("size") >= 0) {
-        getFontSizeDropDown(printess, p, false, pre1);
-    }
-    group1.appendChild(pre1);
-    if (p.textStyle.allows.indexOf("font") >= 0) {
-        getFontDropDown(printess, p, false, group1);
+        getFontDropDown(printess, p, false, group1, false);
     }
     textPropertiesDiv.appendChild(group1);
     const group2 = document.createElement("div");
@@ -345,7 +307,7 @@ function getStepsUi(printess) {
     if (printess.hasNextStep()) {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-outline-primary";
-        nextStep.innerText = "Next Step";
+        nextStep.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
         nextStep.onclick = () => printess.nextStep();
         flex.appendChild(nextStep);
     }
@@ -504,7 +466,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
         return dropdown;
     }
 }
-function getDropDown(printess, p, asList, fullWidth = false) {
+function getDropDown(printess, p, asList, fullWidth = true) {
     var _a;
     const dropdown = document.createElement("div");
     dropdown.classList.add("btn-group");
@@ -718,37 +680,6 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
         return container;
     }
 }
-function getImageScaleControlOld(printess, p) {
-    var _a, _b, _c, _d, _f, _g;
-    const scaleRangeLabel = document.createElement("label");
-    const scaleRangeLabelCaption = document.createElement("span");
-    const scaleRange = document.createElement("input");
-    scaleRange.type = "range";
-    scaleRange.min = (_b = (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.scaleHints.min.toString()) !== null && _b !== void 0 ? _b : "0";
-    scaleRange.max = (_d = (_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.scaleHints.max.toString()) !== null && _d !== void 0 ? _d : "0";
-    scaleRange.step = "0.01";
-    scaleRange.value = (_g = (_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.scale.toString()) !== null && _g !== void 0 ? _g : "0";
-    scaleRange.oninput = () => {
-        const newScale = parseFloat(scaleRange.value);
-        printess.setImageMetaProperty(p.id, "scale", newScale);
-        if (p.imageMeta) {
-            p.imageMeta.scale = newScale;
-            scaleRangeLabelCaption.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale) + "dpi)";
-            const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
-            if (mobileButtonDiv) {
-                drawButtonContent(printess, mobileButtonDiv, [p]);
-            }
-        }
-    };
-    if (p.imageMeta) {
-        scaleRangeLabelCaption.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale) + "dpi)";
-    }
-    scaleRangeLabel.style.width = "100%";
-    scaleRange.style.width = "80%";
-    scaleRangeLabel.appendChild(scaleRangeLabelCaption);
-    scaleRangeLabel.appendChild(scaleRange);
-    return scaleRangeLabel;
-}
 function getImageScaleControl(printess, p, forMobile = false) {
     var _a, _b, _c, _d, _f, _g;
     const rangeLabel = document.createElement("label");
@@ -813,27 +744,7 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
     }
     return rangeLabel;
 }
-function getFontSizeSelect(printess, p) {
-    var _a, _b;
-    const select = document.createElement("select");
-    select.className = "form-control";
-    select.style.width = "60px";
-    select.value = (_b = (_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.size) !== null && _b !== void 0 ? _b : "12pt";
-    select.onchange = () => {
-        printess.setTextStyleProperty(p.id, "size", select.value);
-    };
-    if (!document.getElementById("font-size-data-list")) {
-        const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt"];
-        for (const s of sizes) {
-            const option = document.createElement("option");
-            option.value = s;
-            option.innerText = s;
-            select.appendChild(option);
-        }
-    }
-    return select;
-}
-function getFontSizeDropDown(printess, p, asList, dropdown, fullWidth = false) {
+function getFontSizeDropDown(printess, p, asList, dropdown, fullWidth = true) {
     var _a, _b, _c;
     if (!dropdown) {
         dropdown = document.createElement("div");
@@ -907,7 +818,7 @@ function getFontSizeDropDown(printess, p, asList, dropdown, fullWidth = false) {
         return dropdown;
     }
 }
-function getFontDropDown(printess, p, asList, dropdown, fullWidth = false) {
+function getFontDropDown(printess, p, asList, dropdown, fullWidth = true) {
     var _a;
     if (!dropdown) {
         dropdown = document.createElement("div");
@@ -1299,21 +1210,19 @@ function renderGroupSnippets(printess, groupSnippets, forMobile) {
             hr.style.width = "100%";
             div.appendChild(hr);
             for (const snippet of cluster.snippets) {
+                const thumbDiv = document.createElement("div");
+                thumbDiv.className = "snippet-thumb";
                 const thumb = document.createElement("img");
                 thumb.src = snippet.thumbUrl;
                 thumb.style.backgroundColor = snippet.bgColor;
-                thumb.style.width = forMobile ? "60px" : "100px";
-                thumb.style.height = "fit-content";
-                if (forMobile)
-                    thumb.style.maxHeight = "60px";
-                thumb.style.margin = "5px";
-                thumb.onclick = () => {
+                thumbDiv.appendChild(thumb);
+                thumbDiv.onclick = () => {
                     if (forMobile) {
                         div.innerHTML === "";
                     }
                     printess.insertGroupSnippet(snippet.snippetUrl);
                 };
-                div.appendChild(thumb);
+                div.appendChild(thumbDiv);
             }
         }
     }
@@ -1371,7 +1280,7 @@ function getMobileUiDiv() {
     }
     return mobileUi;
 }
-function getMobileNavbar() {
+function getMobileNavbarDiv() {
     let mobileNav = document.querySelector(".mobile-navbar");
     if (!mobileNav) {
         mobileNav = document.createElement("nav");
@@ -1461,7 +1370,7 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
 }
 function renderMobileNavBar(printess) {
     const buttons = ["back", "undo", "redo", "step", "next"];
-    const nav = getMobileNavbar();
+    const nav = getMobileNavbarDiv();
     nav.innerHTML = "";
     for (const b of buttons) {
         const btn = document.createElement("button");
@@ -1502,7 +1411,7 @@ function renderMobileNavBar(printess) {
             case "next":
                 btn.classList.add("btn-outline-light");
                 if (printess.hasNextStep()) {
-                    btn.innerText = "Next Step";
+                    btn.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
                     const curStep = printess.getStep();
                     const maxStep = printess.maxStep();
                     if (curStep && maxStep) {
@@ -1562,125 +1471,6 @@ function renderMobileNavBar(printess) {
                 break;
             }
         }
-    }
-    return nav;
-}
-function renderMobileNavBarFlexible(printess, buttons) {
-    if (!buttons || buttons.length === 0) {
-        buttons = [
-            {
-                type: "back"
-            },
-            {
-                type: "undo"
-            },
-            {
-                type: "redo"
-            },
-            {
-                type: "callback",
-                caption: "Open",
-                callback: () => {
-                    const list = document.getElementById("test-template-list");
-                    if (list) {
-                        list.style.zIndex = "1000";
-                        list.style.visibility = "visible";
-                        list.style.display = "block";
-                        list.style.left = "0";
-                        list.style.top = "0";
-                        list.style.bottom = "0";
-                        list.style.right = "0";
-                        list.style.padding = "20px";
-                        document.body.appendChild(list);
-                    }
-                }
-            },
-            {
-                type: "next"
-            }
-        ];
-    }
-    const nav = getMobileNavbar();
-    nav.innerHTML = "";
-    for (const b of buttons) {
-        const btn = document.createElement("button");
-        btn.classList.add("btn");
-        btn.classList.add("btn-sm");
-        btn.classList.add("me-2");
-        if (b.type === "addToBasket") {
-            btn.classList.add("btn-outline-light");
-            btn.innerText = b.caption || "Add to Basket";
-        }
-        else if (b.type === "next") {
-            btn.classList.add("btn-outline-light");
-            if (printess.hasNextStep()) {
-                btn.innerText = "Next Step";
-                const curStep = printess.getStep();
-                const maxStep = printess.maxStep();
-                if (curStep && maxStep) {
-                    btn.title = "Step " + curStep.index + " of " + maxStep.index;
-                }
-            }
-            else {
-                btn.innerText = b.caption || "Add to Basket";
-            }
-        }
-        else if (b.type === "back") {
-            btn.classList.add("ms-2");
-            const ico = printess.getIcon("arrow-left");
-            ico.style.width = "20px";
-            ico.style.height = "20px";
-            ico.style.color = "white";
-            btn.appendChild(ico);
-        }
-        else if (b.type === "undo") {
-            const ico = printess.getIcon("undo");
-            ico.style.width = "20px";
-            ico.style.height = "20px";
-            ico.style.color = "white";
-            btn.appendChild(ico);
-        }
-        else if (b.type === "redo") {
-            const ico = printess.getIcon("redo");
-            ico.style.width = "20px";
-            ico.style.height = "20px";
-            ico.style.color = "white";
-            btn.appendChild(ico);
-        }
-        else {
-            btn.classList.add("btn-outline-light");
-            btn.innerText = b.caption || b.type;
-        }
-        btn.onclick = () => {
-            if (b.type === "undo") {
-                printess.undo();
-                return;
-            }
-            if (b.type === "redo") {
-                printess.redo();
-                return;
-            }
-            if (b.type === "next") {
-                if (printess.hasNextStep()) {
-                    printess.nextStep();
-                }
-                else {
-                    alert("Add to basket");
-                }
-            }
-            if (b.type === "back") {
-                if (printess.hasPreviousStep()) {
-                    printess.previousStep();
-                }
-                else {
-                    alert("Back to catalog");
-                }
-            }
-            if (b.callback) {
-                b.callback();
-            }
-        };
-        nav.appendChild(btn);
     }
     return nav;
 }

@@ -284,6 +284,10 @@ export interface iPrintessApi {
   maxStep(): iBuyerStep | null;
   hasNextStep(): boolean;
   hasPreviousStep(): boolean;
+  /**
+   * Indicates if the next step is the preview document.
+   */
+  isNextStepPreview(): boolean;
   nextStep(): Promise<void>;
   previousStep(): Promise<void>;
 
