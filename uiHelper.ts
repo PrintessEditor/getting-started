@@ -29,7 +29,7 @@ console.log("Printess ui-helper loaded");
 function addToBasket(printess: iPrintessApi) {
   const callback = printess.getAddToBasketCallback();
   if (callback) {
-   printess.showOverlay("Saving Your Design ...")
+    printess.showOverlay("Saving Your Design ...")
     printess.saveJson().then((token) => {
       printess.renderFirstPageImage("thumbnail").then((url: string) => {
         callback(token, url);
@@ -247,6 +247,54 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
   }
 
   const group1 = document.createElement("div");
+
+  group1.className = "input-group mb-3";
+  const pre1 = document.createElement("div");
+  pre1.className = "input-group-prepend";
+  if (p.textStyle.allows.indexOf("color") >= 0) {
+    getColorDropDown(printess, p, "color", false, pre1);
+  }
+  if (p.textStyle.allows.indexOf("size") >= 0) {
+    getFontSizeDropDown(printess, p, false, pre1);
+  }
+
+  group1.appendChild(pre1);
+
+  if (p.textStyle.allows.indexOf("font") >= 0) {
+    getFontDropDown(printess, p, false, group1);
+  }
+
+  textPropertiesDiv.appendChild(group1);
+
+  const group2 = document.createElement("div");
+  group2.className = "input-group mb-3";
+
+  const pre2 = document.createElement("div");
+  pre2.className = "input-group-prepend";
+
+  if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
+    group2.appendChild(getHAlignControl(printess, p, false));
+  }
+
+  const spacer = document.createElement("div");
+  spacer.style.width = "10px";
+  group2.appendChild(spacer);
+  if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
+    group2.appendChild(getVAlignControl(printess, p, false));
+  }
+  textPropertiesDiv.appendChild(group2);
+
+  return textPropertiesDiv;
+}
+function getTextStyleControlOLD(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
+  const textPropertiesDiv = document.createElement("div");
+  textPropertiesDiv.classList.add("mb-3");
+
+  if (!p.textStyle) {
+    return textPropertiesDiv;
+  }
+
+  const group1 = document.createElement("div");
   group1.className = "input-group mb-3";
   const pre1 = document.createElement("div");
   pre1.className = "input-group-prepend";
@@ -398,7 +446,6 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
     badge.innerText = (cur.index + 1).toString();
     flex.appendChild(badge);
 
-
     const h1 = document.createElement("h2");
     h1.style.flexGrow = "1";
     h1.className = "mb-0";
@@ -406,6 +453,7 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
     flex.appendChild(h1);
 
   } else {
+   // debugger;
     flex.style.justifyContent = "space-between";
   }
 
@@ -604,7 +652,7 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
   }
 }
 
-function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean): HTMLElement {
+function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, fullWidth: boolean = false): HTMLElement {
 
   const dropdown = document.createElement("div");
   dropdown.classList.add("btn-group");
@@ -615,6 +663,9 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
     const selectedItem = p.listMeta.list.filter(itm => itm.key === p.value)[0] ?? null;
     const button = document.createElement("button");
     button.className = "btn btn-light dropdown-toggle";
+    if (fullWidth) {
+      button.classList.add("full-width");
+    }
     // button.style.display = "flex";
     button.dataset.bsToggle = "dropdown";
     button.dataset.bsAutoClose = "true"
@@ -1002,7 +1053,7 @@ function getFontSizeSelect(printess: iPrintessApi, p: iExternalProperty) {
 
 }
 
-function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement): HTMLElement {
+function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean= false): HTMLElement {
 
   if (!dropdown) {
     dropdown = document.createElement("div");
@@ -1017,6 +1068,9 @@ function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asLis
     const selectedItem = sizes.filter(itm => itm === p.textStyle?.size ?? "??pt")[0] ?? null;
     const button = document.createElement("button");
     button.className = "btn btn-light dropdown-toggle";
+    if (fullWidth) {
+      button.classList.add("full-width");
+    }
     //  button.style.display = "flex";
     button.dataset.bsToggle = "dropdown";
     button.dataset.bsAutoClose = "true"
@@ -1083,7 +1137,7 @@ function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asLis
 
 }
 
-function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement): HTMLElement {
+function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean = false): HTMLElement {
 
   if (!dropdown) {
     dropdown = document.createElement("div");
@@ -1099,6 +1153,9 @@ function getFontDropDown(printess: iPrintessApi, p: iExternalProperty, asList: b
     const selectedItem = fonts.filter(itm => itm.name === p.textStyle?.font ?? "")[0] ?? null;
     const button = document.createElement("button");
     button.className = "btn btn-light dropdown-toggle";
+    if (fullWidth) {
+      button.classList.add("full-width");
+    }
     // button.style.display = "flex";
     button.dataset.bsToggle = "dropdown";
     button.dataset.bsAutoClose = "true"
@@ -1687,7 +1744,9 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
       resizeMobileUi(printess);
     }, 500);
   } else {
-    if (printess.isCurrentStepActive()) {
+    if (printess.isCurrentStepActive() && state !== "frames") {
+      // when coming from state details->frames, resize is needed because of new control host with same step. 
+
       // when step is active zoom has already happened
       // but not the other stuff ... hmmm
       // const step= printess.getStep();
@@ -1816,7 +1875,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
           btn.onclick = () => addToBasket(printess);
         }
 
-       
+
 
         nav.appendChild(btn);
         break;
@@ -2222,7 +2281,13 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           if (backButton) {
             backButton.parentElement?.removeChild(backButton);
           }
-          getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+          if (printess.isCurrentStepActive()) {
+            // happens with rich-text-color
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
+          } else {
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+          }
+        
         }
 
         // render control 

@@ -93,6 +93,9 @@ hr {
   display: grid;
   grid-template-columns: 1fr auto 10px;
 }
+.desktop-title-bar > h2 {
+  margin: 0;
+}
 
 
  
@@ -155,7 +158,7 @@ input[type="radio"]:checked+label > svg {
 .snippet-cluster-name {
   width: 100%;
   margin-top: 20px;
-  margin-bottom: -10px;
+  margin-bottom: 3px;
 }
 
 
@@ -380,13 +383,13 @@ input[type='range'] {
   font-size: 12pt;
 }
 
-#desktop-properties .dropdown-toggle::after {
-  /* extending the bootstrap class */
+#desktop-properties .dropdown-toggle.full-width::after {
+  /* tweaking the bootstrap class for 100% width controls */
   position: absolute;
   top: 50%;
   right: 10px;
 }
-
+ 
 /*
  **** COLOR PICKER ***
  */
@@ -893,7 +896,7 @@ body.inline-mobile-page-bar .mobile-pagebar {
 @media screen and (min-width: 897px) {
   .token-warning {
     left: calc(50% - 190px);
-    bottom: -3px;
+    bottom: 0px;
     width: 380px;
   }
 }

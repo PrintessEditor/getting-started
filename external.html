@@ -197,7 +197,7 @@
 
 
   <!-- MAIN PRINTES UI-COMPONENTS -->
-  <div class="printess-desktop-grid">
+  <div class="printess-desktop-grid" style="height: calc(100vh - 60px)">
     <nav class="desktop-pagebar"></nav>
     <div id="desktop-properties"></div>
     <div id="printessin"></div>
@@ -253,19 +253,7 @@
     const spreadChangeCallback = (groupSnippets, layoutSnippets, spread, spreadCount) => {
 
       // remember groupSnippets for showing as add-able items
-      currentGroupSnippets = groupSnippets
-
-      if (!printess.isMobile()) {
-        uiHelper.renderMobileNavBar(printess);
-        const desktop = document.getElementById("desktop-properties");
-        if (!desktop) {
-          throw "#desktop-properties not found, please add to html.";
-        }
-        desktop.innerHTML = "";
-        const spreads = printess.getAllSpreadsSync();
-        const info = printess.pageInfoSync();
-        uiHelper.renderPageNavigation(printess, spreads, info, false, false);
-      }
+      currentGroupSnippets = groupSnippets;
 
       const layoutSnippetsDiv = document.getElementById("layoutSnippets");
       layoutSnippetsDiv.innerHTML = "";

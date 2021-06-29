@@ -220,6 +220,43 @@ function getTextStyleControl(printess, p) {
     textPropertiesDiv.appendChild(group2);
     return textPropertiesDiv;
 }
+function getTextStyleControlOLD(printess, p) {
+    const textPropertiesDiv = document.createElement("div");
+    textPropertiesDiv.classList.add("mb-3");
+    if (!p.textStyle) {
+        return textPropertiesDiv;
+    }
+    const group1 = document.createElement("div");
+    group1.className = "input-group mb-3";
+    const pre1 = document.createElement("div");
+    pre1.className = "input-group-prepend";
+    if (p.textStyle.allows.indexOf("color") >= 0) {
+        getColorDropDown(printess, p, "color", false, pre1);
+    }
+    if (p.textStyle.allows.indexOf("size") >= 0) {
+        getFontSizeDropDown(printess, p, false, pre1);
+    }
+    group1.appendChild(pre1);
+    if (p.textStyle.allows.indexOf("font") >= 0) {
+        getFontDropDown(printess, p, false, group1);
+    }
+    textPropertiesDiv.appendChild(group1);
+    const group2 = document.createElement("div");
+    group2.className = "input-group mb-3";
+    const pre2 = document.createElement("div");
+    pre2.className = "input-group-prepend";
+    if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
+        group2.appendChild(getHAlignControl(printess, p, false));
+    }
+    const spacer = document.createElement("div");
+    spacer.style.width = "10px";
+    group2.appendChild(spacer);
+    if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
+        group2.appendChild(getVAlignControl(printess, p, false));
+    }
+    textPropertiesDiv.appendChild(group2);
+    return textPropertiesDiv;
+}
 function getMultiLineTextBox(printess, p, forMobile) {
     const ta = getTextArea(printess, p, forMobile);
     if (forMobile) {
@@ -467,7 +504,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
         return dropdown;
     }
 }
-function getDropDown(printess, p, asList) {
+function getDropDown(printess, p, asList, fullWidth = false) {
     var _a;
     const dropdown = document.createElement("div");
     dropdown.classList.add("btn-group");
@@ -476,6 +513,9 @@ function getDropDown(printess, p, asList) {
         const selectedItem = (_a = p.listMeta.list.filter(itm => itm.key === p.value)[0]) !== null && _a !== void 0 ? _a : null;
         const button = document.createElement("button");
         button.className = "btn btn-light dropdown-toggle";
+        if (fullWidth) {
+            button.classList.add("full-width");
+        }
         button.dataset.bsToggle = "dropdown";
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
@@ -793,7 +833,7 @@ function getFontSizeSelect(printess, p) {
     }
     return select;
 }
-function getFontSizeDropDown(printess, p, asList, dropdown) {
+function getFontSizeDropDown(printess, p, asList, dropdown, fullWidth = false) {
     var _a, _b, _c;
     if (!dropdown) {
         dropdown = document.createElement("div");
@@ -807,6 +847,9 @@ function getFontSizeDropDown(printess, p, asList, dropdown) {
         const selectedItem = (_a = sizes.filter(itm => { var _a, _b; return (_b = itm === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.size)) !== null && _b !== void 0 ? _b : "??pt"; })[0]) !== null && _a !== void 0 ? _a : null;
         const button = document.createElement("button");
         button.className = "btn btn-light dropdown-toggle";
+        if (fullWidth) {
+            button.classList.add("full-width");
+        }
         button.dataset.bsToggle = "dropdown";
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
@@ -864,7 +907,7 @@ function getFontSizeDropDown(printess, p, asList, dropdown) {
         return dropdown;
     }
 }
-function getFontDropDown(printess, p, asList, dropdown) {
+function getFontDropDown(printess, p, asList, dropdown, fullWidth = false) {
     var _a;
     if (!dropdown) {
         dropdown = document.createElement("div");
@@ -878,6 +921,9 @@ function getFontDropDown(printess, p, asList, dropdown) {
         const selectedItem = (_a = fonts.filter(itm => { var _a, _b; return (_b = itm.name === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font)) !== null && _b !== void 0 ? _b : ""; })[0]) !== null && _a !== void 0 ? _a : null;
         const button = document.createElement("button");
         button.className = "btn btn-light dropdown-toggle";
+        if (fullWidth) {
+            button.classList.add("full-width");
+        }
         button.dataset.bsToggle = "dropdown";
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
@@ -1369,7 +1415,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         }, 500);
     }
     else {
-        if (printess.isCurrentStepActive()) {
+        if (printess.isCurrentStepActive() && state !== "frames") {
         }
         else {
             resizeMobileUi(printess);
@@ -1809,7 +1855,12 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
                     if (backButton) {
                         (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
                     }
-                    getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+                    if (printess.isCurrentStepActive()) {
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
+                    }
+                    else {
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+                    }
                 }
                 renderMobileControlHost(printess, b.newState);
             };
