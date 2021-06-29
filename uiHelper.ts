@@ -1744,16 +1744,18 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
       resizeMobileUi(printess);
     }, 500);
   } else {
-    if (printess.isCurrentStepActive() && state !== "frames") {
+    // die optimierung führt dazu, das ganz oft die toolbar nicht eingeblendet wird, 
+    // weil der control-host ändert sich unabhämgig von der selection.
+    //if (printess.isCurrentStepActive() && state !== "frames") {
       // when coming from state details->frames, resize is needed because of new control host with same step. 
 
       // when step is active zoom has already happened
       // but not the other stuff ... hmmm
       // const step= printess.getStep();
       // resizeMobileUi(printess,);
-    } else {
+  //  } else {
       resizeMobileUi(printess);
-    }
+  //  }
   }
 
 }

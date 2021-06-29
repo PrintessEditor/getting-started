@@ -1415,11 +1415,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         }, 500);
     }
     else {
-        if (printess.isCurrentStepActive() && state !== "frames") {
-        }
-        else {
-            resizeMobileUi(printess);
-        }
+        resizeMobileUi(printess);
     }
 }
 function getMobilePlusButton(printess, properties, groupSnippets) {
