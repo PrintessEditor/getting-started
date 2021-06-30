@@ -1549,11 +1549,13 @@ function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExt
       const clusterDiv = document.createElement("div");
       clusterDiv.className = "layout-snippet-cluster";
       for (const snippet of cluster.snippets) {
+        const thumbDiv = document.createElement("div");
+        thumbDiv.className = "snippet-thumb big";
         const thumb = document.createElement("img");
         thumb.src = snippet.thumbUrl;
-        // thumb.style.backgroundImage = "url('" + snippet.thumbUrl + "')";
-        thumb.classList.add("layout-snippet-icon");
-        thumb.onclick = () => {
+        thumbDiv.appendChild(thumb);
+  
+        thumbDiv.onclick = () => {
           printess.insertLayoutSnippet(snippet.snippetUrl);
           // close off canvas via its button, the only way it propably worked ...
           const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
@@ -1562,7 +1564,7 @@ function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExt
           const offCanvas = document.getElementById("layoutOffcanvas");
           if (offCanvas) offCanvas.style.visibility = "hidden";
         }
-        clusterDiv.appendChild(thumb);
+        clusterDiv.appendChild(thumbDiv);
       }
       container.appendChild(clusterDiv);
     }

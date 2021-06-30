@@ -152,17 +152,34 @@ input[type="radio"]:checked+label > svg {
   flex-direction: row;
 }
 
-.group-snippets > .snippet-thumb {
+.snippet-thumb {
   cursor:pointer;
   width: 100px; 
   height: 100px;
   margin: 2px;
-  border: 1px solid transparent ;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.group-snippets > .snippet-thumb:hover {
+.snippet-thumb.big {
+  width: 140px; 
+  height: 140px;
+ 
+}
+.snippet-thumb.big > img {
   border: 1px solid var(--mobile-button-border);
 }
-.group-snippets > .snippet-thumb  > img{
+.snippet-thumb:hover {
+  border: 1px solid var(--mobile-button-border);
+}
+.snippet-thumb.big:hover   {
+  border: 1px solid transparent;
+}
+.snippet-thumb.big:hover > img {
+  border: 1px solid var(--mobile-button-border-selected);
+}
+.snippet-thumb  > img{
   max-width: 100%; 
   max-height: 100%;
 }
@@ -220,15 +237,6 @@ input[type='text'] {
 input[type='range'] {
   vertical-align: middle;
   margin-left: 10px;
-}
-
-.layout-snippet-icon {
-  width: 80px;
-  height: auto;
-  border: 1px solid black;
-  background-size: contain;
-  background-repeat: no-repeat;
-  margin:  5px;
 }
 
 .image-panel {
