@@ -18,7 +18,7 @@
   <iframe style="width: 100vw; height: 100vh; border: none; display: block;" id="printess" src="https://editor.printess.com/printess-editor/embed.html"></iframe>
 
   <script>
-    const iframe = document.querySelector("#printess");
+    const iframe = document.getElementById("printess");
     iframe.onload = () => {
 
       /* **************************** */
@@ -30,7 +30,7 @@
             alert("Back to catalog. save-token:" + event.data.token);
             break;
           case "basket":
-            prompt("Proceed to checkout.\nsave-token:\n" + event.data.token +  "\nThumbnailUrl:",event.data.thumbnailUrl );
+            prompt("Proceed to checkout.\n\nsave-token:\n" + event.data.token +  "\n\nThumbnailUrl:",event.data.thumbnailUrl );
             break;
         }
       });
@@ -40,12 +40,12 @@
       /* *************************** */
       iframe.contentWindow.postMessage({
         cmd: "attach", properties: {
-          templateName:"Newborn-Steps", // "Greeting Card", // name of the template to load. You can also pass a save-token here. 
+          templateName:"Newborn-Steps", // name of the template to load. You can also pass a save-token here. 
           //cssUrl: window.location.origin + "/sketchy.css"
         }
       }, "*");
     }
-    
+
   </script>
 
 </body>

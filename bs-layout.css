@@ -179,7 +179,7 @@ input[type="radio"]:checked+label > svg {
 .snippet-thumb.big:hover > img {
   border: 1px solid var(--mobile-button-border-selected);
 }
-.snippet-thumb  > img{
+.snippet-thumb > img {
   max-width: 100%; 
   max-height: 100%;
 }
@@ -190,8 +190,6 @@ input[type="radio"]:checked+label > svg {
   margin-bottom: 3px;
 }
 
-
-
 .show-layouts-button {
   position: absolute;
   left: 0px;
@@ -201,7 +199,6 @@ input[type="radio"]:checked+label > svg {
   transform-origin: 0% 100%;
   z-index: var(--layout-snippet-btn-z-index);
 }
- 
 
 #json {
   position: absolute;

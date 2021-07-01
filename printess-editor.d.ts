@@ -11,12 +11,20 @@ export interface printessAttachParameters {
   token?: string;
   uploadProvider?: UploadProvider;
   div: HTMLDivElement;
-  /*  when used in shop (shop token) scenario, you MUST provide basketId */
+  /** 
+   * when used in shop (shop token) scenario, you MUST provide basketId 
+   */
   basketId?: string,
-  /* when used in shop (shop token) scenario, you CAN provide shopUserId */
+  /** 
+   *  when used in shop (shop token) scenario, you CAN provide shopUserId  
+   */
   shopUserId?: string,
 
   templateName?: string;
+  /**
+   *  The template version to load. For production you should go with "published" which is the default. 
+   * */
+  templateVersion?: "draft" | "published",
   mergeTemplates?: [{
     templateName: string;
     spreadIndex?: number;
@@ -214,8 +222,8 @@ export interface iPrintessApi {
   setImageMetaProperty(propertyId: string, name: "scale" | "sepia" | "brightness" | "saturate" | "contrast" | "grayscale" | "vivid" | "hueRotate", value: string | number): Promise<void>;
   resetImageFilters(propertyId: string): Promise<void>;
 
-  uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage[]>;
-  uploadImage(file: File, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage | null>;
+  uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean,  propertyId?: string): Promise<iExternalImage[]>;
+  uploadImage(file: File, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean,  propertyId?: string): Promise<iExternalImage | null>;
 
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;

@@ -184,14 +184,14 @@
       <a class="dropdown-item" href="#Coffee%20Mug">Coffee Mug</a>
 
       <div class="dropdown-divider">UI Test Templates</div>
-      <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel">Rich Editing with Fallback to Paragraph</a>
-      <a class="dropdown-item" href="#BuyerText-No-Eddi">Form Editing with and without Paragraph Split</a>
-      <a class="dropdown-item" href="#8Pages">8 Pages</a>
-      <a class="dropdown-item" href="#8DoublePages">14 Facing Pages</a>
-      <a class="dropdown-item" href="#8DoublePagesFF">14 Facing Pages w. FormField</a>
-      <a class="dropdown-item" href="#Avatar">Avatar-Test</a>
-      <a class="dropdown-item" href="#Newborn-Steps">Newborn Card with Steps</a>
-      <a class="dropdown-item" href="#sigTestPortrait">Portrait Test Card</a>
+      <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel_draft">Rich Editing with Fallback to Paragraph</a>
+      <a class="dropdown-item" href="#BuyerText-No-Eddi_draft">Form Editing with and without Paragraph Split</a>
+      <a class="dropdown-item" href="#8Pages_draft">8 Pages</a>
+      <a class="dropdown-item" href="#8DoublePages_draft">14 Facing Pages</a>
+      <a class="dropdown-item" href="#8DoublePagesFF_draft">14 Facing Pages w. FormField</a>
+      <a class="dropdown-item" href="#Avatar_draft">Avatar-Test</a>
+      <a class="dropdown-item" href="#Newborn-Steps_draft">Newborn Card with Steps</a>
+      <a class="dropdown-item" href="#sigTestPortrait_draft">Portrait Test Card</a>
     </div>
   </div>
 
@@ -327,8 +327,8 @@
         token: token, // your printess shop-token
         basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
         shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
-
-        templateName: decodeURIComponent(window.location.hash.substr(1)) || "Greeting Card",
+        templateVersion: window.location.hash.substr(1).endsWith("_draft") ? "draft" : "published",
+        templateName: decodeURIComponent(window.location.hash.substr(1).replace("_draft", "")) || "Greeting Card",
         templateJson: undefined, // will be used only if templateName is empty
         templateUserId: undefined, // only needed when loaded from different account
         /* mergeTemplates: [
@@ -407,12 +407,17 @@
     };
 
     window.addEventListener('hashchange', function () {
-      const id = decodeURIComponent(window.location.hash.substr(1));
+      let id = decodeURIComponent(window.location.hash.substr(1));
+      let loadPublishedVersion = true;
+      if (id.endsWith("_draft")) {
+        id = id.replace("_draft", "");
+        loadPublishedVersion = false;
+      }
       const offcanvas = document.getElementById("templateOffcanvas");
       if (offcanvas) offcanvas.style.visibility = "";
       let pagebar = document.querySelector(".mobile-pagebar");
       if (pagebar) pagebar.parentElement.removeChild(pagebar); // will be re-attached on load callback
-      if (id && printess) printess.loadTemplate(decodeURIComponent(window.location.hash.substr(1)));
+      if (id && printess) printess.loadTemplate(id);
     }, false);
 
 

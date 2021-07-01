@@ -79,6 +79,7 @@ function renderDesktopUi(printess, container, properties, state, groupSnippets, 
             else {
                 colorsContainer = null;
                 container.appendChild(getPropertyControl(printess, p));
+                validate(p);
             }
             t.push(JSON.stringify(p, undefined, 2));
         }
@@ -240,10 +241,16 @@ function getSingleLineTextBox(printess, p, forMobile) {
     inp.spellcheck = false;
     inp.oninput = () => {
         printess.setProperty(p.id, inp.value);
+        p.value = inp.value;
+        validate(p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
         if (mobileButtonDiv) {
-            p.value = inp.value;
             drawButtonContent(printess, mobileButtonDiv, [p]);
+        }
+    };
+    inp.onfocus = () => {
+        if (inp.value && p.textMeta && inp.value === p.textMeta.defaultValue) {
+            inp.value = "";
         }
     };
     if (forMobile) {
@@ -346,19 +353,54 @@ function getTextArea(printess, p, forMobile) {
 }
 function addLabel(input, p, label) {
     input.classList.add("form-control");
-    if (!p.label && !label) {
-        return input;
-    }
     const container = document.createElement("div");
-    container.className = "mb-3";
-    const htmlLabel = document.createElement("label");
-    htmlLabel.className = "form-label";
-    htmlLabel.setAttribute("for", "inp" + p.id);
-    htmlLabel.innerText = (label || p.label);
-    input.id = "inp" + p.id;
-    container.appendChild(htmlLabel);
+    container.classList.add("mb-3");
+    container.id = "cnt_" + p.id;
+    if (p.label || label) {
+        const htmlLabel = document.createElement("label");
+        htmlLabel.className = "form-label";
+        htmlLabel.setAttribute("for", "inp_" + p.id);
+        htmlLabel.innerText = (label || p.label || "");
+        container.appendChild(htmlLabel);
+    }
+    input.id = "inp_" + p.id;
     container.appendChild(input);
+    const validation = document.createElement("div");
+    validation.id = "val_" + p.id;
+    validation.classList.add("invalid-feedback");
+    validation.innerText = "Please enter a message in the textarea";
+    container.appendChild(validation);
     return container;
+}
+function validate(p) {
+    const container = document.getElementById("cnt_" + p.id);
+    const input = document.getElementById("inp_" + p.id);
+    const validation = document.getElementById("val_" + p.id);
+    if (container && input && validation) {
+        if (p.textMeta && p.textMeta.maxChars) {
+            if (p.value.toString().length > p.textMeta.maxChars) {
+                container.classList.remove("was-validated");
+                input.classList.add("is-invalid");
+                validation.innerText = "Maximum number of chars exceeded (" + p.textMeta.maxChars + ")";
+            }
+            else if (p.textMeta.isMandatory && (!p.value || p.value === p.textMeta.defaultValue)) {
+                container.classList.remove("was-validated");
+                input.classList.add("is-invalid");
+                validation.innerText = "Please enter some text here";
+            }
+            else {
+                container.classList.add("was-validated");
+                input.classList.remove("is-invalid");
+            }
+        }
+        else if (p.imageMeta && p.imageMeta.isMandatory) {
+            if (p.imageMeta.isMandatory && (!p.value || p.value === p.imageMeta.defaultValue)) {
+                container.classList.remove("was-validated");
+                input.classList.add("is-invalid");
+                validation.innerText = "Please upload or assign your own image here";
+            }
+        }
+    }
 }
 function getImageSelectList(printess, p, forMobile) {
     const container = document.createElement("div");
@@ -608,6 +650,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
     container = container || document.createElement("div");
     const fileUpload = document.createElement("div");
     fileUpload.className = "mb-3";
+    fileUpload.id = "cnt_" + p.id;
     const progressDiv = document.createElement("div");
     progressDiv.className = "progress";
     const progressBar = document.createElement("div");
@@ -617,7 +660,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
     progressDiv.appendChild(progressBar);
     const inp = document.createElement("input");
     inp.type = "file";
-    inp.id = p.id;
+    inp.id = "inp_" + p.id;
     inp.className = "form-control";
     inp.accept = "image/png,image/jpg,image/jpeg";
     inp.multiple = true;
@@ -632,14 +675,14 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
             progressDiv.style.display = "flex";
             printess.uploadImages(inp.files, (progress) => {
                 progressBar.style.width = (progress * 100) + "%";
-            }, true);
+            }, true, p.id);
         }
     };
     const uploadLabel = document.createElement("label");
     uploadLabel.className = "form-label";
     uploadLabel.innerText = "Upload images form your device";
-    uploadLabel.setAttribute("for", p.id);
-    fileUpload.appendChild(inp);
+    uploadLabel.setAttribute("for", "inp_" + p.id);
+    fileUpload.appendChild(addLabel(inp, p, ""));
     container.appendChild(progressDiv);
     container.appendChild(fileUpload);
     const imagePanel = document.createElement("div");
@@ -662,6 +705,8 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
             thumb.style.border = "2px solid red";
         thumb.onclick = () => {
             printess.setProperty(p.id, im.id);
+            p.value = im.id,
+                validate(p);
         };
         imageList.appendChild(thumb);
     }
@@ -1836,41 +1881,42 @@ function getOverlay(printess, properties) {
     const isImage = properties.filter(p => p.kind === "image").length > 0;
     const isColor = properties.filter(p => p.kind === "color").length > 0;
     const hdiv = document.createElement("div");
-    hdiv.style.border = "10px solid rgba(0,200,100,0.5)";
     hdiv.style.opacity = "1";
     if (isSingleLineText) {
-        const tdiv = document.createElement("div");
-        tdiv.style.position = "absolute";
-        tdiv.style.top = "-38px";
-        tdiv.style.left = "10px";
-        tdiv.style.fontSize = "16px";
-        tdiv.style.backgroundColor = "yellow";
-        tdiv.innerText = "TEXT";
-        tdiv.style.padding = "4px";
+        const tdiv = getOverlayIcon(printess, "text", "rgba(255,100,0,1)");
+        hdiv.style.border = "5px solid rgba(255,100,0,0.5)";
         hdiv.appendChild(tdiv);
     }
     else if (isImage) {
-        const tdiv = document.createElement("div");
-        tdiv.style.position = "absolute";
-        tdiv.style.top = "-38px";
-        tdiv.style.left = "10px";
-        tdiv.style.fontSize = "16px";
-        tdiv.style.backgroundColor = "lightblue";
-        tdiv.innerText = "IMAGE";
-        tdiv.style.padding = "4px";
+        const tdiv = getOverlayIcon(printess, "image", "rgba(0,125,255,1)");
+        hdiv.style.border = "5px solid rgba(0,125,255,0.5)";
         hdiv.appendChild(tdiv);
     }
     else if (isColor) {
-        const tdiv = document.createElement("div");
-        tdiv.style.position = "absolute";
-        tdiv.style.top = "-38px";
-        tdiv.style.left = "10px";
-        tdiv.style.fontSize = "16px";
-        tdiv.style.backgroundColor = "pink";
-        tdiv.innerText = "COLOR";
-        tdiv.style.padding = "4px";
+        const tdiv = getOverlayIcon(printess, "palette", "rgba(100,250,0,1)");
+        hdiv.style.border = "5px solid rgba(100,250,0,0.5)";
         hdiv.appendChild(tdiv);
     }
+    else {
+        hdiv.style.border = "5px solid rgba(255,200,100,0.5)";
+    }
     return hdiv;
+}
+function getOverlayIcon(printess, name, color) {
+    const tdiv = document.createElement("div");
+    tdiv.style.position = "absolute";
+    tdiv.style.top = "-16px";
+    tdiv.style.left = "-16px";
+    tdiv.style.backgroundColor = color;
+    tdiv.style.padding = "7px";
+    tdiv.style.width = "36px";
+    tdiv.style.height = "36px";
+    tdiv.style.borderRadius = "50%";
+    const icon = printess.getIcon(name);
+    icon.style.width = "22px";
+    icon.style.height = "22px";
+    icon.style.color = "white";
+    tdiv.appendChild(icon);
+    return tdiv;
 }
 //# sourceMappingURL=uiHelper.js.map

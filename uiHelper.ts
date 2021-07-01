@@ -94,6 +94,7 @@ function renderDesktopUi(printess: iPrintessApi, container: HTMLDivElement, prop
       } else {
         colorsContainer = null;
         container.appendChild(getPropertyControl(printess, p));
+        validate(p);
       }
       t.push(JSON.stringify(p, undefined, 2));
     }
@@ -323,10 +324,17 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
   // Key-up does not fire when autocomplete happens
   inp.oninput = () => {
     printess.setProperty(p.id, inp.value);
+    p.value = inp.value;
+    validate(p);
+
     const mobileButtonDiv = document.getElementById(p.id + ":");
     if (mobileButtonDiv) {
-      p.value = inp.value;
       drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+    }
+  }
+  inp.onfocus = () => {
+    if (inp.value && p.textMeta && inp.value === p.textMeta.defaultValue) {
+      inp.value = "";
     }
   }
 
@@ -411,7 +419,7 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
   if (printess.hasNextStep()) {
     const nextStep = document.createElement("button");
     nextStep.className = "btn btn-outline-primary";
-    nextStep.innerText =  printess.isNextStepPreview() ? "Preview" : "Next Step";
+    nextStep.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
     nextStep.onclick = () => printess.nextStep();
     flex.appendChild(nextStep);
   } else {
@@ -458,26 +466,60 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
 function addLabel(input: HTMLElement, p: iExternalProperty, label?: string): HTMLElement {
   input.classList.add("form-control");
 
-  if (!p.label && !label) {
-    return input;
+  const container = document.createElement("div");
+  container.classList.add("mb-3");
+  container.id = "cnt_" + p.id;
+
+  if (p.label || label) {
+    const htmlLabel = document.createElement("label");
+    htmlLabel.className = "form-label";
+    htmlLabel.setAttribute("for", "inp_" + p.id);
+    htmlLabel.innerText = (label || p.label || "");
+    container.appendChild(htmlLabel);
   }
 
-  const container = document.createElement("div");
-  container.className = "mb-3"
-
-  const htmlLabel = document.createElement("label");
-  htmlLabel.className = "form-label";
-  htmlLabel.setAttribute("for", "inp" + p.id);
-  htmlLabel.innerText = (label || p.label);
-  input.id = "inp" + p.id;
-
-
-  container.appendChild(htmlLabel);
+  input.id = "inp_" + p.id;
   container.appendChild(input);
+
+  const validation = document.createElement("div");
+  validation.id = "val_" + p.id;
+  validation.classList.add("invalid-feedback");
+  validation.innerText = "Please enter a message in the textarea";
+
+  container.appendChild(validation);
 
   return container;
 }
 
+function validate(p: iExternalProperty): void {
+  const container = document.getElementById("cnt_" + p.id);
+  const input = document.getElementById("inp_" + p.id);
+  const validation = document.getElementById("val_" + p.id);
+
+  if (container && input && validation) {
+    if (p.textMeta && p.textMeta.maxChars) {
+      if (p.value.toString().length > p.textMeta.maxChars) {
+        container.classList.remove("was-validated");
+        input.classList.add("is-invalid");
+        validation.innerText = "Maximum number of chars exceeded (" + p.textMeta.maxChars + ")";
+      } else if (p.textMeta.isMandatory && (!p.value || p.value === p.textMeta.defaultValue)) {
+        container.classList.remove("was-validated");
+        input.classList.add("is-invalid");
+        validation.innerText = "Please enter some text here";
+      } else {
+        container.classList.add("was-validated");
+        input.classList.remove("is-invalid");
+      }
+    } else if ( p.imageMeta && p.imageMeta.isMandatory) {
+      if (p.imageMeta.isMandatory && (!p.value || p.value === p.imageMeta.defaultValue)) {
+        container.classList.remove("was-validated");
+        input.classList.add("is-invalid");
+        validation.innerText = "Please upload or assign your own image here";
+      }
+    }
+  }
+
+}
 
 
 function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
@@ -769,6 +811,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   /***+ IMAGE UPLOAD ****/
   const fileUpload = document.createElement("div");
   fileUpload.className = "mb-3";
+  fileUpload.id = "cnt_" + p.id;
 
   const progressDiv = document.createElement("div");
   progressDiv.className = "progress";
@@ -781,7 +824,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
 
   const inp = document.createElement("input");
   inp.type = "file";
-  inp.id = p.id;
+  inp.id = "inp_" + p.id;
   inp.className = "form-control"
   inp.accept = "image/png,image/jpg,image/jpeg";
   inp.multiple = true;
@@ -799,7 +842,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
       printess.uploadImages(inp.files, (progress) => {
         progressBar.style.width = (progress * 100) + "%"
       }
-        , true); // true auto assigns image and triggers selection change wich redraws this control.
+        , true,p.id); // true auto assigns image and triggers selection change wich redraws this control.
 
       // optional: promise resolution returns list of added images 
       // if auto assign is "false" you must reset progress-bar width and control visibilty manually
@@ -812,14 +855,16 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   const uploadLabel = document.createElement("label");
   uploadLabel.className = "form-label";
   uploadLabel.innerText = "Upload images form your device";
-  uploadLabel.setAttribute("for", p.id);
+  uploadLabel.setAttribute("for", "inp_" + p.id);
   // remove comments below to  add label
   // fileUpload.appendChild(uploadLabel);
 
 
-  fileUpload.appendChild(inp);
+  fileUpload.appendChild(addLabel(inp, p, "")); // to add error-message display 
   container.appendChild(progressDiv);
   container.appendChild(fileUpload);
+
+
 
 
 
@@ -843,6 +888,8 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
     if (im.id === p.value) thumb.style.border = "2px solid red";
     thumb.onclick = () => {
       printess.setProperty(p.id, im.id);
+      p.value =im.id,
+      validate(p);
     }
     imageList.appendChild(thumb);
   }
@@ -1509,14 +1556,14 @@ function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExter
         thumb.src = snippet.thumbUrl;
         thumb.style.backgroundColor = snippet.bgColor;
         thumbDiv.appendChild(thumb);
-  
+
         thumbDiv.onclick = () => {
           if (forMobile) {
             div.innerHTML === "";
-          } 
+          }
           printess.insertGroupSnippet(snippet.snippetUrl);
         }
-       
+
         div.appendChild(thumbDiv);
       }
     }
@@ -1554,7 +1601,7 @@ function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExt
         const thumb = document.createElement("img");
         thumb.src = snippet.thumbUrl;
         thumbDiv.appendChild(thumb);
-  
+
         thumbDiv.onclick = () => {
           printess.insertLayoutSnippet(snippet.snippetUrl);
           // close off canvas via its button, the only way it propably worked ...
@@ -1646,7 +1693,7 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
       // when coming from state details->frames, resize is needed because of new control host with same step. 
 
       // when step is active zoom has already happened
-     
+
     } else {
       resizeMobileUi(printess);
     }
@@ -2291,40 +2338,45 @@ function getOverlay(printess: iPrintessApi, properties: Array<iExternalProperty>
   const isImage = properties.filter(p => p.kind === "image").length > 0;
   const isColor = properties.filter(p => p.kind === "color").length > 0;
   const hdiv = document.createElement("div");
-  hdiv.style.border = "10px solid rgba(0,200,100,0.5)";
+  
   hdiv.style.opacity = "1";
+
   if (isSingleLineText) {
-    const tdiv = document.createElement("div");
-    tdiv.style.position = "absolute";
-    tdiv.style.top = "-38px"
-    tdiv.style.left = "10px";
-    tdiv.style.fontSize = "16px";
-    tdiv.style.backgroundColor = "yellow";
-    tdiv.innerText = "TEXT";
-    tdiv.style.padding = "4px"
+    const tdiv = getOverlayIcon(printess, "text", "rgba(255,100,0,1)");
+    hdiv.style.border = "5px solid rgba(255,100,0,0.5)";
     hdiv.appendChild(tdiv);
   } else if (isImage) {
-    const tdiv = document.createElement("div");
-    tdiv.style.position = "absolute";
-    tdiv.style.top = "-38px"
-    tdiv.style.left = "10px";
-    tdiv.style.fontSize = "16px";
-    tdiv.style.backgroundColor = "lightblue";
-    tdiv.innerText = "IMAGE";
-    tdiv.style.padding = "4px"
+    const tdiv = getOverlayIcon(printess, "image", "rgba(0,125,255,1)");
+    hdiv.style.border = "5px solid rgba(0,125,255,0.5)";
     hdiv.appendChild(tdiv);
+
   } else if (isColor) {
-    const tdiv = document.createElement("div");
-    tdiv.style.position = "absolute";
-    tdiv.style.top = "-38px"
-    tdiv.style.left = "10px";
-    tdiv.style.fontSize = "16px";
-    tdiv.style.backgroundColor = "pink";
-    tdiv.innerText = "COLOR";
-    tdiv.style.padding = "4px"
+    const tdiv = getOverlayIcon(printess, "palette", "rgba(100,250,0,1)");
+    hdiv.style.border = "5px solid rgba(100,250,0,0.5)";
     hdiv.appendChild(tdiv);
+  } else {
+    hdiv.style.border = "5px solid rgba(255,200,100,0.5)";
   }
-  return hdiv; 
+  return hdiv;
 }
 
+function getOverlayIcon(printess: iPrintessApi, name: iconName, color: string): HTMLDivElement {
+  const tdiv = document.createElement("div");
+  tdiv.style.position = "absolute";
+  tdiv.style.top = "-16px"
+  tdiv.style.left = "-16px";
+  tdiv.style.backgroundColor = color;
+  tdiv.style.padding = "7px";
+  tdiv.style.width = "36px";
+  tdiv.style.height = "36px";
+  tdiv.style.borderRadius = "50%";
+
+  const icon = printess.getIcon(name);
+  icon.style.width = "22px";
+  icon.style.height = "22px";
+  icon.style.color = "white";
+  tdiv.appendChild(icon);
+
+  return tdiv;
+}
 
