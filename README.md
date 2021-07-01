@@ -4,8 +4,12 @@
 
 This repo shows how easy it is to get started with the printess editor.
 
-You can see thode code running here:
-<https://printesseditor.github.io/getting-started/>
+You can test the iframe based integration running here:
+<https://printesseditor.github.io/getting-started/ebmbed.html>
+
+You can test the full integration here:
+<https://printesseditor.github.io/getting-started/external.html>
+
 
 To get started with Printess in React, follow this link:
 <https://github.com/PrintessEditor/getting-started-react>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 
 <head>
 
@@ -10,12 +10,34 @@
   <!--Please always add the correct viewport to ensure Printess works fine on mobile devices-->
   <meta name="viewport" content="width=device-width">
 
+  <style>
+    /* Counter act the Safari viewport-height bug */
+    html {
+      height: -webkit-fill-available;
+    }
+
+    body {
+      margin: 0; 
+      padding: 0; 
+      height: 100vh; 
+      height: -webkit-fill-available;
+    }
+    iframe {
+      width: 100vw; 
+      height: 100%; 
+      border: none; 
+      display: block; 
+      position: fixed;
+
+    }
+  </style>
+
 </head>
 
-<body style="margin: 0; padding: 0;">
+<body">
 
-  
-  <iframe style="width: 100vw; height: 100vh; border: none; display: block;" id="printess" src="https://editor.printess.com/printess-editor/embed.html"></iframe>
+
+  <iframe  id="printess" src="https://editor.printess.com/printess-editor/embed.html"></iframe>
 
   <script>
     const iframe = document.getElementById("printess");
