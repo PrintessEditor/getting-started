@@ -5,7 +5,7 @@
 This repo shows how easy it is to get started with the printess editor.
 
 You can test the iframe based integration running here:
-<https://printesseditor.github.io/getting-started/ebmbed.html>
+<https://printesseditor.github.io/getting-started/embed.html>
 
 You can test the full integration here:
 <https://printesseditor.github.io/getting-started/external.html>

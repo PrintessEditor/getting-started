@@ -62,7 +62,7 @@
       /* *************************** */
       iframe.contentWindow.postMessage({
         cmd: "attach", properties: {
-          templateName:"Newborn-Steps", // name of the template to load. You can also pass a save-token here. 
+          templateName:"Greeting Card", // name of the template to load. You can also pass a save-token here. 
           //cssUrl: window.location.origin + "/sketchy.css"
         }
       }, "*");
