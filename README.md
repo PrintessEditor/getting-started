@@ -24,7 +24,7 @@ Printess editor can easily embeded as an iframe:
 
 Once the DOM is loaded you will need to pass some  essential parameters, like your shop-token, the name of the template and your session or basket ID. 
 
-```html
+```js
 iframe.contentWindow.postMessage({
     cmd: "attach", properties: {
 
@@ -70,7 +70,7 @@ To continue the shopping journey Printess will give you two essential callbacks:
 
 Both callbacks give you a so called **save-token** which you easily can store in your database and later use to either **print** the saved confuguration or **load** the saved work again to the Printess editor and allow the users to continue their work.
 
-```html
+```js
 window.addEventListener("message", () => {
   switch (event.data.cmd) {
 
@@ -79,15 +79,11 @@ window.addEventListener("message", () => {
       break;
 
     case "basket":
-      prompt("Proceed to checkout.\n\nsave-token:\n" + event.data.token + "\n\nThumbnailUrl:", event.data.thumbnailUrl);
+      alert("Proceed to checkout. save-token:" + event.data.token + " thumbnailUrl:" +event.data.thumbnailUrl);
       break;
 
     case "formFieldChanged":
-      /* You can react to changes of price-relevant form fields here */
-      const msg = document.getElementById("message");
-      msg.style.display = "flex";
-      msg.textContent = "Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'";
-      setTimeout(() => document.getElementById("message").style.display = "none", 2000);
+      alert("Price Relevant Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'");
   }
 });
 ```
