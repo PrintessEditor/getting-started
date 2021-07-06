@@ -20,7 +20,10 @@ Printess editor can easily embeded as an iframe:
 <iframe  id="printess" src="https://editor.printess.com/printess-editor/embed.html"></iframe>
 ```
 
-## Attach the editor 
+It's highly recommended to show the Printess editor iframe in full-screen. Especially on mobile the user experiences gets quirky if other elements are shown on top or below the editor. Space is extremly limited and to achive the app-feeling scrolling of the website should not happen - ever. When iOS is expanding its giant on-screen keyboard Printess will counter act this by hiding all toolbars and page navigation. And when the keyboard collapses Printess will get back to normal as well. This will only work if your page does not exceed the area of the iframe. 
+If you like to handle this behaviour on your own of tweak the existing code, please have a look at the **custom integration** down below.
+
+## Attaching the editor 
 
 Once the DOM is loaded you will need to pass some  essential parameters, like your shop-token, the name of the template and your session or basket ID. 
 
@@ -60,7 +63,7 @@ iframe.contentWindow.postMessage({
 
 ```
 
-## Process the callbacks
+## Listening to callbacks
 
 To continue the shopping journey Printess will give you two essential callbacks:
 
@@ -91,12 +94,12 @@ A third callback is **formFieldChanged** which is helpful if the user changes ce
 
 ## Congratulations!
 
-
 You now know everything to get started with the Printess Editor. Have fun and please let us know if you struggle. 
 
-### Please find more documentation in the [Printess Knowledge Base](https://printess.com/kb/api-reference/js-api/getting-started.html) 
 
+## &nbsp;
 
+## &nbsp;
 
 
 # Custom integration of the Printess Editor
