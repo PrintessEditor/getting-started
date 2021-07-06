@@ -159,6 +159,8 @@ Now we wait for **WebComponentsReady** before loading Printess itself.
 
 The `attachPrintess` call initializes Printess, passes the authentication token and the name of the template to be loaded.
 
+[Attach Printess Full Object Reference](https://printess.com/js-api/interfaces/printessattachparameters.html)
+
 Please be aware that you'll need to tell Printess the path to its resource files (Web-Assembly and Default Fonts) in a separate property `resourcePath`. Please do not change this value.
 
 The `domain` should remain unchanged. It only needs to be changed if you are uing a private Printess cloud.
@@ -169,6 +171,7 @@ Printess is intended to have as much space as possible, so it is highly recommen
 `token` should be set to a **Shop-Token** which points to yout Printess Account. You can get this token once you are logged in in the Printess Editor -> Account Menu -> API-Token. You'll see 3 different tokens in the dialog. Please always use the **Shop-Token**.
 
 Finally the variable named `printess` contains a **js-api** reference to the Printess editor.
+[Printess JS-API Full Reference](https://printess.com/js-api/interfaces/iprintessapi.html)
 
 If you use typescript you'll find a `printess-editor.d.ts` file in the repro which contains all types for the printess object.
 
@@ -189,7 +192,9 @@ Optionally you can pass a `shopUserId` to make Printess store in the context of 
 
 We are working on a method to assign an existing `basketId` to a `shopUserId` in the case the user logs in after he or she has already designed his or her artwork. So you can ensure that even with late sign in or user creation the existing uploaded images are assigned to that customer.
 
-[Find more information here]([https:/printess.com/kb/](https://printess.com/kb/user-manual/js-api.html))
+[Find more information here](https://printess.com/kb/user-manual/js-api.html)
+
+[Full API-Documentation](https://printess.com/js-api/)
 
 ## &nbsp;
 
