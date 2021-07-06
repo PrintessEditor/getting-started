@@ -29,7 +29,7 @@ iframe.contentWindow.postMessage({
     cmd: "attach", properties: {
 
       /* Paste your Printess shop-token here */
-      token: "", // 
+      token: "", 
       
       /* Name of the template to load. You can also pass a save-token from "basket" or "back" callback here to load previously saved work. */
       templateName: "Greeting Card", 
@@ -44,7 +44,7 @@ iframe.contentWindow.postMessage({
       cssUrl: window.location.origin + "/bootstrap-themes/sketchy.css", 
 
       /* Optional: List of one or more templates to merge on load */
-      /* mergeTemplates: [
+      mergeTemplates: [
         {
           "templateName": "Card-Title-2",
           "spreadIndex": 0  // Example to merge a card title to the first spread on load 
@@ -53,7 +53,7 @@ iframe.contentWindow.postMessage({
           "templateName": "Card-Back-2",
           "spreadIndex": 2  // Example to merge a card back to the third spread on load 
         }
-      ], */
+      ],
     }
   }, "*");
 }
