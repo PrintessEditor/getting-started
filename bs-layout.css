@@ -46,7 +46,7 @@ hr {
 /* Main Printess Desktop-Layout */ 
 /* Mobile Layout is positioned absolute in media queries at the end of this file */ 
 
-.printess-desktop-grid {
+#printess-desktop-grid {
   width: calc(100vw - var(--editor-margin-left));
   height: 100vh;
   margin-left: var(--editor-margin-left);
@@ -57,23 +57,25 @@ hr {
   column-gap: var(--editor-space-between);
 }
 
-.desktop-pagebar {
+#desktop-pagebar {
   width:  100%;
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   padding-top: var(--editor-margin-top);
 }
-.desktop-pagebar .undo-redo-bar {
+#desktop-pagebar .undo-redo-bar {
   display: flex;
+  align-self: flex-start;
+  padding-top: 3px;
 }
-.desktop-pagebar .icon {
+#desktop-pagebar .icon {
   width:20px;
   height:20px;
   color: inherit;
 }
 
-#printessin {
+#desktop-printess-container {
   box-shadow: 4px 5px 10px rgba(0, 0, 0, 0.4);
   border: 1px solid gray;
 }
@@ -182,6 +184,7 @@ input[type="radio"]:checked+label > svg {
 .snippet-thumb > img {
   max-width: 100%; 
   max-height: 100%;
+  background-color: white;
 }
 
 .snippet-cluster-name {
@@ -234,6 +237,17 @@ input[type='text'] {
 input[type='range'] {
   vertical-align: middle;
   margin-left: 10px;
+}
+
+
+.image-rotate-panel {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 110px;
+}
+.image-rotate-panel img {
+  border: 1px solid rgba(0,0,0,1);
 }
 
 .image-panel {
@@ -919,7 +933,7 @@ body.inline-mobile-page-bar .mobile-pagebar {
 }
 
 @media screen and (max-width: 896px) {
-  .printess-desktop-grid {
+  #printess-desktop-grid {
     /* shring the desktop-grid, mobile items are positioned absolute */
     margin: 0;
     grid-template-rows: 0 0;
@@ -941,7 +955,7 @@ body.inline-mobile-page-bar .mobile-pagebar {
     bottom: var(--mobile-buttonbar-height);
     transition: bottom 0.5s ease-out, top 0.5s ease-out;
   }
-  #desktop-properties, #json,  .token-warning, .desktop-pagebar {
+  #desktop-properties, #json,  .token-warning, #desktop-pagebar {
     display: none !important;
   }
   .mobile-ui {

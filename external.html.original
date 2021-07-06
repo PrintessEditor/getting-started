@@ -192,15 +192,16 @@
       <a class="dropdown-item" href="#Avatar_draft">Avatar-Test</a>
       <a class="dropdown-item" href="#Newborn-Steps_draft">Newborn Card with Steps</a>
       <a class="dropdown-item" href="#sigTestPortrait_draft">Portrait Test Card</a>
+      <a class="dropdown-item" href="#mff_draft">Form Field Test</a>
     </div>
   </div>
 
 
   <!-- MAIN PRINTES UI-COMPONENTS -->
-  <div class="printess-desktop-grid" style="height: calc(100vh - 60px)">
-    <nav class="desktop-pagebar"></nav>
+  <div id="printess-desktop-grid" style="height: calc(100vh - 60px)">
+    <nav id="desktop-pagebar"></nav>
     <div id="desktop-properties"></div>
-    <div id="printessin"></div>
+    <div id="desktop-printess-container"></div>
   </div>
 
 
@@ -225,8 +226,7 @@
 
     let printess;
     let currentGroupSnippets = [];
-    let templateTitle = "";
-
+   
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
         addEventListener('WebComponentsReady', cb)
@@ -245,7 +245,6 @@
     }
 
     const loadingDoneCallback = function (spreads, title) {
-      templateTitle = title;
       printess.resizePrintess();
     }
 
@@ -258,9 +257,6 @@
       layoutSnippetsDiv.innerHTML = "";
       layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
       document.querySelector(".show-layouts-button").style.visibility = layoutSnippets.length ? "visible" : "hidden";
-
-      uiHelper.renderLayoutSnippets(printess, layoutSnippets)
-
     }
 
     const selectionChangeCallback = (properties, state) => {
@@ -284,11 +280,7 @@
 
       } else {
         // ***** add desktop-ui *****
-        const desktopPropertiesDiv = document.getElementById("desktop-properties");
-        if (!desktopPropertiesDiv) {
-          throw "#desktop-properties not found, please add to html.";
-        }
-        const t = uiHelper.renderDesktopUi(printess, desktopPropertiesDiv, properties, state, currentGroupSnippets, templateTitle);
+        const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets);
         uiHelper.refreshUndoRedoState(printess);
         // print json for debug purposes
         const jsonPre = document.getElementById("propertiesJson");
@@ -320,7 +312,7 @@
       printess = await printessLoader.attachPrintess({
         resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
 
-        div: document.getElementById("printessin"),
+        div: document.getElementById("desktop-printess-container"),
 
 
         domain: "api.printess.com",
@@ -339,7 +331,6 @@
            }
         ],*/
 
-        hideControls: true,
         allowZoomAndPan: true,
         zoomDuration: 0.5, // in seconds 
         /* autoScale: {

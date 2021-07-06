@@ -3,148 +3,122 @@
 
 <head>
 
-  <title>Printess Getting Started</title>
+  <title>Printess iFrame Example</title>
 
   <meta charset="utf-8">
+
   <!--Please always add the correct viewport to ensure Printess works fine on mobile devices-->
   <meta name="viewport" content="width=device-width">
 
-  <link type="text/css" rel="stylesheet" href="index.css" />
+  <style>
+    /* Counter act the Safari viewport-height bug */
+    html {
+      height: -webkit-fill-available;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      height: -webkit-fill-available;
+    }
+
+    iframe {
+      width: 100vw;
+      height: 100%;
+      border: none;
+      display: block;
+      position: fixed;
+    }
+
+    #message {
+      position: fixed;
+      top: 0;
+      right: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background-color: lightgoldenrodyellow;
+      color: black;
+      padding: 20px;
+      font-family: sans-serif;
+    }
+  </style>
 
 </head>
 
-<body style="margin: 0; padding: 0;">
-
-  <div class="button-bar">
-    <select onchange="location = this.value;">
-      <option value="index.html">Printess Ui</option>
-      <option value="external.html">Custom Ui</option>
-    </select>
-    <select id="loadTemplate">
-      <option disabled selected>Load Template ...</option>
-      <option value="Children's book">Children's book</option>
-      <option selected value="Retro Sign">Retro Sign</option>
-      <option value="Business Card">Business Card</option>
-      <option value="Greeting Card">Greeting Card</option>
-      <option value="Chocolate Bar">Chocolate Bar</option>
-      <option value="Photo-Calendar 1">Photo-Calendar 1</option>
-      <option value="Calendar">Calendar</option>
-      <option value="Newborn Card">Newborn Card</option>
-      <option value="Phone-Case">Phone-Case</option>
-      <option value="Puzzle">Puzzle</option>
-      <option value="T-Shirt">T-shirt 2</option>
-      <option value="Coffee Mug">Coffee Mug</option>
-    </select>
-    <div id="message"></div>
-    <button id="btnCreateThumbnail">Create<br>Thumbnail</button>
-    <button id="btnSaveJson">Save State</button>
-    <button id="btnLoadJson">Load State</button>
-  </div>
-  <div class="token-warning">
-    <h4>This site is using a test token. </h4>
-    You will not be able to modify or print the template..
-    Please contact us to get your personal token.
-  </div>
-
-  <div id="printess"></div>
+<body">
 
 
-  <!-- Load polyfills -->
-  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+  <iframe id="printess" src="https://editor.printess.com/printess-editor/embed.html"></iframe>
 
-  <!-- Load components via WebComponents.waitFor -->
+  <div id="message"></div>
+
   <script>
+    const iframe = document.getElementById("printess");
+    iframe.onload = () => {
 
-    let printess;
+      /* **************************** */
+      /* listen to printess callbacks */
+      /* **************************** */
+      window.addEventListener("message", () => {
+        switch (event.data.cmd) {
 
-    window.WebComponents = window.WebComponents || {
-      waitFor(cb) {
-        addEventListener('WebComponentsReady', cb)
-      }
-    };
+          case "back":
+            alert("Back to catalog. save-token:" + event.data.token);
+            break;
 
-    // Add a Printess token, you can get it on printess.com
-    let token = "";
+          case "basket":
+            prompt("Proceed to checkout.\n\nsave-token:\n" + event.data.token + "\n\nThumbnailUrl:", event.data.thumbnailUrl);
+            break;
 
-    if (!token) {
-      token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJneTh6NDRFbUxpWjB2clVLclhsV3RpWlkxNUQyIiwianRpIjoibnl4NGJFZlZ5SVVvM1NkR2dYVnEtempzS3hlb0FYZUYiLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODg2ODUxMSwiZXhwIjoxOTM0MjI4NTExLCJpYXQiOjE2MTg4Njg1MTEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.CuI6zdCzBm2y3t2GBD4pYdyztFzSeSEfdGIDBeiZIYvzQckB9oEB1Z4hDkBCGZGBtTMRyuHCbkwZgO6uxD-ZyahifiqrIqfqSqtFEGwgZUF87TvV_KlrYWBzDNTaUIQjr-yUoxLkdnEMzh-3D5qV8UKWIDfqwnYd0KhJiB2K9CSg82_etnz5Lk-altMDAT8b1AnzxcjRAJ9_b6-CAJFXG6AAnfdl7c_PS3sD-RPOkJ75Ta2glfikIiGZzfh09bn5Ptk7rucRdxUsLCLR6m5nUFpZbV77d2eqRw8pT4Kl-5by5gvMr1wUBGbEx751CNXtcCO3qk4uNnptfZ3yCpK0Z2FOo2CYLZBzmDiYCrdFV5U-_SZuVOEl8vk0uR3tj_PQci_R7MlQOjpB4NjlKckQ2zGvBSKNeupuiC71UZ2AT5BFlbqMsuYu0necIztyKiWsBmbniVlLe-v7_paP1N4nS2haD2n4s4N_CenJqijtPggWsITfoLm2twCOe7yNB5IH7bcEFv1-MbANuaFmJVLOcTfc89Zi-mkidaHV-n_9qXypzyB-ih_27YBNluRGwcHgTEkbJecSssMfvHSt1MUuqX-8gbl7bhFGryqHA2gMoSZNDW0LkSYig2K3poOUumD67vtYdNSPLhOmDK4ck9wLAKLOvk6dtywg2qfV-58_VbI";
-      document.querySelector(".token-warning").style.display = "block";
-    }
-
-    // Specify the template you like to load
-    const templateName = "";
-
-    const formFieldChanged = (name, value) => {
-      document.getElementById("message").textContent = "Form Field: [" + name + "] changed to '" + value + "'";
-      setTimeout(() => document.getElementById("message").textContent = "", 2000);
-    }
-
-    WebComponents.waitFor(async () => {
-      printess = await import('https://editor.printess.com/printess-editor/printess-editor.js');
-
-      printess.attachPrintess({
-        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is
-        div: document.getElementById("printess"), // the element to attach to
-        domain: "api.printess.com",
-
-        token: token, // your printess shop-token
-        basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
-        shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
-
-        showBuyerSide: false, /* Jumps directly in the buyer view, its also token dependend if the designer-view is available */
-        templateName: "Retro Sign", /* Pass the name of a template in your account to load it on startup */
-        formFieldChangedCallback: formFieldChanged,
-        fullScreenOnMobile: false,
-        /* 
-          fullScreenOnMobile is true per default (recommended) and switches to full screen editor display on mobile devices 
-          If you set fullScreenOnMobile to "false" you have to counter 
-          the 100vh viewport bug in IOS devices since Printess is intended to show 
-          app-like without the need to scroll:
-          https://allthingssmitty.com/2020/05/11/css-fix-for-100vh-in-mobile-webkit/
-          https://medium.com/@susiekim9/how-to-compensate-for-the-ios-viewport-unit-bug-46e78d54af0d
-        */
+          case "formFieldChanged":
+            /* You can react to changes of price-relevant form fields here */
+            const msg = document.getElementById("message");
+            msg.style.display = "flex";
+            msg.textContent = "Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'";
+            setTimeout(() => document.getElementById("message").style.display = "none", 2000);
+        }
       });
-    });
 
-    document.getElementById("btnSaveJson").onclick = async () => {
-      printess.saveJson().then((token) => {
-        prompt("Template stored with token:", token);
-      });
-    };
+      /* *************************** */
+      /*    load Printess editor     */
+      /* *************************** */
+      iframe.contentWindow.postMessage({
+        cmd: "attach", properties: {
 
-    document.getElementById("btnLoadJson").onclick = () => {
-      const token = prompt("Load template with token:", "Paste token here");
-      printess.loadJson(token)
-        .then(() => {
-          alert("Template Loaded");
-        })
-        .catch((msg) => {
-          alert(msg)
-        });
+          /* Paste your Printess shop-token here */
+          token: "", // 
+          
+          /* Name of the template to load. You can also pass a save-token from "basket" or "back" callback here to load previously saved work. */
+          templateName: "Greeting Card", 
+
+          /* A unique ID to identify this session, can later be used to connect to a UserID once the user has logged in or createdan account */
+          basketId: "Some-Unique-Basket-Or-Session-Id",
+
+          /* Optional if available: the ID of the current shop-user to keep all uploaded resources together and display for reccuring users */ 
+          shopUserId: properties.shopUserId,
+          
+          /* Optional: you custom CSS or a Bootstrap Theme */
+          cssUrl: window.location.origin + "/bootstrap-themes/sketchy.css", 
+
+          /* Optional: List of one or more templates to merge on load */
+          /* mergeTemplates: [
+            {
+              "templateName": "Card-Title-2",
+              "spreadIndex": 0  // Example to merge a card title to the first spread on load 
+            },
+            {
+              "templateName": "Card-Back-2",
+              "spreadIndex": 2  // Example to merge a card back to the third spread on load 
+            }
+          ], */
+        }
+      }, "*");
     }
-
-    document.getElementById("loadTemplate").onchange = () => {
-      // alert(document.getElementById("loadTemplate").value);
-      printess.loadTemplate(document.getElementById("loadTemplate").value);
-    };
-
-    document.getElementById("btnCreateThumbnail").onclick = () => {
-      document.getElementById("message").textContent = "Creating Thumbnail, Please allow Popups ...";
-      setTimeout(() => document.getElementById("message").textContent = "", 2000);
-
-      const fileName = "thumb_" + new Date().getTime() + ".png";
-      const documentName = "!PREVIEW!"; // optional set a specific document-name here or leave it empty
-      const width = 400; // max is 400
-      const height = 400; // max is 400
-
-      printess.renderFirstPageImage(fileName, documentName, width, height).then(thumbnailUrl => {
-        window.open(thumbnailUrl);
-      });
-    };
-
 
   </script>
 
-</body>
+  </body>
 
 </html>

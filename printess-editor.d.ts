@@ -25,17 +25,21 @@ export interface printessAttachParameters {
    *  The template version to load. For production you should go with "published" which is the default. 
    * */
   templateVersion?: "draft" | "published",
+
+  /**
+   * Optional parameter to merge any number of templates during load
+   */
   mergeTemplates?: [{
+    /**
+     * Name of the template to load an merge into the currently loaded template 
+     */
     templateName: string;
+    /**
+     * At what spread index the incoming template will be merged
+     */
     spreadIndex?: number;
   }];
 
-  /**
-   * Activating ```hideControls```sets Printess to **headless  mode**
-   * No ui-elements outside the page will be drawn. You have to implement all property interactions and page navigations by yourself.
-   * You can use the **external.html** from our github as a good boilerplate and start from there.
-   */
-  hideControls?: boolean;
   /**
    * Activated by default. Deactivating ```allowZoomAndPan``` freezes the visible Area of the current document. 
    * The buyer will not be able to zoom or pan at all. It's handy for simple configurattions on desktop and conjunction with ```autoScale```
@@ -48,11 +52,6 @@ export interface printessAttachParameters {
    * turn animation of completely.
    */
   zoomDuration?: number;
-
-  /**
-   * Printess Editor fill the enitire viewport on mobile devices and treat positioning correctly on iOS (google "iOS viewport-bug")
-   */
-  fullScreenOnMobile?: boolean;
 
   /**
    * Auto scale is only usefull when ```hideControls```is active and ```allowZoomAndPan```is disabled.
@@ -72,10 +71,8 @@ export interface printessAttachParameters {
 
   /**
    * Printess has completely loaded the requested template and is now ready to operate.
-   * You can now paint your page navigation ui based on the passed **iExternalSpreadInfo** Array.
-   * You also can display the **title** of the template
    */
-  loadingDoneCallback?: (spreads: Array<iExternalSpreadInfo>, title: string) => void;
+  loadingDoneCallback?: () => void;
 
   /**
    * Force Showing Buyer-Side (Only valid if Service-Token is passed)
@@ -116,13 +113,6 @@ export interface printessAttachParameters {
     */
   minImageWidth?: number;
 
-  /**
-   * Optinally you can pass a list of buttons.
-   * Since yu have full control over the ui in custom mode, you of course can simply 
-   * hard-code the required buttons.
-   */
-  buttons?: Array<iExternalButton>;
-
 
   /**
    * Provide a callback function which is called when the buyer presses the [Add to Basket] button
@@ -133,7 +123,7 @@ export interface printessAttachParameters {
    * Provide a callback function which is called when the buyer presses the [Back] button
    * Design is automtically saved and function gets a [token] to load or print this design
    */
-   backButtonCallback?: (saveToken: string) => void,
+  backButtonCallback?: (saveToken: string) => void,
 }
 
 /**
@@ -150,56 +140,147 @@ export interface iPrintessApi {
    */
   loadTemplate(templateNameOrToken: string): Promise<void>;
 
+  /**
+   * Saves current artwork and return a saveToken which you can pass in attach or loadJson()
+   */
   saveJson(): Promise<string>;
-  loadJson(id: string): Promise<void>;
-  unexpireJson(id: string): Promise<void>;
+  /**
+   * Loads apreviously saved buyer artwork
+   * @param saveToken a token you  have received from basket or back callback or from saveJson() call
+   */
+  loadJson(saveToken: string): Promise<void>;
 
+  /**
+   * Expects a apreviously saved buyer artwork identified by a saveToken and ensures that this work will never be deleted from DB
+   * @param saveToken  
+   */
+  unexpireJson(saveToken: string): Promise<void>;
+
+  /**
+   * Returns the add to basket callback you have set in `attachPrintess()`
+   */
   getAddToBasketCallback(): null | ((saveToken: string, url: string) => void);
-  getBackButtonCallback(): null | ((saveToken: string) => void) ;
 
+  /**
+   * Returns the back button callback you have set in `attachPrintess()`
+   */
+  getBackButtonCallback(): null | ((saveToken: string) => void);
+
+  /**
+   * Clears current printess frames selection and shows document-wide properties like form fields.
+   */
   clearSelection(): Promise<void>;
+
+  /**
+   * Deletes all selected frames which are allowed to be removed by the buyer
+   */
   deleteSelectedFrames(): Promise<boolean>;
+
+  /**
+   * Select frame by propertyId. Fires a subsequent selection changed callback.
+   */
   selectFrames(propertyId: string): Promise<void>;
+
+  /**
+   * Selects all frames which are marked as **background**
+   */
   selectBackground(): Promise<void>;
+
+  /**
+   * Selects a spread and brings it into view. spread-index is zero based and even a facing page counts as a single spread. You can pass the focus area in the `part`parameter.
+   * @param spreadIndex zero-based 
+   * @param part  "entire" | "left-page" | "right-page"
+   */
   selectSpread(spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
+
+  /**
+   * Moves Printess focus to next page if available. Focus on single pages not spreads.
+   */
   nextPage(): Promise<void>;
+
+  /**
+   * Moves Printess focus to previous page if available. Focus on single pages not spreads.
+   */
   previousPage(): Promise<void>;
+
+  /**
+   * Retrieves information about the currently selected page. 
+   * Returns natural page-number (current) staring from 1 (not spread-index), page-count (max) and flags if the current page isFirst or isLast page of the current document
+   * First and last pages are identical to the spread in facing page documents. 
+   * Async version waits for Printess to be fully loaded.
+   */
   pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean }>
+
+
+  /**
+   * Retrieves information about the currently selected page. 
+   * Returns natural page-number (current) staring from 1 (not spread-index), page-count (max) and flags if the current page isFirst or isLast page of the current document
+   * First and last pages are identical to the spread in facing page documents. 
+   * Sync version returns dummy data if Printess is not fully loaded.
+   */
   pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean }
 
   /**
-   * Returns information about all spreads of the displayed document as an Array of
-   *  iExternalSpreadInfo {
-   *    spreadId: string;
-   *    index: number;
-   *    name: string;
-   *    width: number;
-   *    height: number;
-   *    thumbUrl: string | null;
-   *    pages: number;
-   *  }
+   * Returns information about all spreads of the displayed document as an Array of `iExternalSpreadInfo` 
    */
-  getAllSpreads(): Promise<Array<iExternalSpreadInfo>>;
+  getAllSpreads(): Array<iExternalSpreadInfo>;
 
   /**
-   * Returns total number of spreads
+   * Returns total number of spreads (not pages)
    */
   spreadCount(): number
 
   /**
-   * Sync method will not return thumbnails, only spread infos.
+   * Returns all available properties in teh current document
    */
-  getAllSpreadsSync(): Array<iExternalSpreadInfo>;
   getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
+
+  /**
+   * Returns a list of all available properties on a specific spread
+   * @param spreadId 
+   */
   getAllPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
+
+
+   /**
+   * Returns a list of all required properties (async)
+   * @param spreadId 
+   */
   getAllRequiredProperties(): Promise<Array<Array<iExternalProperty>>>;
+
+ /**
+   * Returns a list of all required properties (sync)
+   * @param spreadId 
+   */
   getAllRequiredPropertiesSync(): Array<Array<iExternalProperty>>;
+
+   /**
+   * Returns a list of all required properties on a specific spread (async)
+   * @param spreadId 
+   */
   getAllRequiredPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
+  /**
+   * Returns a list of all required properties on a specific spread (sync)
+   * @param spreadId 
+   */
   getAllRequiredPropertiesBySpreadIdSync(spreadId: string): Array<Array<iExternalProperty>>;
 
+  /**
+   * Mobile UI helper method to convert a list of properties to a list of mobile buttons to show to the buyer
+   * @param properties list of properties to get buttons from
+   * @param propertyIdFilter can be the *id* of a specific property to get only property related buttons (for images and multi-line text)
+   *                         "all" returns only top level buttons (no sub/meta property buttons)
+   *                         "root" returns only top-level properties but sets the `hasCollapsedMetaProperties` flag if applicable
+   */
   getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string): Array<iMobileUIButton>;
 
 
+  /**
+   * Mobile UI helper method to get model to draw a circle button including icons, gauge, etc.
+   * uiHelper.js conatins a method to create an SVG from this circle model
+   * @param m The mobile button to create a circle for
+   * @param isSelected If the button is selected
+   */
   getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
 
   /**
@@ -207,23 +288,90 @@ export interface iPrintessApi {
    */
   isTextButton(m: iMobileUIButton): boolean
 
-
+  /**
+   * Sets the value of any top-level property passed to the external UI
+   * @param propertyId 
+   * @param propertyValue Must be string and will be converted if neccessary
+   */
   setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void>;
 
+  /**
+   * Sets the vaue of a form field
+   * @param fieldNameOrId 
+   * @param newValue Must be string and will be converted if neccessary
+   */
   setFormFieldValue(fieldNameOrId: string, newValue: string): Promise<void>;
 
-  getNumberUi(ep: iExternalProperty, metaProperty?: iExternalMetaPropertyKind | null): {
+  /**
+   * Returns the number UI model for any numeric property
+   * `iExternalNumberUi` and value will be returned and has min, max and step info
+   * Important: Number models can have different value ranges than the values stored in printess for better user experience
+   * uiHelper.js conatins a method to create a slider control from this model
+   * @param property 
+   * @param metaProperty 
+   */
+  getNumberUi(property: iExternalProperty, metaProperty?: iExternalMetaPropertyKind | null): {
     meta: iExternalNumberUi;
     value: number;
   } | undefined;
-  setNumberUiProperty(ep: iExternalProperty, metaProperty: iExternalMetaPropertyKind | null, value: number): Promise<void>;
+  /**
+   * Sets a numric values based on a retrieved number model. 
+   * Number models can have different value ranges than the values stored in printess 
+   * If a number value has been retrieved by `getNumberUi` its mandatory to set it via `setNumberUiProperty`
+   * @param property 
+   * @param metaProperty 
+   * @param value 
+   */
+  setNumberUiProperty(property: iExternalProperty, metaProperty: iExternalMetaPropertyKind | null, value: number): Promise<void>;
 
+  /**
+   * Method to set a text style meta-property
+   * @param propertyId 
+   * @param name 
+   * @param value 
+   * @param textStyleMode 
+   */
   setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
+  
+  /**
+   * Method to set an image meta-property
+   * Set the image itself via `setProperty()`
+   * @param propertyId 
+   * @param name 
+   * @param value 
+   */
   setImageMetaProperty(propertyId: string, name: "scale" | "sepia" | "brightness" | "saturate" | "contrast" | "grayscale" | "vivid" | "hueRotate", value: string | number): Promise<void>;
+  
+  /**
+   * Resets all image filters (meta-values) of an image-property to default
+   * @param propertyId 
+   */
   resetImageFilters(propertyId: string): Promise<void>;
 
-  uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean,  propertyId?: string): Promise<iExternalImage[]>;
-  uploadImage(file: File, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean,  propertyId?: string): Promise<iExternalImage | null>;
+  /**
+   * Uploads one or many images to Printess and can auto assign the first image
+   * @param files 
+   * @param progressCallback 
+   * @param assignToFrameOrNewFrame Auto assigns the first image to the current slection or a specific frame
+   * @param propertyId Auto assigns the first image to a specific frame identified via property Id.
+   */
+  uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage[]>;
+  
+  /**
+   * Uploads a single image to Printess and can auto assign this image
+   * @param file 
+   * @param progressCallback 
+   * @param assignToFrameOrNewFrame 
+   * @param propertyId 
+   */
+  uploadImage(file: File, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage | null>;
+
+  /**
+   * Rotates an image by 90deg and saves the result as new image and assigns rotated image to frame automatically.
+   * @param propertyId 
+   * @param angle 
+   */
+  async rotateImage(propertyId: string, angle: "0" | "90" | "180" | "270"): Promise<iExternalImage | null>
 
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
@@ -251,6 +399,8 @@ export interface iPrintessApi {
   resizePrintess(immediate?: boolean, focusSelection?: boolean, width?: number, height?: number): void;
 
   load(scopeId: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
+
+  getTemplateTitle(): string;
 
   insertLayoutSnippet(snippetUrl: string): Promise<void>;
   insertGroupSnippet(snippetUrl: string): Promise<void>;
@@ -300,7 +450,7 @@ export interface iPrintessApi {
   previousStep(): Promise<void>;
 
   showOverlay(message: string): void;
-  hideOverlay(): void ;
+  hideOverlay(): void;
 }
 
 export interface iBuyerStep {
@@ -335,11 +485,25 @@ export interface iExternalFormFieldInfo {
 }
 export interface iExternalSpreadInfo {
   spreadId: string;
+  /**
+   * Zero based spread index (not page nr)
+   */
   index: number;
+   /**
+   * Name of spread if set by the designer
+   */
   name: string;
+   /**
+   * Spread width in pixel
+   */
   width: number;
+   /**
+   * Spread height in pixel
+   */
   height: number;
-  thumbUrl: string | null;
+   /**
+   * Number of pages in this spread. Will be 1 or 2.
+   */
   pages: number;
 }
 export interface iExternalSpread {
@@ -379,9 +543,9 @@ export interface iExternalProperty {
   value: string | number;
   kind: iExternalPropertyKind;
   label: string;
+  validation?: iExternalValidation;
   textStyle?: iExternalTextStyle;
   imageMeta?: iExternalimageMeta;
-  textMeta?: iExternalTextMeta;
   listMeta?: iExternalListMeta;
 }
 export interface iExternalTextStyle {
@@ -392,7 +556,7 @@ export interface iExternalTextStyle {
   vAlign: "top" | "center" | "bottom";
   allows: Array<"content" | "mandatory" | "color" | "stroke" | "font" | "size" | "lineHeight" | "tracking" | "baselineShift" | "horizontalAlignment" | "verticalAlignment" | "padding" | "styles" | "bullet" | "indent" | "paragraphSpacing" | "baselineGrid">;
 }
-export interface iExternalTextMeta {
+export interface iExternalValidation {
   maxChars: number;
   defaultValue: string;
   isMandatory: boolean;
@@ -440,8 +604,6 @@ export interface iExternalimageMeta {
   hueRotate: number;
   thumbUrl: string;
   thumbCssUrl: string;
-  defaultValue: string;
-  isMandatory: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate">;
 }
 export interface iExternalImageScaleHints {
@@ -451,11 +613,7 @@ export interface iExternalImageScaleHints {
 }
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
-export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>, spread: {
-  id: string;
-  name: string;
-  index: number;
-}, spreadCount: number) => void;
+export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<iExternalProperty>) => HTMLDivElement;
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
 export interface iExternalImage {

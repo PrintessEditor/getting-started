@@ -7,19 +7,12 @@ declare const bootstrap: any;
 //const textStyleMode: textStyleModeEnum = "default"; //  "default" | "all-paragraphs" | "all-paragraphs-if-no-selection"
 
 (<any>window).uiHelper = {
-  getPropertyControl: getPropertyControl,
-  renderGroupSnippets: renderGroupSnippets,
   renderLayoutSnippets: renderLayoutSnippets,
   getOverlay: getOverlay,
-  getDoneButton: getDoneButton,
-  getTitle: getTitle,
-  getStepsUi: getStepsUi,
   renderMobileUi: renderMobileUi,
+  renderMobileNavBar: renderMobileNavBar,
   renderDesktopUi: renderDesktopUi,
   refreshUndoRedoState: refreshUndoRedoState,
-  getMobileButtons: getMobileButtons,
-  renderMobilePagebar: renderMobilePagebar,
-  renderMobileNavBar: renderMobileNavBar,
   viewPortScroll: viewPortScroll
 }
 console.log("Printess ui-helper loaded");
@@ -41,7 +34,7 @@ function addToBasket(printess: iPrintessApi) {
 
 function viewPortScroll(printess: iPrintessApi) {
   console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
-  const printessDiv = document.getElementById("printessin");
+  const printessDiv = document.getElementById("desktop-printess-container");
   if (printessDiv) {
     if (window.visualViewport.offsetTop > 0) {
       // system has auto scrolled content, so we adjust printess-editor to fit
@@ -52,7 +45,21 @@ function viewPortScroll(printess: iPrintessApi) {
   }
 }
 
-function renderDesktopUi(printess: iPrintessApi, container: HTMLDivElement, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>, templateTitle: string): Array<string> {
+function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>): Array<string> {
+
+  const printessDiv = document.getElementById("desktop-printess-container");
+  const container = document.getElementById("desktop-properties");
+  if (!container || !printessDiv) {
+    throw "#desktop-properties or #desktop-printess-container not found, please add to html.";
+  }
+
+  printessDiv.style.position = "relative"; // reset static from mobile, be part of parent layout again
+  printessDiv.style.top = "";
+  printessDiv.style.left = "";
+  printessDiv.style.bottom = "";
+  printessDiv.style.right = "";
+
+  firstRenderMobileCall = true; // reset flag to ensure redraw when mobile is entered again. 
 
   container.innerHTML = "";
   const t = [];
@@ -60,17 +67,16 @@ function renderDesktopUi(printess: iPrintessApi, container: HTMLDivElement, prop
   const nav = getMobileNavbarDiv();
   if (nav) nav.parentElement?.removeChild(nav);
 
-
-  const spreads = printess.getAllSpreadsSync();
+  const spreads = printess.getAllSpreads();
   const info = printess.pageInfoSync();
   renderPageNavigation(printess, spreads, info);
 
   if (printess.hasSteps()) {
     // if document has steps, display current step:
-    container.appendChild(getStepsUi(printess));
+    container.appendChild(getDesktopStepsUi(printess));
   } else {
     // display template name
-    container.appendChild(getTitle(printess, templateTitle))
+    container.appendChild(getDesktopTitle(printess))
   }
 
   if (state === "document") {
@@ -78,6 +84,7 @@ function renderDesktopUi(printess: iPrintessApi, container: HTMLDivElement, prop
     for (const p of properties) {
       t.push(JSON.stringify(p, undefined, 2));
       container.appendChild(getPropertyControl(printess, p));
+      validate(p);
     }
     container.appendChild(renderGroupSnippets(printess, groupSnippets, false))
   } else {
@@ -174,7 +181,8 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
       }
       return getTabPanel([
         { id: "upload", title: "Upload Image", content: getImageUploadControl(printess, p) },
-        { title: "Filter", id: "filter", content: getImageFilterControl(printess, p) }
+        { title: "Filter", id: "filter", content: getImageFilterControl(printess, p) },
+        { title: "Rotate", id: "rotate", content: getImageRotateControl(printess, p) }
       ]);
 
 
@@ -333,7 +341,7 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
     }
   }
   inp.onfocus = () => {
-    if (inp.value && p.textMeta && inp.value === p.textMeta.defaultValue) {
+    if (inp.value && p.validation && inp.value === p.validation.defaultValue) {
       inp.value = "";
     }
   }
@@ -352,7 +360,7 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
 
 }
 
-function getTitle(printess: iPrintessApi, title: string): HTMLElement {
+function getDesktopTitle(printess: iPrintessApi): HTMLElement {
   const container = document.createElement("div");
 
   const hr = document.createElement("hr");
@@ -362,7 +370,7 @@ function getTitle(printess: iPrintessApi, title: string): HTMLElement {
   inner.className = "desktop-title-bar mb-2"
 
   const h2 = document.createElement("h2");
-  h2.innerText = title;
+  h2.innerText = printess.getTemplateTitle();
   inner.appendChild(h2);
 
   const basketBtn = document.createElement("button");
@@ -377,7 +385,7 @@ function getTitle(printess: iPrintessApi, title: string): HTMLElement {
   return container;
 }
 
-function getStepsUi(printess: iPrintessApi): HTMLElement {
+function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
   const container = document.createElement("div");
 
   const hr = document.createElement("hr");
@@ -391,8 +399,9 @@ function getStepsUi(printess: iPrintessApi): HTMLElement {
   if (printess.hasPreviousStep()) {
     const prevStep = document.createElement("button");
     prevStep.className = "btn";
-    const svg = printess.getIcon("carret-left-solid");
-    svg.style.width = "8px";
+    prevStep.style.paddingLeft = "0";
+    const svg = printess.getIcon("arrow-left");
+    svg.style.width = "20px";
     prevStep.appendChild(svg);
     prevStep.onclick = () => printess.previousStep();
     flex.appendChild(prevStep);
@@ -492,35 +501,31 @@ function addLabel(input: HTMLElement, p: iExternalProperty, label?: string): HTM
 }
 
 function validate(p: iExternalProperty): void {
-  const container = document.getElementById("cnt_" + p.id);
-  const input = document.getElementById("inp_" + p.id);
-  const validation = document.getElementById("val_" + p.id);
+  if (p.validation) {
+    const container = document.getElementById("cnt_" + p.id);
+    const input = document.getElementById("inp_" + p.id);
+    const validation = document.getElementById("val_" + p.id);
 
-  if (container && input && validation) {
-    if (p.textMeta && p.textMeta.maxChars) {
-      if (p.value.toString().length > p.textMeta.maxChars) {
-        container.classList.remove("was-validated");
-        input.classList.add("is-invalid");
-        validation.innerText = "Maximum number of chars exceeded (" + p.textMeta.maxChars + ")";
-      } else if (p.textMeta.isMandatory && (!p.value || p.value === p.textMeta.defaultValue)) {
-        container.classList.remove("was-validated");
-        input.classList.add("is-invalid");
-        validation.innerText = "Please enter some text here";
-      } else {
-        container.classList.add("was-validated");
-        input.classList.remove("is-invalid");
-      }
-    } else if ( p.imageMeta && p.imageMeta.isMandatory) {
-      if (p.imageMeta.isMandatory && (!p.value || p.value === p.imageMeta.defaultValue)) {
-        container.classList.remove("was-validated");
-        input.classList.add("is-invalid");
-        validation.innerText = "Please upload or assign your own image here";
+    if (container && input && validation) {
+      if (p.validation.maxChars) {
+        if (p.value.toString().length > p.validation.maxChars) {
+          container.classList.remove("was-validated");
+          input.classList.add("is-invalid");
+          validation.innerText = "Maximum number of chars exceeded (" + p.validation.maxChars + ")";
+
+        } else if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
+          container.classList.remove("was-validated");
+          input.classList.add("is-invalid");
+          validation.innerText = "Please enter some text here";
+
+        } else {
+          container.classList.add("was-validated");
+          input.classList.remove("is-invalid");
+        }
       }
     }
   }
-
 }
-
 
 function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
   const container = document.createElement("div");
@@ -802,6 +807,44 @@ function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty): HT
   return container;
 }
 
+function getImageRotateControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
+
+  const container = document.createElement("div");
+
+  if (p.imageMeta) {
+
+    const imagePanel = document.createElement("div");
+    imagePanel.className = "image-rotate-panel";
+
+
+
+    for (let i = 1; i < 4; i++) {
+
+      const thumbDiv = document.createElement("div");
+      thumbDiv.className = "snippet-thumb";
+      const thumb = document.createElement("img");
+      thumb.src = p.imageMeta.thumbUrl;
+      thumbDiv.appendChild(thumb);
+
+      thumbDiv.onclick = () => {
+        const rotAngle = (i * 90).toString();
+        printess.rotateImage(p.id, <"90" | "180" | "270">rotAngle)
+        // alert("bastian hier rotieren");
+      }
+      imagePanel.appendChild(thumbDiv);
+
+      thumbDiv.style.transformOrigin = "50% 50%";
+      thumbDiv.style.transform = "rotate(" + i * 90 + "deg)"
+
+      imagePanel.appendChild(thumbDiv);
+    }
+
+    container.appendChild(imagePanel);
+  }
+
+  return container;
+}
+
 function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, container?: HTMLDivElement, forMobile: boolean = false): HTMLElement {
 
   // for redraw after upoad, take passed container instead
@@ -842,7 +885,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
       printess.uploadImages(inp.files, (progress) => {
         progressBar.style.width = (progress * 100) + "%"
       }
-        , true,p.id); // true auto assigns image and triggers selection change wich redraws this control.
+        , true, p.id); // true auto assigns image and triggers selection change wich redraws this control.
 
       // optional: promise resolution returns list of added images 
       // if auto assign is "false" you must reset progress-bar width and control visibilty manually
@@ -888,8 +931,8 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
     if (im.id === p.value) thumb.style.border = "2px solid red";
     thumb.onclick = () => {
       printess.setProperty(p.id, im.id);
-      p.value =im.id,
-      validate(p);
+      p.value = im.id,
+        validate(p);
     }
     imageList.appendChild(thumb);
   }
@@ -1276,32 +1319,6 @@ function getRadioButton(printess: iPrintessApi, p: iExternalProperty, id: string
 }
 
 
-function getFontSizeBox(printess: iPrintessApi, p: iExternalProperty) {
-  // alternativey show selectlist or slider: return getNumberSlider(p, "text-style-size");
-
-  const cp = document.createElement("input");
-  cp.type = "text";
-  cp.className = "form-control";
-  cp.value = p.textStyle?.size ?? "12pt";
-  cp.setAttribute("list", "font-size-data-list");
-  cp.onchange = () => {
-    printess.setTextStyleProperty(p.id, "size", cp.value)
-  }
-  if (!document.getElementById("font-size-data-list")) {
-    const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt"];
-    const dl = document.createElement("datalist");
-    dl.id = "font-size-data-list";
-    for (const s of sizes) {
-      const option = document.createElement("option");
-      option.value = s;
-      dl.appendChild(option);
-    }
-    document.body.appendChild(dl);
-  }
-
-  return cp;
-
-}
 
 
 
@@ -1324,9 +1341,15 @@ function getPaginationItem(printess: iPrintessApi, content: number | "previous" 
   if (typeof content === "number" && spread) {
     a.innerText = spread.name ? spread.name : content.toString();
   } else if (content === "previous") {
-    a.innerHTML = "&laquo";
+    const svg = printess.getIcon("carret-left-solid");
+    svg.style.height = "1.3em";
+    a.appendChild(svg);
+    // a.innerHTML = "&laquo";
   } else if (content === "next") {
-    a.innerHTML = "&raquo";
+    const svg = printess.getIcon("carret-right-solid");
+    svg.style.height = "1.3em";
+    a.appendChild(svg);
+    // a.innerHTML = "&raquo";
   } else if (content === "ellipsis") {
     a.innerHTML = "&#8230";
     a.className = "page-ellipsis disabled";
@@ -1379,7 +1402,7 @@ function refreshUndoRedoState(printess: iPrintessApi) {
 function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSpreadInfo>, info?: { current: number, max: number, isFirst: boolean, isLast: boolean }, container?: HTMLDivElement, large: boolean = false, forMobile: boolean = false): void {
 
   // draw pages ui
-  const pages = container || document.querySelector(".desktop-pagebar");
+  const pages = container || document.querySelector("#desktop-pagebar");
   if (pages) {
     let pageNo = 0;
     pages.innerHTML = "";
@@ -1390,18 +1413,18 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
 
       const btnBack = document.createElement("button");
       btnBack.className = "btn btn-sm";
-      if (printess.hasPreviousStep()) {
+      /*if (printess.hasPreviousStep()) {
         const icoBack = printess.getIcon("arrow-left");
         icoBack.classList.add("icon");
         btnBack.appendChild(icoBack);
-      } else {
-        btnBack.classList.add("btn-outline-secondary")
-        btnBack.innerText = "Back";
-      }
+      } else {*/
+      btnBack.classList.add("btn-outline-secondary")
+      btnBack.innerText = "Back";
+      //}
 
       btnBack.onclick = () => {
         const callback = printess.getBackButtonCallback();
-        if (printess.hasPreviousStep()) {
+        if (forMobile && printess.hasPreviousStep()) {
           printess.previousStep();
           renderMobileNavBar(printess);
         } else if (callback) {
@@ -1648,6 +1671,17 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
 
   const mobileUi = getMobileUiDiv();
   mobileUi.innerHTML = "";
+
+  // render mobile page navigation if document has properties 
+  if (state === "document") {
+    if (properties.length === 0 || printess.spreadCount() < 2) {
+      // sets css varibale --mobile-pagebar-height: 0px;
+      document.body.classList.add("inline-mobile-page-bar");
+    } else {
+      document.body.classList.remove("inline-mobile-page-bar");
+    }
+  }
+
   if (state !== "add") {
     // render properties UI
     const buttonsOrPages = getMobileButtons(printess, properties);
@@ -1684,7 +1718,7 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
     // iphone does not get is so quickly:
     firstRenderMobileCall = false;
     window.setTimeout(() => {
-      resizeMobileUi(printess);
+      resizeMobileUi(printess, false, true);
     }, 500);
   } else {
     // die optimierung führt dazu, das ganz oft die toolbar nicht eingeblendet wird, 
@@ -1750,7 +1784,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
 
 
 
-  //  const p = document.getElementById("printessin");
+  //  const p = document.getElementById("desktop-printess-container");
   // console.warn("Resize Printess Height: " + p?.offsetHeight)
   // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
 
@@ -1887,39 +1921,7 @@ function getMobilePageBarDiv(): HTMLDivElement {
   return pagebar;
 }
 
-function renderMobilePagebar(printess: iPrintessApi) {
-
-  const toolbar = getMobilePageBarDiv();
-
-  const info = printess.pageInfoSync();
-
-  const page = document.createElement("div");
-  page.className = "mobile-pagebar-page-info";
-
-  if (!info.isFirst) {
-    const previousPage = printess.getIcon("arrow-left");
-    previousPage.classList.add("mobile-pagebar-page-previous");
-    previousPage.onclick = () => {
-      printess.previousPage();
-    }
-    toolbar.appendChild(previousPage);
-  }
-
-  if (!info.isLast) {
-    const nextPage = printess.getIcon("arrow-right");
-    nextPage.classList.add("mobile-pagebar-page-next");
-    nextPage.onclick = () => {
-      printess.nextPage();
-    }
-    toolbar.appendChild(nextPage);
-  }
-
-  page.innerHTML = "Page<br>" + info.current + " of " + info.max;
-
-  toolbar.appendChild(page);
-
-}
-
+/*
 function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExternalProperty | null {
   const selectedButton = document.querySelector(".mobile-property-button.selected");
   if (selectedButton) {
@@ -1931,13 +1933,14 @@ function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExter
   }
   return null;
 }
+*/
 
 
 let lastPrintessHeight = 0;
 let lastPrintessTop = "";
 let lastPrintessBottom = 0;
 
-function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false) {
+function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false, alwaysRedraw: boolean = false) {
   const mobileUi = getMobileUiDiv();
   // const mobilePagebarDiv = getMobilePageBarDiv();
   const controlHost: HTMLElement | null = document.getElementById("mobile-control-host");
@@ -1957,12 +1960,15 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
      }*/
 
     mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px"; // +2 = border-top
-    const printessDiv = document.getElementById("printessin");
+    const printessDiv = document.getElementById("desktop-printess-container");
     const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
     let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
     if (printessDiv) {
       let printessTop: string;
+
+      // make sure printessDiv position is absolute relative
+
 
       if (viewPortTopOffset > 0) {
         // counter-act view-port shift if iOS keyboard is visible
@@ -1980,23 +1986,37 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
 
       } else {
         // reduce height by visible toolbar and pagebar 
+        let top = 0;
         printessTop = "";
         printessHeight -= mobilePageBarHeight;
         printessHeight -= mobileNavBarHeight;
         const toolBar: HTMLDivElement | null = document.querySelector(".mobile-navbar");
-        if (toolBar) toolBar.style.visibility = "visible";
+        if (toolBar) {
+          toolBar.style.visibility = "visible";
+          top += mobileNavBarHeight;
+        }
         const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
-        if (pageBar) pageBar.style.visibility = "visible";
+        if (pageBar) {
+          pageBar.style.visibility = "visible";
+          top += mobilePageBarHeight;
+        }
+        printessTop = top + "px";
       }
 
       const printessBottom = mobileButtonBarHeight + controlHostHeight;
 
-      if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
+      if (alwaysRedraw || printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
         lastPrintessBottom = printessBottom;
         lastPrintessTop = printessTop;
         lastPrintessHeight = printessHeight;
+
+        printessDiv.style.position = "fixed"; // to counter act relative positions above and width/height settings
+        printessDiv.style.left = "0";
+        printessDiv.style.right = "0";
+
         printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
         printessDiv.style.top = printessTop;
+
         printess.resizePrintess(true, focusSelection, undefined, printessHeight);
         // console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
       }
@@ -2022,13 +2042,10 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   const hasButtons = buttons.length > 0;
 
   if (printess.spreadCount() > 1) {
-    const spreads = printess.getAllSpreadsSync();
+    const spreads = printess.getAllSpreads();
     const info = printess.pageInfoSync();
     if (hasButtons) {
       renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
-
-      // render page navigation on top under nav-bar 
-      //    renderMobilePagebar(printess);
     } else {
       // if we have no properties on document level, we can render an even larger page navigation in the button bar 
       document.body.classList.remove("no-mobile-button-bar");
@@ -2338,7 +2355,7 @@ function getOverlay(printess: iPrintessApi, properties: Array<iExternalProperty>
   const isImage = properties.filter(p => p.kind === "image").length > 0;
   const isColor = properties.filter(p => p.kind === "color").length > 0;
   const hdiv = document.createElement("div");
-  
+
   hdiv.style.opacity = "1";
 
   if (isSingleLineText) {
