@@ -116,7 +116,7 @@ Custom integration comes with a **uiHelper.js** file which does all of the ui-wo
 
 It uses teh Printess-JS-Api to communicate with tzhe editor.
 
-**uiHelper.js** is also available as a typescript version and we provide you with a **d.ts** file for the Printess-JS API.
+**uiHelper.js** is also available as a typescript version and we provide you with a **printess-editor.d.ts** file for the Printess-JS API.
 
 
 
