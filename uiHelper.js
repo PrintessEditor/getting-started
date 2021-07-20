@@ -13,7 +13,7 @@ function addToBasket(printess) {
     if (callback) {
         printess.showOverlay("Saving Your Design ...");
         printess.saveJson().then((token) => {
-            printess.renderFirstPageImage("thumbnail").then((url) => {
+            printess.renderFirstPageImage("thumbnail.png").then((url) => {
                 callback(token, url);
                 printess.hideOverlay();
             });
@@ -660,9 +660,18 @@ function getImageRotateControl(printess, p) {
             thumbDiv.appendChild(thumb);
             thumbDiv.onclick = () => {
                 const rotAngle = (i * 90).toString();
-                printess.rotateImage(p.id, rotAngle);
+                printess.rotateImage(p.id, rotAngle).then(() => {
+                    imagePanel.innerHTML = "";
+                });
+                for (const c of [...imagePanel.childNodes]) {
+                    if (c !== thumbDiv) {
+                        c.style.opacity = "0.4";
+                    }
+                    else {
+                        c.style.border = "2px solid red";
+                    }
+                }
             };
-            imagePanel.appendChild(thumbDiv);
             thumbDiv.style.transformOrigin = "50% 50%";
             thumbDiv.style.transform = "rotate(" + i * 90 + "deg)";
             imagePanel.appendChild(thumbDiv);
@@ -800,7 +809,15 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
     range.step = ui.meta.step.toString();
     range.value = ui.value.toString();
     range.oninput = () => {
-        printess.setNumberUiProperty(p, metaProperty, parseFloat(range.value));
+        const newValue = parseFloat(range.value);
+        printess.setNumberUiProperty(p, metaProperty, newValue);
+        if (metaProperty && p.imageMeta) {
+            const imProp = metaProperty.replace("image-", "");
+            p.imageMeta[imProp] = newValue;
+        }
+        else if (!metaProperty) {
+            p.value = newValue;
+        }
         const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
         if (mobileButtonDiv) {
             drawButtonContent(printess, mobileButtonDiv, [p]);
@@ -1142,9 +1159,14 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
                     renderMobileNavBar(printess);
                 }
                 else if (callback) {
-                    printess.saveJson().then((token) => {
-                        callback(token);
-                    });
+                    if (printess.isInDesignerMode()) {
+                        callback("");
+                    }
+                    else {
+                        printess.saveJson().then((token) => {
+                            callback(token);
+                        });
+                    }
                 }
                 else {
                     alert("Please add your callback in attachPrintess. [backButtonCallback]");
@@ -1451,9 +1473,14 @@ function renderMobileNavBar(printess) {
                         renderMobileNavBar(printess);
                     }
                     else if (callback) {
-                        printess.saveJson().then((token) => {
-                            callback(token);
-                        });
+                        if (printess.isInDesignerMode()) {
+                            callback("");
+                        }
+                        else {
+                            printess.saveJson().then((token) => {
+                                callback(token);
+                            });
+                        }
                     }
                     else {
                         const offcanvas = document.getElementById("templateOffcanvas");
@@ -1468,9 +1495,9 @@ function renderMobileNavBar(printess) {
                 if (printess.hasNextStep()) {
                     btn.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
                     const curStep = printess.getStep();
-                    const maxStep = printess.maxStep();
-                    if (curStep && maxStep) {
-                        btn.title = "Step " + curStep.index + " of " + maxStep.index;
+                    const lastStep = printess.lastStep();
+                    if (curStep && lastStep) {
+                        btn.title = "Step " + curStep.index + " of " + lastStep.index;
                     }
                     btn.onclick = () => {
                         printess.nextStep();
@@ -1901,4 +1928,5 @@ function getOverlayIcon(printess, name, color) {
     tdiv.appendChild(icon);
     return tdiv;
 }
+
 //# sourceMappingURL=uiHelper.js.map

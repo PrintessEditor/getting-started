@@ -250,6 +250,8 @@
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
 
+      //console.warn("Spread Change!");
+
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets;
 
@@ -262,6 +264,8 @@
 
     const selectionChangeCallback = (properties, state) => {
       // state is "document" or "frames"
+
+      //console.warn("Selection Change!");
 
       if (printess.isMobile()) {
         // **** add mobile-ui *****

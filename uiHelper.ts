@@ -3,7 +3,6 @@
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState } from "./printess-editor";
 
 declare const bootstrap: any;
-
 //const textStyleMode: textStyleModeEnum = "default"; //  "default" | "all-paragraphs" | "all-paragraphs-if-no-selection"
 
 (<any>window).uiHelper = {
@@ -15,6 +14,7 @@ declare const bootstrap: any;
   refreshUndoRedoState: refreshUndoRedoState,
   viewPortScroll: viewPortScroll
 }
+
 console.log("Printess ui-helper loaded");
 
 function addToBasket(printess: iPrintessApi) {
@@ -22,7 +22,7 @@ function addToBasket(printess: iPrintessApi) {
   if (callback) {
     printess.showOverlay("Saving Your Design ...")
     printess.saveJson().then((token) => {
-      printess.renderFirstPageImage("thumbnail").then((url: string) => {
+      printess.renderFirstPageImage("thumbnail.png").then((url: string) => {
         callback(token, url);
         printess.hideOverlay();
       })
@@ -828,10 +828,19 @@ function getImageRotateControl(printess: iPrintessApi, p: iExternalProperty): HT
 
       thumbDiv.onclick = () => {
         const rotAngle = (i * 90).toString();
-        printess.rotateImage(p.id, <"90" | "180" | "270">rotAngle)
-        // alert("bastian hier rotieren");
+        printess.rotateImage(p.id, <"90" | "180" | "270">rotAngle).then(() => {
+
+          imagePanel.innerHTML = "";
+        })
+
+        for (const c of [...imagePanel.childNodes]) {
+          if (c !== thumbDiv) {
+            (<HTMLDivElement>c).style.opacity = "0.4";
+          } else {
+            (<HTMLDivElement>c).style.border = "2px solid red";
+          }
+        }
       }
-      imagePanel.appendChild(thumbDiv);
 
       thumbDiv.style.transformOrigin = "50% 50%";
       thumbDiv.style.transform = "rotate(" + i * 90 + "deg)"
@@ -1017,8 +1026,16 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
   range.step = ui.meta.step.toString();
   range.value = ui.value.toString();
   range.oninput = () => {
-    // setNumberUiProperty will automatically update model!
-    printess.setNumberUiProperty(p, metaProperty, parseFloat(range.value));
+
+    const newValue = parseFloat(range.value);
+    printess.setNumberUiProperty(p, metaProperty, newValue);
+
+    if (metaProperty && p.imageMeta) {
+      const imProp = <"hueRotate" | "brightness" | "contrast" | "vivid" | "sepia">metaProperty.replace("image-", "");
+      p.imageMeta[imProp] = newValue; // update our model
+    } else if (!metaProperty) {
+      p.value = newValue; // update our model
+    }
     // update mobile circle if present
     const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
     if (mobileButtonDiv) {
@@ -1428,9 +1445,14 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
           printess.previousStep();
           renderMobileNavBar(printess);
         } else if (callback) {
-          printess.saveJson().then((token) => {
-            callback(token);
-          })
+          if (printess.isInDesignerMode()) {
+            // do not save in designer mode.
+            callback("");
+          } else {
+            printess.saveJson().then((token) => {
+              callback(token);
+            });
+          }
         } else {
           alert("Please add your callback in attachPrintess. [backButtonCallback]");
         }
@@ -1817,9 +1839,14 @@ function renderMobileNavBar(printess: iPrintessApi) {
             printess.previousStep();
             renderMobileNavBar(printess);
           } else if (callback) {
-            printess.saveJson().then((token) => {
-              callback(token);
-            })
+            if (printess.isInDesignerMode()) {
+              // do not save in designer mode.
+              callback("");
+            } else {
+              printess.saveJson().then((token) => {
+                callback(token);
+              })
+            }
           } else {
             // show sample load ui
 
@@ -1839,9 +1866,9 @@ function renderMobileNavBar(printess: iPrintessApi) {
         if (printess.hasNextStep()) {
           btn.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
           const curStep = printess.getStep();
-          const maxStep = printess.maxStep();
-          if (curStep && maxStep) {
-            btn.title = "Step " + curStep.index + " of " + maxStep.index;
+          const lastStep = printess.lastStep();
+          if (curStep && lastStep) {
+            btn.title = "Step " + curStep.index + " of " + lastStep.index;
           }
           btn.onclick = () => {
             printess.nextStep();
@@ -2396,4 +2423,3 @@ function getOverlayIcon(printess: iPrintessApi, name: iconName, color: string): 
 
   return tdiv;
 }
-

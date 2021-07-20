@@ -102,7 +102,7 @@ You now know everything to get started with the Printess Editor. Have fun and pl
 ## &nbsp;
 
 
-# Custom integration of the Printess Editor
+# Custom Frontend Integration
 
 If at any point you feel that the iframe integration lacks some kind of flexibility you can allways switch to a **Custom Integration**.
 
@@ -119,7 +119,7 @@ It uses teh Printess-JS-Api to communicate with tzhe editor.
 
 
 
-Printess can still be easily be loaded from our CDN.
+Printess can easily be loaded from our CDN.
 
 Be aware that Printess itself is loaded after the webcomponents polyfills. So first we need to load **webcomponentjs** from the Printess CDN.
 
@@ -157,9 +157,7 @@ Now we wait for **WebComponentsReady** before loading Printess itself.
 </script>
 ```
 
-The `attachPrintess` call initializes Printess, passes the authentication token and the name of the template to be loaded.
-
-[Attach Printess Full Object Reference](https://printess.com/js-api/interfaces/printessattachparameters.html)
+The `attachPrintess` call initializes Printess, passes the authentication token and the name of the template to be loaded. See all parameters here: [JS-API](https://printess.com/js-api)
 
 Please be aware that you'll need to tell Printess the path to its resource files (Web-Assembly and Default Fonts) in a separate property `resourcePath`. Please do not change this value.
 
@@ -170,8 +168,8 @@ Printess is intended to have as much space as possible, so it is highly recommen
 
 `token` should be set to a **Shop-Token** which points to yout Printess Account. You can get this token once you are logged in in the Printess Editor -> Account Menu -> API-Token. You'll see 3 different tokens in the dialog. Please always use the **Shop-Token**.
 
-Finally the variable named `printess` contains a **js-api** reference to the Printess editor.
-[Printess JS-API Full Reference](https://printess.com/js-api/interfaces/iprintessapi.html)
+Finally the variable named `printess` contains a [JS-API](https://printess.com/js-api) reference to the Printess editor.
+
 
 If you use typescript you'll find a `printess-editor.d.ts` file in the repro which contains all types for the printess object.
 

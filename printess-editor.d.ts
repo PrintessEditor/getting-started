@@ -35,6 +35,10 @@ export interface printessAttachParameters {
      */
     templateName: string;
     /**
+     * Name of the document you want to merge. If none is specified the primary document of the template will be taken.
+     */
+    documentName?: string;
+    /**
      * At what spread index the incoming template will be merged
      */
     spreadIndex?: number;
@@ -81,6 +85,11 @@ export interface printessAttachParameters {
   showBuyerSide?: boolean;
 
   /**
+   * The initial form fields you want to fill.
+   */
+  formFields: Array<{ name: string, value: string }>;
+
+  /**
    * For every Form Field which is set to **Impact-Price**
    * Printess fires a callback when the value has changed
    */
@@ -116,9 +125,9 @@ export interface printessAttachParameters {
 
   /**
    * Provide a callback function which is called when the buyer presses the [Add to Basket] button
-   * Design is automtically saved and function gets a [token] to load or print this design
+   * Design is automtically saved and function gets a [token] to load or print this design.
    */
-  addToBasketCallback?: (saveToken: string) => void,
+  addToBasketCallback?: (saveToken: string, thumbnailUrl: string) => void,
   /**
    * Provide a callback function which is called when the buyer presses the [Back] button
    * Design is automtically saved and function gets a [token] to load or print this design
@@ -371,8 +380,7 @@ export interface iPrintessApi {
    * @param propertyId 
    * @param angle 
    */
-  async rotateImage(propertyId: string, angle: "0" | "90" | "180" | "270"): Promise<iExternalImage | null>
-
+  rotateImage(propertyId: string, angle: "0" | "90" | "180" | "270"): Promise<iExternalImage | null>
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
 
@@ -387,7 +395,16 @@ export interface iPrintessApi {
     color: string;
   }>;
 
+  /**
+   * Retrieves a SVG icon from printess
+   * @param icon 
+   */
   getIcon(icon: iconName): SVGElement
+
+  /**
+   * Returns true if printess has full Designer edit rights and is not running in Shop-Mode
+   */
+  isInDesignerMode() : boolean;
 
   /**
    * Trigger a resize and fit of the current page, can focus the selection alternatively.
@@ -439,18 +456,75 @@ export interface iPrintessApi {
    * Indicates if the current template has buyer-steps 
    */
   hasSteps(): boolean
-  maxStep(): iBuyerStep | null;
+  /**
+   * 
+   */
+  lastStep(): iBuyerStep | null;
   hasNextStep(): boolean;
   hasPreviousStep(): boolean;
   /**
    * Indicates if the next step is the preview document.
    */
   isNextStepPreview(): boolean;
-  nextStep(): Promise<void>;
-  previousStep(): Promise<void>;
 
+  /**
+   * Goes to the next available step (if any)
+   * @param zoom overrides the frames zoom settings for all devices
+   */
+  nextStep(zoom?:  "frame" | "spread"): Promise<void>;
+
+  /**
+   * Goes to the previous step (if any)
+   * @param zoom overrides the frames zoom settings for all devices
+   */
+  previousStep(zoom?:  "frame" | "spread"): Promise<void>;
+
+  /**
+   * Returns the total amount of available preview-steps. 0 indicates no preview
+   */
+  previewStepsCount(): number;
+
+  /**
+   * Goes directly to the preview-step-index 
+   * @param previewIndex Zero based index of the preview steps. See also: previewStepsCount()
+   * @param zoom overrides the frames zoom settings for all devices
+   */
+  async gotoPreviewStep(previewIndex: number = 0, zoom?: "frame" | "spread"): Promise<void>;
+
+  /**
+   * Returns to the first step, helpful if you want to exit the preview step.
+   * @param zoom overrides the frames zoom settings for all devices
+   */
+  async gotoFirstStep(zoom?: "frame" | "spread"): Promise<void>;
+
+  /**
+   * Turns the display of step numbers on or off
+   */
+  async displayStepNumbers(display: boolean): Promise<void> 
+
+  /**
+   * Returns if step numbers are displayed 
+   */
+  stepNumbersDisplayed(): boolean 
+
+  /**
+   * Displays a grey overlay on printess editor
+   * @param message Message to show on overlay
+   */
   showOverlay(message: string): void;
+
+  /**
+   * Hides printess editor overlay (see showOverlay())
+   */
   hideOverlay(): void;
+
+  /**
+   * 
+   * @param uploadEndpoint 
+   * @param serveEndpoint 
+   * @param keyGenerator 
+   */
+  createAwsUploaderProvider(uploadEndpoint: string, serveEndpoint?: string, keyGenerator?: (fileName: string) => string): AwsUploadProvider;
 }
 
 export interface iBuyerStep {
@@ -466,9 +540,25 @@ export interface iBuyerStep {
 * UPLOAD
 */
 export interface UploadProvider {
-  upload: (formData: FormData, progressCallback?: ProgressCallback) => Promise<UploadResult>; //der muss die Urls zurückgeben
+  /** The main method to upload data. */
+  upload: (formData: FormData, progressCallback?: ProgressCallback) => Promise<UploadResult>;
+
+  /** Specialized method for uploading images. You can simply forward it to upload in case you don't need special handling of those. */
+  uploadImage: (formData: FormData, progressCallback?: ProgressCallback) => Promise<UploadResult>;
+
+  /** Specialized method for uploading fonts. You can simply forward it to upload in case you don't need special handling of those. */
+  uploadFont: (formData: FormData, progressCallback?: ProgressCallback) => Promise<UploadResult>;
+
+  /** This method is called before Printess adds the form data containing the data needed for the upload. Use it in case you must prepend some fields to the form data before. */
   beforeAddingFormData?: (formData: FormData, blob: Blob, fileName: string) => void;
 }
+
+export interface AwsUploadProvider extends UploadProvider  {
+  /** The method which generates the final key to store within S3. */
+  keyGenerator: (fileName: string) => string;
+}
+
+
 export type ProgressCallback = (uploaded: number, total: number) => void;
 export type UploadResult = {
   originalFormName?: string,
