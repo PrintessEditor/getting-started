@@ -1,20 +1,19 @@
 ![Printess Logo](PrintessLogoS.png)
 
-# Getting Started
+# Embedding the Printess editor to your site
 
-This repo shows how easy it is to get started with the printess editor.
+In this getting started repo you can see various Printess integrations and you can test them live as well.  
 
-You can test the iframe based integration running here:
+You can test drive all sample codes directly on github:
+
 <https://printesseditor.github.io/getting-started/index.html>
 
+# iframe vs. custom integration
+
+The easiest and recommended way is to embed the Printess editor with a iframe and pass your own CSS-file for ui customization. You should always start with this integration and you can always switch to the custom-ui if you need. The CSS approach and the DOM will stay the same, so you wont loose any of your work. With the iframe integration you rely on our buyer-side-ui and will get bugfixes and improvements automatically. If you went the custom route you basically check out the entire Printess buyer side code (uiHelper) and you can modify, change and extend it to your needs. Best way is to fork the uiHelper so you still see the improvements from the Printess team. 
 
 
-## &nbsp;
-
-
-# Embedding the Printess Editor
-
-Printess editor can easily embeded as an iframe:
+# Embedd Printess editor as iframe
 
 ```html
 <iframe  id="printess" src="https://editor.printess.com/printess-editor/embed.html"></iframe>
@@ -107,9 +106,6 @@ You now know everything to get started with the Printess Editor. Have fun and pl
 If at any point you feel that the iframe integration lacks some kind of flexibility you can allways switch to a **Custom Integration**.
 
 All the work you have done to make the iframe look like your website will stil work, since custom integration is doing the exact same thing like the iframe way - but you can customize much further. 
-
-You can test the custom integration here:
-<https://printesseditor.github.io/getting-started/custom.html>
 
 Custom integration comes with a **uiHelper.js** file which does all of the ui-work you already familiar with from the iframe-integration.
 

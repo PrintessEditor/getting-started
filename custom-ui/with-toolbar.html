@@ -217,7 +217,7 @@
     crossorigin="anonymous"></script>
 
   <!-- Load polyfills -->
-  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+  <script src="../node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 
   <script src="uiHelper.js"></script>
 
@@ -226,7 +226,7 @@
 
     let printess;
     let currentGroupSnippets = [];
-   
+
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
         addEventListener('WebComponentsReady', cb)
@@ -305,10 +305,9 @@
     window.WebComponents.waitFor(async () => {
       const printessLoader = await import('https://editor.printess.com/printess-editor/printess-editor.js');
       printess = await printessLoader.attachPrintess({
-        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+        resourcePath: "../printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
 
         div: document.getElementById("desktop-printess-container"),
-
 
         domain: "api.printess.com",
         token: token, // your printess shop-token
@@ -316,33 +315,30 @@
         shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
         templateVersion: window.location.hash.substr(1).endsWith("_draft") ? "draft" : "published",
         templateName: decodeURIComponent(window.location.hash.substr(1).replace("_draft", "")) || "Greeting Card",
-        templateJson: undefined, // will be used only if templateName is empty
-        templateUserId: undefined, // only needed when loaded from different account
-        /* mergeTemplates: [
-           {
-             templateName: "set2",
-             templateUserId: undefined // only needed when loaded from different account 
-             // add spread-number (offset) for placing backsides, etc. 
-           }
-        ],*/
-
-        allowZoomAndPan: true,
-        zoomDuration: 0.5, // in seconds 
-        /* autoScale: {
-          maxWidth: 420,
-          maxHeight: 800,
-        },*/
 
         loadingDoneCallback: loadingDoneCallback,
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
-        getOverlayCallback: getOverlayCallback,
+        getOverlayCallback: getOverlayCallback
+
+        /* Optional: List of one or more templates to merge on load */
+        /* mergeTemplates: [
+          {
+            "templateName": "Card-Title-2",
+            "spreadIndex": 0  // Example to merge a card title to the first spread on load 
+          },
+          {
+            "templateName": "Card-Back-2",
+            "spreadIndex": 2  // Example to merge a card back to the third spread on load 
+          }
+        ], */
+
+
 
       });
 
-      // listen to viual viewport changes to detect virtual keyboard on iOs
+      // listen to visual viewport changes to detect virtual keyboard on iOs
       if (window.visualViewport) {
-        // window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess))
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess))
       }
 

@@ -251,22 +251,22 @@ export interface iPrintessApi {
   getAllPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
 
 
-   /**
-   * Returns a list of all required properties (async)
-   * @param spreadId 
-   */
+  /**
+  * Returns a list of all required properties (async)
+  * @param spreadId 
+  */
   getAllRequiredProperties(): Promise<Array<Array<iExternalProperty>>>;
 
- /**
-   * Returns a list of all required properties (sync)
-   * @param spreadId 
-   */
+  /**
+    * Returns a list of all required properties (sync)
+    * @param spreadId 
+    */
   getAllRequiredPropertiesSync(): Array<Array<iExternalProperty>>;
 
-   /**
-   * Returns a list of all required properties on a specific spread (async)
-   * @param spreadId 
-   */
+  /**
+  * Returns a list of all required properties on a specific spread (async)
+  * @param spreadId 
+  */
   getAllRequiredPropertiesBySpreadId(spreadId: string): Promise<Array<Array<iExternalProperty>>>;
   /**
    * Returns a list of all required properties on a specific spread (sync)
@@ -286,7 +286,7 @@ export interface iPrintessApi {
 
   /**
    * Mobile UI helper method to get model to draw a circle button including icons, gauge, etc.
-   * uiHelper.js conatins a method to create an SVG from this circle model
+   * uiHelper.js contains a method to create an SVG from this circle model
    * @param m The mobile button to create a circle for
    * @param isSelected If the button is selected
    */
@@ -341,7 +341,7 @@ export interface iPrintessApi {
    * @param textStyleMode 
    */
   setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
-  
+
   /**
    * Method to set an image meta-property
    * Set the image itself via `setProperty()`
@@ -350,7 +350,7 @@ export interface iPrintessApi {
    * @param value 
    */
   setImageMetaProperty(propertyId: string, name: "scale" | "sepia" | "brightness" | "saturate" | "contrast" | "grayscale" | "vivid" | "hueRotate", value: string | number): Promise<void>;
-  
+
   /**
    * Resets all image filters (meta-values) of an image-property to default
    * @param propertyId 
@@ -365,7 +365,7 @@ export interface iPrintessApi {
    * @param propertyId Auto assigns the first image to a specific frame identified via property Id.
    */
   uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage[]>;
-  
+
   /**
    * Uploads a single image to Printess and can auto assign this image
    * @param file 
@@ -385,11 +385,16 @@ export interface iPrintessApi {
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
 
   getImages(propertyId: string): Array<iExternalImage>;
+  
   getFonts(propertyId: string): Array<{
-    name: string;
-    thumbUrl: string;
-    displayName: string;
+    name: string; 
+    thumbUrl: string; 
+    displayName: string; 
+    familyName: string; 
+    weight: number;
+    isItalic: boolean;
   }>;
+
   getColors(propertyId: string): Array<{
     name: string;
     color: string;
@@ -404,7 +409,7 @@ export interface iPrintessApi {
   /**
    * Returns true if printess has full Designer edit rights and is not running in Shop-Mode
    */
-  isInDesignerMode() : boolean;
+  isInDesignerMode(): boolean;
 
   /**
    * Trigger a resize and fit of the current page, can focus the selection alternatively.
@@ -471,13 +476,13 @@ export interface iPrintessApi {
    * Goes to the next available step (if any)
    * @param zoom overrides the frames zoom settings for all devices
    */
-  nextStep(zoom?:  "frame" | "spread"): Promise<void>;
+  nextStep(zoom?: "frame" | "spread"): Promise<void>;
 
   /**
    * Goes to the previous step (if any)
    * @param zoom overrides the frames zoom settings for all devices
    */
-  previousStep(zoom?:  "frame" | "spread"): Promise<void>;
+  previousStep(zoom?: "frame" | "spread"): Promise<void>;
 
   /**
    * Returns the total amount of available preview-steps. 0 indicates no preview
@@ -500,12 +505,12 @@ export interface iPrintessApi {
   /**
    * Turns the display of step numbers on or off
    */
-  async displayStepNumbers(display: boolean): Promise<void> 
+  async displayStepNumbers(display: boolean): Promise<void>
 
   /**
    * Returns if step numbers are displayed 
    */
-  stepNumbersDisplayed(): boolean 
+  stepNumbersDisplayed(): boolean
 
   /**
    * Displays a grey overlay on printess editor
@@ -520,9 +525,9 @@ export interface iPrintessApi {
 
   /**
    * 
-   * @param uploadEndpoint 
-   * @param serveEndpoint 
-   * @param keyGenerator 
+   * @param uploadEndpoint The target address to send the upload form data to. E.g. https://your-bucket.s3.eu-central-1.amazonaws.com/ 
+   * @param serveEndpoint The url the files are served from. This can differ from the upload endpoint to make CDN distribution possible. E.g. https://mycloudfrontid.amazonaws.com/
+   * @param keyGenerator The method to generate the S3 key. The built-in one just makes sure that the file name is unique per session.
    */
   createAwsUploaderProvider(uploadEndpoint: string, serveEndpoint?: string, keyGenerator?: (fileName: string) => string): AwsUploadProvider;
 }
@@ -553,7 +558,7 @@ export interface UploadProvider {
   beforeAddingFormData?: (formData: FormData, blob: Blob, fileName: string) => void;
 }
 
-export interface AwsUploadProvider extends UploadProvider  {
+export interface AwsUploadProvider extends UploadProvider {
   /** The method which generates the final key to store within S3. */
   keyGenerator: (fileName: string) => string;
 }
@@ -579,21 +584,21 @@ export interface iExternalSpreadInfo {
    * Zero based spread index (not page nr)
    */
   index: number;
-   /**
-   * Name of spread if set by the designer
-   */
+  /**
+  * Name of spread if set by the designer
+  */
   name: string;
-   /**
-   * Spread width in pixel
-   */
+  /**
+  * Spread width in pixel
+  */
   width: number;
-   /**
-   * Spread height in pixel
-   */
+  /**
+  * Spread height in pixel
+  */
   height: number;
-   /**
-   * Number of pages in this spread. Will be 1 or 2.
-   */
+  /**
+  * Number of pages in this spread. Will be 1 or 2.
+  */
   pages: number;
 }
 export interface iExternalSpread {

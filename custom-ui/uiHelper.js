@@ -1,3 +1,12 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 window.uiHelper = {
     renderLayoutSnippets: renderLayoutSnippets,
     getOverlay: getOverlay,
@@ -5,26 +14,32 @@ window.uiHelper = {
     renderMobileNavBar: renderMobileNavBar,
     renderDesktopUi: renderDesktopUi,
     refreshUndoRedoState: refreshUndoRedoState,
-    viewPortScroll: viewPortScroll
+    viewPortScroll: viewPortScroll,
+    viewPortScrollInIFrame: viewPortScrollInIFrame
 };
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
-    const callback = printess.getAddToBasketCallback();
-    if (callback) {
-        printess.showOverlay("Saving Your Design ...");
-        printess.saveJson().then((token) => {
-            printess.renderFirstPageImage("thumbnail.png").then((url) => {
-                callback(token, url);
-                printess.hideOverlay();
-            });
-        });
-    }
-    else {
-        alert("Please add your callback in attachPrintess. [addToBasketCallback]");
-    }
+    return __awaiter(this, void 0, void 0, function* () {
+        yield printess.clearSelection();
+        const callback = printess.getAddToBasketCallback();
+        if (callback) {
+            printess.showOverlay("Saving Your Design ...");
+            const saveToken = yield printess.saveJson();
+            const url = yield printess.renderFirstPageImage("thumbnail.png");
+            callback(saveToken, url);
+            printess.hideOverlay();
+        }
+        else {
+            alert("Please add your callback in attachPrintess. [addToBasketCallback]");
+        }
+    });
 }
+let viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+let viewportOffsetTop = 0;
 function viewPortScroll(printess) {
-    console.log("!!!! View-Port-Scroll: top=" + window.visualViewport.offsetTop, window.visualViewport);
+    console.log("!!!! View-Port-Scroll-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
+    viewportOffsetTop = window.visualViewport.offsetTop;
+    viewportHeight = window.visualViewport.height;
     const printessDiv = document.getElementById("desktop-printess-container");
     if (printessDiv) {
         if (window.visualViewport.offsetTop > 0) {
@@ -32,6 +47,20 @@ function viewPortScroll(printess) {
         }
         else {
             resizeMobileUi(printess, false);
+        }
+    }
+}
+function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
+    console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
+    viewportHeight = vpHeight;
+    viewportOffsetTop = vpOffsetTop;
+    const printessDiv = document.getElementById("desktop-printess-container");
+    if (printessDiv) {
+        if (vpOffsetTop > 0) {
+            resizeMobileUi(printess, true, undefined);
+        }
+        else {
+            resizeMobileUi(printess, false, undefined);
         }
     }
 }
@@ -255,7 +284,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
         }
     };
     inp.onfocus = () => {
-        if (inp.value && p.validation && inp.value === p.validation.defaultValue) {
+        if (inp.value && p.validation && p.validation.isMandatory && inp.value === p.validation.defaultValue) {
             inp.value = "";
         }
     };
@@ -1390,7 +1419,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         mobileUi.appendChild(getMobileBackButton(printess, properties, state, groupSnippets));
     }
     else {
-        if (window.visualViewport && window.visualViewport.offsetTop) {
+        if (viewportOffsetTop) {
             return;
         }
     }
@@ -1581,8 +1610,8 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
         mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
         const printessDiv = document.getElementById("desktop-printess-container");
-        const viewPortHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const viewPortTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
+        const viewPortHeight = viewportHeight;
+        const viewPortTopOffset = viewportOffsetTop;
         let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
         if (printessDiv) {
             let printessTop;
@@ -1633,7 +1662,7 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
     }
 }
 function getMobileButtons(printess, properties, container, propertyIdFilter) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     container = container || document.createElement("div");
     container.className = "mobile-buttons-container";
     const scrollContainer = document.createElement("div");
@@ -1654,7 +1683,19 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
             renderPageNavigation(printess, spreads, info, buttonContainer, true, true);
         }
     }
-    if (buttons.length === 1 && !((_a = buttons[0].newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id.startsWith("FF_"))) {
+    let autoSelect = false;
+    if (buttons.length === 1) {
+        const ep = buttons[0].newState.externalProperty;
+        if (ep && ep.id.startsWith("FF_")) {
+            if (ep.kind === 'single-line-text') {
+                autoSelect = true;
+            }
+        }
+        else {
+            autoSelect = false;
+        }
+    }
+    if (autoSelect) {
         document.body.classList.add("no-mobile-button-bar");
         window.setTimeout(() => {
             var _a;
@@ -1671,7 +1712,7 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
         document.body.classList.remove("no-mobile-button-bar");
         for (const b of buttons) {
             const buttonDiv = document.createElement("div");
-            buttonDiv.id = ((_c = (_b = b.newState.externalProperty) === null || _b === void 0 ? void 0 : _b.id) !== null && _c !== void 0 ? _c : "") + ":" + ((_d = b.newState.metaProperty) !== null && _d !== void 0 ? _d : "");
+            buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + ":" + ((_c = b.newState.metaProperty) !== null && _c !== void 0 ? _c : "");
             buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
             buttonDiv.onclick = (_e) => {
                 var _a, _b, _c;
