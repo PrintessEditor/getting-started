@@ -8,6 +8,8 @@ You can test drive all sample codes directly on github:
 
 <https://printesseditor.github.io/getting-started/index.html>
 
+And you'll find more information in our [knowledge base](https://printess.com/kb/user-manual/js-api.html)
+
 # iframe vs. custom integration
 
 The easiest and recommended way is to embed the Printess editor with a iframe and pass your own CSS-file for ui customization. You should always start with this integration and you can always switch to the custom-ui if you need. The CSS approach and the DOM will stay the same, so you wont loose any of your work. With the iframe integration you rely on our buyer-side-ui and will get bugfixes and improvements automatically. If you went the custom route you basically check out the entire Printess buyer side code (uiHelper) and you can modify, change and extend it to your needs. Best way is to fork the uiHelper so you still see the improvements from the Printess team. 
@@ -212,5 +214,5 @@ To test it, we added a button in the toolbar **Save State**, which saves the cur
 
 ## &nbsp;
 
-### Please find more documentation in the [Printess Knowledge Base](https://printess.com/kb/api-reference/js-api/getting-started.html) 
+### Please find more documentation in the [Printess Knowledge Base](https://printess.com/kb/user-manual/js-api.html) 
 
