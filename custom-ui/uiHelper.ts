@@ -16,6 +16,7 @@ declare const bootstrap: any;
   viewPortScrollInIFrame: viewPortScrollInIFrame
 }
 
+
 console.log("Printess ui-helper loaded");
 
 async function addToBasket(printess: iPrintessApi) {
@@ -535,17 +536,19 @@ function validate(p: iExternalProperty): void {
           container.classList.remove("was-validated");
           input.classList.add("is-invalid");
           validation.innerText = "Maximum number of chars exceeded (" + p.validation.maxChars + ")";
-
-        } else if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
-          container.classList.remove("was-validated");
-          input.classList.add("is-invalid");
-          validation.innerText = "Please enter some text here";
-
-        } else {
-          container.classList.add("was-validated");
-          input.classList.remove("is-invalid");
+          return;
         }
       }
+      if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
+        container.classList.remove("was-validated");
+        input.classList.add("is-invalid");
+        validation.innerText = "Please enter some text here";
+
+      } else {
+        container.classList.add("was-validated");
+        input.classList.remove("is-invalid");
+      }
+
     }
   }
 }

@@ -419,16 +419,17 @@ function validate(p) {
                     container.classList.remove("was-validated");
                     input.classList.add("is-invalid");
                     validation.innerText = "Maximum number of chars exceeded (" + p.validation.maxChars + ")";
+                    return;
                 }
-                else if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
-                    container.classList.remove("was-validated");
-                    input.classList.add("is-invalid");
-                    validation.innerText = "Please enter some text here";
-                }
-                else {
-                    container.classList.add("was-validated");
-                    input.classList.remove("is-invalid");
-                }
+            }
+            if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
+                container.classList.remove("was-validated");
+                input.classList.add("is-invalid");
+                validation.innerText = "Please enter some text here";
+            }
+            else {
+                container.classList.add("was-validated");
+                input.classList.remove("is-invalid");
             }
         }
     }
