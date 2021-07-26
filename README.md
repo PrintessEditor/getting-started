@@ -166,7 +166,7 @@ Printess is intended to have as much space as possible, so it is highly recommen
 
 `token` should be set to a **Shop-Token** which points to yout Printess Account. You can get this token once you are logged in in the Printess Editor -> Account Menu -> API-Token. You'll see 3 different tokens in the dialog. Please always use the **Shop-Token**.
 
-Finally the variable named `printess` contains a [JS-API](https://printess.com/js-api) reference to the Printess editor.
+Finally the variable named `printess` contains a [JS-API](https://printess.com/kb/api-reference/index.html) reference to the Printess editor.
 
 
 If you use typescript you'll find a `printess-editor.d.ts` file in the repro which contains all types for the printess object.
