@@ -8,7 +8,7 @@ You can test drive all sample codes directly on github:
 
 <https://printesseditor.github.io/getting-started/index.html>
 
-And you'll find more information in our [knowledge base](/kb/user-manual/api-reference/index.html)
+And you'll find more information in our [knowledge base](https://www.printess.com/kb/user-manual/api-reference/index.html)
 
 # iframe vs. custom integration
 
