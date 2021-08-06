@@ -37,19 +37,21 @@ let viewportOffsetTop: number = 0;
    viewPortSCROLL for iPhone
    viewPortRESIZE for android
 */
+// Handles software keyboard expasion and collapse 
 function viewPortScroll(printess: iPrintessApi) {
 
   console.log("!!!! View-Port-Scroll-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
-  viewportOffsetTop = window.visualViewport.offsetTop;
-  viewportHeight = window.visualViewport.height;
-
-  const printessDiv = document.getElementById("desktop-printess-container");
-  if (printessDiv) {
-    if (window.visualViewport.offsetTop > 0) {
-      // system has auto scrolled content, so we adjust printess-editor to fit
-      resizeMobileUi(printess, true);
-    } else {
-      resizeMobileUi(printess, false);
+  if (viewportOffsetTop !== window.visualViewport.offsetTop || viewportHeight !== window.visualViewport.height) {
+    viewportOffsetTop = window.visualViewport.offsetTop;
+    viewportHeight = window.visualViewport.height;
+    const printessDiv = document.getElementById("desktop-printess-container");
+    if (printessDiv) {
+      if (window.visualViewport.offsetTop > 0) {
+        // system has auto scrolled content, so we adjust printess-editor to fit
+        resizeMobileUi(printess, true);
+      } else {
+        resizeMobileUi(printess, false);
+      }
     }
   }
 }
@@ -1801,7 +1803,7 @@ function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, forMob
     for (const col of p.tableMeta.columns) {
       if (col.name === "day") {
         const dayDiv = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
-        dayDiv.style.flexBasis =  "80px"; //col.width ||
+        dayDiv.style.flexBasis = "80px"; //col.width ||
         dayDiv.style.marginRight = "10px"
         group.appendChild(dayDiv)
       } else if (col.name === "text") {
@@ -2147,7 +2149,7 @@ function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternal
   circle.onclick = () => {
     if (state === "details") {
       renderMobileUi(printess, properties, "frames", groupSnippets)
-    } else if (state === "frames" ) {
+    } else if (state === "frames") {
       printess.clearSelection();
     } else if (state === "add" || state === "document") {
       renderMobileUi(printess, properties, "document", groupSnippets)

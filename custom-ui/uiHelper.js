@@ -38,15 +38,17 @@ let viewportHeight = window.visualViewport ? window.visualViewport.height : wind
 let viewportOffsetTop = 0;
 function viewPortScroll(printess) {
     console.log("!!!! View-Port-Scroll-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
-    viewportOffsetTop = window.visualViewport.offsetTop;
-    viewportHeight = window.visualViewport.height;
-    const printessDiv = document.getElementById("desktop-printess-container");
-    if (printessDiv) {
-        if (window.visualViewport.offsetTop > 0) {
-            resizeMobileUi(printess, true);
-        }
-        else {
-            resizeMobileUi(printess, false);
+    if (viewportOffsetTop !== window.visualViewport.offsetTop || viewportHeight !== window.visualViewport.height) {
+        viewportOffsetTop = window.visualViewport.offsetTop;
+        viewportHeight = window.visualViewport.height;
+        const printessDiv = document.getElementById("desktop-printess-container");
+        if (printessDiv) {
+            if (window.visualViewport.offsetTop > 0) {
+                resizeMobileUi(printess, true);
+            }
+            else {
+                resizeMobileUi(printess, false);
+            }
         }
     }
 }
