@@ -233,7 +233,18 @@
       }
     };
 
-    window.addEventListener("resize", () => resizePrintess());
+    const uaDataIsMobile = window.navigator.userAgentData?.mobile;
+    const isTabletOrPhoneDevice = typeof uaDataIsMobile === 'boolean'
+      ? uaDataIsMobile
+      : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
+    if (isTabletOrPhoneDevice) {
+      console.log('MOBILE DEVICE DETECTED');
+      window.addEventListener("orientationchange", () => resizePrintess());
+    } else {
+      console.log('NO MOBILE DEVICE DETECTED');
+      window.addEventListener("resize", () => resizePrintess());
+    }
 
     function resizePrintess() {
       if (printess) {
@@ -339,7 +350,8 @@
 
       // listen to visual viewport changes to detect virtual keyboard on iOs
       if (window.visualViewport) {
-        window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess))
+        window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
+        window.visualViewport.addEventListener("resize", () => uiHelper.viewPortScroll(printess)); // android
       }
 
     });
@@ -370,7 +382,7 @@
     };
 
     document.getElementById("btnSave").onclick = () => {
-      printess.saveJson().then(id => {
+      printess.save().then(id => {
         navigator.clipboard.writeText(id).then(function () {
           /* clipboard successfully set */
           prompt("Saved Artwork and copied ID to clipboard:", id);
@@ -384,7 +396,7 @@
       navigator.clipboard.readText().then(
         clipText => {
           const newId = prompt("Load Saved Artwork by ID:", clipText);
-          if (newId) printess.loadJson(newId);
+          if (newId) printess.load(newId);
         });
     };
 

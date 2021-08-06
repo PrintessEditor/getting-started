@@ -214,5 +214,5 @@ To test it, we added a button in the toolbar **Save State**, which saves the cur
 
 ## &nbsp;
 
-### Please find more documentation in the [Printess Knowledge Base](https://printess.com/kb/user-manual/js-api.html) 
+### Please find more documentation in the [Printess Knowledge Base](https://www.printess.com/kb/api-reference/index.html) 
 

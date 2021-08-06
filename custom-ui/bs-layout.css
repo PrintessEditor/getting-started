@@ -432,7 +432,7 @@ input[type='range'] {
  /* overide bootstrap behaviour */
  .list-group-item .dropdown-item:focus, .list-group-item .dropdown-item:hover {
   background-color: transparent;
-  color: white;
+  /*color: white; kills mobile form-lists */
  }
 
 .color-picker-button {

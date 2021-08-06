@@ -24,7 +24,7 @@ function addToBasket(printess) {
         const callback = printess.getAddToBasketCallback();
         if (callback) {
             printess.showOverlay("Saving Your Design ...");
-            const saveToken = yield printess.saveJson();
+            const saveToken = yield printess.save();
             const url = yield printess.renderFirstPageImage("thumbnail.png");
             callback(saveToken, url);
             printess.hideOverlay();
@@ -187,6 +187,8 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
             return getDropDown(printess, p, forMobile);
         case "image-list":
             return getImageSelectList(printess, p, forMobile);
+        case "table":
+            return getTableControl(printess, p, forMobile);
     }
     const div = document.createElement("div");
     div.innerText = "Property not found: " + p.kind;
@@ -603,7 +605,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
         return ddContent;
     }
     else {
-        return dropdown;
+        return addLabel(dropdown, p);
     }
 }
 function getDropdownItemContent(meta, entry) {
@@ -1193,7 +1195,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
                         callback("");
                     }
                     else {
-                        printess.saveJson().then((token) => {
+                        printess.save().then((token) => {
                             callback(token);
                         });
                     }
@@ -1370,6 +1372,304 @@ function renderLayoutSnippets(printess, layoutSnippets) {
     }
     return container;
 }
+let tableEditRow = {};
+let tableEditRowIndex = -1;
+function getTableControl(printess, p, forMobile) {
+    const container = document.createElement("div");
+    let hasRow = false;
+    if (p.tableMeta) {
+        const data = JSON.parse(p.value.toString() || "[]");
+        if (data.length > 0) {
+            const table = document.createElement("table");
+            table.className = "table mb-3";
+            const thead = document.createElement("thead");
+            let tr = document.createElement("tr");
+            for (const col of p.tableMeta.columns) {
+                if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
+                    const th = document.createElement("th");
+                    th.scope = "col";
+                    th.innerText = col.label || col.name;
+                    tr.appendChild(th);
+                }
+            }
+            thead.appendChild(tr);
+            table.appendChild(thead);
+            const tbody = document.createElement("tbody");
+            let rowNumber = 0;
+            for (const row of data) {
+                if (p.tableMeta.tableType !== "calendar-events" || row.month == p.tableMeta.month) {
+                    tr = document.createElement("tr");
+                    tr.dataset.rowNumber = rowNumber.toString();
+                    for (const col of p.tableMeta.columns) {
+                        if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
+                            const td = document.createElement("td");
+                            td.innerText = row[col.name];
+                            tr.appendChild(td);
+                        }
+                    }
+                    tr.onclick = (ele) => {
+                        const rowIndex = parseInt(ele.currentTarget.dataset.rowNumber);
+                        if (rowIndex >= 0) {
+                            for (const row of ele.currentTarget.parentElement.children) {
+                                row.classList.remove("table-active");
+                                ele.currentTarget.classList.add("table-active");
+                            }
+                        }
+                        tableEditRow = data[rowIndex];
+                        tableEditRowIndex = rowIndex;
+                        renderTableDetails(printess, p, false);
+                    };
+                    tbody.appendChild(tr);
+                    hasRow = true;
+                }
+                rowNumber++;
+            }
+            table.appendChild(tbody);
+            if (hasRow)
+                container.appendChild(table);
+        }
+        const addButton = document.createElement("button");
+        addButton.className = "btn btn-primary mb-3";
+        addButton.innerText = p.tableMeta.tableType === "calendar-events" ? "Add New Event" : "Add New Entry";
+        addButton.onclick = () => {
+            if (p.tableMeta) {
+                tableEditRowIndex = -1;
+                tableEditRow = {};
+                for (const col of p.tableMeta.columns) {
+                    tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
+                }
+                if (p.tableMeta.tableType === "calendar-events") {
+                    tableEditRow.month = p.tableMeta.month || 1;
+                    tableEditRow.event = "Birthday";
+                }
+            }
+            renderTableDetails(printess, p, false);
+        };
+        container.appendChild(addButton);
+    }
+    const details = document.createElement("div");
+    details.id = "tableDetails_" + p.id;
+    details.className = "container-fluid border";
+    container.appendChild(details);
+    return container;
+}
+function renderTableDetails(printess, p, forMobile) {
+    var _a, _b;
+    const details = forMobile ? document.createElement("div") : document.getElementById("tableDetails_" + p.id);
+    if (!details || !p.tableMeta)
+        return document.createElement("div");
+    details.innerHTML = "";
+    if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events") {
+        const group = document.createElement("div");
+        group.className = "input-group mb-3";
+        for (const col of p.tableMeta.columns) {
+            if (col.name === "day") {
+                const dayDiv = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
+                dayDiv.style.flexBasis = "80px";
+                dayDiv.style.marginRight = "10px";
+                group.appendChild(dayDiv);
+            }
+            else if (col.name === "text") {
+                const text = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
+                text.style.flexGrow = "1";
+                text.style.flexBasis = "80px";
+                text.style.marginRight = "10px";
+                group.appendChild(text);
+            }
+        }
+        details.appendChild(group);
+    }
+    else {
+        for (const col of p.tableMeta.columns) {
+            if ((_b = col.list) === null || _b === void 0 ? void 0 : _b.length) {
+                details.appendChild(getTableDetailsDropDown(printess, p, tableEditRowIndex, tableEditRow, col, false, true));
+            }
+            else {
+                details.appendChild(getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false));
+            }
+        }
+    }
+    const submitButton = document.createElement("button");
+    submitButton.className = "btn btn-primary mb-3 float-left";
+    if (tableEditRowIndex === -1) {
+        submitButton.innerText = "Add";
+    }
+    else {
+        submitButton.innerText = "Submit";
+    }
+    submitButton.onclick = () => {
+        var _a;
+        if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
+            alert("Please enter a text for the event");
+            return;
+        }
+        const data = JSON.parse(p.value.toString()) || [];
+        if (tableEditRowIndex === -1) {
+            data.push(tableEditRow);
+        }
+        else {
+            data[tableEditRowIndex] = tableEditRow;
+        }
+        p.value = JSON.stringify(data);
+        printess.setProperty(p.id, p.value);
+        details.innerHTML = "";
+    };
+    details.appendChild(submitButton);
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "btn btn-secondary mb-3 ml-3";
+    cancelButton.style.marginLeft = "20px";
+    cancelButton.innerText = "Cancel";
+    cancelButton.onclick = () => {
+        details.innerHTML = "";
+        tableEditRowIndex = -1;
+    };
+    details.appendChild(cancelButton);
+    if (tableEditRowIndex !== -1) {
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "btn btn-danger mb-3 ml-3";
+        deleteButton.style.marginLeft = "20px";
+        deleteButton.innerText = "Remove";
+        deleteButton.onclick = () => {
+            const data = JSON.parse(p.value.toString()) || [];
+            data.splice(tableEditRowIndex, 1);
+            p.value = JSON.stringify(data);
+            printess.setProperty(p.id, p.value);
+            details.innerHTML = "";
+        };
+        details.appendChild(deleteButton);
+    }
+    return details;
+}
+function getTableDetailsShortList(printess, p, rowIndex, row, col) {
+    const ddContent = document.createElement("div");
+    ddContent.className = "dropdown-menu";
+    ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+    ddContent.style.width = "240px";
+    const list = document.createElement("div");
+    list.className = "color-picker-drop-down";
+    const value = row[col.name];
+    for (const f of col.list || []) {
+        const a = document.createElement("a");
+        a.href = "#";
+        a.className = "color-picker-color dropdown-item";
+        a.innerText = f.toString();
+        if (value == f) {
+            a.classList.add("active");
+        }
+        a.onclick = () => {
+            setTableValue(col, f);
+            if (col.list) {
+                list.querySelectorAll("a").forEach(a => a.classList.remove("active"));
+                a.classList.add("active");
+            }
+        };
+        list.appendChild(a);
+    }
+    return list;
+}
+function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWidth = true) {
+    var _a;
+    const dropdown = document.createElement("div");
+    dropdown.classList.add("btn-group");
+    const ddContent = document.createElement("ul");
+    const value = row[col.name];
+    if (col.list) {
+        const selectedItem = (_a = col.list.filter(s => s == value)[0]) !== null && _a !== void 0 ? _a : null;
+        const button = document.createElement("button");
+        button.className = "btn btn-light dropdown-toggle";
+        if (fullWidth) {
+            button.classList.add("full-width");
+        }
+        button.dataset.bsToggle = "dropdown";
+        button.dataset.bsAutoClose = "true";
+        button.setAttribute("aria-expanded", "false");
+        if (selectedItem) {
+            button.appendChild(getTableDropdownItemContent(value));
+        }
+        dropdown.appendChild(button);
+        if (asList) {
+            ddContent.classList.add("list-group");
+        }
+        else {
+            ddContent.classList.add("dropdown-menu");
+            ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+            ddContent.style.width = "100%";
+        }
+        for (const entry of col.list) {
+            const li = document.createElement("li");
+            if (asList) {
+                li.classList.add("list-group-item");
+                if (entry === selectedItem) {
+                    li.classList.add("active");
+                }
+            }
+            const a = document.createElement("a");
+            a.href = "#";
+            a.classList.add("dropdown-item");
+            a.onclick = () => {
+                setTableValue(col, entry);
+                if (col.list) {
+                    button.innerHTML = "";
+                    button.appendChild(getTableDropdownItemContent(entry));
+                    if (asList) {
+                        ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+                        li.classList.add("active");
+                    }
+                }
+            };
+            a.appendChild(getTableDropdownItemContent(entry));
+            li.appendChild(a);
+            ddContent.appendChild(li);
+        }
+        dropdown.appendChild(ddContent);
+    }
+    if (asList) {
+        return ddContent;
+    }
+    else {
+        return addLabel(dropdown, p, col.label || col.name);
+    }
+}
+function getTableDropdownItemContent(value) {
+    const div = document.createElement("div");
+    div.classList.add("dropdown-list-entry");
+    const label = document.createElement("div");
+    label.classList.add("dropdown-list-label");
+    label.innerText = value.toString();
+    div.appendChild(label);
+    return div;
+}
+function getTableTextBox(printess, p, rowIndex, row, col, forMobile) {
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.value = row[col.name];
+    inp.autocomplete = "off";
+    inp.autocapitalize = "off";
+    inp.spellcheck = false;
+    inp.oninput = () => {
+        setTableValue(col, inp.value);
+    };
+    if (forMobile) {
+        inp.classList.add("form-control");
+        return inp;
+    }
+    else {
+        const r = addLabel(inp, p, col.label || col.name);
+        return r;
+    }
+}
+function setTableValue(col, newValue) {
+    tableEditRow[col.name];
+    if (col.data === "number" && typeof newValue !== "number") {
+        tableEditRow[col.name] = isNaN(+newValue) ? 0 : +newValue;
+    }
+    else if (col.data === "boolean" && typeof newValue !== "boolean") {
+        tableEditRow[col.name] = !!(newValue);
+    }
+    else {
+        tableEditRow[col.name] = newValue;
+    }
+}
 function getMobileUiDiv() {
     let mobileUi = document.querySelector(".mobile-ui");
     if (!mobileUi) {
@@ -1507,7 +1807,7 @@ function renderMobileNavBar(printess) {
                             callback("");
                         }
                         else {
-                            printess.saveJson().then((token) => {
+                            printess.save().then((token) => {
                                 callback(token);
                             });
                         }
@@ -1663,7 +1963,7 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
     }
 }
 function getMobileButtons(printess, properties, container, propertyIdFilter) {
-    var _a, _b, _c;
+    var _a, _b, _c, _d, _f;
     container = container || document.createElement("div");
     container.className = "mobile-buttons-container";
     const scrollContainer = document.createElement("div");
@@ -1713,12 +2013,49 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
         document.body.classList.remove("no-mobile-button-bar");
         for (const b of buttons) {
             const buttonDiv = document.createElement("div");
-            buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + ":" + ((_c = b.newState.metaProperty) !== null && _c !== void 0 ? _c : "");
+            if (b.newState.tableRowIndex !== undefined) {
+                buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + "#" + b.newState.tableRowIndex;
+            }
+            else {
+                buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + ":" + ((_f = b.newState.metaProperty) !== null && _f !== void 0 ? _f : "");
+            }
             buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
             buttonDiv.onclick = (_e) => {
-                var _a, _b, _c;
+                var _a, _b, _c, _d;
                 if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
                     printess.selectBackground();
+                }
+                else if (b.newState.state === "table-add") {
+                    const p = b.newState.externalProperty;
+                    if (p === null || p === void 0 ? void 0 : p.tableMeta) {
+                        tableEditRowIndex = -1;
+                        tableEditRow = {};
+                        for (const col of p.tableMeta.columns) {
+                            tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
+                        }
+                        if (p.tableMeta.tableType === "calendar-events") {
+                            tableEditRow.month = p.tableMeta.month || 1;
+                            tableEditRow.event = "Birthday";
+                        }
+                        renderMobileControlHost(printess, b.newState);
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+                    }
+                }
+                else if (b.newState.state === "table-edit") {
+                    const p = b.newState.externalProperty;
+                    const rowIndex = (_b = b.newState.tableRowIndex) !== null && _b !== void 0 ? _b : -1;
+                    if ((p === null || p === void 0 ? void 0 : p.tableMeta) && (rowIndex !== null && rowIndex !== void 0 ? rowIndex : -1) >= 0) {
+                        try {
+                            const data = JSON.parse(p.value.toString());
+                            tableEditRow = data[rowIndex];
+                            tableEditRowIndex = rowIndex;
+                            renderMobileControlHost(printess, b.newState);
+                            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+                        }
+                        catch (error) {
+                            console.error("property table has no array data:" + p.id);
+                        }
+                    }
                 }
                 else if (b.hasCollapsedMetaProperties === true && b.newState.externalProperty) {
                     const buttonContainer = document.querySelector(".mobile-buttons-container");
@@ -1727,7 +2064,7 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
                         getMobileButtons(printess, properties, container, b.newState.externalProperty.id);
                         const backButton = document.querySelector(".mobile-property-back-button");
                         if (backButton) {
-                            (_b = backButton.parentElement) === null || _b === void 0 ? void 0 : _b.removeChild(backButton);
+                            (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
                         }
                         getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
                     }
@@ -1741,7 +2078,7 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
                     centerMobileButton(buttonDiv);
                     const backButton = document.querySelector(".mobile-property-back-button");
                     if (backButton) {
-                        (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
+                        (_d = backButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(backButton);
                     }
                     if (printess.isCurrentStepActive()) {
                         getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
@@ -1775,7 +2112,13 @@ function renderMobileControlHost(printess, state, groupSnippets) {
         }
         else if (state.externalProperty) {
             controlHost.classList.add(getMobileControlHeightClass(state.externalProperty, state.metaProperty));
-            const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
+            let control;
+            if (state.state === "table-add" || state.state === "table-edit") {
+                control = renderTableDetails(printess, state.externalProperty, true);
+            }
+            else {
+                control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
+            }
             controlHost.appendChild(control);
             resizeMobileUi(printess, true);
         }
@@ -1798,23 +2141,41 @@ function getMobileControlHeightClass(property, meta) {
         case "select-list":
         case "image-list":
             return "mobile-control-lg";
+        case "table":
+            return "mobile-control-xl";
     }
     return "mobile-control-sm";
 }
 function drawButtonContent(printess, buttonDiv, properties) {
     var _a, _b;
     const id = buttonDiv.id.split(":");
-    const propertyId = id[0];
+    let propertyId = id[0];
+    let rowIndex = undefined;
+    if (propertyId.indexOf("#") > 0) {
+        const tId = propertyId.split("#");
+        propertyId = tId[0];
+        rowIndex = isNaN(+tId[1]) ? undefined : +tId[1];
+    }
     const metaProperty = (_a = id[1]) !== null && _a !== void 0 ? _a : "";
     const property = properties.filter(p => p.id === propertyId)[0];
     if (!property)
         return;
     const buttons = printess.getMobileUiButtons([property], propertyId);
     let b = undefined;
-    for (const button of buttons) {
-        if (((_b = button.newState.metaProperty) !== null && _b !== void 0 ? _b : "") === metaProperty) {
-            b = button;
-            break;
+    if (rowIndex !== undefined) {
+        for (const button of buttons) {
+            if (button.newState.tableRowIndex === rowIndex) {
+                b = button;
+                break;
+            }
+        }
+    }
+    else {
+        for (const button of buttons) {
+            if (((_b = button.newState.metaProperty) !== null && _b !== void 0 ? _b : "") === metaProperty) {
+                b = button;
+                break;
+            }
         }
     }
     if (!b)

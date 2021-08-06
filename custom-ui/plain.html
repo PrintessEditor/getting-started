@@ -106,17 +106,10 @@
         // **** add mobile-ui *****
         uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
         uiHelper.renderMobileNavBar(printess);
-
       } else {
         // ***** add desktop-ui *****
         const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets);
         uiHelper.refreshUndoRedoState(printess);
-
-        // print json for debug purposes
-        const jsonPre = document.getElementById("propertiesJson");
-        if (jsonPre) {
-          jsonPre.innerHTML = t.join("<br/>");
-        }
       }
 
     }
@@ -138,7 +131,7 @@
         basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
         shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
         templateVersion: "published",
-        templateName: "Greeting Card",
+        templateName: "Greeting Card", // You can also pass a saveToken here 
 
         loadingDoneCallback: loadingDoneCallback,
         selectionChangeCallback: selectionChangeCallback,

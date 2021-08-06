@@ -42,10 +42,15 @@ export interface printessAttachParameters {
      * At what spread index the incoming template will be merged
      */
     spreadIndex?: number;
+    /**
+     * Force Printess to merge in a particular layout-snippet mode. 
+     * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
+     */
+     mergeMode?: MergeMode 
   }];
 
   /**
-   * Activated by default. Deactivating ```allowZoomAndPan``` freezes the visible Area of the current document. 
+   * Activated by default. Deactivating `allowZoomAndPan` freezes the visible Area of the current document. 
    * The buyer will not be able to zoom or pan at all. It's handy for simple configurattions on desktop and conjunction with ```autoScale```
    * Handle with care on mobile, since users proably need zoom to have a closer look on their products.
    */
@@ -58,7 +63,7 @@ export interface printessAttachParameters {
   zoomDuration?: number;
 
   /**
-   * Auto scale is only usefull when ```hideControls```is active and ```allowZoomAndPan```is disabled.
+   * Auto scale is only usefull when `allowZoomAndPan`is disabled.
    * Printess will adjust its width or height in between the given dimensions to meet the aspect ratio of the loaded document.
    */
   autoScale?: {
@@ -150,14 +155,26 @@ export interface iPrintessApi {
   loadTemplate(templateNameOrToken: string): Promise<void>;
 
   /**
-   * Saves current artwork and return a saveToken which you can pass in attach or loadJson()
+   * @deprecated 
    */
   saveJson(): Promise<string>;
   /**
-   * Loads apreviously saved buyer artwork
-   * @param saveToken a token you  have received from basket or back callback or from saveJson() call
+   * @deprecated
    */
   loadJson(saveToken: string): Promise<void>;
+
+  /**
+   * Saves current artwork
+   * @returns `saveToken` which you can pass on `attachPrintess()` or `load()`
+   */
+  save(): Promise<string>;
+
+  /**
+   * Loads template or previously saved buyer artwork (`saveToken`)
+   * @param templateNameOrSaveToken a templateName or a `saveToken` you have received from basket- or back-callback or from `save()` call
+   */
+  load(templateNameOrSaveToken: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
+
 
   /**
    * Expects a apreviously saved buyer artwork identified by a saveToken and ensures that this work will never be deleted from DB
@@ -385,12 +402,12 @@ export interface iPrintessApi {
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
 
   getImages(propertyId: string): Array<iExternalImage>;
-  
+
   getFonts(propertyId: string): Array<{
-    name: string; 
-    thumbUrl: string; 
-    displayName: string; 
-    familyName: string; 
+    name: string;
+    thumbUrl: string;
+    displayName: string;
+    familyName: string;
     weight: number;
     isItalic: boolean;
   }>;
@@ -419,8 +436,6 @@ export interface iPrintessApi {
    * @param height Optional: Overrides the retrieved offsetHeight of the printess container - helpfull when animation are longer running
    */
   resizePrintess(immediate?: boolean, focusSelection?: boolean, width?: number, height?: number): void;
-
-  load(scopeId: string, mode?: "auto" | "loadAlwaysFromServer"): Promise<void>;
 
   getTemplateTitle(): string;
 
@@ -627,7 +642,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "table";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" |
@@ -642,6 +657,7 @@ export interface iExternalProperty {
   textStyle?: iExternalTextStyle;
   imageMeta?: iExternalimageMeta;
   listMeta?: iExternalListMeta;
+  tableMeta?: iExternalTableMeta;
 }
 export interface iExternalTextStyle {
   size: string;
@@ -668,7 +684,19 @@ export type iExternalFieldListEntry = {
   description: string,
   imageUrl: string
 }
-
+export interface iExternalTableMeta {
+  columns: Array<iExternalTableColumn>;
+  month?: number;
+  tableType: "generic" | "calendar-events";
+}
+export interface iExternalTableColumn {
+  name: string,
+  label?: string,
+  readonly?: boolean,
+  data?: "string" | "boolean" | "number" | "image",
+  list?: Array<string | number>,
+  width?: string
+}
 export interface iExternalNumberUi {
   max: number;
   min: number;
@@ -706,6 +734,9 @@ export interface iExternalImageScaleHints {
   max: number;
   dpiAtScale1: number;
 }
+
+export type MergeMode  = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
+
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
@@ -736,9 +767,10 @@ export interface iMobileUIButton {
 }
 
 export interface iMobileUiState {
-  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop"
+  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop" | "table-add" | "table-edit"
   externalProperty?: iExternalProperty,
-  metaProperty?: iExternalMetaPropertyKind
+  metaProperty?: iExternalMetaPropertyKind,
+  tableRowIndex?: number
 }
 
 
