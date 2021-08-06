@@ -233,7 +233,7 @@
       }
     };
 
-    const uaDataIsMobile = window.navigator.userAgentData?.mobile;
+    const uaDataIsMobile = window.navigator.userAgentData ? window.navigator.userAgentData.mobile : undefined;
     const isTabletOrPhoneDevice = typeof uaDataIsMobile === 'boolean'
       ? uaDataIsMobile
       : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
