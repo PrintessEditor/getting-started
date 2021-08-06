@@ -233,30 +233,9 @@
       }
     };
 
-    const uaDataIsMobile = window.navigator.userAgentData?.mobile;
-    const isTabletOrPhoneDevice = typeof uaDataIsMobile === 'boolean'
-      ? uaDataIsMobile
-      : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-
-    if (isTabletOrPhoneDevice) {
-      console.log('MOBILE DEVICE DETECTED');
-      window.addEventListener("orientationchange", () => resizePrintess());
-    } else {
-      console.log('NO MOBILE DEVICE DETECTED');
-      window.addEventListener("resize", () => resizePrintess());
-    }
-
-    function resizePrintess() {
-      if (printess) {
-        printess.resizePrintess();
-        printess.clearSelection();
-      } else {
-        window.setTimeout(resizePrintess, 100);
-      }
-    }
 
     const loadingDoneCallback = function (spreads, title) {
-      printess.resizePrintess();
+      // printess.resizePrintess();
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
@@ -351,8 +330,17 @@
       // listen to visual viewport changes to detect virtual keyboard on iOs
       if (window.visualViewport) {
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
-      //  window.visualViewport.addEventListener("resize", () => uiHelper.viewPortScroll(printess)); // android
+        window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
       }
+
+      if (uiHelper.isTabletOrPhoneDevice()) {
+        console.log('MOBILE DEVICE DETECTED');
+        window.addEventListener("orientationchange", () => uiHelper.resizeAndClearSelection());
+      } else {
+        console.log('NO MOBILE DEVICE DETECTED');
+        window.addEventListener("resize", () => uiHelper.resizeAndClearSelection());
+      }
+
 
     });
 
@@ -374,8 +362,7 @@
     };
 
     document.getElementById("btnClearSelection").onclick = () => {
-      printess.clearSelection();
-      printess.resizePrintess();
+      uiHelper.resizeAndClearSelection(); // resize to reset potential frame zoom
     };
     document.getElementById("btnDelete").onclick = () => {
       printess.deleteSelectedFrames();

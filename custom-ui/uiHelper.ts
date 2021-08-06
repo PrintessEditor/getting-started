@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn } from "./printess-editor";
 
 declare const bootstrap: any;
@@ -11,7 +12,11 @@ declare const bootstrap: any;
   renderDesktopUi: renderDesktopUi,
   refreshUndoRedoState: refreshUndoRedoState,
   viewPortScroll: viewPortScroll,
-  viewPortScrollInIFrame: viewPortScrollInIFrame
+  viewPortResize: viewPortResize,
+  viewPortScrollInIFrame: viewPortScrollInIFrame,
+  isTabletOrPhoneDevice: () => isTabletOrPhoneDevice === true,
+  isSafari: () => isSafari === true,
+  resizeAndClearSelection: resizeAndClearSelection
 }
 
 console.log("Printess ui-helper loaded");
@@ -33,14 +38,71 @@ async function addToBasket(printess: iPrintessApi) {
 let viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let viewportOffsetTop: number = 0;
 
-/*
-   viewPortSCROLL for iPhone
-   viewPortRESIZE for android
-*/
-// Handles software keyboard expasion and collapse 
-function viewPortScroll(printess: iPrintessApi) {
+const isTabletOrPhoneDevice: boolean = (function (): boolean {
+  //@ts-ignore
+  const _uaDataIsMobile = window.navigator.userAgentData ? window.navigator.userAgentData.mobile : undefined;
+  return typeof _uaDataIsMobile === 'boolean'
+    ? _uaDataIsMobile
+    : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}());
 
-  console.log("!!!! View-Port-Scroll-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
+const isSafari: boolean = (function (): boolean {
+  const ua = window.navigator.userAgent;
+  const iOS = !!ua.match(/iP(ad|od|hone)/i);
+  const hasSafariInUa = !!ua.match(/Safari/i);
+  const noOtherBrowsersInUa = !ua.match(/Chrome|CriOS|OPiOS|mercury|FxiOS|Firefox/i)
+  let result = false;
+  if (iOS) { //detecting Safari in IOS mobile browsers
+    const webkit = !!ua.match(/WebKit/i);
+    result = webkit && hasSafariInUa && noOtherBrowsersInUa
+  } else if ((<any>window).safari !== undefined) { //detecting Safari in Desktop Browsers
+    result = true;
+  } else { // detecting Safari in other platforms
+    result = hasSafariInUa && noOtherBrowsersInUa
+  }
+  return result;
+}());
+
+const hasTouchScreen = (function (): boolean {
+  let hasTouchScreen = false;
+  if ("maxTouchPoints" in navigator) {
+    hasTouchScreen = navigator.maxTouchPoints > 0;
+  } else if ("msMaxTouchPoints" in navigator) {
+    hasTouchScreen = (<any>navigator).msMaxTouchPoints > 0;
+  } else {
+    const mQ = window.matchMedia("(pointer:coarse)");
+    if (mQ && mQ.media === "(pointer:coarse)") {
+      hasTouchScreen = !!mQ.matches;
+    } else if ('orientation' in window) {
+      hasTouchScreen = true; // deprecated, but good fallback
+    } else {
+      // Only as a last resort, fall back to user agent sniffing
+      const UA = (<any>navigator).userAgent;
+      hasTouchScreen = (
+        /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||
+        /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA)
+      );
+    }
+  }
+  return hasTouchScreen;
+});
+
+function viewPortScroll(printess: iPrintessApi) {
+  // safari pushes viewport up to show keyboars, android doesn't
+  if (isSafari) {
+  _viewPortScroll(printess, "scroll");
+  }
+  // unfortunately iPad fires 2 scroll events when external keyboard is attached  -> top:55 , top:0 
+}
+function viewPortResize(printess: iPrintessApi) {
+  // software keyboard in safari fires viewPortScroll, so we can ignore the resize 
+  if (!isSafari) {
+  _viewPortScroll(printess, "resize");
+  }
+}
+
+function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
+  console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
   if (viewportOffsetTop !== window.visualViewport.offsetTop || viewportHeight !== window.visualViewport.height) {
     viewportOffsetTop = window.visualViewport.offsetTop;
     viewportHeight = window.visualViewport.height;
@@ -70,6 +132,11 @@ function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffs
       resizeMobileUi(printess, false, undefined);
     }
   }
+}
+
+function resizeAndClearSelection(printess: iPrintessApi) {
+  printess.resizePrintess();
+  printess.clearSelection();
 }
 
 function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>): Array<string> {

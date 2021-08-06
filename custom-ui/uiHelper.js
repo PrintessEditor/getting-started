@@ -15,7 +15,11 @@ window.uiHelper = {
     renderDesktopUi: renderDesktopUi,
     refreshUndoRedoState: refreshUndoRedoState,
     viewPortScroll: viewPortScroll,
-    viewPortScrollInIFrame: viewPortScrollInIFrame
+    viewPortResize: viewPortResize,
+    viewPortScrollInIFrame: viewPortScrollInIFrame,
+    isTabletOrPhoneDevice: () => isTabletOrPhoneDevice === true,
+    isSafari: () => isSafari === true,
+    resizeAndClearSelection: resizeAndClearSelection
 };
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
@@ -36,8 +40,66 @@ function addToBasket(printess) {
 }
 let viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let viewportOffsetTop = 0;
+const isTabletOrPhoneDevice = (function () {
+    const _uaDataIsMobile = window.navigator.userAgentData ? window.navigator.userAgentData.mobile : undefined;
+    return typeof _uaDataIsMobile === 'boolean'
+        ? _uaDataIsMobile
+        : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}());
+const isSafari = (function () {
+    const ua = window.navigator.userAgent;
+    const iOS = !!ua.match(/iP(ad|od|hone)/i);
+    const hasSafariInUa = !!ua.match(/Safari/i);
+    const noOtherBrowsersInUa = !ua.match(/Chrome|CriOS|OPiOS|mercury|FxiOS|Firefox/i);
+    let result = false;
+    if (iOS) {
+        const webkit = !!ua.match(/WebKit/i);
+        result = webkit && hasSafariInUa && noOtherBrowsersInUa;
+    }
+    else if (window.safari !== undefined) {
+        result = true;
+    }
+    else {
+        result = hasSafariInUa && noOtherBrowsersInUa;
+    }
+    return result;
+}());
+const hasTouchScreen = (function () {
+    let hasTouchScreen = false;
+    if ("maxTouchPoints" in navigator) {
+        hasTouchScreen = navigator.maxTouchPoints > 0;
+    }
+    else if ("msMaxTouchPoints" in navigator) {
+        hasTouchScreen = navigator.msMaxTouchPoints > 0;
+    }
+    else {
+        const mQ = window.matchMedia("(pointer:coarse)");
+        if (mQ && mQ.media === "(pointer:coarse)") {
+            hasTouchScreen = !!mQ.matches;
+        }
+        else if ('orientation' in window) {
+            hasTouchScreen = true;
+        }
+        else {
+            const UA = navigator.userAgent;
+            hasTouchScreen = (/\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||
+                /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA));
+        }
+    }
+    return hasTouchScreen;
+});
 function viewPortScroll(printess) {
-    console.log("!!!! View-Port-Scroll-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
+    if (isSafari) {
+        _viewPortScroll(printess, "scroll");
+    }
+}
+function viewPortResize(printess) {
+    if (!isSafari) {
+        _viewPortScroll(printess, "resize");
+    }
+}
+function _viewPortScroll(printess, what) {
+    console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
     if (viewportOffsetTop !== window.visualViewport.offsetTop || viewportHeight !== window.visualViewport.height) {
         viewportOffsetTop = window.visualViewport.offsetTop;
         viewportHeight = window.visualViewport.height;
@@ -65,6 +127,10 @@ function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
             resizeMobileUi(printess, false, undefined);
         }
     }
+}
+function resizeAndClearSelection(printess) {
+    printess.resizePrintess();
+    printess.clearSelection();
 }
 function renderDesktopUi(printess, properties, state, groupSnippets) {
     var _a;
