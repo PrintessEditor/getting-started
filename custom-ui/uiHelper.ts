@@ -90,14 +90,14 @@ const hasTouchScreen = (function (): boolean {
 function viewPortScroll(printess: iPrintessApi) {
   // safari pushes viewport up to show keyboars, android doesn't
   if (isSafari) {
-  _viewPortScroll(printess, "scroll");
+    _viewPortScroll(printess, "scroll");
   }
   // unfortunately iPad fires 2 scroll events when external keyboard is attached  -> top:55 , top:0 
 }
 function viewPortResize(printess: iPrintessApi) {
   // software keyboard in safari fires viewPortScroll, so we can ignore the resize 
   if (!isSafari) {
-  _viewPortScroll(printess, "resize");
+    _viewPortScroll(printess, "resize");
   }
 }
 
@@ -119,7 +119,6 @@ function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
 }
 
 function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffsetTop: number) {
-
   console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
   viewportHeight = vpHeight;
   viewportOffsetTop = vpOffsetTop;
@@ -630,9 +629,11 @@ function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMob
   const container = document.createElement("div");
   if (p.listMeta && p.listMeta.list) {
 
+    const cssId = p.id.replace("#", "-");
+
     if (p.listMeta.imageCss) {
       const st = document.createElement("style");
-      const css = p.listMeta.imageCss.replace(/\.image/g, ".image" + p.id);
+      const css = p.listMeta.imageCss.replace(/\.image/g, ".image" + cssId);
       st.innerHTML = css.split("\n").join("");
       container.appendChild(st);
     }
@@ -644,7 +645,7 @@ function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMob
 
     for (const entry of p.listMeta.list) {
       const thumb = document.createElement("div");
-      thumb.className = "image" + p.id;
+      thumb.className = "image" + cssId;
       thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
       thumb.style.width = p.listMeta.thumbWidth + "px";
       thumb.style.height = p.listMeta.thumbHeight + "px";
@@ -2120,7 +2121,7 @@ let firstRenderMobileCall: boolean = true;
 function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>) {
 
   const mobileUi = getMobileUiDiv();
-  mobileUi.innerHTML = "";
+  mobileUi.innerHTML = ""; 
 
   // render mobile page navigation if document has properties 
   if (state === "document") {
@@ -2134,7 +2135,7 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
 
   if (state !== "add") {
     // render properties UI
-    const buttonsOrPages = getMobileButtons(printess, properties);
+    const buttonsOrPages = getMobileButtons(printess, properties, state);
     mobileUi.innerHTML = "";
     mobileUi.appendChild(buttonsOrPages);
   }
@@ -2166,7 +2167,9 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
     }
 
   }
-  if (firstRenderMobileCall) {
+  if ( firstRenderMobileCall && isTabletOrPhoneDevice) {
+    // on tablet and phone we only register orientation-change event and this event is not fired initially
+    // so we fire it again. 
     // iphone does not get is so quickly:
     firstRenderMobileCall = false;
     window.setTimeout(() => {
@@ -2483,7 +2486,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false,
 
 }
 
-function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalProperty>, container?: HTMLDivElement, propertyIdFilter?: string): HTMLDivElement {
+function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, container?: HTMLDivElement, propertyIdFilter?: string): HTMLDivElement {
   container = container || document.createElement("div");
   container.className = "mobile-buttons-container";
 
@@ -2502,9 +2505,9 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   if (printess.spreadCount() > 1) {
     const spreads = printess.getAllSpreads();
     const info = printess.pageInfoSync();
-    if (hasButtons) {
+    if (hasButtons && !document.body.classList.contains('inline-mobile-page-bar')) {
       renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
-    } else {
+    } else if (!hasButtons) {
       // if we have no properties on document level, we can render an even larger page navigation in the button bar 
       document.body.classList.remove("no-mobile-button-bar");
 
@@ -2552,7 +2555,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
     for (const b of buttons) {
       const buttonDiv = document.createElement("div");
       if (b.newState.tableRowIndex !== undefined) {
-        buttonDiv.id = (b.newState.externalProperty?.id ?? "") + "#" + b.newState.tableRowIndex;
+        buttonDiv.id = (b.newState.externalProperty?.id ?? "") + "$$$" + b.newState.tableRowIndex;
       } else {
         buttonDiv.id = (b.newState.externalProperty?.id ?? "") + ":" + (b.newState.metaProperty ?? "");
       }
@@ -2601,7 +2604,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           const buttonContainer = document.querySelector(".mobile-buttons-container");
           if (buttonContainer) {
             buttonContainer.innerHTML = "";
-            getMobileButtons(printess, properties, container, b.newState.externalProperty.id);
+            getMobileButtons(printess, properties, state, container, b.newState.externalProperty.id);
             const backButton = document.querySelector(".mobile-property-back-button");
             if (backButton) {
               backButton.parentElement?.removeChild(backButton);
@@ -2625,7 +2628,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
             // happens with rich-text-color
             getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
           } else {
-            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, state, []));
           }
 
         }
@@ -2707,8 +2710,8 @@ function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, pr
   const id = buttonDiv.id.split(":")
   let propertyId = id[0];
   let rowIndex: number | undefined = undefined;
-  if (propertyId.indexOf("#") > 0) {
-    const tId = propertyId.split("#");
+  if (propertyId.startsWith("FF") && propertyId.indexOf("$$$") > 0) {
+    const tId = propertyId.split("$$$");
     propertyId = tId[0];
     rowIndex = isNaN(+tId[1]) ? undefined : +tId[1];
   }
@@ -2903,8 +2906,10 @@ function getOverlay(printess: iPrintessApi, properties: Array<iExternalProperty>
     hdiv.style.border = "5px solid rgba(100,250,0,0.5)";
     hdiv.appendChild(tdiv);
   } else {
-    hdiv.style.border = "5px solid rgba(255,200,100,0.5)";
-  }
+    const tdiv = getOverlayIcon(printess, "cog", "rgba(200,0,100,1)");
+    hdiv.style.border = "5px solid rgba(200,0,100,0.5)";
+    hdiv.appendChild(tdiv);
+  } 
   return hdiv;
 }
 

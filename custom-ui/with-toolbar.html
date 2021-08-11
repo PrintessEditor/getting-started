@@ -235,7 +235,7 @@
 
 
     const loadingDoneCallback = function (spreads, title) {
-      // printess.resizePrintess();
+        // remove your progress overlay here
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
@@ -327,7 +327,7 @@
 
       });
 
-      // listen to visual viewport changes to detect virtual keyboard on iOs
+      // listen to visual viewport changes to detect virtual keyboard on iOs and Android
       if (window.visualViewport) {
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
         window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
@@ -335,10 +335,10 @@
 
       if (uiHelper.isTabletOrPhoneDevice()) {
         console.log('MOBILE DEVICE DETECTED');
-        window.addEventListener("orientationchange", () => uiHelper.resizeAndClearSelection());
+        window.addEventListener("orientationchange", () => uiHelper.resizeAndClearSelection(printess));
       } else {
         console.log('NO MOBILE DEVICE DETECTED');
-        window.addEventListener("resize", () => uiHelper.resizeAndClearSelection());
+        window.addEventListener("resize", () => uiHelper.resizeAndClearSelection(printess));
       }
 
 
@@ -362,7 +362,7 @@
     };
 
     document.getElementById("btnClearSelection").onclick = () => {
-      uiHelper.resizeAndClearSelection(); // resize to reset potential frame zoom
+      uiHelper.resizeAndClearSelection(printess); // resize to reset potential frame zoom
     };
     document.getElementById("btnDelete").onclick = () => {
       printess.deleteSelectedFrames();

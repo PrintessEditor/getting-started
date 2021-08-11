@@ -507,9 +507,10 @@ function validate(p) {
 function getImageSelectList(printess, p, forMobile) {
     const container = document.createElement("div");
     if (p.listMeta && p.listMeta.list) {
+        const cssId = p.id.replace("#", "-");
         if (p.listMeta.imageCss) {
             const st = document.createElement("style");
-            const css = p.listMeta.imageCss.replace(/\.image/g, ".image" + p.id);
+            const css = p.listMeta.imageCss.replace(/\.image/g, ".image" + cssId);
             st.innerHTML = css.split("\n").join("");
             container.appendChild(st);
         }
@@ -519,7 +520,7 @@ function getImageSelectList(printess, p, forMobile) {
         imageList.classList.add("image-select-list");
         for (const entry of p.listMeta.list) {
             const thumb = document.createElement("div");
-            thumb.className = "image" + p.id;
+            thumb.className = "image" + cssId;
             thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
             thumb.style.width = p.listMeta.thumbWidth + "px";
             thumb.style.height = p.listMeta.thumbHeight + "px";
@@ -1769,7 +1770,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         }
     }
     if (state !== "add") {
-        const buttonsOrPages = getMobileButtons(printess, properties);
+        const buttonsOrPages = getMobileButtons(printess, properties, state);
         mobileUi.innerHTML = "";
         mobileUi.appendChild(buttonsOrPages);
     }
@@ -1792,7 +1793,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
             return;
         }
     }
-    if (firstRenderMobileCall) {
+    if (firstRenderMobileCall && isTabletOrPhoneDevice) {
         firstRenderMobileCall = false;
         window.setTimeout(() => {
             resizeMobileUi(printess, false, true);
@@ -2030,7 +2031,7 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
         }
     }
 }
-function getMobileButtons(printess, properties, container, propertyIdFilter) {
+function getMobileButtons(printess, properties, state, container, propertyIdFilter) {
     var _a, _b, _c, _d, _f;
     container = container || document.createElement("div");
     container.className = "mobile-buttons-container";
@@ -2043,10 +2044,10 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
     if (printess.spreadCount() > 1) {
         const spreads = printess.getAllSpreads();
         const info = printess.pageInfoSync();
-        if (hasButtons) {
+        if (hasButtons && !document.body.classList.contains('inline-mobile-page-bar')) {
             renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
         }
-        else {
+        else if (!hasButtons) {
             document.body.classList.remove("no-mobile-button-bar");
             buttonContainer.style.width = "100%";
             renderPageNavigation(printess, spreads, info, buttonContainer, true, true);
@@ -2082,7 +2083,7 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
         for (const b of buttons) {
             const buttonDiv = document.createElement("div");
             if (b.newState.tableRowIndex !== undefined) {
-                buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + "#" + b.newState.tableRowIndex;
+                buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + "$$$" + b.newState.tableRowIndex;
             }
             else {
                 buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + ":" + ((_f = b.newState.metaProperty) !== null && _f !== void 0 ? _f : "");
@@ -2129,7 +2130,7 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
                     const buttonContainer = document.querySelector(".mobile-buttons-container");
                     if (buttonContainer) {
                         buttonContainer.innerHTML = "";
-                        getMobileButtons(printess, properties, container, b.newState.externalProperty.id);
+                        getMobileButtons(printess, properties, state, container, b.newState.externalProperty.id);
                         const backButton = document.querySelector(".mobile-property-back-button");
                         if (backButton) {
                             (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
@@ -2152,7 +2153,7 @@ function getMobileButtons(printess, properties, container, propertyIdFilter) {
                         getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
                     }
                     else {
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, state, []));
                     }
                 }
                 renderMobileControlHost(printess, b.newState);
@@ -2219,8 +2220,8 @@ function drawButtonContent(printess, buttonDiv, properties) {
     const id = buttonDiv.id.split(":");
     let propertyId = id[0];
     let rowIndex = undefined;
-    if (propertyId.indexOf("#") > 0) {
-        const tId = propertyId.split("#");
+    if (propertyId.startsWith("FF") && propertyId.indexOf("$$$") > 0) {
+        const tId = propertyId.split("$$$");
         propertyId = tId[0];
         rowIndex = isNaN(+tId[1]) ? undefined : +tId[1];
     }
@@ -2378,7 +2379,9 @@ function getOverlay(printess, properties) {
         hdiv.appendChild(tdiv);
     }
     else {
-        hdiv.style.border = "5px solid rgba(255,200,100,0.5)";
+        const tdiv = getOverlayIcon(printess, "cog", "rgba(200,0,100,1)");
+        hdiv.style.border = "5px solid rgba(200,0,100,0.5)";
+        hdiv.appendChild(tdiv);
     }
     return hdiv;
 }
@@ -2400,4 +2403,3 @@ function getOverlayIcon(printess, name, color) {
     return tdiv;
 }
 
-//# sourceMappingURL=uiHelper.js.map
