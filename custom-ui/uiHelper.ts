@@ -22,7 +22,6 @@ declare const bootstrap: any;
 
 let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let uih_viewportOffsetTop: number = 0;
-let uih_firstRenderMobileCall: boolean = true;
 
 let uih_currentGroupSnippets: Array<iExternalSnippetCluster> = [];
 let uih_currentProperties: Array<iExternalProperty> = [];
@@ -112,8 +111,7 @@ function viewPortResize(printess: iPrintessApi) {
 
   if (printess.isMobile()) {
     if (uih_currentRender !== "mobile") {
-      uih_firstRenderMobileCall = true; // forces printess-resize
-      renderMobileUi(printess);
+      renderMobileUi(printess, undefined,undefined,undefined, true);
     }
   } else {
     if (uih_currentRender !== "desktop") {
@@ -216,9 +214,7 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
   printessDiv.style.left = "";
   printessDiv.style.bottom = "";
   printessDiv.style.right = "";
-
-  uih_firstRenderMobileCall = true; // reset flag to ensure redraw when mobile is entered again. 
-
+ 
   container.innerHTML = "";
   const t = [];
 
@@ -2194,7 +2190,11 @@ function getMobileNavbarDiv(): HTMLElement {
 
 
 
-function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets) {
+function renderMobileUi(printess: iPrintessApi,
+  properties: Array<iExternalProperty> = uih_currentProperties,
+  state: MobileUiState = uih_currentState,
+  groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets,
+  forcePrintessResize: boolean = false) {
 
   uih_currentGroupSnippets = groupSnippets;
   uih_currentState = state;
@@ -2255,16 +2255,9 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
     }
 
   }
-  if (uih_firstRenderMobileCall && isTabletOrPhoneDevice) {
-    // iphone does not get is so quickly:
-    uih_firstRenderMobileCall = false;
-    window.setTimeout(() => {
-      resizeMobileUi(printess, false, true);
-    }, 500);
-  } else {
-    resizeMobileUi(printess);
-  }
-
+  
+  resizeMobileUi(printess, false, forcePrintessResize);
+ 
 }
 
 function getMobilePlusButton(printess: iPrintessApi): HTMLDivElement {

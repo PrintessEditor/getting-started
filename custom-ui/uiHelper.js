@@ -24,7 +24,6 @@ window.uiHelper = {
 };
 let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let uih_viewportOffsetTop = 0;
-let uih_firstRenderMobileCall = true;
 let uih_currentGroupSnippets = [];
 let uih_currentProperties = [];
 let uih_currentState = "document";
@@ -107,8 +106,7 @@ function viewPortScroll(printess) {
 function viewPortResize(printess) {
     if (printess.isMobile()) {
         if (uih_currentRender !== "mobile") {
-            uih_firstRenderMobileCall = true;
-            renderMobileUi(printess);
+            renderMobileUi(printess, undefined, undefined, undefined, true);
         }
     }
     else {
@@ -193,7 +191,6 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
     printessDiv.style.left = "";
     printessDiv.style.bottom = "";
     printessDiv.style.right = "";
-    uih_firstRenderMobileCall = true;
     container.innerHTML = "";
     const t = [];
     const nav = getMobileNavbarDiv();
@@ -1813,7 +1810,7 @@ function getMobileNavbarDiv() {
     }
     return mobileNav;
 }
-function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
+function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets, forcePrintessResize = false) {
     uih_currentGroupSnippets = groupSnippets;
     uih_currentState = state;
     uih_currentProperties = properties;
@@ -1857,15 +1854,7 @@ function renderMobileUi(printess, properties = uih_currentProperties, state = ui
             return;
         }
     }
-    if (uih_firstRenderMobileCall && isTabletOrPhoneDevice) {
-        uih_firstRenderMobileCall = false;
-        window.setTimeout(() => {
-            resizeMobileUi(printess, false, true);
-        }, 500);
-    }
-    else {
-        resizeMobileUi(printess);
-    }
+    resizeMobileUi(printess, false, forcePrintessResize);
 }
 function getMobilePlusButton(printess) {
     const button = document.createElement("div");
