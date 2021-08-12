@@ -331,9 +331,11 @@
       if (window.visualViewport) {
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
         window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
+      } else {
+        window.addEventListener("resize", () => uiHelper.resize(printess));
       }
 
-      window.addEventListener("resize", () => uiHelper.resize(printess));
+
 
     });
 
