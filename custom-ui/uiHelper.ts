@@ -16,8 +16,17 @@ declare const bootstrap: any;
   viewPortScrollInIFrame: viewPortScrollInIFrame,
   isTabletOrPhoneDevice: () => isTabletOrPhoneDevice === true,
   isSafari: () => isSafari === true,
-  resizeAndClearSelection: resizeAndClearSelection
+  resizeAndClearSelection: resizeAndClearSelection,
+  resize: resize
 }
+
+let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+let uih_viewportOffsetTop: number = 0;
+
+let uih_currentGroupSnippets: Array<iExternalSnippetCluster> = [];
+let uih_currentProperties: Array<iExternalProperty> = [];
+let uih_currentState: MobileUiState = "document";
+let uih_currentRender: "mobile" | "desktop" | "never" = "never";
 
 console.log("Printess ui-helper loaded");
 
@@ -35,8 +44,6 @@ async function addToBasket(printess: iPrintessApi) {
   }
 }
 
-let viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-let viewportOffsetTop: number = 0;
 
 const isIpadOS = (function () {
   return navigator.maxTouchPoints &&
@@ -110,9 +117,9 @@ function viewPortResize(printess: iPrintessApi) {
 
 function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
   console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
-  if (viewportOffsetTop !== window.visualViewport.offsetTop || viewportHeight !== window.visualViewport.height) {
-    viewportOffsetTop = window.visualViewport.offsetTop;
-    viewportHeight = window.visualViewport.height;
+  if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height) {
+    uih_viewportOffsetTop = window.visualViewport.offsetTop;
+    uih_viewportHeight = window.visualViewport.height;
     const printessDiv = document.getElementById("desktop-printess-container");
     if (printessDiv) {
       if (window.visualViewport.offsetTop > 0) {
@@ -127,8 +134,8 @@ function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
 
 function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffsetTop: number) {
   console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
-  viewportHeight = vpHeight;
-  viewportOffsetTop = vpOffsetTop;
+  uih_viewportHeight = vpHeight;
+  uih_viewportOffsetTop = vpOffsetTop;
   const printessDiv = document.getElementById("desktop-printess-container");
   if (printessDiv) {
     if (vpOffsetTop > 0) {
@@ -140,6 +147,7 @@ function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffs
   }
 }
 
+//obsolete
 function resizeAndClearSelection(printess: iPrintessApi) {
   if (isTabletOrPhoneDevice) {
     // orientation-change, takes some time
@@ -153,7 +161,34 @@ function resizeAndClearSelection(printess: iPrintessApi) {
   }
 }
 
-function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>): Array<string> {
+function resize(printess: iPrintessApi) {
+  printess.resizePrintess();
+
+  if (printess.isMobile()) {
+    if (uih_currentRender !== "mobile") {
+      renderMobileUi(printess);
+    }
+  } else {
+    if (uih_currentRender !== "desktop") {
+      renderDesktopUi(printess);
+    }
+  }
+
+}
+
+function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets): Array<string> {
+
+  uih_currentGroupSnippets = groupSnippets;
+  uih_currentState = state;
+  uih_currentProperties = properties;
+  uih_currentRender = "desktop";
+
+  // remove mobile ui if rendered before
+  const mobileUi: HTMLDivElement | null = document.querySelector(".mobile-ui");
+  if (mobileUi) {
+    mobileUi.innerHTML = "";
+  }
+
 
   const printessDiv = document.getElementById("desktop-printess-container");
   const container = document.getElementById("desktop-properties");
@@ -386,6 +421,8 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
 
   const group2 = document.createElement("div");
   group2.className = "input-group mb-3";
+  group2.style.padding = "1px";
+  group2.style.marginLeft = "0px";
 
   const pre2 = document.createElement("div");
   pre2.className = "input-group-prepend";
@@ -396,7 +433,11 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
 
   const spacer = document.createElement("div");
   spacer.style.width = "10px";
-  group2.appendChild(spacer);
+
+  if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0 && p.textStyle.allows.indexOf("verticalAlignment")) {
+    group2.appendChild(spacer);
+  }
+
   if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
     group2.appendChild(getVAlignControl(printess, p, false));
   }
@@ -1359,6 +1400,8 @@ function getVAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobil
 
   const group = document.createElement("div");
   group.className = "btn-group";
+  group.style.marginLeft = "0px";
+
   if (forMobile) {
     group.classList.add("form-control");
   }
@@ -1384,6 +1427,8 @@ function getHAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobil
 
   const group = document.createElement("div");
   group.className = "btn-group";
+  group.style.marginLeft = "0px";
+
   if (forMobile) {
     group.classList.add("form-control");
   }
@@ -2134,10 +2179,21 @@ function getMobileNavbarDiv(): HTMLElement {
 
 let firstRenderMobileCall: boolean = true;
 
-function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>) {
+function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets) {
+
+  uih_currentGroupSnippets = groupSnippets;
+  uih_currentState = state;
+  uih_currentProperties = properties;
+  uih_currentRender = "mobile";
 
   const mobileUi = getMobileUiDiv();
   mobileUi.innerHTML = "";
+
+  // remove desktop ui if rendered before
+  const desktopProperties = document.getElementById("desktop-properties");
+  if (desktopProperties) {
+    desktopProperties.innerHTML = "";
+  }
 
   // render mobile page navigation if document has properties 
   if (state === "document") {
@@ -2151,7 +2207,7 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
 
   if (state !== "add") {
     // render properties UI
-    const buttonsOrPages = getMobileButtons(printess, properties, state);
+    const buttonsOrPages = getMobileButtons(printess);
     mobileUi.innerHTML = "";
     mobileUi.appendChild(buttonsOrPages);
   }
@@ -2164,21 +2220,21 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
   if (state === "add") {
     // render list of group snippets
     document.body.classList.add("no-mobile-button-bar");
-    renderMobileControlHost(printess, { state: "add" }, groupSnippets)
+    renderMobileControlHost(printess, { state: "add" })
   }
 
   // Buttons for "add" and "back ""
   if (groupSnippets.length > 0 && state !== "add") {
-    mobileUi.appendChild(getMobilePlusButton(printess, properties, groupSnippets))
+    mobileUi.appendChild(getMobilePlusButton(printess))
   }
   if (state !== "document") {
-    mobileUi.appendChild(getMobileBackButton(printess, properties, state, groupSnippets))
+    mobileUi.appendChild(getMobileBackButton(printess, state))
 
   } else {
     // propably we where in text edit and now need to wait for viewport scroll evevnt to fire 
     // to not resize twice 
     // if (window.visualViewport && window.visualViewport.offsetTop) {
-    if (viewportOffsetTop) {
+    if (uih_viewportOffsetTop) {
       return;
     }
 
@@ -2206,14 +2262,14 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
 
 }
 
-function getMobilePlusButton(printess: iPrintessApi, properties: Array<iExternalProperty>, groupSnippets: Array<iExternalSnippetCluster>): HTMLDivElement {
+function getMobilePlusButton(printess: iPrintessApi): HTMLDivElement {
   const button = document.createElement("div");
   button.className = "mobile-property-plus-button";
 
   const circle = document.createElement("div");
   circle.className = "mobile-property-circle";
   circle.onclick = () => {
-    renderMobileUi(printess, properties, "add", groupSnippets)
+    renderMobileUi(printess, undefined, "add", undefined)
   }
 
   const icon = printess.getIcon("plus");
@@ -2223,7 +2279,7 @@ function getMobilePlusButton(printess: iPrintessApi, properties: Array<iExternal
   return button;
 }
 
-function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>): HTMLDivElement {
+function getMobileBackButton(printess: iPrintessApi, state: MobileUiState): HTMLDivElement {
   const button = document.createElement("div");
   button.className = "mobile-property-back-button";
 
@@ -2234,11 +2290,11 @@ function getMobileBackButton(printess: iPrintessApi, properties: Array<iExternal
   }
   circle.onclick = () => {
     if (state === "details") {
-      renderMobileUi(printess, properties, "frames", groupSnippets)
+      renderMobileUi(printess, undefined, "frames")
     } else if (state === "frames") {
       printess.clearSelection();
     } else if (state === "add" || state === "document") {
-      renderMobileUi(printess, properties, "document", groupSnippets)
+      renderMobileUi(printess, undefined, "document")
     }
   }
 
@@ -2437,8 +2493,8 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false,
 
     mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px"; // +2 = border-top
     const printessDiv = document.getElementById("desktop-printess-container");
-    const viewPortHeight = viewportHeight; //||  window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    const viewPortTopOffset = viewportOffsetTop; //  ?? window.visualViewport ? window.visualViewport.offsetTop : 0;
+    const viewPortHeight = uih_viewportHeight; //||  window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const viewPortTopOffset = uih_viewportOffsetTop; //  ?? window.visualViewport ? window.visualViewport.offsetTop : 0;
 
     let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
     if (printessDiv) {
@@ -2502,7 +2558,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false,
 
 }
 
-function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, container?: HTMLDivElement, propertyIdFilter?: string): HTMLDivElement {
+function getMobileButtons(printess: iPrintessApi, container?: HTMLDivElement, propertyIdFilter?: string): HTMLDivElement {
   container = container || document.createElement("div");
   container.className = "mobile-buttons-container";
 
@@ -2514,7 +2570,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   buttonContainer.className = "mobile-buttons";
 
 
-  const buttons = printess.getMobileUiButtons(properties, propertyIdFilter || "root");
+  const buttons = printess.getMobileUiButtons(uih_currentProperties, propertyIdFilter || "root");
 
   const hasButtons = buttons.length > 0;
 
@@ -2596,7 +2652,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
               tableEditRow.event = "Birthday";
             }
             renderMobileControlHost(printess, b.newState);
-            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", [])); // group-snippets are only used with  "add" state
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, "document")); // group-snippets are only used with  "add" state
 
           }
         } else if (b.newState.state === "table-edit") {
@@ -2608,7 +2664,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
               tableEditRow = data[rowIndex];
               tableEditRowIndex = rowIndex;
               renderMobileControlHost(printess, b.newState);
-              getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", [])); // group-snippets are only used with  "add" state
+              getMobileUiDiv().appendChild(getMobileBackButton(printess, "document")); // group-snippets are only used with  "add" state
             } catch (error) {
               console.error("property table has no array data:" + p.id)
             }
@@ -2620,19 +2676,19 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           const buttonContainer = document.querySelector(".mobile-buttons-container");
           if (buttonContainer) {
             buttonContainer.innerHTML = "";
-            getMobileButtons(printess, properties, state, container, b.newState.externalProperty.id);
+            getMobileButtons(printess, container, b.newState.externalProperty.id);
             const backButton = document.querySelector(".mobile-property-back-button");
             if (backButton) {
               backButton.parentElement?.removeChild(backButton);
             }
-            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", [])); // group-snippets are only used with  "add" state
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, "details")); // group-snippets are only used with  "add" state
           }
         } else {
           document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
           document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
           buttonDiv.classList.toggle("selected");
           buttonDiv.innerHTML = "";
-          drawButtonContent(printess, buttonDiv, properties);
+          drawButtonContent(printess, buttonDiv, uih_currentProperties);
           centerMobileButton(buttonDiv);
 
           // if a form field on doc level was selectected, we might not have a back button, so add one just in case 
@@ -2642,9 +2698,9 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
           }
           if (printess.isCurrentStepActive()) {
             // happens with rich-text-color
-            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, "details"));
           } else {
-            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, state, []));
+            getMobileUiDiv().appendChild(getMobileBackButton(printess, uih_currentState));
           }
 
         }
@@ -2653,7 +2709,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
         renderMobileControlHost(printess, b.newState);
       }
 
-      drawButtonContent(printess, buttonDiv, properties);
+      drawButtonContent(printess, buttonDiv, uih_currentProperties);
 
       buttonContainer.appendChild(buttonDiv);
 
@@ -2667,7 +2723,7 @@ function getMobileButtons(printess: iPrintessApi, properties: Array<iExternalPro
   return container;
 }
 
-function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState, groupSnippets?: Array<iExternalSnippetCluster>) {
+function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState) {
   const controlHost = document.getElementById("mobile-control-host");
 
   if (controlHost) {
@@ -2678,7 +2734,7 @@ function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState, 
     controlHost.innerHTML = "";
     if (state.state === "add") {
       controlHost.classList.add("mobile-control-xl");
-      const snippets = renderGroupSnippets(printess, groupSnippets || [], true);
+      const snippets = renderGroupSnippets(printess, uih_currentGroupSnippets || [], true);
       controlHost.appendChild(snippets);
 
     } else if (state.externalProperty) {

@@ -19,8 +19,15 @@ window.uiHelper = {
     viewPortScrollInIFrame: viewPortScrollInIFrame,
     isTabletOrPhoneDevice: () => isTabletOrPhoneDevice === true,
     isSafari: () => isSafari === true,
-    resizeAndClearSelection: resizeAndClearSelection
+    resizeAndClearSelection: resizeAndClearSelection,
+    resize: resize
 };
+let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+let uih_viewportOffsetTop = 0;
+let uih_currentGroupSnippets = [];
+let uih_currentProperties = [];
+let uih_currentState = "document";
+let uih_currentRender = "never";
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -38,8 +45,6 @@ function addToBasket(printess) {
         }
     });
 }
-let viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-let viewportOffsetTop = 0;
 const isIpadOS = (function () {
     return navigator.maxTouchPoints &&
         navigator.maxTouchPoints > 2 &&
@@ -107,9 +112,9 @@ function viewPortResize(printess) {
 }
 function _viewPortScroll(printess, what) {
     console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
-    if (viewportOffsetTop !== window.visualViewport.offsetTop || viewportHeight !== window.visualViewport.height) {
-        viewportOffsetTop = window.visualViewport.offsetTop;
-        viewportHeight = window.visualViewport.height;
+    if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height) {
+        uih_viewportOffsetTop = window.visualViewport.offsetTop;
+        uih_viewportHeight = window.visualViewport.height;
         const printessDiv = document.getElementById("desktop-printess-container");
         if (printessDiv) {
             if (window.visualViewport.offsetTop > 0) {
@@ -123,8 +128,8 @@ function _viewPortScroll(printess, what) {
 }
 function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
     console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
-    viewportHeight = vpHeight;
-    viewportOffsetTop = vpOffsetTop;
+    uih_viewportHeight = vpHeight;
+    uih_viewportOffsetTop = vpOffsetTop;
     const printessDiv = document.getElementById("desktop-printess-container");
     if (printessDiv) {
         if (vpOffsetTop > 0) {
@@ -147,8 +152,29 @@ function resizeAndClearSelection(printess) {
         printess.clearSelection();
     }
 }
-function renderDesktopUi(printess, properties, state, groupSnippets) {
+function resize(printess) {
+    printess.resizePrintess();
+    if (printess.isMobile()) {
+        if (uih_currentRender !== "mobile") {
+            renderMobileUi(printess);
+        }
+    }
+    else {
+        if (uih_currentRender !== "desktop") {
+            renderDesktopUi(printess);
+        }
+    }
+}
+function renderDesktopUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
     var _a;
+    uih_currentGroupSnippets = groupSnippets;
+    uih_currentState = state;
+    uih_currentProperties = properties;
+    uih_currentRender = "desktop";
+    const mobileUi = document.querySelector(".mobile-ui");
+    if (mobileUi) {
+        mobileUi.innerHTML = "";
+    }
     const printessDiv = document.getElementById("desktop-printess-container");
     const container = document.getElementById("desktop-properties");
     if (!container || !printessDiv) {
@@ -326,6 +352,8 @@ function getTextStyleControl(printess, p) {
     textPropertiesDiv.appendChild(group1);
     const group2 = document.createElement("div");
     group2.className = "input-group mb-3";
+    group2.style.padding = "1px";
+    group2.style.marginLeft = "0px";
     const pre2 = document.createElement("div");
     pre2.className = "input-group-prepend";
     if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
@@ -333,7 +361,9 @@ function getTextStyleControl(printess, p) {
     }
     const spacer = document.createElement("div");
     spacer.style.width = "10px";
-    group2.appendChild(spacer);
+    if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0 && p.textStyle.allows.indexOf("verticalAlignment")) {
+        group2.appendChild(spacer);
+    }
     if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
         group2.appendChild(getVAlignControl(printess, p, false));
     }
@@ -1104,6 +1134,7 @@ function getDropdownImageContent(thumbUrl) {
 function getVAlignControl(printess, p, forMobile) {
     const group = document.createElement("div");
     group.className = "btn-group";
+    group.style.marginLeft = "0px";
     if (forMobile) {
         group.classList.add("form-control");
     }
@@ -1126,6 +1157,7 @@ function getVAlignControl(printess, p, forMobile) {
 function getHAlignControl(printess, p, forMobile) {
     const group = document.createElement("div");
     group.className = "btn-group";
+    group.style.marginLeft = "0px";
     if (forMobile) {
         group.classList.add("form-control");
     }
@@ -1774,9 +1806,17 @@ function getMobileNavbarDiv() {
     return mobileNav;
 }
 let firstRenderMobileCall = true;
-function renderMobileUi(printess, properties, state, groupSnippets) {
+function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
+    uih_currentGroupSnippets = groupSnippets;
+    uih_currentState = state;
+    uih_currentProperties = properties;
+    uih_currentRender = "mobile";
     const mobileUi = getMobileUiDiv();
     mobileUi.innerHTML = "";
+    const desktopProperties = document.getElementById("desktop-properties");
+    if (desktopProperties) {
+        desktopProperties.innerHTML = "";
+    }
     if (state === "document") {
         if (properties.length === 0 || printess.spreadCount() < 2) {
             document.body.classList.add("inline-mobile-page-bar");
@@ -1786,7 +1826,7 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         }
     }
     if (state !== "add") {
-        const buttonsOrPages = getMobileButtons(printess, properties, state);
+        const buttonsOrPages = getMobileButtons(printess);
         mobileUi.innerHTML = "";
         mobileUi.appendChild(buttonsOrPages);
     }
@@ -1796,16 +1836,16 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
     mobileUi.appendChild(controlHost);
     if (state === "add") {
         document.body.classList.add("no-mobile-button-bar");
-        renderMobileControlHost(printess, { state: "add" }, groupSnippets);
+        renderMobileControlHost(printess, { state: "add" });
     }
     if (groupSnippets.length > 0 && state !== "add") {
-        mobileUi.appendChild(getMobilePlusButton(printess, properties, groupSnippets));
+        mobileUi.appendChild(getMobilePlusButton(printess));
     }
     if (state !== "document") {
-        mobileUi.appendChild(getMobileBackButton(printess, properties, state, groupSnippets));
+        mobileUi.appendChild(getMobileBackButton(printess, state));
     }
     else {
-        if (viewportOffsetTop) {
+        if (uih_viewportOffsetTop) {
             return;
         }
     }
@@ -1823,20 +1863,20 @@ function renderMobileUi(printess, properties, state, groupSnippets) {
         }
     }
 }
-function getMobilePlusButton(printess, properties, groupSnippets) {
+function getMobilePlusButton(printess) {
     const button = document.createElement("div");
     button.className = "mobile-property-plus-button";
     const circle = document.createElement("div");
     circle.className = "mobile-property-circle";
     circle.onclick = () => {
-        renderMobileUi(printess, properties, "add", groupSnippets);
+        renderMobileUi(printess, undefined, "add", undefined);
     };
     const icon = printess.getIcon("plus");
     circle.appendChild(icon);
     button.appendChild(circle);
     return button;
 }
-function getMobileBackButton(printess, properties, state, groupSnippets) {
+function getMobileBackButton(printess, state) {
     const button = document.createElement("div");
     button.className = "mobile-property-back-button";
     const circle = document.createElement("div");
@@ -1846,13 +1886,13 @@ function getMobileBackButton(printess, properties, state, groupSnippets) {
     }
     circle.onclick = () => {
         if (state === "details") {
-            renderMobileUi(printess, properties, "frames", groupSnippets);
+            renderMobileUi(printess, undefined, "frames");
         }
         else if (state === "frames") {
             printess.clearSelection();
         }
         else if (state === "add" || state === "document") {
-            renderMobileUi(printess, properties, "document", groupSnippets);
+            renderMobileUi(printess, undefined, "document");
         }
     };
     const icon = printess.getIcon("arrow-left");
@@ -1996,8 +2036,8 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
         mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
         const printessDiv = document.getElementById("desktop-printess-container");
-        const viewPortHeight = viewportHeight;
-        const viewPortTopOffset = viewportOffsetTop;
+        const viewPortHeight = uih_viewportHeight;
+        const viewPortTopOffset = uih_viewportOffsetTop;
         let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
         if (printessDiv) {
             let printessTop;
@@ -2047,7 +2087,7 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
         }
     }
 }
-function getMobileButtons(printess, properties, state, container, propertyIdFilter) {
+function getMobileButtons(printess, container, propertyIdFilter) {
     var _a, _b, _c, _d, _f;
     container = container || document.createElement("div");
     container.className = "mobile-buttons-container";
@@ -2055,7 +2095,7 @@ function getMobileButtons(printess, properties, state, container, propertyIdFilt
     scrollContainer.className = "mobile-buttons-scroll-container";
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "mobile-buttons";
-    const buttons = printess.getMobileUiButtons(properties, propertyIdFilter || "root");
+    const buttons = printess.getMobileUiButtons(uih_currentProperties, propertyIdFilter || "root");
     const hasButtons = buttons.length > 0;
     if (printess.spreadCount() > 1) {
         const spreads = printess.getAllSpreads();
@@ -2123,7 +2163,7 @@ function getMobileButtons(printess, properties, state, container, propertyIdFilt
                             tableEditRow.event = "Birthday";
                         }
                         renderMobileControlHost(printess, b.newState);
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, "document"));
                     }
                 }
                 else if (b.newState.state === "table-edit") {
@@ -2135,7 +2175,7 @@ function getMobileButtons(printess, properties, state, container, propertyIdFilt
                             tableEditRow = data[rowIndex];
                             tableEditRowIndex = rowIndex;
                             renderMobileControlHost(printess, b.newState);
-                            getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "document", []));
+                            getMobileUiDiv().appendChild(getMobileBackButton(printess, "document"));
                         }
                         catch (error) {
                             console.error("property table has no array data:" + p.id);
@@ -2146,12 +2186,12 @@ function getMobileButtons(printess, properties, state, container, propertyIdFilt
                     const buttonContainer = document.querySelector(".mobile-buttons-container");
                     if (buttonContainer) {
                         buttonContainer.innerHTML = "";
-                        getMobileButtons(printess, properties, state, container, b.newState.externalProperty.id);
+                        getMobileButtons(printess, container, b.newState.externalProperty.id);
                         const backButton = document.querySelector(".mobile-property-back-button");
                         if (backButton) {
                             (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
                         }
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, "details"));
                     }
                 }
                 else {
@@ -2159,22 +2199,22 @@ function getMobileButtons(printess, properties, state, container, propertyIdFilt
                     document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
                     buttonDiv.classList.toggle("selected");
                     buttonDiv.innerHTML = "";
-                    drawButtonContent(printess, buttonDiv, properties);
+                    drawButtonContent(printess, buttonDiv, uih_currentProperties);
                     centerMobileButton(buttonDiv);
                     const backButton = document.querySelector(".mobile-property-back-button");
                     if (backButton) {
                         (_d = backButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(backButton);
                     }
                     if (printess.isCurrentStepActive()) {
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, "details", []));
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, "details"));
                     }
                     else {
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, properties, state, []));
+                        getMobileUiDiv().appendChild(getMobileBackButton(printess, uih_currentState));
                     }
                 }
                 renderMobileControlHost(printess, b.newState);
             };
-            drawButtonContent(printess, buttonDiv, properties);
+            drawButtonContent(printess, buttonDiv, uih_currentProperties);
             buttonContainer.appendChild(buttonDiv);
         }
     }
@@ -2182,7 +2222,7 @@ function getMobileButtons(printess, properties, state, container, propertyIdFilt
     container.appendChild(scrollContainer);
     return container;
 }
-function renderMobileControlHost(printess, state, groupSnippets) {
+function renderMobileControlHost(printess, state) {
     const controlHost = document.getElementById("mobile-control-host");
     if (controlHost) {
         controlHost.classList.remove("mobile-control-sm");
@@ -2192,7 +2232,7 @@ function renderMobileControlHost(printess, state, groupSnippets) {
         controlHost.innerHTML = "";
         if (state.state === "add") {
             controlHost.classList.add("mobile-control-xl");
-            const snippets = renderGroupSnippets(printess, groupSnippets || [], true);
+            const snippets = renderGroupSnippets(printess, uih_currentGroupSnippets || [], true);
             controlHost.appendChild(snippets);
         }
         else if (state.externalProperty) {
