@@ -101,14 +101,20 @@ const hasTouchScreen = (function () {
     return hasTouchScreen;
 });
 function viewPortScroll(printess) {
-    if (isSafari) {
-        _viewPortScroll(printess, "scroll");
-    }
+    _viewPortScroll(printess, "scroll");
 }
 function viewPortResize(printess) {
-    if (!isSafari) {
-        _viewPortScroll(printess, "resize");
+    if (printess.isMobile()) {
+        if (uih_currentRender !== "mobile") {
+            renderMobileUi(printess);
+        }
     }
+    else {
+        if (uih_currentRender !== "desktop") {
+            renderDesktopUi(printess);
+        }
+    }
+    _viewPortScroll(printess, "resize");
 }
 function _viewPortScroll(printess, what) {
     console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);

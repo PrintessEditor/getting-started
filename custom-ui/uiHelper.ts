@@ -105,8 +105,7 @@ function viewPortScroll(printess: iPrintessApi) {
   // safari pushes viewport up to show keyboars, android doesn't
   //if (isSafari) {
     _viewPortScroll(printess, "scroll");
- // }
-  // unfortunately iPad fires 2 scroll events when external keyboard is attached  -> top:55 , top:0 
+ // } 
 }
 function viewPortResize(printess: iPrintessApi) {
 
@@ -175,6 +174,7 @@ function resizeAndClearSelection(printess: iPrintessApi) {
 }
 
 function resize(printess: iPrintessApi) {
+  
   printess.resizePrintess();
 
   if (printess.isMobile()) {
