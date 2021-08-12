@@ -107,7 +107,7 @@ function viewPortScroll(printess) {
 function viewPortResize(printess) {
     if (printess.isMobile()) {
         if (uih_currentRender !== "mobile") {
-            uih_firstRenderMobileCall = false;
+            uih_firstRenderMobileCall = true;
             renderMobileUi(printess);
         }
     }

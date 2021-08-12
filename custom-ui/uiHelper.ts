@@ -112,7 +112,7 @@ function viewPortResize(printess: iPrintessApi) {
 
   if (printess.isMobile()) {
     if (uih_currentRender !== "mobile") {
-      uih_firstRenderMobileCall = false;
+      uih_firstRenderMobileCall = true; // forces printess-resize
       renderMobileUi(printess);
     }
   } else {
