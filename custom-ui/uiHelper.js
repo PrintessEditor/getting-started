@@ -24,6 +24,7 @@ window.uiHelper = {
 };
 let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let uih_viewportOffsetTop = 0;
+let uih_firstRenderMobileCall = true;
 let uih_currentGroupSnippets = [];
 let uih_currentProperties = [];
 let uih_currentState = "document";
@@ -106,6 +107,7 @@ function viewPortScroll(printess) {
 function viewPortResize(printess) {
     if (printess.isMobile()) {
         if (uih_currentRender !== "mobile") {
+            uih_firstRenderMobileCall = false;
             renderMobileUi(printess);
         }
     }
@@ -191,7 +193,7 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
     printessDiv.style.left = "";
     printessDiv.style.bottom = "";
     printessDiv.style.right = "";
-    firstRenderMobileCall = true;
+    uih_firstRenderMobileCall = true;
     container.innerHTML = "";
     const t = [];
     const nav = getMobileNavbarDiv();
@@ -1811,7 +1813,6 @@ function getMobileNavbarDiv() {
     }
     return mobileNav;
 }
-let firstRenderMobileCall = true;
 function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
     uih_currentGroupSnippets = groupSnippets;
     uih_currentState = state;
@@ -1852,21 +1853,18 @@ function renderMobileUi(printess, properties = uih_currentProperties, state = ui
     }
     else {
         if (uih_viewportOffsetTop) {
+            alert("Cancel Render");
             return;
         }
     }
-    if (firstRenderMobileCall && isTabletOrPhoneDevice) {
-        firstRenderMobileCall = false;
+    if (uih_firstRenderMobileCall && isTabletOrPhoneDevice) {
+        uih_firstRenderMobileCall = false;
         window.setTimeout(() => {
             resizeMobileUi(printess, false, true);
         }, 500);
     }
     else {
-        if (printess.isCurrentStepActive() && state !== "frames") {
-        }
-        else {
-            resizeMobileUi(printess);
-        }
+        resizeMobileUi(printess);
     }
 }
 function getMobilePlusButton(printess) {

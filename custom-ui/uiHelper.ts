@@ -22,6 +22,7 @@ declare const bootstrap: any;
 
 let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let uih_viewportOffsetTop: number = 0;
+let uih_firstRenderMobileCall: boolean = true;
 
 let uih_currentGroupSnippets: Array<iExternalSnippetCluster> = [];
 let uih_currentProperties: Array<iExternalProperty> = [];
@@ -104,13 +105,14 @@ const hasTouchScreen = (function (): boolean {
 function viewPortScroll(printess: iPrintessApi) {
   // safari pushes viewport up to show keyboars, android doesn't
   //if (isSafari) {
-    _viewPortScroll(printess, "scroll");
- // } 
+  _viewPortScroll(printess, "scroll");
+  // } 
 }
 function viewPortResize(printess: iPrintessApi) {
 
   if (printess.isMobile()) {
     if (uih_currentRender !== "mobile") {
+      uih_firstRenderMobileCall = false;
       renderMobileUi(printess);
     }
   } else {
@@ -120,9 +122,9 @@ function viewPortResize(printess: iPrintessApi) {
   }
 
   // software keyboard in safari fires viewPortScroll, so we can ignore the resize 
- // if (!isSafari) {
-    _viewPortScroll(printess, "resize");
- // }
+  // if (!isSafari) {
+  _viewPortScroll(printess, "resize");
+  // }
 
 
 }
@@ -174,7 +176,7 @@ function resizeAndClearSelection(printess: iPrintessApi) {
 }
 
 function resize(printess: iPrintessApi) {
-  
+
   printess.resizePrintess();
 
   if (printess.isMobile()) {
@@ -215,7 +217,7 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
   printessDiv.style.bottom = "";
   printessDiv.style.right = "";
 
-  firstRenderMobileCall = true; // reset flag to ensure redraw when mobile is entered again. 
+  uih_firstRenderMobileCall = true; // reset flag to ensure redraw when mobile is entered again. 
 
   container.innerHTML = "";
   const t = [];
@@ -2190,7 +2192,7 @@ function getMobileNavbarDiv(): HTMLElement {
   return mobileNav;
 }
 
-let firstRenderMobileCall: boolean = true;
+
 
 function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets) {
 
@@ -2248,29 +2250,19 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
     // to not resize twice 
     // if (window.visualViewport && window.visualViewport.offsetTop) {
     if (uih_viewportOffsetTop) {
+      alert("Cancel Render");
       return;
     }
 
   }
-  if (firstRenderMobileCall && isTabletOrPhoneDevice) {
-    // on tablet and phone we only register orientation-change event and this event is not fired initially
-    // so we fire it again. 
+  if (uih_firstRenderMobileCall && isTabletOrPhoneDevice) {
     // iphone does not get is so quickly:
-    firstRenderMobileCall = false;
+    uih_firstRenderMobileCall = false;
     window.setTimeout(() => {
       resizeMobileUi(printess, false, true);
     }, 500);
   } else {
-    // die optimierung führt dazu, das ganz oft die toolbar nicht eingeblendet wird, 
-    // weil der control-host ändert sich unabhämgig von der selection.
-    if (printess.isCurrentStepActive() && state !== "frames") {
-      // when coming from state details->frames, resize is needed because of new control host with same step. 
-
-      // when step is active zoom has already happened
-
-    } else {
-      resizeMobileUi(printess);
-    }
+    resizeMobileUi(printess);
   }
 
 }
