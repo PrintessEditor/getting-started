@@ -40,7 +40,14 @@ function addToBasket(printess) {
 }
 let viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let viewportOffsetTop = 0;
+const isIpadOS = (function () {
+    return navigator.maxTouchPoints &&
+        navigator.maxTouchPoints > 2 &&
+        /MacIntel/.test(navigator.platform);
+}());
 const isTabletOrPhoneDevice = (function () {
+    if (isIpadOS)
+        return true;
     const _uaDataIsMobile = window.navigator.userAgentData ? window.navigator.userAgentData.mobile : undefined;
     return typeof _uaDataIsMobile === 'boolean'
         ? _uaDataIsMobile
@@ -129,8 +136,16 @@ function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
     }
 }
 function resizeAndClearSelection(printess) {
-    printess.resizePrintess();
-    printess.clearSelection();
+    if (isTabletOrPhoneDevice) {
+        window.setTimeout(() => {
+            printess.resizePrintess();
+            printess.clearSelection();
+        }, 1000);
+    }
+    else {
+        printess.resizePrintess();
+        printess.clearSelection();
+    }
 }
 function renderDesktopUi(printess, properties, state, groupSnippets) {
     var _a;
@@ -1151,6 +1166,7 @@ function getRadioLabel(printess, p, id, name, icon) {
     const svg = printess.getIcon(icon);
     svg.style.width = "20px";
     svg.style.height = "20px";
+    svg.style.pointerEvents = "none";
     label.appendChild(svg);
     return label;
 }

@@ -38,7 +38,14 @@ async function addToBasket(printess: iPrintessApi) {
 let viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 let viewportOffsetTop: number = 0;
 
+const isIpadOS = (function () {
+  return navigator.maxTouchPoints &&
+    navigator.maxTouchPoints > 2 &&
+    /MacIntel/.test(navigator.platform);
+}());
+
 const isTabletOrPhoneDevice: boolean = (function (): boolean {
+  if (isIpadOS) return true;
   //@ts-ignore
   const _uaDataIsMobile = window.navigator.userAgentData ? window.navigator.userAgentData.mobile : undefined;
   return typeof _uaDataIsMobile === 'boolean'
@@ -134,8 +141,16 @@ function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffs
 }
 
 function resizeAndClearSelection(printess: iPrintessApi) {
-  printess.resizePrintess();
-  printess.clearSelection();
+  if (isTabletOrPhoneDevice) {
+    // orientation-change, takes some time
+    window.setTimeout(() => {
+      printess.resizePrintess()
+      printess.clearSelection()
+    }, 1000)
+  } else {
+    printess.resizePrintess();
+    printess.clearSelection();
+  }
 }
 
 function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>): Array<string> {
@@ -1405,6 +1420,7 @@ function getRadioLabel(printess: iPrintessApi, p: iExternalProperty, id: string,
   const svg = printess.getIcon(icon);
   svg.style.width = "20px";
   svg.style.height = "20px";
+  svg.style.pointerEvents = "none";
   label.appendChild(svg);
   return label;
 }
@@ -2121,7 +2137,7 @@ let firstRenderMobileCall: boolean = true;
 function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalProperty>, state: MobileUiState, groupSnippets: Array<iExternalSnippetCluster>) {
 
   const mobileUi = getMobileUiDiv();
-  mobileUi.innerHTML = ""; 
+  mobileUi.innerHTML = "";
 
   // render mobile page navigation if document has properties 
   if (state === "document") {
@@ -2167,7 +2183,7 @@ function renderMobileUi(printess: iPrintessApi, properties: Array<iExternalPrope
     }
 
   }
-  if ( firstRenderMobileCall && isTabletOrPhoneDevice) {
+  if (firstRenderMobileCall && isTabletOrPhoneDevice) {
     // on tablet and phone we only register orientation-change event and this event is not fired initially
     // so we fire it again. 
     // iphone does not get is so quickly:
@@ -2909,7 +2925,7 @@ function getOverlay(printess: iPrintessApi, properties: Array<iExternalProperty>
     const tdiv = getOverlayIcon(printess, "cog", "rgba(200,0,100,1)");
     hdiv.style.border = "5px solid rgba(200,0,100,0.5)";
     hdiv.appendChild(tdiv);
-  } 
+  }
   return hdiv;
 }
 
