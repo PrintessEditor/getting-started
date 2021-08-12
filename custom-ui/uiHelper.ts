@@ -103,16 +103,29 @@ const hasTouchScreen = (function (): boolean {
 
 function viewPortScroll(printess: iPrintessApi) {
   // safari pushes viewport up to show keyboars, android doesn't
-  if (isSafari) {
+  //if (isSafari) {
     _viewPortScroll(printess, "scroll");
-  }
+ // }
   // unfortunately iPad fires 2 scroll events when external keyboard is attached  -> top:55 , top:0 
 }
 function viewPortResize(printess: iPrintessApi) {
-  // software keyboard in safari fires viewPortScroll, so we can ignore the resize 
-  if (!isSafari) {
-    _viewPortScroll(printess, "resize");
+
+  if (printess.isMobile()) {
+    if (uih_currentRender !== "mobile") {
+      renderMobileUi(printess);
+    }
+  } else {
+    if (uih_currentRender !== "desktop") {
+      renderDesktopUi(printess);
+    }
   }
+
+  // software keyboard in safari fires viewPortScroll, so we can ignore the resize 
+ // if (!isSafari) {
+    _viewPortScroll(printess, "resize");
+ // }
+
+
 }
 
 function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
