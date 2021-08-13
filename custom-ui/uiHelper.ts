@@ -21,12 +21,19 @@ declare const bootstrap: any;
 }
 
 let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+let uih_viewportWidth: number = window.visualViewport ? window.visualViewport.width : window.innerWidth;
 let uih_viewportOffsetTop: number = 0;
 
 let uih_currentGroupSnippets: Array<iExternalSnippetCluster> = [];
 let uih_currentProperties: Array<iExternalProperty> = [];
 let uih_currentState: MobileUiState = "document";
 let uih_currentRender: "mobile" | "desktop" | "never" = "never";
+
+
+let lastPrintessHeight = 0;
+let lastPrintessWidth = 0;
+let lastPrintessTop = "";
+let lastPrintessBottom = 0;
 
 console.log("Printess ui-helper loaded");
 
@@ -108,34 +115,54 @@ function viewPortScroll(printess: iPrintessApi) {
   // } 
 }
 function viewPortResize(printess: iPrintessApi) {
-
   if (printess.isMobile()) {
     if (uih_currentRender !== "mobile") {
-      renderMobileUi(printess, undefined,undefined,undefined, true);
+      renderMobileUi(printess);
+      renderMobileNavBar(printess);
+    } else if (window.visualViewport) {
+      _viewPortScroll(printess, "resize");
+    } else {
+      printess.resizePrintess();
     }
-  } else {
+  } else { // desktop
     if (uih_currentRender !== "desktop") {
       renderDesktopUi(printess);
+    } else {
+      printess.resizePrintess();
     }
   }
-
-  // software keyboard in safari fires viewPortScroll, so we can ignore the resize 
-  // if (!isSafari) {
-  _viewPortScroll(printess, "resize");
-  // }
-
-
 }
 
-function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
+function resize(printess: iPrintessApi) {
+  viewPortResize(printess);
+  /* printess.resizePrintess();
+ 
+   if (printess.isMobile()) {
+     if (uih_currentRender !== "mobile") {
+       renderMobileUi(printess);
+     }
+   } else {
+     if (uih_currentRender !== "desktop") {
+       renderDesktopUi(printess);
+     }
+   }*/
+
+}
+// software keyboard in safari fires viewPortScroll, so we can ignore the resize 
+// if (!isSafari) {
+
+// }
+
+function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize", forceResize: boolean = false) {
   console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
-  if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height) {
+  if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
     uih_viewportOffsetTop = window.visualViewport.offsetTop;
     uih_viewportHeight = window.visualViewport.height;
+    uih_viewportWidth = window.visualViewport.width;
     const printessDiv = document.getElementById("desktop-printess-container");
     if (printessDiv) {
       if (window.visualViewport.offsetTop > 0) {
-        // system has auto scrolled content, so we adjust printess-editor to fit
+        // system has auto scrolled content, so we adjust printess-editor to fit and auto focus selected element 
         resizeMobileUi(printess, true);
       } else {
         resizeMobileUi(printess, false);
@@ -148,13 +175,14 @@ function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffs
   console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
   uih_viewportHeight = vpHeight;
   uih_viewportOffsetTop = vpOffsetTop;
+  uih_viewportWidth = window.innerWidth;
   const printessDiv = document.getElementById("desktop-printess-container");
   if (printessDiv) {
     if (vpOffsetTop > 0) {
-      // system has auto scrolled content, so we adjust printess-editor to fit
-      resizeMobileUi(printess, true, undefined);
+      // system has auto scrolled content, so we adjust printess-editor to fit and auto focus selected element 
+      resizeMobileUi(printess, true);
     } else {
-      resizeMobileUi(printess, false, undefined);
+      resizeMobileUi(printess, false);
     }
   }
 }
@@ -173,21 +201,6 @@ function resizeAndClearSelection(printess: iPrintessApi) {
   }
 }
 
-function resize(printess: iPrintessApi) {
-
-  printess.resizePrintess();
-
-  if (printess.isMobile()) {
-    if (uih_currentRender !== "mobile") {
-      renderMobileUi(printess);
-    }
-  } else {
-    if (uih_currentRender !== "desktop") {
-      renderDesktopUi(printess);
-    }
-  }
-
-}
 
 function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets): Array<string> {
 
@@ -214,7 +227,7 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
   printessDiv.style.left = "";
   printessDiv.style.bottom = "";
   printessDiv.style.right = "";
- 
+
   container.innerHTML = "";
   const t = [];
 
@@ -2193,8 +2206,7 @@ function getMobileNavbarDiv(): HTMLElement {
 function renderMobileUi(printess: iPrintessApi,
   properties: Array<iExternalProperty> = uih_currentProperties,
   state: MobileUiState = uih_currentState,
-  groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets,
-  forcePrintessResize: boolean = false) {
+  groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets) {
 
   uih_currentGroupSnippets = groupSnippets;
   uih_currentState = state;
@@ -2255,9 +2267,9 @@ function renderMobileUi(printess: iPrintessApi,
     }
 
   }
-  
-  resizeMobileUi(printess, false, forcePrintessResize);
- 
+
+  resizeMobileUi(printess, false);
+
 }
 
 function getMobilePlusButton(printess: iPrintessApi): HTMLDivElement {
@@ -2466,11 +2478,8 @@ function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExter
 */
 
 
-let lastPrintessHeight = 0;
-let lastPrintessTop = "";
-let lastPrintessBottom = 0;
 
-function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false, alwaysRedraw: boolean = false) {
+function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false) {
   const mobileUi = getMobileUiDiv();
   // const mobilePagebarDiv = getMobilePageBarDiv();
   const controlHost: HTMLElement | null = document.getElementById("mobile-control-host");
@@ -2492,6 +2501,7 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false,
     mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px"; // +2 = border-top
     const printessDiv = document.getElementById("desktop-printess-container");
     const viewPortHeight = uih_viewportHeight; //||  window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const viewPortWidth = uih_viewportWidth; //||  window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const viewPortTopOffset = uih_viewportOffsetTop; //  ?? window.visualViewport ? window.visualViewport.offsetTop : 0;
 
     let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
@@ -2536,10 +2546,11 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false,
 
       const printessBottom = mobileButtonBarHeight + controlHostHeight;
 
-      if (alwaysRedraw || printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
+      if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight || viewPortWidth !== lastPrintessWidth) {
         lastPrintessBottom = printessBottom;
         lastPrintessTop = printessTop;
         lastPrintessHeight = printessHeight;
+        lastPrintessWidth = viewPortWidth;
 
         printessDiv.style.position = "fixed"; // to counter act relative positions above and width/height settings
         printessDiv.style.left = "0";

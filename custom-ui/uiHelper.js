@@ -23,11 +23,16 @@ window.uiHelper = {
     resize: resize
 };
 let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+let uih_viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
 let uih_viewportOffsetTop = 0;
 let uih_currentGroupSnippets = [];
 let uih_currentProperties = [];
 let uih_currentState = "document";
 let uih_currentRender = "never";
+let lastPrintessHeight = 0;
+let lastPrintessWidth = 0;
+let lastPrintessTop = "";
+let lastPrintessBottom = 0;
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -106,21 +111,34 @@ function viewPortScroll(printess) {
 function viewPortResize(printess) {
     if (printess.isMobile()) {
         if (uih_currentRender !== "mobile") {
-            renderMobileUi(printess, undefined, undefined, undefined, true);
+            renderMobileUi(printess);
+            renderMobileNavBar(printess);
+        }
+        else if (window.visualViewport) {
+            _viewPortScroll(printess, "resize");
+        }
+        else {
+            printess.resizePrintess();
         }
     }
     else {
         if (uih_currentRender !== "desktop") {
             renderDesktopUi(printess);
         }
+        else {
+            printess.resizePrintess();
+        }
     }
-    _viewPortScroll(printess, "resize");
 }
-function _viewPortScroll(printess, what) {
+function resize(printess) {
+    viewPortResize(printess);
+}
+function _viewPortScroll(printess, what, forceResize = false) {
     console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
-    if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height) {
+    if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
         uih_viewportOffsetTop = window.visualViewport.offsetTop;
         uih_viewportHeight = window.visualViewport.height;
+        uih_viewportWidth = window.visualViewport.width;
         const printessDiv = document.getElementById("desktop-printess-container");
         if (printessDiv) {
             if (window.visualViewport.offsetTop > 0) {
@@ -136,13 +154,14 @@ function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
     console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
     uih_viewportHeight = vpHeight;
     uih_viewportOffsetTop = vpOffsetTop;
+    uih_viewportWidth = window.innerWidth;
     const printessDiv = document.getElementById("desktop-printess-container");
     if (printessDiv) {
         if (vpOffsetTop > 0) {
-            resizeMobileUi(printess, true, undefined);
+            resizeMobileUi(printess, true);
         }
         else {
-            resizeMobileUi(printess, false, undefined);
+            resizeMobileUi(printess, false);
         }
     }
 }
@@ -156,19 +175,6 @@ function resizeAndClearSelection(printess) {
     else {
         printess.resizePrintess();
         printess.clearSelection();
-    }
-}
-function resize(printess) {
-    printess.resizePrintess();
-    if (printess.isMobile()) {
-        if (uih_currentRender !== "mobile") {
-            renderMobileUi(printess);
-        }
-    }
-    else {
-        if (uih_currentRender !== "desktop") {
-            renderDesktopUi(printess);
-        }
     }
 }
 function renderDesktopUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
@@ -1810,7 +1816,7 @@ function getMobileNavbarDiv() {
     }
     return mobileNav;
 }
-function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets, forcePrintessResize = false) {
+function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
     uih_currentGroupSnippets = groupSnippets;
     uih_currentState = state;
     uih_currentProperties = properties;
@@ -1854,7 +1860,7 @@ function renderMobileUi(printess, properties = uih_currentProperties, state = ui
             return;
         }
     }
-    resizeMobileUi(printess, false, forcePrintessResize);
+    resizeMobileUi(printess, false);
 }
 function getMobilePlusButton(printess) {
     const button = document.createElement("div");
@@ -2016,10 +2022,7 @@ function getMobilePageBarDiv() {
     }
     return pagebar;
 }
-let lastPrintessHeight = 0;
-let lastPrintessTop = "";
-let lastPrintessBottom = 0;
-function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) {
+function resizeMobileUi(printess, focusSelection = false) {
     const mobileUi = getMobileUiDiv();
     const controlHost = document.getElementById("mobile-control-host");
     if (mobileUi && controlHost) {
@@ -2030,6 +2033,7 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
         mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
         const printessDiv = document.getElementById("desktop-printess-container");
         const viewPortHeight = uih_viewportHeight;
+        const viewPortWidth = uih_viewportWidth;
         const viewPortTopOffset = uih_viewportOffsetTop;
         let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
         if (printessDiv) {
@@ -2066,10 +2070,11 @@ function resizeMobileUi(printess, focusSelection = false, alwaysRedraw = false) 
                 printessTop = top + "px";
             }
             const printessBottom = mobileButtonBarHeight + controlHostHeight;
-            if (alwaysRedraw || printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight) {
+            if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight || viewPortWidth !== lastPrintessWidth) {
                 lastPrintessBottom = printessBottom;
                 lastPrintessTop = printessTop;
                 lastPrintessHeight = printessHeight;
+                lastPrintessWidth = viewPortWidth;
                 printessDiv.style.position = "fixed";
                 printessDiv.style.left = "0";
                 printessDiv.style.right = "0";
