@@ -14,9 +14,6 @@ declare const bootstrap: any;
   viewPortScroll: viewPortScroll,
   viewPortResize: viewPortResize,
   viewPortScrollInIFrame: viewPortScrollInIFrame,
-  isTabletOrPhoneDevice: () => isTabletOrPhoneDevice === true,
-  isSafari: () => isSafari === true,
-  resizeAndClearSelection: resizeAndClearSelection,
   resize: resize
 }
 
@@ -50,63 +47,6 @@ async function addToBasket(printess: iPrintessApi) {
     alert("Please add your callback in attachPrintess. [addToBasketCallback]")
   }
 }
-
-
-const isIpadOS = (function () {
-  return navigator.maxTouchPoints &&
-    navigator.maxTouchPoints > 2 &&
-    /MacIntel/.test(navigator.platform);
-}());
-
-const isTabletOrPhoneDevice: boolean = (function (): boolean {
-  if (isIpadOS) return true;
-  //@ts-ignore
-  const _uaDataIsMobile = window.navigator.userAgentData ? window.navigator.userAgentData.mobile : undefined;
-  return typeof _uaDataIsMobile === 'boolean'
-    ? _uaDataIsMobile
-    : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-}());
-
-const isSafari: boolean = (function (): boolean {
-  const ua = window.navigator.userAgent;
-  const iOS = !!ua.match(/iP(ad|od|hone)/i);
-  const hasSafariInUa = !!ua.match(/Safari/i);
-  const noOtherBrowsersInUa = !ua.match(/Chrome|CriOS|OPiOS|mercury|FxiOS|Firefox/i)
-  let result = false;
-  if (iOS) { //detecting Safari in IOS mobile browsers
-    const webkit = !!ua.match(/WebKit/i);
-    result = webkit && hasSafariInUa && noOtherBrowsersInUa
-  } else if ((<any>window).safari !== undefined) { //detecting Safari in Desktop Browsers
-    result = true;
-  } else { // detecting Safari in other platforms
-    result = hasSafariInUa && noOtherBrowsersInUa
-  }
-  return result;
-}());
-
-const hasTouchScreen = (function (): boolean {
-  let hasTouchScreen = false;
-  if ("maxTouchPoints" in navigator) {
-    hasTouchScreen = navigator.maxTouchPoints > 0;
-  } else if ("msMaxTouchPoints" in navigator) {
-    hasTouchScreen = (<any>navigator).msMaxTouchPoints > 0;
-  } else {
-    const mQ = window.matchMedia("(pointer:coarse)");
-    if (mQ && mQ.media === "(pointer:coarse)") {
-      hasTouchScreen = !!mQ.matches;
-    } else if ('orientation' in window) {
-      hasTouchScreen = true; // deprecated, but good fallback
-    } else {
-      // Only as a last resort, fall back to user agent sniffing
-      const UA = (<any>navigator).userAgent;
-      hasTouchScreen = (
-        /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||
-        /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA)
-      );
-    }
-  }
-  return hasTouchScreen;
-});
 
 function viewPortScroll(printess: iPrintessApi) {
   // safari pushes viewport up to show keyboars, android doesn't
@@ -160,9 +100,9 @@ function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
       } else {
         // safari can't determine grid row-height automatically (1fr);
         const desktopGrid: HTMLElement | null = document.getElementById("printess-desktop-grid");
-        if (desktopGrid) {
-          const height = desktopGrid.offsetHeight - 50;
-          const calcHeight = "calc(" + desktopGrid.offsetHeight + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+        if (desktopGrid && !printess.autoScaleEnabled()) {
+          const height = desktopGrid.offsetHeight || window.innerHeight; // fallback when running inside printess-editor
+          const calcHeight = "calc(" +height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
           printessDiv.style.height = calcHeight;
           printess.resizePrintess(); //false, undefined, undefined, height);
         }
@@ -186,27 +126,13 @@ function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffs
     }
   }
 }
-
-//obsolete
-function resizeAndClearSelection(printess: iPrintessApi) {
-  if (isTabletOrPhoneDevice) {
-    // orientation-change, takes some time
-    window.setTimeout(() => {
-      printess.resizePrintess()
-      printess.clearSelection()
-    }, 1000)
-  } else {
-    printess.resizePrintess();
-    printess.clearSelection();
-  }
-}
-
+ 
 
 function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets): Array<string> {
 
   if (uih_currentRender === "never") {
     // initialize grid-position
-    if (window.visualViewport) {
+    if (window.visualViewport && !printess.autoScaleEnabled()) {
       uih_viewportHeight = -1; // force re-rendering the view
       _viewPortScroll(printess, "resize");
     } else {

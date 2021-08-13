@@ -42,13 +42,27 @@ hr {
   margin: 0;  
 }
 
+html {
+  height: -webkit-fill-available; /* to counter safari 100vh bug */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  height: -webkit-fill-available; /* to counter safari 100vh bug */
+}
 
 /* Main Printess Desktop-Layout */ 
 /* Mobile Layout is positioned absolute in media queries at the end of this file */ 
-
+/* Vertical position of printess needs to be absolute to counter the 100vh safari-bug */
 #printess-desktop-grid {
+  position: absolute; 
+  height: initial;
+  top: 0px;
+  bottom: 0px; 
+
   width: calc(100vw - var(--editor-margin-left));
-  height: 100vh;
   margin-left: var(--editor-margin-left);
  
   display: grid;

@@ -162,16 +162,10 @@
       if (window.visualViewport) {
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
         window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
-      }
-
-      if (uiHelper.isTabletOrPhoneDevice()) {
-        console.log('MOBILE DEVICE DETECTED');
-        window.addEventListener("orientationchange", () => uiHelper.resizeAndClearSelection(printess));
       } else {
-        console.log('NO MOBILE DEVICE DETECTED');
-        window.addEventListener("resize", () => uiHelper.resizeAndClearSelection(printess));
+        window.addEventListener("resize", () => uiHelper.resize(printess));
       }
-
+      
     });
 
 

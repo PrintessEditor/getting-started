@@ -17,27 +17,6 @@
 
   <link type="text/css" rel="stylesheet" href="bs-layout.css" />
 
-  <style>
-    html {
-      height: -webkit-fill-available;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      height: -webkit-fill-available;
-    }
-
-    /* Vertical position of printess needs to be absolute to counter the 100vh safari-bug */
-    #printess-desktop-grid {
-      position: absolute;
-      height: initial;
-      /* Top Below Toolbar */
-      top: 60px;
-      bottom: 0px;
-    }
-  </style>
 </head>
 
 <body>
@@ -219,7 +198,7 @@
 
   <!-- position: absolute; height: initial; top: 60px; bottom: 0px; outline: 4px solid red; -->
   <!-- MAIN PRINTES UI-COMPONENTS -->
-  <div id="printess-desktop-grid">
+  <div id="printess-desktop-grid" style="top: 60px;">
     <nav id="desktop-pagebar"></nav>
     <div id="desktop-properties"></div>
     <div id="desktop-printess-container"></div>
@@ -378,7 +357,8 @@
     };
 
     document.getElementById("btnClearSelection").onclick = () => {
-      uiHelper.resizeAndClearSelection(printess); // resize to reset potential frame zoom
+      printess.resizePrintess();
+      printess.clearSelection();
     };
     document.getElementById("btnDelete").onclick = () => {
       printess.deleteSelectedFrames();

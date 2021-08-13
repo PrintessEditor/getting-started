@@ -17,9 +17,6 @@ window.uiHelper = {
     viewPortScroll: viewPortScroll,
     viewPortResize: viewPortResize,
     viewPortScrollInIFrame: viewPortScrollInIFrame,
-    isTabletOrPhoneDevice: () => isTabletOrPhoneDevice === true,
-    isSafari: () => isSafari === true,
-    resizeAndClearSelection: resizeAndClearSelection,
     resize: resize
 };
 let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -50,61 +47,6 @@ function addToBasket(printess) {
         }
     });
 }
-const isIpadOS = (function () {
-    return navigator.maxTouchPoints &&
-        navigator.maxTouchPoints > 2 &&
-        /MacIntel/.test(navigator.platform);
-}());
-const isTabletOrPhoneDevice = (function () {
-    if (isIpadOS)
-        return true;
-    const _uaDataIsMobile = window.navigator.userAgentData ? window.navigator.userAgentData.mobile : undefined;
-    return typeof _uaDataIsMobile === 'boolean'
-        ? _uaDataIsMobile
-        : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}());
-const isSafari = (function () {
-    const ua = window.navigator.userAgent;
-    const iOS = !!ua.match(/iP(ad|od|hone)/i);
-    const hasSafariInUa = !!ua.match(/Safari/i);
-    const noOtherBrowsersInUa = !ua.match(/Chrome|CriOS|OPiOS|mercury|FxiOS|Firefox/i);
-    let result = false;
-    if (iOS) {
-        const webkit = !!ua.match(/WebKit/i);
-        result = webkit && hasSafariInUa && noOtherBrowsersInUa;
-    }
-    else if (window.safari !== undefined) {
-        result = true;
-    }
-    else {
-        result = hasSafariInUa && noOtherBrowsersInUa;
-    }
-    return result;
-}());
-const hasTouchScreen = (function () {
-    let hasTouchScreen = false;
-    if ("maxTouchPoints" in navigator) {
-        hasTouchScreen = navigator.maxTouchPoints > 0;
-    }
-    else if ("msMaxTouchPoints" in navigator) {
-        hasTouchScreen = navigator.msMaxTouchPoints > 0;
-    }
-    else {
-        const mQ = window.matchMedia("(pointer:coarse)");
-        if (mQ && mQ.media === "(pointer:coarse)") {
-            hasTouchScreen = !!mQ.matches;
-        }
-        else if ('orientation' in window) {
-            hasTouchScreen = true;
-        }
-        else {
-            const UA = navigator.userAgent;
-            hasTouchScreen = (/\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||
-                /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA));
-        }
-    }
-    return hasTouchScreen;
-});
 function viewPortScroll(printess) {
     _viewPortScroll(printess, "scroll");
 }
@@ -145,9 +87,9 @@ function _viewPortScroll(printess, what) {
             }
             else {
                 const desktopGrid = document.getElementById("printess-desktop-grid");
-                if (desktopGrid) {
-                    const height = desktopGrid.offsetHeight - 50;
-                    const calcHeight = "calc(" + desktopGrid.offsetHeight + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+                if (desktopGrid && !printess.autoScaleEnabled()) {
+                    const height = desktopGrid.offsetHeight || window.innerHeight;
+                    const calcHeight = "calc(" + height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
                     printessDiv.style.height = calcHeight;
                     printess.resizePrintess();
                 }
@@ -170,22 +112,10 @@ function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
         }
     }
 }
-function resizeAndClearSelection(printess) {
-    if (isTabletOrPhoneDevice) {
-        window.setTimeout(() => {
-            printess.resizePrintess();
-            printess.clearSelection();
-        }, 1000);
-    }
-    else {
-        printess.resizePrintess();
-        printess.clearSelection();
-    }
-}
 function renderDesktopUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
     var _a;
     if (uih_currentRender === "never") {
-        if (window.visualViewport) {
+        if (window.visualViewport && !printess.autoScaleEnabled()) {
             uih_viewportHeight = -1;
             _viewPortScroll(printess, "resize");
         }

@@ -539,6 +539,11 @@ export interface iPrintessApi {
   hideOverlay(): void;
 
   /**
+   * Returns true if `autoScale` was set in `attachPrintess` call
+   */
+  autoScaleEnabled(): boolean
+
+  /**
    * 
    * @param uploadEndpoint The target address to send the upload form data to. E.g. https://your-bucket.s3.eu-central-1.amazonaws.com/ 
    * @param serveEndpoint The url the files are served from. This can differ from the upload endpoint to make CDN distribution possible. E.g. https://mycloudfrontid.amazonaws.com/
