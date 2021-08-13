@@ -1856,7 +1856,6 @@ function renderMobileUi(printess, properties = uih_currentProperties, state = ui
     }
     else {
         if (uih_viewportOffsetTop) {
-            alert("Cancel Render");
             return;
         }
     }

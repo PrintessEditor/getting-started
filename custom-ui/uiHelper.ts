@@ -2262,7 +2262,6 @@ function renderMobileUi(printess: iPrintessApi,
     // to not resize twice 
     // if (window.visualViewport && window.visualViewport.offsetTop) {
     if (uih_viewportOffsetTop) {
-      alert("Cancel Render");
       return;
     }
 
