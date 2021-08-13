@@ -29,10 +29,10 @@ let uih_currentGroupSnippets = [];
 let uih_currentProperties = [];
 let uih_currentState = "document";
 let uih_currentRender = "never";
-let lastPrintessHeight = 0;
-let lastPrintessWidth = 0;
-let lastPrintessTop = "";
-let lastPrintessBottom = 0;
+let uih_lastPrintessHeight = 0;
+let uih_lastPrintessWidth = 0;
+let uih_lastPrintessTop = "";
+let uih_lastPrintessBottom = 0;
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -2083,11 +2083,11 @@ function resizeMobileUi(printess, focusSelection = false) {
                 printessTop = top + "px";
             }
             const printessBottom = mobileButtonBarHeight + controlHostHeight;
-            if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight || viewPortWidth !== lastPrintessWidth) {
-                lastPrintessBottom = printessBottom;
-                lastPrintessTop = printessTop;
-                lastPrintessHeight = printessHeight;
-                lastPrintessWidth = viewPortWidth;
+            if (printessBottom !== uih_lastPrintessBottom || printessTop !== uih_lastPrintessTop || printessHeight !== uih_lastPrintessHeight || viewPortWidth !== uih_lastPrintessWidth) {
+                uih_lastPrintessBottom = printessBottom;
+                uih_lastPrintessTop = printessTop;
+                uih_lastPrintessHeight = printessHeight;
+                uih_lastPrintessWidth = viewPortWidth;
                 printessDiv.style.position = "fixed";
                 printessDiv.style.left = "0";
                 printessDiv.style.right = "0";

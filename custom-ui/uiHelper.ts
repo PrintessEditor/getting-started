@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { printess } from "../printess-editor/wasm/printessWasmInit";
+
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn } from "./printess-editor";
 
 declare const bootstrap: any;
-//const textStyleMode: textStyleModeEnum = "default"; //  "default" | "all-paragraphs" | "all-paragraphs-if-no-selection"
 
 (<any>window).uiHelper = {
   renderLayoutSnippets: renderLayoutSnippets,
@@ -31,10 +30,10 @@ let uih_currentState: MobileUiState = "document";
 let uih_currentRender: "mobile" | "desktop" | "never" = "never";
 
 
-let lastPrintessHeight = 0;
-let lastPrintessWidth = 0;
-let lastPrintessTop = "";
-let lastPrintessBottom = 0;
+let uih_lastPrintessHeight = 0;
+let uih_lastPrintessWidth = 0;
+let uih_lastPrintessTop = "";
+let uih_lastPrintessBottom = 0;
 
 console.log("Printess ui-helper loaded");
 
@@ -2559,11 +2558,11 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
 
       const printessBottom = mobileButtonBarHeight + controlHostHeight;
 
-      if (printessBottom !== lastPrintessBottom || printessTop !== lastPrintessTop || printessHeight !== lastPrintessHeight || viewPortWidth !== lastPrintessWidth) {
-        lastPrintessBottom = printessBottom;
-        lastPrintessTop = printessTop;
-        lastPrintessHeight = printessHeight;
-        lastPrintessWidth = viewPortWidth;
+      if (printessBottom !== uih_lastPrintessBottom || printessTop !== uih_lastPrintessTop || printessHeight !== uih_lastPrintessHeight || viewPortWidth !== uih_lastPrintessWidth) {
+        uih_lastPrintessBottom = printessBottom;
+        uih_lastPrintessTop = printessTop;
+        uih_lastPrintessHeight = printessHeight;
+        uih_lastPrintessWidth = viewPortWidth;
 
         printessDiv.style.position = "fixed"; // to counter act relative positions above and width/height settings
         printessDiv.style.left = "0";
