@@ -17,9 +17,30 @@
 
   <link type="text/css" rel="stylesheet" href="bs-layout.css" />
 
+  <style>
+    html {
+      height: -webkit-fill-available;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      height: -webkit-fill-available;
+    }
+
+    /* Vertical position of printess needs to be absolute to counter the 100vh safari-bug */
+    #printess-desktop-grid {
+      position: absolute;
+      height: initial;
+      /* Top Below Toolbar */
+      top: 60px;
+      bottom: 0px;
+    }
+  </style>
 </head>
 
-<body style="margin: 0; padding: 0;">
+<body>
 
   <nav class="desktop-navbar navbar navbar-expand navbar-dark bg-primary">
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -196,9 +217,9 @@
     </div>
   </div>
 
-
+  <!-- position: absolute; height: initial; top: 60px; bottom: 0px; outline: 4px solid red; -->
   <!-- MAIN PRINTES UI-COMPONENTS -->
-  <div id="printess-desktop-grid" style="height: calc(100vh - 60px)">
+  <div id="printess-desktop-grid">
     <nav id="desktop-pagebar"></nav>
     <div id="desktop-properties"></div>
     <div id="desktop-printess-container"></div>

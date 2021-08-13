@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
+import { printess } from "../printess-editor/wasm/printessWasmInit";
 import { iconName, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn } from "./printess-editor";
 
 declare const bootstrap: any;
@@ -115,45 +116,33 @@ function viewPortScroll(printess: iPrintessApi) {
   // } 
 }
 function viewPortResize(printess: iPrintessApi) {
-  if (printess.isMobile()) {
-    if (uih_currentRender !== "mobile") {
-      renderMobileUi(printess);
-      renderMobileNavBar(printess);
-    } else if (window.visualViewport) {
-      _viewPortScroll(printess, "resize");
-    } else {
-      printess.resizePrintess();
-    }
-  } else { // desktop
-    if (uih_currentRender !== "desktop") {
-      renderDesktopUi(printess);
-    } else {
-      printess.resizePrintess();
-    }
-  }
+  checkAndSwitchViews(printess);
+  _viewPortScroll(printess, "resize");
 }
 
 function resize(printess: iPrintessApi) {
-  viewPortResize(printess);
-  /* printess.resizePrintess();
- 
-   if (printess.isMobile()) {
-     if (uih_currentRender !== "mobile") {
-       renderMobileUi(printess);
-     }
-   } else {
-     if (uih_currentRender !== "desktop") {
-       renderDesktopUi(printess);
-     }
-   }*/
-
+  checkAndSwitchViews(printess);
+  printess.resizePrintess(false, false, undefined,);
 }
 // software keyboard in safari fires viewPortScroll, so we can ignore the resize 
 // if (!isSafari) {
 
 // }
 
-function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize", forceResize: boolean = false) {
+function checkAndSwitchViews(printess: iPrintessApi) {
+  const mobile = printess.isMobile();
+  if (mobile && uih_currentRender !== "mobile") {
+    // switch to mobile
+    renderMobileUi(printess);
+    renderMobileNavBar(printess);
+  }
+  if (!mobile && uih_currentRender !== "desktop") {
+    // switch to desktop
+    renderDesktopUi(printess);
+  }
+}
+
+function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
   console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
   if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
     uih_viewportOffsetTop = window.visualViewport.offsetTop;
@@ -161,11 +150,23 @@ function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize", forc
     uih_viewportWidth = window.visualViewport.width;
     const printessDiv = document.getElementById("desktop-printess-container");
     if (printessDiv) {
-      if (window.visualViewport.offsetTop > 0) {
-        // system has auto scrolled content, so we adjust printess-editor to fit and auto focus selected element 
-        resizeMobileUi(printess, true);
+      if (printess.isMobile()) {
+        printessDiv.style.height = "";
+        if (window.visualViewport.offsetTop > 0) {
+          // system has auto scrolled content, so we adjust printess-editor to fit and auto focus selected element 
+          resizeMobileUi(printess, true);
+        } else {
+          resizeMobileUi(printess, false);
+        }
       } else {
-        resizeMobileUi(printess, false);
+        // safari can't determine grid row-height automatically (1fr);
+        const desktopGrid: HTMLElement | null = document.getElementById("printess-desktop-grid");
+        if (desktopGrid) {
+          const height = desktopGrid.offsetHeight - 50;
+          const calcHeight = "calc(" + desktopGrid.offsetHeight + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+          printessDiv.style.height = calcHeight;
+          printess.resizePrintess(); //false, undefined, undefined, height);
+        }
       }
     }
   }
@@ -204,6 +205,18 @@ function resizeAndClearSelection(printess: iPrintessApi) {
 
 function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets): Array<string> {
 
+  if (uih_currentRender === "never") {
+    // initialize grid-position
+    if (window.visualViewport) {
+      uih_viewportHeight = -1; // force re-rendering the view
+      _viewPortScroll(printess, "resize");
+    } else {
+      printess.resizePrintess(false, false, undefined,);
+    }
+  }
+
+   
+ 
   uih_currentGroupSnippets = groupSnippets;
   uih_currentState = state;
   uih_currentProperties = properties;
@@ -2208,6 +2221,7 @@ function renderMobileUi(printess: iPrintessApi,
   state: MobileUiState = uih_currentState,
   groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets) {
 
+ 
   uih_currentGroupSnippets = groupSnippets;
   uih_currentState = state;
   uih_currentProperties = properties;

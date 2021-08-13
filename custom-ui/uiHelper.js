@@ -109,31 +109,24 @@ function viewPortScroll(printess) {
     _viewPortScroll(printess, "scroll");
 }
 function viewPortResize(printess) {
-    if (printess.isMobile()) {
-        if (uih_currentRender !== "mobile") {
-            renderMobileUi(printess);
-            renderMobileNavBar(printess);
-        }
-        else if (window.visualViewport) {
-            _viewPortScroll(printess, "resize");
-        }
-        else {
-            printess.resizePrintess();
-        }
-    }
-    else {
-        if (uih_currentRender !== "desktop") {
-            renderDesktopUi(printess);
-        }
-        else {
-            printess.resizePrintess();
-        }
-    }
+    checkAndSwitchViews(printess);
+    _viewPortScroll(printess, "resize");
 }
 function resize(printess) {
-    viewPortResize(printess);
+    checkAndSwitchViews(printess);
+    printess.resizePrintess(false, false, undefined);
 }
-function _viewPortScroll(printess, what, forceResize = false) {
+function checkAndSwitchViews(printess) {
+    const mobile = printess.isMobile();
+    if (mobile && uih_currentRender !== "mobile") {
+        renderMobileUi(printess);
+        renderMobileNavBar(printess);
+    }
+    if (!mobile && uih_currentRender !== "desktop") {
+        renderDesktopUi(printess);
+    }
+}
+function _viewPortScroll(printess, what) {
     console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
     if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
         uih_viewportOffsetTop = window.visualViewport.offsetTop;
@@ -141,11 +134,23 @@ function _viewPortScroll(printess, what, forceResize = false) {
         uih_viewportWidth = window.visualViewport.width;
         const printessDiv = document.getElementById("desktop-printess-container");
         if (printessDiv) {
-            if (window.visualViewport.offsetTop > 0) {
-                resizeMobileUi(printess, true);
+            if (printess.isMobile()) {
+                printessDiv.style.height = "";
+                if (window.visualViewport.offsetTop > 0) {
+                    resizeMobileUi(printess, true);
+                }
+                else {
+                    resizeMobileUi(printess, false);
+                }
             }
             else {
-                resizeMobileUi(printess, false);
+                const desktopGrid = document.getElementById("printess-desktop-grid");
+                if (desktopGrid) {
+                    const height = desktopGrid.offsetHeight - 50;
+                    const calcHeight = "calc(" + desktopGrid.offsetHeight + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+                    printessDiv.style.height = calcHeight;
+                    printess.resizePrintess();
+                }
             }
         }
     }
@@ -179,6 +184,15 @@ function resizeAndClearSelection(printess) {
 }
 function renderDesktopUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
     var _a;
+    if (uih_currentRender === "never") {
+        if (window.visualViewport) {
+            uih_viewportHeight = -1;
+            _viewPortScroll(printess, "resize");
+        }
+        else {
+            printess.resizePrintess(false, false, undefined);
+        }
+    }
     uih_currentGroupSnippets = groupSnippets;
     uih_currentState = state;
     uih_currentProperties = properties;
