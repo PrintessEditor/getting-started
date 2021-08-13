@@ -46,7 +46,7 @@ export interface printessAttachParameters {
      * Force Printess to merge in a particular layout-snippet mode. 
      * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
      */
-     mergeMode?: MergeMode 
+    mergeMode?: MergeMode
   }];
 
   /**
@@ -397,7 +397,15 @@ export interface iPrintessApi {
    * @param propertyId 
    * @param angle 
    */
-  rotateImage(propertyId: string, angle: "0" | "90" | "180" | "270"): Promise<iExternalImage | null>
+  rotateImage(propertyId: string, angle: "0" | "90" | "180" | "270"): Promise<iExternalImage | null>;
+
+  /**
+  * Imports a single image to Printess and can auto assign this image
+  * @param url The url to the image you want to import to Printess.
+  * @param assignToFrameOrNewFrame Assign this image to the current frame, or create a new frame in case none is selected.
+  * @param propertyId 
+  */
+  importImageFromUrl(url: string, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage | null>;
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
 
@@ -509,18 +517,18 @@ export interface iPrintessApi {
    * @param previewIndex Zero based index of the preview steps. See also: previewStepsCount()
    * @param zoom overrides the frames zoom settings for all devices
    */
-  async gotoPreviewStep(previewIndex: number = 0, zoom?: "frame" | "spread"): Promise<void>;
+  gotoPreviewStep(previewIndex?: number, zoom?: "frame" | "spread"): Promise<void>;
 
   /**
    * Returns to the first step, helpful if you want to exit the preview step.
    * @param zoom overrides the frames zoom settings for all devices
    */
-  async gotoFirstStep(zoom?: "frame" | "spread"): Promise<void>;
+  gotoFirstStep(zoom?: "frame" | "spread"): Promise<void>;
 
   /**
    * Turns the display of step numbers on or off
    */
-  async displayStepNumbers(display: boolean): Promise<void>
+  displayStepNumbers(display: boolean): Promise<void>
 
   /**
    * Returns if step numbers are displayed 
@@ -740,7 +748,7 @@ export interface iExternalImageScaleHints {
   dpiAtScale1: number;
 }
 
-export type MergeMode  = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
+export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;

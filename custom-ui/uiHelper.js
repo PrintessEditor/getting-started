@@ -235,7 +235,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                             return getImageScaleControl(printess, p, true);
                     }
                     const d = document.createElement("div");
-                    d.innerText = "Property Control no found";
+                    d.innerText = "Property Control not found";
                     return d;
                 }
                 else {
@@ -358,14 +358,8 @@ function getSingleLineTextBox(printess, p, forMobile) {
             inp.value = "";
         }
     };
-    if (forMobile) {
-        inp.classList.add("form-control");
-        return inp;
-    }
-    else {
-        const r = addLabel(inp, p);
-        return r;
-    }
+    const r = addLabel(inp, p, forMobile);
+    return r;
 }
 function getDesktopTitle(printess) {
     const container = document.createElement("div");
@@ -454,10 +448,10 @@ function getTextArea(printess, p, forMobile) {
     }
     else {
         inp.className = "desktop-text-area";
-        return addLabel(inp, p);
+        return addLabel(inp, p, forMobile);
     }
 }
-function addLabel(input, p, label) {
+function addLabel(input, p, forMobile, label) {
     input.classList.add("form-control");
     const container = document.createElement("div");
     container.classList.add("mb-3");
@@ -467,6 +461,7 @@ function addLabel(input, p, label) {
         htmlLabel.className = "form-label";
         htmlLabel.setAttribute("for", "inp_" + p.id);
         htmlLabel.innerText = (label || p.label || "");
+        htmlLabel.style.display = forMobile ? "none" : "inline-block";
         container.appendChild(htmlLabel);
     }
     input.id = "inp_" + p.id;
@@ -495,7 +490,7 @@ function validate(p) {
             if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
                 container.classList.remove("was-validated");
                 input.classList.add("is-invalid");
-                validation.innerText = "Please enter some text here";
+                validation.innerText = p.kind === "image" ? "Please upload an image" : "Please enter some text here";
             }
             else {
                 container.classList.add("was-validated");
@@ -544,7 +539,7 @@ function getImageSelectList(printess, p, forMobile) {
         return container;
     }
     else {
-        return addLabel(container, p);
+        return addLabel(container, p, forMobile);
     }
 }
 function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
@@ -674,7 +669,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
         return ddContent;
     }
     else {
-        return addLabel(dropdown, p);
+        return addLabel(dropdown, p, false);
     }
 }
 function getDropdownItemContent(meta, entry) {
@@ -816,9 +811,9 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
     };
     const uploadLabel = document.createElement("label");
     uploadLabel.className = "form-label";
-    uploadLabel.innerText = "Upload images form your device";
+    uploadLabel.innerText = "Upload images from your device";
     uploadLabel.setAttribute("for", "inp_" + p.id);
-    fileUpload.appendChild(addLabel(inp, p, ""));
+    fileUpload.appendChild(addLabel(inp, p, forMobile, ""));
     container.appendChild(progressDiv);
     container.appendChild(fileUpload);
     const imagePanel = document.createElement("div");
@@ -1699,7 +1694,7 @@ function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWi
         return ddContent;
     }
     else {
-        return addLabel(dropdown, p, col.label || col.name);
+        return addLabel(dropdown, p, false, col.label || col.name);
     }
 }
 function getTableDropdownItemContent(value) {
@@ -1726,7 +1721,7 @@ function getTableTextBox(printess, p, rowIndex, row, col, forMobile) {
         return inp;
     }
     else {
-        const r = addLabel(inp, p, col.label || col.name);
+        const r = addLabel(inp, p, forMobile, col.label || col.name);
         return r;
     }
 }

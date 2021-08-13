@@ -278,7 +278,7 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
               return getImageScaleControl(printess, p, true);
           }
           const d = document.createElement("div");
-          d.innerText = "Property Control no found";
+          d.innerText = "Property Control not found";
           return d;
         } else {
           return getImageUploadControl(printess, p, undefined, forMobile);
@@ -460,14 +460,9 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
     }
   }
 
+  const r = addLabel(inp, p, forMobile);
+  return r;
 
-  if (forMobile) {
-    inp.classList.add("form-control");
-    return inp;
-  } else {
-    const r = addLabel(inp, p);
-    return r;
-  }
   /* window.setTimeout(() => {
      inp.focus();
    }, 100)*/
@@ -580,13 +575,13 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
     return inp;
   } else {
     inp.className = "desktop-text-area";
-    return addLabel(inp, p);
+    return addLabel(inp, p, forMobile);
   }
 
 
 }
 
-function addLabel(input: HTMLElement, p: iExternalProperty, label?: string): HTMLElement {
+function addLabel(input: HTMLElement, p: iExternalProperty, forMobile: boolean, label?: string): HTMLElement {
   input.classList.add("form-control");
 
   const container = document.createElement("div");
@@ -598,6 +593,7 @@ function addLabel(input: HTMLElement, p: iExternalProperty, label?: string): HTM
     htmlLabel.className = "form-label";
     htmlLabel.setAttribute("for", "inp_" + p.id);
     htmlLabel.innerText = (label || p.label || "");
+    htmlLabel.style.display = forMobile ? "none" : "inline-block"
     container.appendChild(htmlLabel);
   }
 
@@ -632,7 +628,7 @@ function validate(p: iExternalProperty): void {
       if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
         container.classList.remove("was-validated");
         input.classList.add("is-invalid");
-        validation.innerText = "Please enter some text here";
+        validation.innerText = p.kind === "image" ? "Please upload an image" : "Please enter some text here";
 
       } else {
         container.classList.add("was-validated");
@@ -687,7 +683,7 @@ function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMob
   if (forMobile) {
     return container;
   } else {
-    return addLabel(container, p);
+    return addLabel(container, p, forMobile);
   }
 
 
@@ -833,7 +829,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
   if (asList) {
     return ddContent;
   } else {
-    return addLabel(dropdown, p);
+    return addLabel(dropdown, p, false);
   }
 }
 
@@ -1012,7 +1008,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
       printess.uploadImages(inp.files, (progress) => {
         progressBar.style.width = (progress * 100) + "%"
       }
-        , true, p.id); // true auto assigns image and triggers selection change wich redraws this control.
+        , true, p.id); // true auto assigns image and triggers selection change which redraws this control.
 
       // optional: promise resolution returns list of added images 
       // if auto assign is "false" you must reset progress-bar width and control visibilty manually
@@ -1024,13 +1020,13 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   /* optinally add label before upload */
   const uploadLabel = document.createElement("label");
   uploadLabel.className = "form-label";
-  uploadLabel.innerText = "Upload images form your device";
+  uploadLabel.innerText = "Upload images from your device";
   uploadLabel.setAttribute("for", "inp_" + p.id);
   // remove comments below to  add label
   // fileUpload.appendChild(uploadLabel);
 
 
-  fileUpload.appendChild(addLabel(inp, p, "")); // to add error-message display 
+  fileUpload.appendChild(addLabel(inp, p, forMobile, "")); // to add error-message display 
   container.appendChild(progressDiv);
   container.appendChild(fileUpload);
 
@@ -2063,7 +2059,7 @@ function getTableDetailsDropDown(printess: iPrintessApi, p: iExternalProperty, r
   if (asList) {
     return ddContent;
   } else {
-    return addLabel(dropdown, p, col.label || col.name);
+    return addLabel(dropdown, p, false, col.label || col.name);
   }
 }
 function getTableDropdownItemContent(value: string | number): HTMLElement {
@@ -2096,7 +2092,7 @@ function getTableTextBox(printess: iPrintessApi, p: iExternalProperty, rowIndex:
     inp.classList.add("form-control");
     return inp;
   } else {
-    const r = addLabel(inp, p, col.label || col.name);
+    const r = addLabel(inp, p, forMobile, col.label || col.name);
     return r;
   }
 }
