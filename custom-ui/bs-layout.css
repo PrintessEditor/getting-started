@@ -98,6 +98,7 @@ body {
   grid-row: 1 / 4;
   grid-column: 2;
   display: flex;
+  height: -webkit-fill-available; /* safari only */
   flex-direction: column;
   padding-right: 5px;
   padding-top: var(--editor-margin-top);
@@ -546,6 +547,19 @@ input[type='range'] {
 
 .mobile-control-host > ul {
   height: 100%;
+}
+
+.align-control-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.align-control-item {
+  width: auto;
+  padding: 0;
+  border: none;
+  margin: 4px;
 }
  
 .list-group-grid-style {

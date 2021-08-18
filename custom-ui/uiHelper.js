@@ -48,28 +48,35 @@ function addToBasket(printess) {
     });
 }
 function viewPortScroll(printess) {
-    _viewPortScroll(printess, "scroll");
+    if (printess) {
+        _viewPortScroll(printess, "scroll");
+    }
 }
 function viewPortResize(printess) {
-    checkAndSwitchViews(printess);
-    _viewPortScroll(printess, "resize");
+    if (printess) {
+        checkAndSwitchViews(printess);
+        _viewPortScroll(printess, "resize");
+    }
 }
 function resize(printess) {
-    checkAndSwitchViews(printess);
-    printess.resizePrintess(false, false, undefined);
+    if (printess) {
+        checkAndSwitchViews(printess);
+        printess.resizePrintess(false, false, undefined);
+    }
 }
 function checkAndSwitchViews(printess) {
-    const mobile = printess.isMobile();
-    if (mobile && uih_currentRender !== "mobile") {
-        renderMobileUi(printess);
-        renderMobileNavBar(printess);
-    }
-    if (!mobile && uih_currentRender !== "desktop") {
-        renderDesktopUi(printess);
+    if (printess) {
+        const mobile = printess.isMobile();
+        if (mobile && uih_currentRender !== "mobile") {
+            renderMobileUi(printess);
+            renderMobileNavBar(printess);
+        }
+        if (!mobile && uih_currentRender !== "desktop") {
+            renderDesktopUi(printess);
+        }
     }
 }
-function _viewPortScroll(printess, what) {
-    console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
+function _viewPortScroll(printess, _what) {
     if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
         uih_viewportOffsetTop = window.visualViewport.offsetTop;
         uih_viewportHeight = window.visualViewport.height;
@@ -98,7 +105,6 @@ function _viewPortScroll(printess, what) {
     }
 }
 function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
-    console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
     uih_viewportHeight = vpHeight;
     uih_viewportOffsetTop = vpOffsetTop;
     uih_viewportWidth = window.innerWidth;
@@ -208,6 +214,8 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                         return getFontSizeDropDown(printess, p, true);
                     case "text-style-vAlign":
                         return getVAlignControl(printess, p, true);
+                    case "text-style-vAlign-hAlign":
+                        return getVAlignAndHAlignControl(printess, p, true);
                     default:
                         return getMultiLineTextBox(printess, p, forMobile);
                 }
@@ -575,7 +583,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
         color.style.backgroundColor = f.color;
         color.dataset.color = f.name;
         color.title = f.name;
-        color.onclick = () => {
+        color.onclick = () => __awaiter(this, void 0, void 0, function* () {
             if (metaProperty === "color") {
                 printess.setTextStyleProperty(p.id, metaProperty, f.name);
                 const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
@@ -585,7 +593,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
                 }
             }
             else {
-                printess.setProperty(p.id, f.name);
+                yield printess.setProperty(p.id, f.name);
                 p.value = f.color;
                 const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
                 if (mobileButtonDiv) {
@@ -594,7 +602,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
             }
             if (!forMobile)
                 button.style.backgroundColor = f.color;
-        };
+        });
         colorList.appendChild(color);
     }
     if (forMobile) {
@@ -756,7 +764,7 @@ function getImageRotateControl(printess, p) {
             thumbDiv.appendChild(thumb);
             thumbDiv.onclick = () => {
                 const rotAngle = (i * 90).toString();
-                printess.rotateImage(p.id, rotAngle).then(() => {
+                printess.rotateImage(p.id, rotAngle).finally(() => {
                     imagePanel.innerHTML = "";
                 });
                 for (const c of [...imagePanel.childNodes]) {
@@ -1084,7 +1092,10 @@ function getDropdownImageContent(thumbUrl) {
 function getVAlignControl(printess, p, forMobile) {
     const group = document.createElement("div");
     group.className = "btn-group";
-    group.style.marginLeft = "0px";
+    group.classList.add("align-control-item");
+    if (!forMobile) {
+        group.style.marginLeft = "0px";
+    }
     if (forMobile) {
         group.classList.add("form-control");
     }
@@ -1107,7 +1118,10 @@ function getVAlignControl(printess, p, forMobile) {
 function getHAlignControl(printess, p, forMobile) {
     const group = document.createElement("div");
     group.className = "btn-group";
-    group.style.marginLeft = "0px";
+    group.classList.add("align-control-item");
+    if (!forMobile) {
+        group.style.marginLeft = "0px";
+    }
     if (forMobile) {
         group.classList.add("form-control");
     }
@@ -1139,6 +1153,13 @@ function getHAlignControl(printess, p, forMobile) {
     }
     return group;
 }
+function getVAlignAndHAlignControl(printess, p, forMobile) {
+    const container = document.createElement("div");
+    container.className = "align-control-container";
+    container.appendChild(getHAlignControl(printess, p, forMobile));
+    container.appendChild(getVAlignControl(printess, p, forMobile));
+    return container;
+}
 function getRadioLabel(printess, p, id, name, icon) {
     const label = document.createElement("label");
     label.setAttribute("for", id);
@@ -1166,7 +1187,10 @@ function getRadioButton(printess, p, id, name, value) {
         printess.setTextStyleProperty(p.id, name, value);
         if (p.textStyle)
             p.textStyle[name] = value;
-        const mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-" + name);
+        let mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-" + name);
+        if (!mobileButtonDiv && name === "hAlign") {
+            mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-vAlign-hAlign");
+        }
         if (mobileButtonDiv) {
             drawButtonContent(printess, mobileButtonDiv, [p]);
         }
@@ -1441,7 +1465,7 @@ function renderLayoutSnippets(printess, layoutSnippets) {
 }
 let tableEditRow = {};
 let tableEditRowIndex = -1;
-function getTableControl(printess, p, forMobile) {
+function getTableControl(printess, p, _forMobile) {
     const container = document.createElement("div");
     let hasRow = false;
     if (p.tableMeta) {
@@ -1970,8 +1994,8 @@ function resizeMobileUi(printess, focusSelection = false) {
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
         mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
         const printessDiv = document.getElementById("desktop-printess-container");
-        const viewPortHeight = uih_viewportHeight;
-        const viewPortWidth = uih_viewportWidth;
+        const viewPortHeight = uih_viewportHeight || window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const viewPortWidth = uih_viewportWidth || window.visualViewport ? window.visualViewport.width : window.innerWidth;
         const viewPortTopOffset = uih_viewportOffsetTop;
         let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
         if (printessDiv) {

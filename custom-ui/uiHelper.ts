@@ -50,39 +50,41 @@ async function addToBasket(printess: iPrintessApi) {
 
 function viewPortScroll(printess: iPrintessApi) {
   // safari pushes viewport up to show keyboars, android doesn't
-  //if (isSafari) {
-  _viewPortScroll(printess, "scroll");
-  // } 
+  if (printess) {
+    _viewPortScroll(printess, "scroll");
+  }
 }
 function viewPortResize(printess: iPrintessApi) {
-  checkAndSwitchViews(printess);
-  _viewPortScroll(printess, "resize");
+  if (printess) {
+    checkAndSwitchViews(printess);
+    _viewPortScroll(printess, "resize");
+  }
 }
 
 function resize(printess: iPrintessApi) {
-  checkAndSwitchViews(printess);
-  printess.resizePrintess(false, false, undefined,);
+  if (printess) {
+    checkAndSwitchViews(printess);
+    printess.resizePrintess(false, false, undefined);
+  }
 }
-// software keyboard in safari fires viewPortScroll, so we can ignore the resize 
-// if (!isSafari) {
-
-// }
 
 function checkAndSwitchViews(printess: iPrintessApi) {
-  const mobile = printess.isMobile();
-  if (mobile && uih_currentRender !== "mobile") {
-    // switch to mobile
-    renderMobileUi(printess);
-    renderMobileNavBar(printess);
-  }
-  if (!mobile && uih_currentRender !== "desktop") {
-    // switch to desktop
-    renderDesktopUi(printess);
+  if (printess) {
+    const mobile = printess.isMobile();
+    if (mobile && uih_currentRender !== "mobile") {
+      // switch to mobile
+      renderMobileUi(printess);
+      renderMobileNavBar(printess);
+    }
+    if (!mobile && uih_currentRender !== "desktop") {
+      // switch to desktop
+      renderDesktopUi(printess);
+    }
   }
 }
 
-function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
-  console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
+function _viewPortScroll(printess: iPrintessApi, _what: "scroll" | "resize") {
+  //console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
   if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
     uih_viewportOffsetTop = window.visualViewport.offsetTop;
     uih_viewportHeight = window.visualViewport.height;
@@ -102,7 +104,7 @@ function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
         const desktopGrid: HTMLElement | null = document.getElementById("printess-desktop-grid");
         if (desktopGrid && !printess.autoScaleEnabled()) {
           const height = desktopGrid.offsetHeight || window.innerHeight; // fallback when running inside printess-editor
-          const calcHeight = "calc(" +height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+          const calcHeight = "calc(" + height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
           printessDiv.style.height = calcHeight;
           printess.resizePrintess(); //false, undefined, undefined, height);
         }
@@ -112,7 +114,7 @@ function _viewPortScroll(printess: iPrintessApi, what: "scroll" | "resize") {
 }
 
 function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffsetTop: number) {
-  console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
+  //console.log("!!!! View-Port-Scroll in iFrame: offsetTop=" + vpOffsetTop + "   height=" + vpHeight);
   uih_viewportHeight = vpHeight;
   uih_viewportOffsetTop = vpOffsetTop;
   uih_viewportWidth = window.innerWidth;
@@ -126,7 +128,7 @@ function viewPortScrollInIFrame(printess: iPrintessApi, vpHeight: number, vpOffs
     }
   }
 }
- 
+
 
 function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProperty> = uih_currentProperties, state: MobileUiState = uih_currentState, groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets): Array<string> {
 
@@ -140,8 +142,8 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
     }
   }
 
-   
- 
+
+
   uih_currentGroupSnippets = groupSnippets;
   uih_currentState = state;
   uih_currentProperties = properties;
@@ -246,6 +248,8 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
             return getFontSizeDropDown(printess, p, true);
           case "text-style-vAlign":
             return getVAlignControl(printess, p, true);
+          case "text-style-vAlign-hAlign":
+            return getVAlignAndHAlignControl(printess, p, true);
           default:
             return getMultiLineTextBox(printess, p, forMobile)
         }
@@ -409,7 +413,6 @@ function getTextStyleControl(printess: iPrintessApi, p: iExternalProperty): HTML
 }
 
 function getMultiLineTextBox(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
-
   const ta = getTextArea(printess, p, forMobile);
   if (forMobile) {
     return ta;
@@ -434,6 +437,7 @@ function getMultiLineTextBox(printess: iPrintessApi, p: iExternalProperty, forMo
     return container;
   }
 }
+
 function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
 
   const inp = document.createElement("input");
@@ -733,7 +737,7 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
     color.style.backgroundColor = f.color;
     color.dataset.color = f.name;
     color.title = f.name;
-    color.onclick = () => {
+    color.onclick = async () => {
       if (metaProperty === "color") {
         printess.setTextStyleProperty(p.id, metaProperty, f.name);
         const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
@@ -742,8 +746,9 @@ function getColorDropDown(printess: iPrintessApi, p: iExternalProperty, metaProp
           drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
         }
       } else {
-        printess.setProperty(p.id, f.name);
+        await printess.setProperty(p.id, f.name);
         p.value = f.color;
+    
         const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
         if (mobileButtonDiv) {
           drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
@@ -922,15 +927,11 @@ function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty): HT
 }
 
 function getImageRotateControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
-
   const container = document.createElement("div");
 
   if (p.imageMeta) {
-
     const imagePanel = document.createElement("div");
     imagePanel.className = "image-rotate-panel";
-
-
 
     for (let i = 1; i < 4; i++) {
 
@@ -942,8 +943,8 @@ function getImageRotateControl(printess: iPrintessApi, p: iExternalProperty): HT
 
       thumbDiv.onclick = () => {
         const rotAngle = (i * 90).toString();
-        printess.rotateImage(p.id, <"90" | "180" | "270">rotAngle).then(() => {
-
+        
+        printess.rotateImage(p.id, <"90" | "180" | "270">rotAngle).finally(() => {
           imagePanel.innerHTML = "";
         })
 
@@ -992,7 +993,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   inp.type = "file";
   inp.id = "inp_" + p.id;
   inp.className = "form-control"
-  inp.accept = "image/png,image/jpg,image/jpeg";
+  inp.accept = "image/png,image/jpg,image/jpeg"; // do not add pdf or svg, since it cannot be rotated!!
   inp.multiple = true;
   inp.onchange = () => {
 
@@ -1358,10 +1359,16 @@ function getVAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobil
 
   const group = document.createElement("div");
   group.className = "btn-group";
-  group.style.marginLeft = "0px";
+  group.classList.add("align-control-item");
+
+  if (!forMobile) {
+    group.style.marginLeft = "0px";
+  }
 
   if (forMobile) {
     group.classList.add("form-control");
+    // group.style.left = "50%";
+    // group.style.transform = "translateX(-50%)";
   }
 
   for (const v of ["top", "center", "bottom"]) {
@@ -1375,7 +1382,6 @@ function getVAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobil
 
     group.appendChild(getRadioButton(printess, p, id, "vAlign", v));
     group.appendChild(getRadioLabel(printess, p, id, "vAlign", icon));
-
   }
 
   return group;
@@ -1385,10 +1391,16 @@ function getHAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobil
 
   const group = document.createElement("div");
   group.className = "btn-group";
-  group.style.marginLeft = "0px";
+  group.classList.add("align-control-item");
+
+  if (!forMobile) {
+    group.style.marginLeft = "0px";
+  }
 
   if (forMobile) {
     group.classList.add("form-control");
+    // group.style.left = "50%";
+    // group.style.transform = "translateX(-50%)";
   }
   for (const v of ["left", "right", "center", "justifyLeft"]) { // you can missing options if needed:  "justifyCenter", "justifyRight", "justifyJustify" 
     let icon: iconName = "text-align-left";
@@ -1412,6 +1424,15 @@ function getHAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobil
   }
 
   return group;
+}
+
+function getVAlignAndHAlignControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean) {
+  const container = document.createElement("div");
+  container.className = "align-control-container";
+
+  container.appendChild(getHAlignControl(printess, p, forMobile));
+  container.appendChild(getVAlignControl(printess, p, forMobile));
+  return container;
 }
 
 function getRadioLabel(printess: iPrintessApi, p: iExternalProperty, id: string, name: string, icon: iconName): HTMLLabelElement {
@@ -1445,7 +1466,10 @@ function getRadioButton(printess: iPrintessApi, p: iExternalProperty, id: string
     if (p.textStyle) p.textStyle[name] = value;
 
     // update mobile button if exists:
-    const mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-" + name);
+    let mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-" + name);
+    if (!mobileButtonDiv && name === "hAlign") {
+      mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-vAlign-hAlign");
+    }
     if (mobileButtonDiv) {
       drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
     }
@@ -1789,7 +1813,7 @@ function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExt
 let tableEditRow: Record<string, string | number | boolean> = {};
 let tableEditRowIndex = -1;
 
-function getTableControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
+function getTableControl(printess: iPrintessApi, p: iExternalProperty, _forMobile: boolean): HTMLElement {
   const container = document.createElement("div");
   let hasRow = false;
   if (p.tableMeta) {
@@ -2142,7 +2166,7 @@ function renderMobileUi(printess: iPrintessApi,
   state: MobileUiState = uih_currentState,
   groupSnippets: Array<iExternalSnippetCluster> = uih_currentGroupSnippets) {
 
- 
+
   uih_currentGroupSnippets = groupSnippets;
   uih_currentState = state;
   uih_currentProperties = properties;
@@ -2434,8 +2458,8 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
 
     mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px"; // +2 = border-top
     const printessDiv = document.getElementById("desktop-printess-container");
-    const viewPortHeight = uih_viewportHeight; //||  window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    const viewPortWidth = uih_viewportWidth; //||  window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const viewPortHeight = uih_viewportHeight || window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const viewPortWidth = uih_viewportWidth || window.visualViewport ? window.visualViewport.width : window.innerWidth;
     const viewPortTopOffset = uih_viewportOffsetTop; //  ?? window.visualViewport ? window.visualViewport.offsetTop : 0;
 
     let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
@@ -2565,7 +2589,6 @@ function getMobileButtons(printess: iPrintessApi, container?: HTMLDivElement, pr
     document.body.classList.remove("no-mobile-button-bar");
 
     // if the selection contains multiple frames it might be better to show a 2 level ui, first the main features and then the meta-properties 
-
 
     for (const b of buttons) {
       const buttonDiv = document.createElement("div");

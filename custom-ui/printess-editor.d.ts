@@ -319,7 +319,7 @@ export interface iPrintessApi {
    * @param propertyId 
    * @param propertyValue Must be string and will be converted if neccessary
    */
-  setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void>;
+  setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void | iExternalImageScaleHints>; // | Array<iExternalColorUpdate>>;
 
   /**
    * Sets the vaue of a form field
@@ -472,6 +472,16 @@ export interface iPrintessApi {
 
   renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
 
+
+  /**
+   * Renders all pages as images for the given document. 
+   * @param fileNameSuffix Optional: The file name suffix when uploading the image. All files will be prefixed with the page index + underscore character.
+   * @param documentName Optional: The name of the document you want to render the pages images for. If not provided the one marked as thumbnail will be taken, otherwise the preview document, or as last try the first/primary document.
+   * @param maxWidth Optional: Maximum render width.
+   * @param maxHeight Optional: Maximum render height.
+   */
+  renderPageImages(fileNameSuffix: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string[]>;
+
   isMobile(): boolean;
 
   getStep(): iBuyerStep | null;
@@ -558,6 +568,16 @@ export interface iPrintessApi {
    * @param keyGenerator The method to generate the S3 key. The built-in one just makes sure that the file name is unique per session.
    */
   createAwsUploaderProvider(uploadEndpoint: string, serveEndpoint?: string, keyGenerator?: (fileName: string) => string): AwsUploadProvider;
+
+  /**
+   * @deprecated
+   */
+  getContentEditables(): TemplateEditables;
+
+  /**
+   * Returns all default english translations
+   */
+  getTranslations(): Record<string, Record<string, string|number> | string | number>
 }
 
 export interface iBuyerStep {
@@ -658,7 +678,7 @@ export interface iExternalFrameBounds {
 export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "table";
 
 export type iExternalMetaPropertyKind = null |
-  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" |
+  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
   "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-hueRotate";
 
 export interface iExternalProperty {
@@ -808,6 +828,41 @@ export interface iStoryContent {
   pts: Array<any> // Array<iParagraphTextAndStyles>
 }
 
+export interface FormFieldEntry {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface FormFieldItem {
+  name: string;
+  value: string;
+  visibility: string;
+  isPriceRelevant: boolean;
+  entries: FormFieldEntry[];
+}
+
+export interface ContentEditableItem {
+  id: string;
+  name: string;
+  isMandatory: boolean;
+  value: string;
+}
+
+export interface DocumentContentEditables {
+  id: string;
+  name: string;
+  simpleTexts: ContentEditableItem[];
+  multilineTexts: ContentEditableItem[];
+  images: ContentEditableItem[];
+  stories: Record<string, string>;
+  serializedStories: Record<string, string>;
+}
+
+export interface TemplateEditables {
+  primaryDocument: DocumentContentEditables;
+  formFields: FormFieldItem[];
+}
 
 export type iconName =
   "image"
