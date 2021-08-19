@@ -855,8 +855,7 @@ export interface DocumentContentEditables {
   simpleTexts: ContentEditableItem[];
   multilineTexts: ContentEditableItem[];
   images: ContentEditableItem[];
-  stories: Record<string, string>;
-  serializedStories: Record<string, string>;
+  stories: Record<string, string[]>;
 }
 
 export interface TemplateEditables {
