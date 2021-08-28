@@ -987,11 +987,15 @@ function getTabPanel(tabs: Array<{ title: string, id: string, content: HTMLEleme
 function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
   const container = document.createElement("div");
   /*** Effects ***/
-  container.appendChild(getNumberSlider(printess, p, "image-brightness"));
-  container.appendChild(getNumberSlider(printess, p, "image-contrast"));
-  container.appendChild(getNumberSlider(printess, p, "image-vivid"));
-  container.appendChild(getNumberSlider(printess, p, "image-sepia"));
-  container.appendChild(getNumberSlider(printess, p, "image-hueRotate"));
+  p.imageMeta?.allows.forEach(metaProperty => {
+    switch (metaProperty) {
+      case "brightness": container.appendChild(getNumberSlider(printess, p, "image-brightness")); break;
+      case "contrast": container.appendChild(getNumberSlider(printess, p, "image-contrast")); break;
+      case "vivid": container.appendChild(getNumberSlider(printess, p, "image-vivid")); break;
+      case "sepia": container.appendChild(getNumberSlider(printess, p, "image-sepia")); break;
+      case "hueRotate": container.appendChild(getNumberSlider(printess, p, "image-hueRotate")); break;
+    }
+  })
   return container;
 }
 
@@ -2417,7 +2421,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
             renderMobileNavBar(printess);
           }
         } else {
-          btn.innerText = printess.gl("ui.basket");
+          btn.innerText = printess.gl("ui.buttonBasket");
           btn.onclick = () => addToBasket(printess);
         }
 
