@@ -465,10 +465,11 @@ function addLabel(input, p, forMobile, label) {
     container.classList.add("mb-3");
     container.id = "cnt_" + p.id;
     if (p.label || label) {
+        const propsLabel = printess.gl(p.label).includes("not found") ? p.label : printess.gl(p.label);
         const htmlLabel = document.createElement("label");
         htmlLabel.className = "form-label";
         htmlLabel.setAttribute("for", "inp_" + p.id);
-        htmlLabel.innerText = (label || p.label || "");
+        htmlLabel.innerText = (label || propsLabel || "");
         htmlLabel.style.display = forMobile ? "none" : "inline-block";
         container.appendChild(htmlLabel);
     }
