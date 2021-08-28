@@ -99,8 +99,8 @@
           /* Optional if available: the ID of the current shop-user to keep all uploaded resources together and display for reccuring users */
           shopUserId: "",
 
-          /* Optinal: custom translations */ 
-          translations: {"ui": {"basket": "Add to basket"}},
+          /* Optinal: custom translations */
+          translations: { "ui": { "basketBtn": "Add to basket" } },
 
           /* Optional: you custom CSS or a Bootstrap Theme */
           /* cssUrl: "https://editor.printess.com/printess-editor/bootstrap-themes/sketchy.css", */
@@ -120,14 +120,14 @@
       }, "*");
     }
 
-   
+
     /* *************************** */
     /*   Forward Visual Viewport   */
     /* *************************** */
     if (window.visualViewport) {
       window.visualViewport.addEventListener("scroll", () => {
         // unfortunately an iframe on iOS is not able to receive the correct visual-viewport, so we forward it. 
-        iframe.contentWindow.postMessage({ cmd: "viewportScroll", height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop },"*")
+        iframe.contentWindow.postMessage({ cmd: "viewportScroll", height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop }, "*")
       })
     }
 
