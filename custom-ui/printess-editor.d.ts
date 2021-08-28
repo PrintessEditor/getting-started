@@ -609,10 +609,10 @@ export interface iPrintessApi {
   getTranslations(): Record<string, Record<string, string | number> | string | number>;
 
   /**
-   * Returns an array of external property errors that can be used to display errors like missing character to the customer
+   * Returns an array of external property errors that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
-  validate(mode: "add-to-basket" | "until-current-step"): Array<iExternalPropertyError>
+  validate(mode: "all" | "until-current-step" | "selection"): Array<iExternalPropertyError>
 
   /**
    * Returns a translation as string to display the ui in different languages

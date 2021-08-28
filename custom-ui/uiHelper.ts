@@ -36,7 +36,7 @@ console.log("Printess ui-helper loaded");
 
 
 async function addToBasket(printess: iPrintessApi) {
-  const errors = printess.validate("add-to-basket");
+  const errors = printess.validate("all");
   if (errors.length > 0) {
     getValidationOverlay(printess, errors[0]);
     return;
