@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+
+  <title>Printess-Custom-Ui</title>
+
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+
+  <!--<link href="sketchy.css" rel="stylesheet">-->
+
+  <link type="text/css" rel="stylesheet" href="bs-layout.css" />
+
+</head>
+
+<body>
+
+  <nav class="desktop-navbar navbar navbar-expand navbar-dark bg-primary">
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto" style="width: 100%;">
+        <!--<li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            Ui
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <a class="dropdown-item" href="index.html">Printess Ui</a>
+            <a class="dropdown-item" href="external.html">Custom Ui</a>
+          </div>
+        </li>-->
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnShowJson" title="Show Properties JSON" data-bs-toggle="offcanvas"
+            data-bs-target="#templateOffcanvas">
+            open
+          </a>
+        </li>
+        <li class="nav-item" style="flex-grow: 1;"></li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnUndo" title="Undo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-arrow-counterclockwise" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z" />
+              <path
+                d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnRedo" title="Redo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"
+              class="bi bi-arrow-clockwise">
+              <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+              <path
+                d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnSelect" title="Select Frame by Property-ID">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-bounding-box-circles" viewBox="0 0 16 16">
+              <path
+                d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2zm2.5 1.937v8.126c.703.18 1.256.734 1.437 1.437h8.126a2.004 2.004 0 0 1 1.437-1.437V3.937A2.004 2.004 0 0 1 12.063 2.5H3.937A2.004 2.004 0 0 1 2.5 3.937zM14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnClearSelection" title="Clear Selection">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-x-circle"
+              viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+              <path
+                d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnDelete" title="Delete Selected Frames">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash"
+              viewBox="0 0 16 16">
+              <path
+                d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+              <path fill-rule="evenodd"
+                d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnShowJson" title="Show Properties JSON" data-bs-toggle="offcanvas"
+            data-bs-target="#jsonOffcanvas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-code"
+              viewBox="0 0 16 16">
+              <path
+                d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" " id="btnValidate" title="Show Validation JSON"  >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"  
+              viewBox="0 0 576 512">
+              <path fill="currentColor"
+                d="M248.747 204.705l6.588 112c.373 6.343 5.626 11.295 11.979 11.295h41.37a12 12 0 0 0 11.979-11.295l6.588-112c.405-6.893-5.075-12.705-11.979-12.705h-54.547c-6.903 0-12.383 5.812-11.978 12.705zM330 384c0 23.196-18.804 42-42 42s-42-18.804-42-42 18.804-42 42-42 42 18.804 42 42zm-.423-360.015c-18.433-31.951-64.687-32.009-83.154 0L6.477 440.013C-11.945 471.946 11.118 512 48.054 512H527.94c36.865 0 60.035-39.993 41.577-71.987L329.577 23.985zM53.191 455.002L282.803 57.008c2.309-4.002 8.085-4.002 10.394 0l229.612 397.993c2.308 4-.579 8.998-5.197 8.998H58.388c-4.617.001-7.504-4.997-5.197-8.997z">
+              </path>
+
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnSave" title="Save Current Artwork">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-cloud-arrow-up-fill" viewBox="0 0 16 16">
+              <path
+                d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2zm2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnLoad" title="Load Artwork by ID">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-cloud-arrow-down" viewBox="0 0 16 16">
+              <path fill-rule="evenodd"
+                d="M7.646 10.854a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 9.293V5.5a.5.5 0 0 0-1 0v3.793L6.354 8.146a.5.5 0 1 0-.708.708l2 2z" />
+              <path
+                d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+            </svg>
+          </a>
+        </li>
+
+
+
+      </ul>
+
+    </div>
+  </nav>
+
+  <button class="show-layouts-button btn btn-primary" type="button" data-bs-toggle="offcanvas"
+    data-bs-target="#layoutOffcanvas" aria-controls="layoutOffcanvas">
+    Change Layout
+  </button>
+
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="layoutOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasLabel">Layouts</h5>
+      <button type="button" class="btn-close text-reset" id="closeLayoutOffCanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <div id="layoutSnippets" class="offcanvas-body">
+    </div>
+  </div>
+
+  <!-- FOR TESTING ONLY: JSON DEBUG VIEW -->
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="jsonOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasLabel">Properties JSON</h5>
+      <button type="button" class="btn-close text-reset" id="closeJsonOffCanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <pre id="propertiesJson" class="offcanvas-body">
+    </pre>
+  </div>
+
+  <!-- FOR TESTING ONLY: SELECT TEMPLATE VIEW-->
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="templateOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header" style="align-items: start;">
+      <div class="offcanvas-title">
+        <h5 id="offcanvasLabel">Load Template</h5>
+        <p class="text-muted" id="offcanvasLabel">For mobile please add your own [backButtonCallback] as an
+          attachPrintess parameter.</p>
+      </div>
+      <button type="button" class="btn-close text-reset" id="closeTemplateOffCanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <a class="dropdown-item" href="#Children%27s%20book">Children's book</a>
+      <a class="dropdown-item" href="#Retro%20Sign">Retro Sign</a>
+      <a class="dropdown-item" href="#Business%20Card">Business Card</a>
+      <a class="dropdown-item" href="#Greeting%20Card">Greeting Card</a>
+      <a class="dropdown-item" href="#Chocolate%20Bar">Chocolate Bar</a>
+      <a class="dropdown-item" href="#Photo-Calendar%201">Photo-Calendar</a>
+      <a class="dropdown-item" href="#Calendar">Calendar</a>
+      <a class="dropdown-item" href="#Newborn%20Card">Newborn Card</a>
+      <a class="dropdown-item" href="#Phone-Case">Phone-Case</a>
+      <a class="dropdown-item" href="#Puzzle">Puzzle</a>
+      <a class="dropdown-item" href="#T-shirt%202">T-Shirt</a>
+      <a class="dropdown-item" href="#Coffee%20Mug">Coffee Mug</a>
+
+      <div class="dropdown-divider">UI Test Templates</div>
+      <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel_draft">Rich Editing with Fallback to Paragraph</a>
+      <a class="dropdown-item" href="#BuyerText-No-Eddi_draft">Form Editing with and without Paragraph Split</a>
+      <a class="dropdown-item" href="#8Pages_draft">8 Pages</a>
+      <a class="dropdown-item" href="#8DoublePages_draft">14 Facing Pages</a>
+      <a class="dropdown-item" href="#8DoublePagesFF_draft">14 Facing Pages w. FormField</a>
+      <a class="dropdown-item" href="#Avatar_draft">Avatar-Test</a>
+      <a class="dropdown-item" href="#Newborn-Steps_draft">Newborn Card with Steps</a>
+      <a class="dropdown-item" href="#sigTestPortrait_draft">Portrait Test Card</a>
+      <a class="dropdown-item" href="#mff_draft">Form Field Test</a>
+    </div>
+  </div>
+
+  <!-- position: absolute; height: initial; top: 60px; bottom: 0px; outline: 4px solid red; -->
+  <!-- MAIN PRINTES UI-COMPONENTS -->
+  <div id="printess-desktop-grid" style="top: 60px;">
+    <nav id="desktop-pagebar"></nav>
+    <div id="desktop-properties"></div>
+    <div id="desktop-printess-container"></div>
+  </div>
+
+
+  <div class="token-warning">
+    <h4>This site is using a test token. </h4>
+    You will not be able to modify or print the template.
+    Please contact us to get your personal token.
+  </div>
+
+  <!-- Bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4"
+    crossorigin="anonymous"></script>
+
+  <!-- Load polyfills -->
+  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+
+  <script src="uiHelper.js"></script>
+
+  <!-- Load components via WebComponents.waitFor -->
+  <script>
+
+    let printess;
+    let currentGroupSnippets = [];
+
+    window.WebComponents = window.WebComponents || {
+      waitFor(cb) {
+        addEventListener('WebComponentsReady', cb)
+      }
+    };
+
+
+    const loadingDoneCallback = function (spreads, title) {
+      // remove your progress overlay here
+    }
+
+    const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
+
+      //console.warn("Spread Change!");
+
+      // remember groupSnippets for showing as add-able items
+      currentGroupSnippets = groupSnippets;
+
+      const layoutSnippetsDiv = document.getElementById("layoutSnippets");
+      layoutSnippetsDiv.innerHTML = "";
+      layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
+      document.querySelector(".show-layouts-button").style.visibility = layoutSnippets.length ? "visible" : "hidden";
+
+    }
+
+    const selectionChangeCallback = (properties, state) => {
+      // state is "document" or "frames"
+
+      //console.warn("Selection Change!");
+
+      if (printess.isMobile()) {
+        // **** add mobile-ui *****
+        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
+        uiHelper.renderMobileNavBar(printess);
+
+      } else {
+        // ***** add desktop-ui *****
+        const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets);
+        uiHelper.refreshUndoRedoState(printess);
+
+        // print json for debug purposes
+        const jsonPre = document.getElementById("propertiesJson");
+        if (jsonPre) {
+          jsonPre.innerHTML = t.join("<br/>");
+        }
+      }
+
+    }
+
+
+    const getOverlayCallback = (properties) => {
+      return uiHelper.getOverlay(printess, properties);
+    }
+
+
+    // Add a Printess token, you can get it on printess.com
+    let token = "";
+
+    if (!token) {
+      token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJneTh6NDRFbUxpWjB2clVLclhsV3RpWlkxNUQyIiwianRpIjoibnl4NGJFZlZ5SVVvM1NkR2dYVnEtempzS3hlb0FYZUYiLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODg2ODUxMSwiZXhwIjoxOTM0MjI4NTExLCJpYXQiOjE2MTg4Njg1MTEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.CuI6zdCzBm2y3t2GBD4pYdyztFzSeSEfdGIDBeiZIYvzQckB9oEB1Z4hDkBCGZGBtTMRyuHCbkwZgO6uxD-ZyahifiqrIqfqSqtFEGwgZUF87TvV_KlrYWBzDNTaUIQjr-yUoxLkdnEMzh-3D5qV8UKWIDfqwnYd0KhJiB2K9CSg82_etnz5Lk-altMDAT8b1AnzxcjRAJ9_b6-CAJFXG6AAnfdl7c_PS3sD-RPOkJ75Ta2glfikIiGZzfh09bn5Ptk7rucRdxUsLCLR6m5nUFpZbV77d2eqRw8pT4Kl-5by5gvMr1wUBGbEx751CNXtcCO3qk4uNnptfZ3yCpK0Z2FOo2CYLZBzmDiYCrdFV5U-_SZuVOEl8vk0uR3tj_PQci_R7MlQOjpB4NjlKckQ2zGvBSKNeupuiC71UZ2AT5BFlbqMsuYu0necIztyKiWsBmbniVlLe-v7_paP1N4nS2haD2n4s4N_CenJqijtPggWsITfoLm2twCOe7yNB5IH7bcEFv1-MbANuaFmJVLOcTfc89Zi-mkidaHV-n_9qXypzyB-ih_27YBNluRGwcHgTEkbJecSssMfvHSt1MUuqX-8gbl7bhFGryqHA2gMoSZNDW0LkSYig2K3poOUumD67vtYdNSPLhOmDK4ck9wLAKLOvk6dtywg2qfV-58_VbI";
+      document.querySelector(".token-warning").style.display = "block";
+    }
+
+
+
+    window.WebComponents.waitFor(async () => {
+      const printessLoader = await import('https://editor.printess.com/printess-editor/printess-editor.js');
+      printess = await printessLoader.attachPrintess({
+        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+
+        div: document.getElementById("desktop-printess-container"),
+
+        domain: "api.printess.com",
+        token: token, // your printess shop-token
+        basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
+        shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
+        templateVersion: window.location.hash.substr(1).endsWith("_draft") ? "draft" : "published",
+        templateName: decodeURIComponent(window.location.hash.substr(1).replace("_draft", "")) || "Greeting Card",
+
+        loadingDoneCallback: loadingDoneCallback,
+        selectionChangeCallback: selectionChangeCallback,
+        spreadChangeCallback: spreadChangeCallback,
+        getOverlayCallback: getOverlayCallback
+
+        /* Optional: List of one or more templates to merge on load */
+        /* mergeTemplates: [
+          {
+            "templateName": "Card-Title-2",
+            "spreadIndex": 0  // Example to merge a card title to the first spread on load 
+          },
+          {
+            "templateName": "Card-Back-2",
+            "spreadIndex": 2  // Example to merge a card back to the third spread on load 
+          }
+        ], */
+
+
+
+      });
+
+      // listen to visual viewport changes to detect virtual keyboard on iOs and Android
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
+        window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
+      } else {
+        window.addEventListener("resize", () => uiHelper.resize(printess));
+      }
+
+
+
+    });
+
+
+    document.getElementById("btnUndo").onclick = () => {
+      printess.undo();
+      selectionChangeCallback([]);
+    };
+    document.getElementById("btnRedo").onclick = () => {
+      printess.redo();
+      selectionChangeCallback([]);
+    };
+
+    document.getElementById("btnSelect").onclick = () => {
+      const id = prompt("Select Frames by propertyId:");
+      if (id) {
+        printess.selectFrames(id);
+      }
+    };
+
+    document.getElementById("btnClearSelection").onclick = () => {
+      printess.resizePrintess();
+      printess.clearSelection();
+    };
+    document.getElementById("btnDelete").onclick = () => {
+      printess.deleteSelectedFrames();
+    };
+    document.getElementById("btnValidate").onclick = () => {
+      alert(JSON.stringify(printess.getAllRequiredPropertiesSync()));
+    };
+
+    document.getElementById("btnSave").onclick = () => {
+      printess.save().then(id => {
+        navigator.clipboard.writeText(id).then(function () {
+          /* clipboard successfully set */
+          prompt("Saved Artwork and copied ID to clipboard:", id);
+        }, function () {
+          alert("Copy failed!");
+        });
+      })
+
+    };
+    document.getElementById("btnLoad").onclick = () => {
+      navigator.clipboard.readText().then(
+        clipText => {
+          const newId = prompt("Load Saved Artwork by ID:", clipText);
+          if (newId) printess.load(newId);
+        });
+    };
+
+    window.addEventListener('hashchange', function () {
+      let id = decodeURIComponent(window.location.hash.substr(1));
+      let loadPublishedVersion = true;
+      if (id.endsWith("_draft")) {
+        id = id.replace("_draft", "");
+        loadPublishedVersion = false;
+      }
+      const offcanvas = document.getElementById("templateOffcanvas");
+      if (offcanvas) offcanvas.style.visibility = "";
+      let pagebar = document.querySelector(".mobile-pagebar");
+      if (pagebar) pagebar.parentElement.removeChild(pagebar); // will be re-attached on load callback
+      if (id && printess) printess.loadTemplate(id);
+    }, false);
+
+
+
+  </script>
+
+</body>
+
+</html>

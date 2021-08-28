@@ -1,2 +1,10 @@
-external.html.original
+custom.html.original
 index.html.original
+uiHelper.js.original
+uiHelper.ts.original
+custom-ui/auto-scale-no-zoom.html.original
+custom-ui/plain.html.original
+custom-ui/with-toolbar.html.original
+iframe-ui/plain.html.original
+iframe-ui/sketchy-theme.html.original
+custom-ui/postcard-merge.html.original

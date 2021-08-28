@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+
+  <title>Printess-Custom-Ui Auto-Scale Example</title>
+
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+
+  <!--<link href="sketchy.css" rel="stylesheet">-->
+
+  <link type="text/css" rel="stylesheet" href="bs-layout.css" />
+
+</head>
+
+<body style="margin: 0; padding: 0;">
+
+
+  <button class="show-layouts-button btn btn-primary" type="button" data-bs-toggle="offcanvas"
+    data-bs-target="#layoutOffcanvas" aria-controls="layoutOffcanvas">
+    Change Layout
+  </button>
+
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="layoutOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasLabel">Layouts</h5>
+      <button type="button" class="btn-close text-reset" id="closeLayoutOffCanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <div id="layoutSnippets" class="offcanvas-body">
+    </div>
+  </div>
+
+  <!-- MAIN PRINTES UI-COMPONENTS -->
+  <div id="printess-desktop-grid">
+    <nav id="desktop-pagebar"></nav>
+    <div id="desktop-properties"></div>
+    <div id="desktop-printess-container"></div>
+  </div>
+
+
+  <!-- Bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4"
+    crossorigin="anonymous"></script>
+
+  <!-- Load polyfills -->
+  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+
+  <script src="uiHelper.js"></script>
+
+  <!-- Load components via WebComponents.waitFor -->
+  <script>
+
+    let printess;
+    let currentGroupSnippets = [];
+
+    window.WebComponents = window.WebComponents || {
+      waitFor(cb) {
+        addEventListener('WebComponentsReady', cb)
+      }
+    };
+
+    
+
+    const loadingDoneCallback = function (spreads, title) {
+      // remove your progress overlay here
+    }
+
+    const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
+
+      //console.warn("Spread Change!");
+
+      // remember groupSnippets for showing as add-able items
+      currentGroupSnippets = groupSnippets;
+
+      const layoutSnippetsDiv = document.getElementById("layoutSnippets");
+      layoutSnippetsDiv.innerHTML = "";
+      layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
+      document.querySelector(".show-layouts-button").style.visibility = layoutSnippets.length ? "visible" : "hidden";
+
+    }
+
+    const selectionChangeCallback = (properties, state) => {
+      // state is "document" or "frames"
+
+      //console.warn("Selection Change!");
+
+      if (printess.isMobile()) {
+        // **** add mobile-ui *****
+        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
+        uiHelper.renderMobileNavBar(printess);
+      } else {
+        // ***** add desktop-ui *****
+        const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets);
+        uiHelper.refreshUndoRedoState(printess);
+      }
+
+    }
+
+    const getOverlayCallback = (properties) => {
+      return uiHelper.getOverlay(printess, properties);
+    }
+
+
+    window.WebComponents.waitFor(async () => {
+      const printessLoader = await import('https://editor.printess.com/printess-editor/printess-editor.js');
+      printess = await printessLoader.attachPrintess({
+        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+
+        div: document.getElementById("desktop-printess-container"),
+
+        domain: "api.printess.com",
+        token: "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJneTh6NDRFbUxpWjB2clVLclhsV3RpWlkxNUQyIiwianRpIjoibnl4NGJFZlZ5SVVvM1NkR2dYVnEtempzS3hlb0FYZUYiLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODg2ODUxMSwiZXhwIjoxOTM0MjI4NTExLCJpYXQiOjE2MTg4Njg1MTEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.CuI6zdCzBm2y3t2GBD4pYdyztFzSeSEfdGIDBeiZIYvzQckB9oEB1Z4hDkBCGZGBtTMRyuHCbkwZgO6uxD-ZyahifiqrIqfqSqtFEGwgZUF87TvV_KlrYWBzDNTaUIQjr-yUoxLkdnEMzh-3D5qV8UKWIDfqwnYd0KhJiB2K9CSg82_etnz5Lk-altMDAT8b1AnzxcjRAJ9_b6-CAJFXG6AAnfdl7c_PS3sD-RPOkJ75Ta2glfikIiGZzfh09bn5Ptk7rucRdxUsLCLR6m5nUFpZbV77d2eqRw8pT4Kl-5by5gvMr1wUBGbEx751CNXtcCO3qk4uNnptfZ3yCpK0Z2FOo2CYLZBzmDiYCrdFV5U-_SZuVOEl8vk0uR3tj_PQci_R7MlQOjpB4NjlKckQ2zGvBSKNeupuiC71UZ2AT5BFlbqMsuYu0necIztyKiWsBmbniVlLe-v7_paP1N4nS2haD2n4s4N_CenJqijtPggWsITfoLm2twCOe7yNB5IH7bcEFv1-MbANuaFmJVLOcTfc89Zi-mkidaHV-n_9qXypzyB-ih_27YBNluRGwcHgTEkbJecSssMfvHSt1MUuqX-8gbl7bhFGryqHA2gMoSZNDW0LkSYig2K3poOUumD67vtYdNSPLhOmDK4ck9wLAKLOvk6dtywg2qfV-58_VbI", // your printess shop-token
+        basketId: "CurrentShopBasketId", // your shop  sessionId or baskedId
+        shopUserId: "CurrentShopCustomerId", // optional the userId of your shop customer
+        templateVersion: "published",
+        templateName: "Greeting Card", // You can also pass a saveToken here 
+
+        loadingDoneCallback: loadingDoneCallback,
+        selectionChangeCallback: selectionChangeCallback,
+        spreadChangeCallback: spreadChangeCallback,
+        getOverlayCallback: getOverlayCallback
+
+        /* Optional: List of one or more templates to merge on load */
+        /* mergeTemplates: [
+          {
+            "templateName": "Card-Title-2",
+            "spreadIndex": 0  // Example to merge a card title to the first spread on load 
+          },
+          {
+            "templateName": "Card-Back-2",
+            "spreadIndex": 2  // Example to merge a card back to the third spread on load 
+          }
+        ], */
+
+      });
+
+      // listen to visual viewport changes to detect virtual keyboard on iOs and Android
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
+        window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
+      } else {
+        window.addEventListener("resize", () => uiHelper.resize(printess));
+      }
+      
+    });
+
+
+  </script>
+
+</body>
+
+</html>
