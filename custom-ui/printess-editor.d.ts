@@ -46,7 +46,12 @@ export interface printessAttachParameters {
      * Force Printess to merge in a particular layout-snippet mode. 
      * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
      */
-    mergeMode?: MergeMode
+    mergeMode?: MergeMode;
+
+    /**
+     * Define which resources you want to merge from the template additionally. 
+     */
+    mergeResources?: MergeResource[];
   }];
 
   /**
@@ -70,6 +75,11 @@ export interface printessAttachParameters {
     maxWidth: number;
     maxHeight: number;
   };
+
+  /**
+   * TODO(aka): link to git-hub JSON
+   */
+  translations?: Record<string, Record<string, string> | string>;
 
 
   /**
@@ -323,10 +333,26 @@ export interface iPrintessApi {
 
   /**
    * Sets the vaue of a form field
-   * @param fieldNameOrId 
+   * @param fieldNameOrId Name of the Form-Field or Form-Field Property-ID
    * @param newValue Must be string and will be converted if neccessary
    */
-  setFormFieldValue(fieldNameOrId: string, newValue: string): Promise<void>;
+  setFormFieldValue(fieldName: string, newValue: string): Promise<void>;
+
+
+  /**
+   * Returns the current form field value and its possible list values if available
+   * @param fieldName Name of the Form-Field or Form-Field Property-ID
+   */
+  getFormField(fieldName: string): Promise<{
+    value: null | string | number | Array<Record<string, any>>,
+    list?: Array<{
+      key: string,
+      label?: string,
+      description?: string,
+      imageId?: string
+    }>
+  } | undefined>
+
 
   /**
    * Returns the number UI model for any numeric property
@@ -424,6 +450,9 @@ export interface iPrintessApi {
     name: string;
     color: string;
   }>;
+
+
+
 
   /**
    * Retrieves a SVG icon from printess
@@ -575,9 +604,22 @@ export interface iPrintessApi {
   getContentEditables(): TemplateEditables;
 
   /**
-   * Returns all default english translations
+   * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
    */
-  getTranslations(): Record<string, Record<string, string|number> | string | number>
+  getTranslations(): Record<string, Record<string, string | number> | string | number>;
+
+  /**
+   * Returns an array of external property errors that can be used to display errors like missing character to the customer
+   * @param mode Specifies when and up to which point the validation should be done.
+   */
+  validate(mode: "add-to-basket" | "until-current-step"): Array<iExternalPropertyError>
+
+  /**
+   * Returns a translation as string to display the ui in different languages
+   * @param translationKey String containing the keys for the translation table separated by period
+   * @param params String or number parameters that substitute $1, ..., $9 properties in a translation
+   */
+  gl(translationKey: string, ...params: Array<string | number>): string
 }
 
 export interface iBuyerStep {
@@ -768,7 +810,18 @@ export interface iExternalImageScaleHints {
   dpiAtScale1: number;
 }
 
+export type iExternalPropertyErrors = Array<iExternalPropertyError>
+
+export interface iExternalPropertyError {
+  propertyId: string,
+  propertyKind: string,
+  errorCode: "imageResolutionLow" | "imageMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected",
+  errorValue1: string | number,
+  errorValue2?: string | number,
+}
+
 export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
+export type MergeResource = "snippets" | "fonts" | "colors" | "images";
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
@@ -847,6 +900,7 @@ export interface ContentEditableItem {
   name: string;
   isMandatory: boolean;
   value: string;
+  maxCharacters: number;
 }
 
 export interface DocumentContentEditables {
