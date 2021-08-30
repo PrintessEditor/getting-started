@@ -31,19 +31,68 @@ let uih_lastPrintessWidth = 0;
 let uih_lastPrintessTop = "";
 let uih_lastPrintessBottom = 0;
 console.log("Printess ui-helper loaded");
+function gl(printess, translationKeys, ...params) {
+    if (typeof translationKeys !== "string") {
+        return "Translation key must be of type string";
+    }
+    let translation = findLanguageKey(printess, translationKeys.split("."));
+    if (translation) {
+        if (params.length > 0) {
+            for (let i = 1; i <= params.length; i++) {
+                translation = translation.replace('$' + i, params[i - 1].toString());
+            }
+            return translation;
+        }
+        else {
+            return translation;
+        }
+    }
+    return translationKeys + " not found";
+}
+function findLanguageKey(printess, translationKeys) {
+    const userTranslations = window.printessTranslations;
+    let result = undefined;
+    if (userTranslations && typeof userTranslations === "object") {
+        result = _findLanguageKeyInternal(userTranslations, translationKeys);
+    }
+    if (result === undefined) {
+        result = _findLanguageKeyInternal(printess.getTranslations(), translationKeys);
+    }
+    if (!result) {
+        return translationKeys.join(".") + " not found";
+    }
+    return result;
+}
+function _findLanguageKeyInternal(t, translationKeys) {
+    let translationTable = t;
+    let i = 0;
+    for (i; i < translationKeys.length; i++) {
+        const key = translationKeys[i];
+        if (translationTable && Object.prototype.hasOwnProperty.call(translationTable, key)) {
+            translationTable = translationTable[key];
+            if (typeof translationTable === "string") {
+                return translationTable;
+            }
+        }
+        else {
+            return undefined;
+        }
+    }
+    return undefined;
+}
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
         yield printess.clearSelection();
         const callback = printess.getAddToBasketCallback();
         if (callback) {
-            printess.showOverlay("Saving Your Design ...");
+            printess.showOverlay(gl(printess, "ui.saveProgress"));
             const saveToken = yield printess.save();
             const url = yield printess.renderFirstPageImage("thumbnail.png");
             callback(saveToken, url);
             printess.hideOverlay();
         }
         else {
-            alert("Please add your callback in attachPrintess. [addToBasketCallback]");
+            alert(gl(printess, "ui.addToBasketCallback"));
         }
     });
 }
@@ -165,7 +214,7 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
         for (const p of properties) {
             t.push(JSON.stringify(p, undefined, 2));
             container.appendChild(getPropertyControl(printess, p));
-            validate(p);
+            validate(printess, p);
         }
         container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
     }
@@ -183,7 +232,7 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
             else {
                 colorsContainer = null;
                 container.appendChild(getPropertyControl(printess, p));
-                validate(p);
+                validate(printess, p);
             }
             t.push(JSON.stringify(p, undefined, 2));
         }
@@ -243,7 +292,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                             return getImageScaleControl(printess, p, true);
                     }
                     const d = document.createElement("div");
-                    d.innerText = "Property Control not found";
+                    d.innerText = gl(printess, "ui.missingControl");
                     return d;
                 }
                 else {
@@ -251,9 +300,9 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                 }
             }
             return getTabPanel([
-                { id: "upload", title: "Upload Image", content: getImageUploadControl(printess, p) },
-                { title: "Filter", id: "filter", content: getImageFilterControl(printess, p) },
-                { title: "Rotate", id: "rotate", content: getImageRotateControl(printess, p) }
+                { id: "upload", title: gl(printess, "ui.imageTab"), content: getImageUploadControl(printess, p) },
+                { id: "filter", title: gl(printess, "ui.filterTab"), content: getImageFilterControl(printess, p) },
+                { id: "rotate", title: gl(printess, "ui.rotateTab"), content: getImageRotateControl(printess, p) }
             ]);
         case "select-list":
             return getDropDown(printess, p, forMobile);
@@ -263,14 +312,14 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
             return getTableControl(printess, p, forMobile);
     }
     const div = document.createElement("div");
-    div.innerText = "Property not found: " + p.kind;
+    div.innerText = gl(printess, "ui.missingProperty", p.kind);
     return div;
 }
 function getChangeBackgroundButton(printess) {
     const ok = document.createElement("button");
     ok.className = "btn btn-secondary";
     ok.style.alignSelf = "flex-start";
-    ok.innerText = "Change Background";
+    ok.innerText = gl(printess, "ui.buttonChangeBackground");
     ok.onclick = () => {
         printess.selectBackground();
     };
@@ -279,7 +328,7 @@ function getChangeBackgroundButton(printess) {
 function getDoneButton(printess) {
     const ok = document.createElement("button");
     ok.className = "btn btn-primary";
-    ok.innerText = "Done";
+    ok.innerText = gl(printess, "ui.buttonDone");
     ok.style.alignSelf = "start";
     ok.style.padding = "5px";
     ok.onclick = () => {
@@ -355,7 +404,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
     inp.oninput = () => {
         printess.setProperty(p.id, inp.value);
         p.value = inp.value;
-        validate(p);
+        validate(printess, p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
         if (mobileButtonDiv) {
             drawButtonContent(printess, mobileButtonDiv, [p]);
@@ -366,7 +415,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
             inp.value = "";
         }
     };
-    const r = addLabel(inp, p, forMobile);
+    const r = addLabel(printess, inp, p, forMobile);
     return r;
 }
 function getDesktopTitle(printess) {
@@ -380,12 +429,55 @@ function getDesktopTitle(printess) {
     inner.appendChild(h2);
     const basketBtn = document.createElement("button");
     basketBtn.className = "btn btn-primary";
-    basketBtn.innerText = "Add to Basket";
+    basketBtn.innerText = gl(printess, "ui.basket");
     basketBtn.onclick = () => addToBasket(printess);
     inner.appendChild(basketBtn);
     container.appendChild(inner);
     container.appendChild(hr);
     return container;
+}
+function getValidationOverlay(printess, error) {
+    const modal = document.createElement("div");
+    modal.className = "modal show";
+    modal.setAttribute("tabindex", "-1");
+    modal.style.backgroundColor = "rgba(0,0,0,0.7)";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    const dialog = document.createElement("div");
+    dialog.className = "modal-dialog";
+    dialog.style.minWidth = "500px";
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    const header = document.createElement("div");
+    header.className = "modal-header bg-primary";
+    const title = document.createElement("h5");
+    title.className = "modal-title";
+    title.textContent = gl(printess, `errors.${error.errorCode}Title`);
+    title.style.color = "#fff";
+    title.style.fontSize = "1.8rem";
+    const modalBody = document.createElement("div");
+    modalBody.className = "modal-body";
+    const footer = document.createElement("div");
+    footer.className = "modal-footer";
+    const ok = document.createElement("button");
+    ok.className = "btn btn-primary";
+    ok.textContent = gl(printess, "ui.buttonOk");
+    ok.onclick = () => modal.style.display = "none";
+    const p = document.createElement("p");
+    p.style.display = "flex";
+    p.style.justifyContent = "space-between";
+    p.style.alignItems = "center";
+    p.className = "error-message";
+    p.textContent = `${gl(printess, `errors.${error.errorCode}`, error.errorValue1)}`;
+    header.appendChild(title);
+    modalBody.appendChild(p);
+    footer.appendChild(ok);
+    content.appendChild(header);
+    content.appendChild(modalBody);
+    content.appendChild(footer);
+    dialog.appendChild(content);
+    modal.appendChild(dialog);
+    document.body.appendChild(modal);
 }
 function getDesktopStepsUi(printess) {
     const container = document.createElement("div");
@@ -413,7 +505,7 @@ function getDesktopStepsUi(printess) {
         const h1 = document.createElement("h2");
         h1.style.flexGrow = "1";
         h1.className = "mb-0";
-        h1.innerText = cur.title || "Step " + (cur.index + 1);
+        h1.innerText = cur.title || gl(printess, "ui.step") + (cur.index + 1);
         flex.appendChild(h1);
     }
     else {
@@ -422,14 +514,14 @@ function getDesktopStepsUi(printess) {
     if (printess.hasNextStep()) {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-outline-primary";
-        nextStep.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
+        nextStep.innerText = printess.isNextStepPreview() ? gl(printess, "ui.buttonPreview") : gl(printess, "ui.buttonNext");
         nextStep.onclick = () => printess.nextStep();
         flex.appendChild(nextStep);
     }
     else {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-primary";
-        nextStep.innerText = "Add to Basket";
+        nextStep.innerText = gl(printess, "ui.basket");
         nextStep.onclick = () => addToBasket(printess);
         flex.appendChild(nextStep);
     }
@@ -443,9 +535,10 @@ function getTextArea(printess, p, forMobile) {
     inp.autocomplete = "off";
     inp.oninput = () => {
         printess.setProperty(p.id, inp.value);
+        p.value = inp.value;
+        validate(printess, p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
         if (mobileButtonDiv) {
-            p.value = inp.value;
             drawButtonContent(printess, mobileButtonDiv, [p]);
         }
     };
@@ -456,10 +549,10 @@ function getTextArea(printess, p, forMobile) {
     }
     else {
         inp.className = "desktop-text-area";
-        return addLabel(inp, p, forMobile);
+        return addLabel(printess, inp, p, forMobile);
     }
 }
-function addLabel(input, p, forMobile, label) {
+function addLabel(printess, input, p, forMobile, label) {
     input.classList.add("form-control");
     const container = document.createElement("div");
     container.classList.add("mb-3");
@@ -477,11 +570,11 @@ function addLabel(input, p, forMobile, label) {
     const validation = document.createElement("div");
     validation.id = "val_" + p.id;
     validation.classList.add("invalid-feedback");
-    validation.innerText = "Please enter a message in the textarea";
+    validation.innerText = gl(printess, "errors.textValidation");
     container.appendChild(validation);
     return container;
 }
-function validate(p) {
+function validate(printess, p) {
     if (p.validation) {
         const container = document.getElementById("cnt_" + p.id);
         const input = document.getElementById("inp_" + p.id);
@@ -491,14 +584,14 @@ function validate(p) {
                 if (p.value.toString().length > p.validation.maxChars) {
                     container.classList.remove("was-validated");
                     input.classList.add("is-invalid");
-                    validation.innerText = "Maximum number of chars exceeded (" + p.validation.maxChars + ")";
+                    validation.innerText = gl(printess, "errors.maxCharValidation", p.validation.maxChars);
                     return;
                 }
             }
             if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
                 container.classList.remove("was-validated");
                 input.classList.add("is-invalid");
-                validation.innerText = p.kind === "image" ? "Please upload an image" : "Please enter some text here";
+                validation.innerText = p.kind === "image" ? gl(printess, "errors.imageUpload") : gl(printess, "errors.enterText");
             }
             else {
                 container.classList.add("was-validated");
@@ -547,7 +640,7 @@ function getImageSelectList(printess, p, forMobile) {
         return container;
     }
     else {
-        return addLabel(container, p, forMobile);
+        return addLabel(printess, container, p, forMobile);
     }
 }
 function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
@@ -677,7 +770,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
         return ddContent;
     }
     else {
-        return addLabel(dropdown, p, false);
+        return addLabel(printess, dropdown, p, false);
     }
 }
 function getDropdownItemContent(meta, entry) {
@@ -819,9 +912,9 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
     };
     const uploadLabel = document.createElement("label");
     uploadLabel.className = "form-label";
-    uploadLabel.innerText = "Upload images from your device";
+    uploadLabel.innerText = gl(printess, "ui.uploadImageLabel");
     uploadLabel.setAttribute("for", "inp_" + p.id);
-    fileUpload.appendChild(addLabel(inp, p, forMobile, ""));
+    fileUpload.appendChild(addLabel(printess, inp, p, forMobile, ""));
     container.appendChild(progressDiv);
     container.appendChild(fileUpload);
     const imagePanel = document.createElement("div");
@@ -845,7 +938,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
         thumb.onclick = () => {
             printess.setProperty(p.id, im.id);
             p.value = im.id,
-                validate(p);
+                validate(printess, p);
         };
         imageList.appendChild(thumb);
     }
@@ -876,7 +969,7 @@ function getImageScaleControl(printess, p, forMobile = false) {
     range.value = (_g = (_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.scale.toString()) !== null && _g !== void 0 ? _g : "0";
     const span = document.createElement("span");
     if (p.imageMeta) {
-        span.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale) + "dpi)";
+        span.textContent = gl(printess, "ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale));
     }
     rangeLabel.appendChild(span);
     rangeLabel.appendChild(range);
@@ -888,7 +981,7 @@ function getImageScaleControl(printess, p, forMobile = false) {
         printess.setImageMetaProperty(p.id, "scale", newScale);
         if (p.imageMeta) {
             p.imageMeta.scale = newScale;
-            span.textContent = "Scale(" + Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale) + "dpi)";
+            span.textContent = gl(printess, "ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale));
             const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
             if (mobileButtonDiv) {
                 drawButtonContent(printess, mobileButtonDiv, [p]);
@@ -901,7 +994,7 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
     const ui = printess.getNumberUi(p, metaProperty);
     if (!ui) {
         const er = document.createElement("div");
-        er.textContent = "Can't get number UI for " + p.id + " / metaProperty:" + (metaProperty || "");
+        er.textContent = gl(printess, "ui.numberSlider", p.id, (metaProperty || ""));
         return er;
     }
     const rangeLabel = document.createElement("label");
@@ -1274,7 +1367,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
             const btnBack = document.createElement("button");
             btnBack.className = "btn btn-sm";
             btnBack.classList.add("btn-outline-secondary");
-            btnBack.innerText = "Back";
+            btnBack.innerText = gl(printess, "ui.buttonBack");
             btnBack.onclick = () => {
                 const callback = printess.getBackButtonCallback();
                 if (forMobile && printess.hasPreviousStep()) {
@@ -1292,7 +1385,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
                     }
                 }
                 else {
-                    alert("Please add your callback in attachPrintess. [backButtonCallback]");
+                    alert(gl(printess, "ui.backButtonCallback"));
                 }
             };
             miniBar.appendChild(btnBack);
@@ -1521,7 +1614,7 @@ function getTableControl(printess, p, _forMobile) {
         }
         const addButton = document.createElement("button");
         addButton.className = "btn btn-primary mb-3";
-        addButton.innerText = p.tableMeta.tableType === "calendar-events" ? "Add New Event" : "Add New Entry";
+        addButton.innerText = p.tableMeta.tableType === "calendar-events" ? gl(printess, "ui.newEvent") : gl(printess, "ui.newEntry");
         addButton.onclick = () => {
             if (p.tableMeta) {
                 tableEditRowIndex = -1;
@@ -1583,15 +1676,15 @@ function renderTableDetails(printess, p, forMobile) {
     const submitButton = document.createElement("button");
     submitButton.className = "btn btn-primary mb-3 float-left";
     if (tableEditRowIndex === -1) {
-        submitButton.innerText = "Add";
+        submitButton.innerText = gl(printess, "ui.buttonAdd");
     }
     else {
-        submitButton.innerText = "Submit";
+        submitButton.innerText = gl(printess, "ui.buttonSubmit");
     }
     submitButton.onclick = () => {
         var _a;
         if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
-            alert("Please enter a text for the event");
+            alert(gl(printess, "ui.eventText"));
             return;
         }
         const data = JSON.parse(p.value.toString()) || [];
@@ -1609,7 +1702,7 @@ function renderTableDetails(printess, p, forMobile) {
     const cancelButton = document.createElement("button");
     cancelButton.className = "btn btn-secondary mb-3 ml-3";
     cancelButton.style.marginLeft = "20px";
-    cancelButton.innerText = "Cancel";
+    cancelButton.innerText = gl(printess, "ui.buttonCancel");
     cancelButton.onclick = () => {
         details.innerHTML = "";
         tableEditRowIndex = -1;
@@ -1619,7 +1712,7 @@ function renderTableDetails(printess, p, forMobile) {
         const deleteButton = document.createElement("button");
         deleteButton.className = "btn btn-danger mb-3 ml-3";
         deleteButton.style.marginLeft = "20px";
-        deleteButton.innerText = "Remove";
+        deleteButton.innerText = gl(printess, "ui.buttonRemove");
         deleteButton.onclick = () => {
             const data = JSON.parse(p.value.toString()) || [];
             data.splice(tableEditRowIndex, 1);
@@ -1718,7 +1811,7 @@ function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWi
         return ddContent;
     }
     else {
-        return addLabel(dropdown, p, false, col.label || col.name);
+        return addLabel(printess, dropdown, p, false, col.label || col.name);
     }
 }
 function getTableDropdownItemContent(value) {
@@ -1745,7 +1838,7 @@ function getTableTextBox(printess, p, rowIndex, row, col, forMobile) {
         return inp;
     }
     else {
-        const r = addLabel(inp, p, forMobile, col.label || col.name);
+        const r = addLabel(printess, inp, p, forMobile, col.label || col.name);
         return r;
     }
 }
@@ -1880,7 +1973,7 @@ function renderMobileNavBar(printess) {
                 }
                 else {
                     btn.classList.add("btn-outline-light");
-                    btn.innerText = "Back";
+                    btn.innerText = gl(printess, "ui.buttonBack");
                 }
                 btn.onclick = () => {
                     const callback = printess.getBackButtonCallback();
@@ -1909,7 +2002,7 @@ function renderMobileNavBar(printess) {
             case "next":
                 btn.classList.add("btn-outline-light");
                 if (printess.hasNextStep()) {
-                    btn.innerText = printess.isNextStepPreview() ? "Preview" : "Next Step";
+                    btn.innerText = printess.isNextStepPreview() ? gl(printess, "ui.buttonPreview") : gl(printess, "ui.buttonNext");
                     const curStep = printess.getStep();
                     const lastStep = printess.lastStep();
                     if (curStep && lastStep) {
@@ -1921,7 +2014,7 @@ function renderMobileNavBar(printess) {
                     };
                 }
                 else {
-                    btn.innerText = "Add to Basket";
+                    btn.innerText = gl(printess, "ui.basket");
                     btn.onclick = () => addToBasket(printess);
                 }
                 nav.appendChild(btn);
@@ -2206,6 +2299,7 @@ function renderMobileControlHost(printess, state) {
             }
             controlHost.appendChild(control);
             resizeMobileUi(printess, true);
+            validate(printess, state.externalProperty);
         }
     }
 }

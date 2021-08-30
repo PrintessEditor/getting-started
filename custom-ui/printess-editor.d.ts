@@ -46,7 +46,12 @@ export interface printessAttachParameters {
      * Force Printess to merge in a particular layout-snippet mode. 
      * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
      */
-    mergeMode?: MergeMode
+    mergeMode?: MergeMode;
+
+    /**
+     * Define which resources you want to merge from the template additionally. 
+     */
+    mergeResources?: MergeResource[];
   }];
 
   /**
@@ -577,7 +582,9 @@ export interface iPrintessApi {
   /**
    * Returns all default english translations
    */
-  getTranslations(): Record<string, Record<string, string|number> | string | number>
+  getTranslations(): Record<string, Record<string, string | number> | string | number>;
+
+  validateAll(): Array<iExternalPropertyError>;
 }
 
 export interface iBuyerStep {
@@ -768,7 +775,18 @@ export interface iExternalImageScaleHints {
   dpiAtScale1: number;
 }
 
+export type iExternalPropertyErrors = Array<iExternalPropertyError>
+
+export interface iExternalPropertyError {
+  propertyId: string,
+  propertyKind: string,
+  errorCode: "imageResolutionLow" | "imageMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected",
+  errorValue1: string | number,
+  errorValue2?: string | number,
+}
+
 export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
+export type MergeResource = "snippets" | "fonts" | "colors" | "images";
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
@@ -847,6 +865,7 @@ export interface ContentEditableItem {
   name: string;
   isMandatory: boolean;
   value: string;
+  maxCharacters: number;
 }
 
 export interface DocumentContentEditables {
