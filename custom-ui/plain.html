@@ -52,7 +52,8 @@
     crossorigin="anonymous"></script>
 
   <!-- Load polyfills -->
-  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+  <script
+    src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 
   <script src="uiHelper.js"></script>
 
@@ -68,7 +69,7 @@
       }
     };
 
-    
+
 
     const loadingDoneCallback = function (spreads, title) {
       // remove your progress overlay here
@@ -141,6 +142,19 @@
           }
         ], */
 
+        /* Optional: Add your own translation-table. 
+                     You'll find all available keys here: 
+                     https://github.com/PrintessEditor/getting-started/blob/main/translations.json
+        
+        translations: {
+           "custom": {
+             "name": "Your Name" // you can access this translation with ${gl("custom.name")}
+           },
+           "ui": {
+             "okButton": "Perfect!"
+           }
+         } */
+
       });
 
       // listen to visual viewport changes to detect virtual keyboard on iOs and Android
@@ -150,7 +164,7 @@
       } else {
         window.addEventListener("resize", () => uiHelper.resize(printess));
       }
-      
+
     });
 
 
