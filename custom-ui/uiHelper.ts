@@ -97,6 +97,12 @@ function _findLanguageKeyInternal(t: Record<string, Record<string, string> | str
 }
 
 async function addToBasket(printess: iPrintessApi) {
+  const errors = printess.validate("all");
+  if (errors.length > 0) {
+    getValidationOverlay(printess, errors[0]);
+    return;
+  }
+
   await printess.clearSelection();
   const callback = printess.getAddToBasketCallback();
   if (callback) {
@@ -711,10 +717,12 @@ function addLabel(printess: iPrintessApi, input: HTMLElement, p: iExternalProper
   container.id = "cnt_" + p.id;
 
   if (p.label || label) {
+    // check if translation is available for p.label
+    const propsLabel = printess.gl(p.label).includes("not found") ? p.label : printess.gl(p.label);
     const htmlLabel = document.createElement("label");
     htmlLabel.className = "form-label";
     htmlLabel.setAttribute("for", "inp_" + p.id);
-    htmlLabel.innerText = (label || p.label || "");
+    htmlLabel.innerText = (label || propsLabel || "");
     htmlLabel.style.display = forMobile ? "none" : "inline-block"
     container.appendChild(htmlLabel);
   }
@@ -741,19 +749,19 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
     if (container && input && validation) {
       if (p.validation.maxChars) {
         if (p.value.toString().length > p.validation.maxChars) {
-          container.classList.remove("was-validated");
+          // container.classList.remove("was-validated");
           input.classList.add("is-invalid");
           validation.innerText = gl(printess, "errors.maxCharValidation", p.validation.maxChars);
           return;
         }
       }
       if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
-        container.classList.remove("was-validated");
+        // container.classList.remove("was-validated");
         input.classList.add("is-invalid");
         validation.innerText = p.kind === "image" ? gl(printess, "errors.imageUpload") : gl(printess, "errors.enterText");
 
       } else {
-        container.classList.add("was-validated");
+        // container.classList.add("was-validated");
         input.classList.remove("is-invalid");
       }
 
@@ -1037,10 +1045,15 @@ function getTabPanel(tabs: Array<{ title: string, id: string, content: HTMLEleme
 function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
   const container = document.createElement("div");
   /*** Effects ***/
-  container.appendChild(getNumberSlider(printess, p, "image-brightness"));
-  container.appendChild(getNumberSlider(printess, p, "image-contrast"));
-  container.appendChild(getNumberSlider(printess, p, "image-vivid"));
-  container.appendChild(getNumberSlider(printess, p, "image-sepia"));
+  p.imageMeta?.allows.forEach(metaProperty => {
+    switch (metaProperty) {
+      case "brightness": container.appendChild(getNumberSlider(printess, p, "image-brightness")); break;
+      case "contrast": container.appendChild(getNumberSlider(printess, p, "image-contrast")); break;
+      case "vivid": container.appendChild(getNumberSlider(printess, p, "image-vivid")); break;
+      case "sepia": container.appendChild(getNumberSlider(printess, p, "image-sepia")); break;
+      case "hueRotate": container.appendChild(getNumberSlider(printess, p, "image-hueRotate")); break;
+    }
+  })
   return container;
 }
 
@@ -1276,7 +1289,7 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
     }
   }
   const span = document.createElement("span");
-  span.textContent = metaProperty ? metaProperty : p.label;
+  span.textContent = metaProperty ? printess.gl('ui.' + metaProperty) : p.label;
   rangeLabel.appendChild(span);
   rangeLabel.appendChild(range);
   if (forMobile) {
@@ -2903,7 +2916,8 @@ function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, pr
 
     const buttonText = document.createElement("div");
     buttonText.className = "text";
-    buttonText.innerText = b.caption;
+    // check if translation is available for b.caption, else use directly b.caption and don't translate
+    buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
 
     const buttonIcon = document.createElement("div");
     buttonIcon.className = "icon";
@@ -2919,7 +2933,8 @@ function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, pr
 
     const buttonText = document.createElement("div");
     buttonText.className = "mobile-property-caption";
-    buttonText.innerText = b.caption;
+    // check if translation is available for b.caption
+    buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
 
     buttonDiv.appendChild(buttonCircle);
     buttonDiv.appendChild(buttonText);

@@ -76,6 +76,11 @@ export interface printessAttachParameters {
     maxHeight: number;
   };
 
+  /**
+   * TODO(aka): link to git-hub JSON
+   */
+  translations?: Record<string, Record<string, string> | string>;
+
 
   /**
    * If you application displays a loading animation, this call tells you to start
@@ -328,10 +333,26 @@ export interface iPrintessApi {
 
   /**
    * Sets the vaue of a form field
-   * @param fieldNameOrId 
+   * @param fieldNameOrId Name of the Form-Field or Form-Field Property-ID
    * @param newValue Must be string and will be converted if neccessary
    */
-  setFormFieldValue(fieldNameOrId: string, newValue: string): Promise<void>;
+  setFormFieldValue(fieldName: string, newValue: string): Promise<void>;
+
+
+  /**
+   * Returns the current form field value and its possible list values if available
+   * @param fieldName Name of the Form-Field or Form-Field Property-ID
+   */
+  getFormField(fieldName: string): Promise<{
+    value: null | string | number | Array<Record<string, any>>,
+    list?: Array<{
+      key: string,
+      label?: string,
+      description?: string,
+      imageId?: string
+    }>
+  } | undefined>
+
 
   /**
    * Returns the number UI model for any numeric property
@@ -429,6 +450,9 @@ export interface iPrintessApi {
     name: string;
     color: string;
   }>;
+
+
+
 
   /**
    * Retrieves a SVG icon from printess
@@ -580,7 +604,13 @@ export interface iPrintessApi {
   getContentEditables(): TemplateEditables;
 
   /**
-   * Returns all default english translations
+   * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
+   */
+  getTranslations(): Record<string, Record<string, string | number> | string | number>;
+
+  /**
+   * Returns an array of external property errors that can be used to display errors like missing text to the customer
+   * @param mode Specifies when and up to which point the validation should be done.
    */
   getTranslations(): Record<string, Record<string, string | number> | string | number>;
 

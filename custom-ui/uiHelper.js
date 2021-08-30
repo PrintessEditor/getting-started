@@ -82,6 +82,11 @@ function _findLanguageKeyInternal(t, translationKeys) {
 }
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
+        const errors = printess.validate("all");
+        if (errors.length > 0) {
+            getValidationOverlay(printess, errors);
+            return;
+        }
         yield printess.clearSelection();
         const callback = printess.getAddToBasketCallback();
         if (callback) {
@@ -334,11 +339,10 @@ function getDoneButton(printess) {
     ok.onclick = () => {
         if (printess.hasNextStep()) {
             printess.nextStep();
-        }
-        else {
+        } else {
             printess.clearSelection();
         }
-    };
+    }
     return ok;
 }
 function getTextStyleControl(printess, p) {
@@ -558,10 +562,11 @@ function addLabel(printess, input, p, forMobile, label) {
     container.classList.add("mb-3");
     container.id = "cnt_" + p.id;
     if (p.label || label) {
+        const propsLabel = printess.gl(p.label).includes("not found") ? p.label : printess.gl(p.label);
         const htmlLabel = document.createElement("label");
         htmlLabel.className = "form-label";
         htmlLabel.setAttribute("for", "inp_" + p.id);
-        htmlLabel.innerText = (label || p.label || "");
+        htmlLabel.innerText = (label || propsLabel || "");
         htmlLabel.style.display = forMobile ? "none" : "inline-block";
         container.appendChild(htmlLabel);
     }
@@ -582,19 +587,16 @@ function validate(printess, p) {
         if (container && input && validation) {
             if (p.validation.maxChars) {
                 if (p.value.toString().length > p.validation.maxChars) {
-                    container.classList.remove("was-validated");
                     input.classList.add("is-invalid");
                     validation.innerText = gl(printess, "errors.maxCharValidation", p.validation.maxChars);
                     return;
                 }
             }
             if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
-                container.classList.remove("was-validated");
                 input.classList.add("is-invalid");
                 validation.innerText = p.kind === "image" ? gl(printess, "errors.imageUpload") : gl(printess, "errors.enterText");
             }
             else {
-                container.classList.add("was-validated");
                 input.classList.remove("is-invalid");
             }
         }
@@ -837,11 +839,27 @@ function getTabPanel(tabs) {
     return panel;
 }
 function getImageFilterControl(printess, p) {
+    var _a;
     const container = document.createElement("div");
-    container.appendChild(getNumberSlider(printess, p, "image-brightness"));
-    container.appendChild(getNumberSlider(printess, p, "image-contrast"));
-    container.appendChild(getNumberSlider(printess, p, "image-vivid"));
-    container.appendChild(getNumberSlider(printess, p, "image-sepia"));
+    (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.allows.forEach(metaProperty => {
+        switch (metaProperty) {
+            case "brightness":
+                container.appendChild(getNumberSlider(printess, p, "image-brightness"));
+                break;
+            case "contrast":
+                container.appendChild(getNumberSlider(printess, p, "image-contrast"));
+                break;
+            case "vivid":
+                container.appendChild(getNumberSlider(printess, p, "image-vivid"));
+                break;
+            case "sepia":
+                container.appendChild(getNumberSlider(printess, p, "image-sepia"));
+                break;
+            case "hueRotate":
+                container.appendChild(getNumberSlider(printess, p, "image-hueRotate"));
+                break;
+        }
+    });
     return container;
 }
 function getImageRotateControl(printess, p) {
@@ -1021,7 +1039,7 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
         }
     };
     const span = document.createElement("span");
-    span.textContent = metaProperty ? metaProperty : p.label;
+    span.textContent = metaProperty ? printess.gl('ui.' + metaProperty) : p.label;
     rangeLabel.appendChild(span);
     rangeLabel.appendChild(range);
     if (forMobile) {
@@ -2364,7 +2382,7 @@ function drawButtonContent(printess, buttonDiv, properties) {
     if (printess.isTextButton(b)) {
         const buttonText = document.createElement("div");
         buttonText.className = "text";
-        buttonText.innerText = b.caption;
+        buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
         const buttonIcon = document.createElement("div");
         buttonIcon.className = "icon";
         buttonIcon.innerText = "T";
@@ -2375,7 +2393,7 @@ function drawButtonContent(printess, buttonDiv, properties) {
         const buttonCircle = getButtonCircle(printess, b, isSelected);
         const buttonText = document.createElement("div");
         buttonText.className = "mobile-property-caption";
-        buttonText.innerText = b.caption;
+        buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
         buttonDiv.appendChild(buttonCircle);
         buttonDiv.appendChild(buttonText);
     }
