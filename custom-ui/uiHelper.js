@@ -31,75 +31,39 @@ let uih_lastPrintessWidth = 0;
 let uih_lastPrintessTop = "";
 let uih_lastPrintessBottom = 0;
 console.log("Printess ui-helper loaded");
-function gl(printess, translationKeys, ...params) {
-    if (typeof translationKeys !== "string") {
-        return "Translation key must be of type string";
-    }
-    let translation = findLanguageKey(printess, translationKeys.split("."));
-    if (translation) {
-        if (params.length > 0) {
-            for (let i = 1; i <= params.length; i++) {
-                translation = translation.replace('$' + i, params[i - 1].toString());
-            }
-            return translation;
-        }
-        else {
-            return translation;
-        }
-    }
-    return translationKeys + " not found";
-}
-function findLanguageKey(printess, translationKeys) {
-    const userTranslations = window.printessTranslations;
-    let result = undefined;
-    if (userTranslations && typeof userTranslations === "object") {
-        result = _findLanguageKeyInternal(userTranslations, translationKeys);
-    }
-    if (result === undefined) {
-        result = _findLanguageKeyInternal(printess.getTranslations(), translationKeys);
-    }
-    if (!result) {
-        return translationKeys.join(".") + " not found";
-    }
-    return result;
-}
-function _findLanguageKeyInternal(t, translationKeys) {
-    let translationTable = t;
-    let i = 0;
-    for (i; i < translationKeys.length; i++) {
-        const key = translationKeys[i];
-        if (translationTable && Object.prototype.hasOwnProperty.call(translationTable, key)) {
-            translationTable = translationTable[key];
-            if (typeof translationTable === "string") {
-                return translationTable;
-            }
-        }
-        else {
-            return undefined;
-        }
-    }
-    return undefined;
-}
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
         const errors = printess.validate("all");
         if (errors.length > 0) {
-            getValidationOverlay(printess, errors);
+            getValidationOverlay(printess, errors[0]);
             return;
         }
         yield printess.clearSelection();
         const callback = printess.getAddToBasketCallback();
         if (callback) {
-            printess.showOverlay(gl(printess, "ui.saveProgress"));
+            printess.showOverlay(printess.gl("ui.saveProgress"));
             const saveToken = yield printess.save();
             const url = yield printess.renderFirstPageImage("thumbnail.png");
             callback(saveToken, url);
             printess.hideOverlay();
         }
         else {
-            alert(gl(printess, "ui.addToBasketCallback"));
+            alert(printess.gl("ui.addToBasketCallback"));
         }
     });
+}
+function gotoNextStep(printess) {
+    const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
+    if (errors.length > 0) {
+        getValidationOverlay(printess, errors[0]);
+        return;
+    }
+    if (printess.hasNextStep()) {
+        printess.nextStep();
+    }
+    else {
+        addToBasket(printess);
+    }
 }
 function viewPortScroll(printess) {
     if (printess) {
@@ -297,7 +261,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                             return getImageScaleControl(printess, p, true);
                     }
                     const d = document.createElement("div");
-                    d.innerText = gl(printess, "ui.missingControl");
+                    d.innerText = printess.gl("ui.missingControl");
                     return d;
                 }
                 else {
@@ -305,9 +269,9 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                 }
             }
             return getTabPanel([
-                { id: "upload", title: gl(printess, "ui.imageTab"), content: getImageUploadControl(printess, p) },
-                { id: "filter", title: gl(printess, "ui.filterTab"), content: getImageFilterControl(printess, p) },
-                { id: "rotate", title: gl(printess, "ui.rotateTab"), content: getImageRotateControl(printess, p) }
+                { id: "upload", title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
+                { id: "filter", title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) },
+                { id: "rotate", title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
             ]);
         case "select-list":
             return getDropDown(printess, p, forMobile);
@@ -317,14 +281,14 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
             return getTableControl(printess, p, forMobile);
     }
     const div = document.createElement("div");
-    div.innerText = gl(printess, "ui.missingProperty", p.kind);
+    div.innerText = printess.gl("ui.missingProperty", p.kind);
     return div;
 }
 function getChangeBackgroundButton(printess) {
     const ok = document.createElement("button");
     ok.className = "btn btn-secondary";
     ok.style.alignSelf = "flex-start";
-    ok.innerText = gl(printess, "ui.buttonChangeBackground");
+    ok.innerText = printess.gl("ui.buttonChangeBackground");
     ok.onclick = () => {
         printess.selectBackground();
     };
@@ -333,16 +297,32 @@ function getChangeBackgroundButton(printess) {
 function getDoneButton(printess) {
     const ok = document.createElement("button");
     ok.className = "btn btn-primary";
-    ok.innerText = gl(printess, "ui.buttonDone");
+    if (printess.isCurrentStepActive()) {
+        if (printess.hasNextStep()) {
+            ok.innerText = printess.gl("ui.buttonNext");
+        }
+        else {
+            ok.innerText = printess.gl("ui.buttonBasket");
+        }
+    }
+    else {
+        ok.innerText = printess.gl("ui.buttonDone");
+    }
     ok.style.alignSelf = "start";
     ok.style.padding = "5px";
     ok.onclick = () => {
-        if (printess.hasNextStep()) {
-            printess.nextStep();
-        } else {
+        if (printess.isCurrentStepActive()) {
+            gotoNextStep(printess);
+        }
+        else {
+            const errors = printess.validate("selection");
+            if (errors.length > 0) {
+                getValidationOverlay(printess, errors[0]);
+                return;
+            }
             printess.clearSelection();
         }
-    }
+    };
     return ok;
 }
 function getTextStyleControl(printess, p) {
@@ -433,7 +413,7 @@ function getDesktopTitle(printess) {
     inner.appendChild(h2);
     const basketBtn = document.createElement("button");
     basketBtn.className = "btn btn-primary";
-    basketBtn.innerText = gl(printess, "ui.basket");
+    basketBtn.innerText = printess.gl("ui.buttonBasket");
     basketBtn.onclick = () => addToBasket(printess);
     inner.appendChild(basketBtn);
     container.appendChild(inner);
@@ -456,7 +436,7 @@ function getValidationOverlay(printess, error) {
     header.className = "modal-header bg-primary";
     const title = document.createElement("h5");
     title.className = "modal-title";
-    title.textContent = gl(printess, `errors.${error.errorCode}Title`);
+    title.innerHTML = printess.gl(`errors.${error.errorCode}Title`).replace(/\n/g, "<br>");
     title.style.color = "#fff";
     title.style.fontSize = "1.8rem";
     const modalBody = document.createElement("div");
@@ -465,14 +445,16 @@ function getValidationOverlay(printess, error) {
     footer.className = "modal-footer";
     const ok = document.createElement("button");
     ok.className = "btn btn-primary";
-    ok.textContent = gl(printess, "ui.buttonOk");
-    ok.onclick = () => modal.style.display = "none";
+    ok.textContent = printess.gl("ui.buttonOk");
+    ok.onclick = () => {
+        modal.style.display = "none";
+    };
     const p = document.createElement("p");
     p.style.display = "flex";
     p.style.justifyContent = "space-between";
     p.style.alignItems = "center";
     p.className = "error-message";
-    p.textContent = `${gl(printess, `errors.${error.errorCode}`, error.errorValue1)}`;
+    p.textContent = `${printess.gl(`errors.${error.errorCode}`, error.errorValue1)}`;
     header.appendChild(title);
     modalBody.appendChild(p);
     footer.appendChild(ok);
@@ -509,7 +491,7 @@ function getDesktopStepsUi(printess) {
         const h1 = document.createElement("h2");
         h1.style.flexGrow = "1";
         h1.className = "mb-0";
-        h1.innerText = cur.title || gl(printess, "ui.step") + (cur.index + 1);
+        h1.innerText = cur.title || printess.gl("ui.step") + (cur.index + 1);
         flex.appendChild(h1);
     }
     else {
@@ -518,14 +500,14 @@ function getDesktopStepsUi(printess) {
     if (printess.hasNextStep()) {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-outline-primary";
-        nextStep.innerText = printess.isNextStepPreview() ? gl(printess, "ui.buttonPreview") : gl(printess, "ui.buttonNext");
-        nextStep.onclick = () => printess.nextStep();
+        nextStep.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
+        nextStep.onclick = () => gotoNextStep(printess);
         flex.appendChild(nextStep);
     }
     else {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-primary";
-        nextStep.innerText = gl(printess, "ui.basket");
+        nextStep.innerText = printess.gl("ui.buttonBasket");
         nextStep.onclick = () => addToBasket(printess);
         flex.appendChild(nextStep);
     }
@@ -537,15 +519,15 @@ function getTextArea(printess, p, forMobile) {
     const inp = document.createElement("textarea");
     inp.value = p.value.toString();
     inp.autocomplete = "off";
-    inp.oninput = () => {
-        printess.setProperty(p.id, inp.value);
+    inp.oninput = () => __awaiter(this, void 0, void 0, function* () {
+        yield printess.setProperty(p.id, inp.value);
         p.value = inp.value;
         validate(printess, p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
         if (mobileButtonDiv) {
             drawButtonContent(printess, mobileButtonDiv, [p]);
         }
-    };
+    });
     inp.rows = 6;
     if (forMobile) {
         inp.className = "mobile-text-area";
@@ -568,14 +550,30 @@ function addLabel(printess, input, p, forMobile, label) {
         htmlLabel.setAttribute("for", "inp_" + p.id);
         htmlLabel.innerText = (label || propsLabel || "");
         htmlLabel.style.display = forMobile ? "none" : "inline-block";
-        container.appendChild(htmlLabel);
+        if (p.kind === "image") {
+            const button = document.createElement("button");
+            button.className = "btn btn-primary";
+            button.id = "upload-btn";
+            button.style.padding = "0px";
+            button.style.width = "100%";
+            htmlLabel.style.cursor = "pointer";
+            htmlLabel.style.display = "inline-block";
+            htmlLabel.style.margin = "0px";
+            htmlLabel.style.padding = ".375rem .75rem";
+            htmlLabel.style.width = "100%";
+            button.appendChild(htmlLabel);
+            container.appendChild(button);
+        }
+        else {
+            container.appendChild(htmlLabel);
+        }
     }
     input.id = "inp_" + p.id;
     container.appendChild(input);
     const validation = document.createElement("div");
     validation.id = "val_" + p.id;
     validation.classList.add("invalid-feedback");
-    validation.innerText = gl(printess, "errors.textValidation");
+    validation.innerText = printess.gl("errors.textValidation");
     container.appendChild(validation);
     return container;
 }
@@ -588,17 +586,25 @@ function validate(printess, p) {
             if (p.validation.maxChars) {
                 if (p.value.toString().length > p.validation.maxChars) {
                     input.classList.add("is-invalid");
-                    validation.innerText = gl(printess, "errors.maxCharValidation", p.validation.maxChars);
+                    validation.innerText = printess.gl("errors.maxCharValidation", p.validation.maxChars);
                     return;
                 }
             }
             if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
                 input.classList.add("is-invalid");
-                validation.innerText = p.kind === "image" ? gl(printess, "errors.imageUpload") : gl(printess, "errors.enterText");
+                validation.innerText = p.kind === "image" ? printess.gl("errors.imageUpload") : printess.gl("errors.enterText");
+                return;
             }
-            else {
-                input.classList.remove("is-invalid");
+            if (p.kind === "multi-line-text") {
+                window.setTimeout(() => {
+                    if (printess.hasTextOverflow(p.id)) {
+                        input.classList.add("is-invalid");
+                        validation.innerText = printess.gl("errors.textOverflowInfo");
+                        return;
+                    }
+                }, 500);
             }
+            input.classList.remove("is-invalid");
         }
     }
 }
@@ -914,6 +920,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
     inp.className = "form-control";
     inp.accept = "image/png,image/jpg,image/jpeg";
     inp.multiple = true;
+    inp.style.display = "none";
     inp.onchange = () => {
         var _a;
         if (inp && ((_a = inp.files) === null || _a === void 0 ? void 0 : _a.length)) {
@@ -923,6 +930,10 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
                 scaleControl.style.display = "none";
             imagePanel.style.display = "none";
             progressDiv.style.display = "flex";
+            const label = document.getElementById("upload-btn");
+            if (label) {
+                label.style.display = "none";
+            }
             printess.uploadImages(inp.files, (progress) => {
                 progressBar.style.width = (progress * 100) + "%";
             }, true, p.id);
@@ -930,7 +941,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
     };
     const uploadLabel = document.createElement("label");
     uploadLabel.className = "form-label";
-    uploadLabel.innerText = gl(printess, "ui.uploadImageLabel");
+    uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
     uploadLabel.setAttribute("for", "inp_" + p.id);
     fileUpload.appendChild(addLabel(printess, inp, p, forMobile, ""));
     container.appendChild(progressDiv);
@@ -987,7 +998,7 @@ function getImageScaleControl(printess, p, forMobile = false) {
     range.value = (_g = (_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.scale.toString()) !== null && _g !== void 0 ? _g : "0";
     const span = document.createElement("span");
     if (p.imageMeta) {
-        span.textContent = gl(printess, "ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale));
+        span.textContent = printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale));
     }
     rangeLabel.appendChild(span);
     rangeLabel.appendChild(range);
@@ -999,7 +1010,7 @@ function getImageScaleControl(printess, p, forMobile = false) {
         printess.setImageMetaProperty(p.id, "scale", newScale);
         if (p.imageMeta) {
             p.imageMeta.scale = newScale;
-            span.textContent = gl(printess, "ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale));
+            span.textContent = printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale));
             const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
             if (mobileButtonDiv) {
                 drawButtonContent(printess, mobileButtonDiv, [p]);
@@ -1012,7 +1023,7 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
     const ui = printess.getNumberUi(p, metaProperty);
     if (!ui) {
         const er = document.createElement("div");
-        er.textContent = gl(printess, "ui.numberSlider", p.id, (metaProperty || ""));
+        er.textContent = printess.gl("ui.numberSlider", p.id, (metaProperty || ""));
         return er;
     }
     const rangeLabel = document.createElement("label");
@@ -1385,7 +1396,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
             const btnBack = document.createElement("button");
             btnBack.className = "btn btn-sm";
             btnBack.classList.add("btn-outline-secondary");
-            btnBack.innerText = gl(printess, "ui.buttonBack");
+            btnBack.innerText = printess.gl("ui.buttonBack");
             btnBack.onclick = () => {
                 const callback = printess.getBackButtonCallback();
                 if (forMobile && printess.hasPreviousStep()) {
@@ -1403,7 +1414,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
                     }
                 }
                 else {
-                    alert(gl(printess, "ui.backButtonCallback"));
+                    alert(printess.gl("ui.backButtonCallback"));
                 }
             };
             miniBar.appendChild(btnBack);
@@ -1632,7 +1643,7 @@ function getTableControl(printess, p, _forMobile) {
         }
         const addButton = document.createElement("button");
         addButton.className = "btn btn-primary mb-3";
-        addButton.innerText = p.tableMeta.tableType === "calendar-events" ? gl(printess, "ui.newEvent") : gl(printess, "ui.newEntry");
+        addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
         addButton.onclick = () => {
             if (p.tableMeta) {
                 tableEditRowIndex = -1;
@@ -1694,15 +1705,15 @@ function renderTableDetails(printess, p, forMobile) {
     const submitButton = document.createElement("button");
     submitButton.className = "btn btn-primary mb-3 float-left";
     if (tableEditRowIndex === -1) {
-        submitButton.innerText = gl(printess, "ui.buttonAdd");
+        submitButton.innerText = printess.gl("ui.buttonAdd");
     }
     else {
-        submitButton.innerText = gl(printess, "ui.buttonSubmit");
+        submitButton.innerText = printess.gl("ui.buttonSubmit");
     }
     submitButton.onclick = () => {
         var _a;
         if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
-            alert(gl(printess, "ui.eventText"));
+            alert(printess.gl("ui.eventText"));
             return;
         }
         const data = JSON.parse(p.value.toString()) || [];
@@ -1720,7 +1731,7 @@ function renderTableDetails(printess, p, forMobile) {
     const cancelButton = document.createElement("button");
     cancelButton.className = "btn btn-secondary mb-3 ml-3";
     cancelButton.style.marginLeft = "20px";
-    cancelButton.innerText = gl(printess, "ui.buttonCancel");
+    cancelButton.innerText = printess.gl("ui.buttonCancel");
     cancelButton.onclick = () => {
         details.innerHTML = "";
         tableEditRowIndex = -1;
@@ -1730,7 +1741,7 @@ function renderTableDetails(printess, p, forMobile) {
         const deleteButton = document.createElement("button");
         deleteButton.className = "btn btn-danger mb-3 ml-3";
         deleteButton.style.marginLeft = "20px";
-        deleteButton.innerText = gl(printess, "ui.buttonRemove");
+        deleteButton.innerText = printess.gl("ui.buttonRemove");
         deleteButton.onclick = () => {
             const data = JSON.parse(p.value.toString()) || [];
             data.splice(tableEditRowIndex, 1);
@@ -1991,7 +2002,7 @@ function renderMobileNavBar(printess) {
                 }
                 else {
                     btn.classList.add("btn-outline-light");
-                    btn.innerText = gl(printess, "ui.buttonBack");
+                    btn.innerText = printess.gl("ui.buttonBack");
                 }
                 btn.onclick = () => {
                     const callback = printess.getBackButtonCallback();
@@ -2020,19 +2031,19 @@ function renderMobileNavBar(printess) {
             case "next":
                 btn.classList.add("btn-outline-light");
                 if (printess.hasNextStep()) {
-                    btn.innerText = printess.isNextStepPreview() ? gl(printess, "ui.buttonPreview") : gl(printess, "ui.buttonNext");
+                    btn.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
                     const curStep = printess.getStep();
                     const lastStep = printess.lastStep();
                     if (curStep && lastStep) {
                         btn.title = "Step " + curStep.index + " of " + lastStep.index;
                     }
                     btn.onclick = () => {
-                        printess.nextStep();
+                        gotoNextStep(printess);
                         renderMobileNavBar(printess);
                     };
                 }
                 else {
-                    btn.innerText = gl(printess, "ui.basket");
+                    btn.innerText = printess.gl("ui.buttonBasket");
                     btn.onclick = () => addToBasket(printess);
                 }
                 nav.appendChild(btn);

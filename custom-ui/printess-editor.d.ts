@@ -612,9 +612,16 @@ export interface iPrintessApi {
    * Returns an array of external property errors that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
-  getTranslations(): Record<string, Record<string, string | number> | string | number>;
+  validate(mode: "all" | "until-current-step" | "selection" = "all"): Array<iExternalError>
 
-  validateAll(): Array<iExternalPropertyError>;
+  hasTextOverflow(propertyId: string): boolean
+
+  /**
+   * Returns a translation as string to display the ui in different languages
+   * @param translationKey String containing the keys for the translation table separated by period
+   * @param params String or number parameters that substitute $1, ..., $9 properties in a translation
+   */
+  gl(translationKey: string, ...params: Array<string | number>): string
 }
 
 export interface iBuyerStep {
@@ -741,6 +748,7 @@ export interface iExternalValidation {
   maxChars: number;
   defaultValue: string;
   isMandatory: boolean;
+  noOffensiveLanguage: boolean;
 }
 export interface iExternalListMeta {
   list: Array<iExternalFieldListEntry>;
@@ -805,11 +813,9 @@ export interface iExternalImageScaleHints {
   dpiAtScale1: number;
 }
 
-export type iExternalPropertyErrors = Array<iExternalPropertyError>
+export type iExternalErrors = Array<iExternalError>
 
-export interface iExternalPropertyError {
-  propertyId: string,
-  propertyKind: string,
+export interface iExternalError {
   errorCode: "imageResolutionLow" | "imageMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected",
   errorValue1: string | number,
   errorValue2?: string | number,

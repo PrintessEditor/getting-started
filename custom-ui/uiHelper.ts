@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import { iconName, iExternalPropertyError, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn } from "./printess-editor";
+import { iconName, iExternalError, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn } from "./printess-editor";
 
 declare const bootstrap: any;
 
@@ -34,67 +34,6 @@ let uih_lastPrintessBottom = 0;
 
 console.log("Printess ui-helper loaded");
 
-function gl(printess: iPrintessApi, translationKeys: string, ...params: Array<string | number>): string {
-  if (typeof translationKeys !== "string") {
-    return "Translation key must be of type string";
-  }
-
-  let translation: string = findLanguageKey(printess, translationKeys.split("."));
-
-  if (translation) {
-    if (params.length > 0) {
-      for (let i = 1; i <= params.length; i++) {
-        translation = translation.replace('$' + i, params[i - 1].toString());
-      }
-      return translation;
-    } else {
-      return translation;
-    }
-  }
-  return translationKeys + " not found";
-}
-
-function findLanguageKey(printess: iPrintessApi, translationKeys: Array<string>): string {
-  // user table 
-  const userTranslations: Record<string, Record<string, string> | string> = (<any>window).printessTranslations;
-
-  let result: string | undefined = undefined;
-
-  if (userTranslations && typeof userTranslations === "object") {
-    result = _findLanguageKeyInternal(userTranslations, translationKeys);
-  }
-
-  if (result === undefined) {
-    // fallback to our translation
-    result = _findLanguageKeyInternal(<Record<string, Record<string, string> | string>><any>printess.getTranslations(), translationKeys);
-  }
-
-  if (!result) {
-    return translationKeys.join(".") + " not found";
-  }
-
-  return result;
-}
-
-function _findLanguageKeyInternal(t: Record<string, Record<string, string> | string>, translationKeys: Array<string>): string | undefined {
-  let translationTable: string | Record<string, Record<string, string> | string> = t;
-  let i = 0;
-
-  for (i; i < translationKeys.length; i++) {
-    const key = translationKeys[i];
-
-    if (translationTable && Object.prototype.hasOwnProperty.call(translationTable, key)) {
-      translationTable = translationTable[key];
-
-      if (typeof translationTable === "string") {
-        return translationTable;
-      }
-    } else {
-      return undefined; // translation not found 
-    }
-  }
-  return undefined;
-}
 
 async function addToBasket(printess: iPrintessApi) {
   const errors = printess.validate("all");
@@ -106,15 +45,31 @@ async function addToBasket(printess: iPrintessApi) {
   await printess.clearSelection();
   const callback = printess.getAddToBasketCallback();
   if (callback) {
-    printess.showOverlay(gl(printess, "ui.saveProgress"))
+    printess.showOverlay(printess.gl("ui.saveProgress"))
     const saveToken = await printess.save();
     const url = await printess.renderFirstPageImage("thumbnail.png");
     callback(saveToken, url);
     printess.hideOverlay();
   } else {
-    alert(gl(printess, "ui.addToBasketCallback"))
+    alert(printess.gl("ui.addToBasketCallback"))
   }
 }
+
+function gotoNextStep(printess: iPrintessApi) {
+
+
+  const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
+  if (errors.length > 0) {
+    getValidationOverlay(printess, errors[0]);
+    return;
+  }
+  if (printess.hasNextStep()) {
+    printess.nextStep();
+  } else {
+    addToBasket(printess);
+  }
+}
+
 
 function viewPortScroll(printess: iPrintessApi) {
   // safari pushes viewport up to show keyboars, android doesn't
@@ -350,16 +305,16 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
               return getImageScaleControl(printess, p, true);
           }
           const d = document.createElement("div");
-          d.innerText = gl(printess, "ui.missingControl");
+          d.innerText = printess.gl("ui.missingControl");
           return d;
         } else {
           return getImageUploadControl(printess, p, undefined, forMobile);
         }
       }
       return getTabPanel([
-        { id: "upload", title: gl(printess, "ui.imageTab"), content: getImageUploadControl(printess, p) },
-        { id: "filter", title: gl(printess, "ui.filterTab"), content: getImageFilterControl(printess, p) },
-        { id: "rotate", title: gl(printess, "ui.rotateTab"), content: getImageRotateControl(printess, p) }
+        { id: "upload", title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
+        { id: "filter", title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) },
+        { id: "rotate", title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
       ]);
 
 
@@ -376,7 +331,7 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
 
 
   const div = document.createElement("div");
-  div.innerText = gl(printess, "ui.missingProperty", p.kind);
+  div.innerText = printess.gl("ui.missingProperty", p.kind);
   return div;
 
 }
@@ -390,7 +345,7 @@ function getChangeBackgroundButton(printess: iPrintessApi): HTMLElement {
   const ok = document.createElement("button");
   ok.className = "btn btn-secondary"
   ok.style.alignSelf = "flex-start";
-  ok.innerText = gl(printess, "ui.buttonChangeBackground");
+  ok.innerText = printess.gl("ui.buttonChangeBackground");
   ok.onclick = () => {
     printess.selectBackground();
   }
@@ -400,13 +355,26 @@ function getChangeBackgroundButton(printess: iPrintessApi): HTMLElement {
 function getDoneButton(printess: iPrintessApi): HTMLElement {
   const ok = document.createElement("button");
   ok.className = "btn btn-primary";
-  ok.innerText = gl(printess, "ui.buttonDone");
+  if (printess.isCurrentStepActive()) {
+    if (printess.hasNextStep()) {
+      ok.innerText = printess.gl("ui.buttonNext");
+    } else {
+      ok.innerText = printess.gl("ui.buttonBasket");
+    }
+  } else {
+    ok.innerText = printess.gl("ui.buttonDone");
+  }
   ok.style.alignSelf = "start";
   ok.style.padding = "5px";
   ok.onclick = () => {
-    if (printess.hasNextStep()) {
-      printess.nextStep();
+    if (printess.isCurrentStepActive()) {
+      gotoNextStep(printess)
     } else {
+      const errors = printess.validate("selection");
+      if (errors.length > 0) {
+        getValidationOverlay(printess, errors[0]);
+        return;
+      }
       printess.clearSelection();
     }
   }
@@ -485,23 +453,9 @@ function getMultiLineTextBox(printess: iPrintessApi, p: iExternalProperty, forMo
   if (forMobile) {
     return ta;
   } else {
-
     const container = document.createElement("div");
     container.appendChild(getTextStyleControl(printess, p));
-
     container.appendChild(ta);
-
-    /*  const textPropertiesDiv = document.createElement("div");
-      textPropertiesDiv.style.marginBottom = "2px";
-      textPropertiesDiv.classList.add("text-properties");
-      textPropertiesDiv.appendChild(getFontList(printess, p));
-      textPropertiesDiv.appendChild(getFontSizeSelect(printess, p));
-      textPropertiesDiv.appendChild(getHAlignList(printess, p));
-      textPropertiesDiv.appendChild(getVAlignList(printess, p));
-      textPropertiesDiv.appendChild(getFontColorPicker(printess, p));
-      container.appendChild(textPropertiesDiv);*/
-
-    // container.appendChild(inp);
     return container;
   }
 }
@@ -556,7 +510,7 @@ function getDesktopTitle(printess: iPrintessApi): HTMLElement {
 
   const basketBtn = document.createElement("button");
   basketBtn.className = "btn btn-primary";
-  basketBtn.innerText = gl(printess, "ui.basket");
+  basketBtn.innerText = printess.gl("ui.buttonBasket");
   basketBtn.onclick = () => addToBasket(printess);
   inner.appendChild(basketBtn);
 
@@ -567,7 +521,7 @@ function getDesktopTitle(printess: iPrintessApi): HTMLElement {
 }
 
 // get validation modal that displays external property errors
-function getValidationOverlay(printess: iPrintessApi, error: iExternalPropertyError) {
+function getValidationOverlay(printess: iPrintessApi, error: iExternalError) {
   const modal = document.createElement("div");
   modal.className = "modal show";
   modal.setAttribute("tabindex", "-1");
@@ -587,7 +541,7 @@ function getValidationOverlay(printess: iPrintessApi, error: iExternalPropertyEr
 
   const title = document.createElement("h5");
   title.className = "modal-title";
-  title.textContent = gl(printess, `errors.${error.errorCode}Title`);
+  title.innerHTML = printess.gl(`errors.${error.errorCode}Title`).replace(/\n/g, "<br>")
   title.style.color = "#fff";
   title.style.fontSize = "1.8rem";
 
@@ -599,15 +553,17 @@ function getValidationOverlay(printess: iPrintessApi, error: iExternalPropertyEr
 
   const ok = document.createElement("button");
   ok.className = "btn btn-primary";
-  ok.textContent = gl(printess, "ui.buttonOk");
-  ok.onclick = () => modal.style.display = "none";
+  ok.textContent = printess.gl("ui.buttonOk");
+  ok.onclick = () => {
+    modal.style.display = "none";
+  }
 
   const p = document.createElement("p");
   p.style.display = "flex";
   p.style.justifyContent = "space-between";
   p.style.alignItems = "center";
   p.className = "error-message";
-  p.textContent = `${gl(printess, `errors.${error.errorCode}`, error.errorValue1)}`;
+  p.textContent = `${printess.gl(`errors.${error.errorCode}`, error.errorValue1)}`;
 
   header.appendChild(title);
   modalBody.appendChild(p);
@@ -652,7 +608,7 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
     const h1 = document.createElement("h2");
     h1.style.flexGrow = "1";
     h1.className = "mb-0";
-    h1.innerText = cur.title || gl(printess, "ui.step") + (cur.index + 1);
+    h1.innerText = cur.title || printess.gl("ui.step") + (cur.index + 1);
     flex.appendChild(h1);
 
   } else {
@@ -663,14 +619,14 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
   if (printess.hasNextStep()) {
     const nextStep = document.createElement("button");
     nextStep.className = "btn btn-outline-primary";
-    nextStep.innerText = printess.isNextStepPreview() ? gl(printess, "ui.buttonPreview") : gl(printess, "ui.buttonNext");
-    nextStep.onclick = () => printess.nextStep();
+    nextStep.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
+    nextStep.onclick = () => gotoNextStep(printess);
     flex.appendChild(nextStep);
   } else {
     // put to basket callback?
     const nextStep = document.createElement("button");
     nextStep.className = "btn btn-primary";
-    nextStep.innerText = gl(printess, "ui.basket");
+    nextStep.innerText = printess.gl("ui.buttonBasket");
     nextStep.onclick = () => addToBasket(printess);
     flex.appendChild(nextStep);
   }
@@ -679,22 +635,21 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
   container.appendChild(hr);
   return container;
 }
- 
+
 
 function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
 
   const inp = document.createElement("textarea");
   inp.value = p.value.toString();
   inp.autocomplete = "off";
-  inp.oninput = () => {
-    printess.setProperty(p.id, inp.value);
+  inp.oninput = async () => {
+    await printess.setProperty(p.id, inp.value);
     p.value = inp.value;
-    validate(printess,p);
+    validate(printess, p);
     const mobileButtonDiv = document.getElementById(p.id + ":");
     if (mobileButtonDiv) {
-     
       drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
-    }
+    } 
   }
   inp.rows = 6;
 
@@ -723,8 +678,24 @@ function addLabel(printess: iPrintessApi, input: HTMLElement, p: iExternalProper
     htmlLabel.className = "form-label";
     htmlLabel.setAttribute("for", "inp_" + p.id);
     htmlLabel.innerText = (label || propsLabel || "");
-    htmlLabel.style.display = forMobile ? "none" : "inline-block"
-    container.appendChild(htmlLabel);
+    htmlLabel.style.display = forMobile ? "none" : "inline-block";
+
+    if (p.kind === "image") {
+      const button = document.createElement("button");
+      button.className = "btn btn-primary";
+      button.id = "upload-btn";
+      button.style.padding = "0px";
+      button.style.width = "100%";
+      htmlLabel.style.cursor = "pointer";
+      htmlLabel.style.display = "inline-block";
+      htmlLabel.style.margin = "0px";
+      htmlLabel.style.padding = ".375rem .75rem";
+      htmlLabel.style.width = "100%";
+      button.appendChild(htmlLabel);
+      container.appendChild(button);
+    } else {
+      container.appendChild(htmlLabel);
+    }
   }
 
   input.id = "inp_" + p.id;
@@ -733,7 +704,7 @@ function addLabel(printess: iPrintessApi, input: HTMLElement, p: iExternalProper
   const validation = document.createElement("div");
   validation.id = "val_" + p.id;
   validation.classList.add("invalid-feedback");
-  validation.innerText = gl(printess, "errors.textValidation");
+  validation.innerText = printess.gl("errors.textValidation");
 
   container.appendChild(validation);
 
@@ -747,23 +718,38 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
     const validation = document.getElementById("val_" + p.id);
 
     if (container && input && validation) {
+
       if (p.validation.maxChars) {
         if (p.value.toString().length > p.validation.maxChars) {
-          // container.classList.remove("was-validated");
+          // container.classList.remove("was-validated");// add to activate BS-green-marker
           input.classList.add("is-invalid");
-          validation.innerText = gl(printess, "errors.maxCharValidation", p.validation.maxChars);
+          validation.innerText = printess.gl("errors.maxCharValidation", p.validation.maxChars);
           return;
         }
       }
-      if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
-        // container.classList.remove("was-validated");
-        input.classList.add("is-invalid");
-        validation.innerText = p.kind === "image" ? gl(printess, "errors.imageUpload") : gl(printess, "errors.enterText");
 
-      } else {
-        // container.classList.add("was-validated");
-        input.classList.remove("is-invalid");
+      if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
+        // container.classList.remove("was-validated"); // add to activate BS-green-marker
+        input.classList.add("is-invalid");
+        validation.innerText = p.kind === "image" ? printess.gl("errors.imageUpload") : printess.gl("errors.enterText");
+        return
       }
+
+      if (p.kind === "multi-line-text") {
+        // check if an overflow occured
+        // story text is changed via debounce method, so we need to wait a little before checking for overflow
+        window.setTimeout(() => {
+          if (printess.hasTextOverflow(p.id)) {
+            input.classList.add("is-invalid");
+            validation.innerText = printess.gl("errors.textOverflowInfo");
+            return
+          }
+        }, 500);
+
+      }
+
+      // container.classList.add("was-validated"); // add to activate BS-green-marker
+      input.classList.remove("is-invalid");
 
     }
   }
@@ -1126,6 +1112,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   inp.className = "form-control"
   inp.accept = "image/png,image/jpg,image/jpeg"; // do not add pdf or svg, since it cannot be rotated!!
   inp.multiple = true;
+  inp.style.display = "none";
   inp.onchange = () => {
 
     // printess.setProperty(p.id, inp.value);
@@ -1135,6 +1122,11 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
       if (scaleControl) scaleControl.style.display = "none";
       imagePanel.style.display = "none";
       progressDiv.style.display = "flex";
+
+      const label = document.getElementById("upload-btn");
+      if (label) {
+        label.style.display = "none";
+      }
 
       // can upload multiple files at once
       printess.uploadImages(inp.files, (progress) => {
@@ -1152,7 +1144,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   /* optinally add label before upload */
   const uploadLabel = document.createElement("label");
   uploadLabel.className = "form-label";
-  uploadLabel.innerText = gl(printess, "ui.uploadImageLabel");
+  uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
   uploadLabel.setAttribute("for", "inp_" + p.id);
   // remove comments below to  add label
   // fileUpload.appendChild(uploadLabel);
@@ -1228,7 +1220,7 @@ function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forM
 
   const span = document.createElement("span");
   if (p.imageMeta) {
-    span.textContent = gl(printess, "ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale));
+    span.textContent = printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale));
   }
 
   rangeLabel.appendChild(span);
@@ -1242,7 +1234,7 @@ function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forM
     printess.setImageMetaProperty(p.id, "scale", newScale);
     if (p.imageMeta) {
       p.imageMeta.scale = newScale;
-      span.textContent = gl(printess, "ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale));
+      span.textContent = printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale));
       const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
       if (mobileButtonDiv) {
         drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
@@ -1259,7 +1251,7 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
   const ui = printess.getNumberUi(p, metaProperty);
   if (!ui) {
     const er = document.createElement("div");
-    er.textContent = gl(printess, "ui.numberSlider", p.id, (metaProperty || ""));
+    er.textContent = printess.gl("ui.numberSlider", p.id, (metaProperty || ""));
     return er;
   }
 
@@ -1710,7 +1702,7 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
         btnBack.appendChild(icoBack);
       } else {*/
       btnBack.classList.add("btn-outline-secondary")
-      btnBack.innerText = gl(printess, "ui.buttonBack");
+      btnBack.innerText = printess.gl("ui.buttonBack");
       //}
 
       btnBack.onclick = () => {
@@ -1728,7 +1720,7 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
             });
           }
         } else {
-          alert(gl(printess, "ui.backButtonCallback"));
+          alert(printess.gl("ui.backButtonCallback"));
         }
       }
 
@@ -2005,7 +1997,7 @@ function getTableControl(printess: iPrintessApi, p: iExternalProperty, _forMobil
     }
     const addButton = document.createElement("button");
     addButton.className = "btn btn-primary mb-3";
-    addButton.innerText = p.tableMeta.tableType === "calendar-events" ? gl(printess, "ui.newEvent") : gl(printess, "ui.newEntry");
+    addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
     addButton.onclick = () => {
       if (p.tableMeta) {
         tableEditRowIndex = -1;
@@ -2070,13 +2062,13 @@ function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, forMob
   const submitButton = document.createElement("button");
   submitButton.className = "btn btn-primary mb-3 float-left";
   if (tableEditRowIndex === -1) {
-    submitButton.innerText = gl(printess, "ui.buttonAdd");
+    submitButton.innerText = printess.gl("ui.buttonAdd");
   } else {
-    submitButton.innerText = gl(printess, "ui.buttonSubmit");
+    submitButton.innerText = printess.gl("ui.buttonSubmit");
   }
   submitButton.onclick = () => {
     if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
-      alert(gl(printess, "ui.eventText"));
+      alert(printess.gl("ui.eventText"));
       return
     }
     const data = JSON.parse(p.value.toString()) || [];
@@ -2094,7 +2086,7 @@ function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, forMob
   const cancelButton = document.createElement("button");
   cancelButton.className = "btn btn-secondary mb-3 ml-3";
   cancelButton.style.marginLeft = "20px"; // ml-3 does not work ???
-  cancelButton.innerText = gl(printess, "ui.buttonCancel");
+  cancelButton.innerText = printess.gl("ui.buttonCancel");
   cancelButton.onclick = () => {
     details.innerHTML = "";
     tableEditRowIndex = -1;
@@ -2105,7 +2097,7 @@ function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, forMob
     const deleteButton = document.createElement("button");
     deleteButton.className = "btn btn-danger mb-3 ml-3";
     deleteButton.style.marginLeft = "20px"; // ml-3 does not work ???
-    deleteButton.innerText = gl(printess, "ui.buttonRemove");
+    deleteButton.innerText = printess.gl("ui.buttonRemove");
     deleteButton.onclick = () => {
       const data: Array<any> = JSON.parse(p.value.toString()) || [];
       data.splice(tableEditRowIndex, 1);
@@ -2435,7 +2427,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
           btn.appendChild(ico);
         } else {
           btn.classList.add("btn-outline-light");
-          btn.innerText = gl(printess, "ui.buttonBack");
+          btn.innerText = printess.gl("ui.buttonBack");
         }
         btn.onclick = () => {
           const callback = printess.getBackButtonCallback();
@@ -2468,18 +2460,18 @@ function renderMobileNavBar(printess: iPrintessApi) {
       case "next":
         btn.classList.add("btn-outline-light");
         if (printess.hasNextStep()) {
-          btn.innerText = printess.isNextStepPreview() ? gl(printess, "ui.buttonPreview") : gl(printess, "ui.buttonNext");
+          btn.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
           const curStep = printess.getStep();
           const lastStep = printess.lastStep();
           if (curStep && lastStep) {
             btn.title = "Step " + curStep.index + " of " + lastStep.index;
           }
           btn.onclick = () => {
-            printess.nextStep();
+            gotoNextStep(printess);
             renderMobileNavBar(printess);
           }
         } else {
-          btn.innerText = gl(printess, "ui.basket");
+          btn.innerText = printess.gl("ui.buttonBasket");
           btn.onclick = () => addToBasket(printess);
         }
 

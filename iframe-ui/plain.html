@@ -99,9 +99,6 @@
           /* Optional if available: the ID of the current shop-user to keep all uploaded resources together and display for reccuring users */
           shopUserId: "",
 
-          /* Optinal: custom translations */
-          translations: { "ui": { "basketBtn": "Add to basket" } },
-
           /* Optional: you custom CSS or a Bootstrap Theme */
           /* cssUrl: "https://editor.printess.com/printess-editor/bootstrap-themes/sketchy.css", */
 
@@ -116,18 +113,31 @@
               "spreadIndex": 2  // Example to merge a card back to the third spread on load 
             }
           ], */
+
+          /* Optional: Add your own translation-table. 
+                     You'll find all available keys here: 
+                     https://github.com/PrintessEditor/getting-started/blob/main/translations.json */
+          /* translations: {
+            "custom": {
+              "name": "Your Name" // you can access this translation with ${gl("custom.name")}
+            },
+            "ui": {
+              "okButton": "Perfect!"
+            }
+          } */
+
         }
       }, "*");
     }
 
-
+   
     /* *************************** */
     /*   Forward Visual Viewport   */
     /* *************************** */
     if (window.visualViewport) {
       window.visualViewport.addEventListener("scroll", () => {
         // unfortunately an iframe on iOS is not able to receive the correct visual-viewport, so we forward it. 
-        iframe.contentWindow.postMessage({ cmd: "viewportScroll", height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop }, "*")
+        iframe.contentWindow.postMessage({ cmd: "viewportScroll", height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop },"*")
       })
     }
 
