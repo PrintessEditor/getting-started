@@ -77,10 +77,17 @@ export interface printessAttachParameters {
   };
 
   /**
-   * TODO(aka): link to git-hub JSON
+   * list if custom-translations to be used by Printess buyer-side.
+   * https://printess.com/kb/api-reference/custom-integration/index.html#translations
    */
   translations?: Record<string, Record<string, string> | string>;
 
+  /**
+   * To prevent the use of offensive language in customizeable texts, you can pass a list of forbidden words.
+   * The use of offensive words can either throw an error during the validation or trigger the replacement of a bad word. 
+   * https://printess.com/kb/api-reference/custom-integration/index.html#offensive-language
+   */
+  offensiveWords? : string 
 
   /**
    * If you application displays a loading animation, this call tells you to start
@@ -612,8 +619,12 @@ export interface iPrintessApi {
    * Returns an array of external property errors that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
-  validate(mode: "all" | "until-current-step" | "selection" = "all"): Array<iExternalError>
+   validate(mode?: "all" | "until-current-step" | "selection"): Array<iExternalError>
 
+  /**
+   * Returns true if the associated mutli-line text-frame has text which does not fit into the frame
+   * @param propertyId 
+   */
   hasTextOverflow(propertyId: string): boolean
 
   /**
@@ -1102,4 +1113,8 @@ export type iconName =
   | "angle-down"
   | "sync"
   | "mirror-x"
-  | "mirror-y";
+  | "mirror-y"
+  | "angle-up-light"
+  | "angle-down-light"
+  | "chevron-up-light"
+  | "chevron-down-light";

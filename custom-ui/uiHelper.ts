@@ -38,7 +38,7 @@ console.log("Printess ui-helper loaded");
 async function addToBasket(printess: iPrintessApi) {
   const errors = printess.validate("all");
   if (errors.length > 0) {
-    getValidationOverlay(printess, errors[0]);
+    getValidationOverlay(printess, errors);
     return;
   }
 
@@ -60,7 +60,7 @@ function gotoNextStep(printess: iPrintessApi) {
 
   const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
   if (errors.length > 0) {
-    getValidationOverlay(printess, errors[0]);
+    getValidationOverlay(printess, errors);
     return;
   }
   if (printess.hasNextStep()) {
@@ -372,7 +372,7 @@ function getDoneButton(printess: iPrintessApi): HTMLElement {
     } else {
       const errors = printess.validate("selection");
       if (errors.length > 0) {
-        getValidationOverlay(printess, errors[0]);
+        getValidationOverlay(printess, errors);
         return;
       }
       printess.clearSelection();
@@ -521,7 +521,7 @@ function getDesktopTitle(printess: iPrintessApi): HTMLElement {
 }
 
 // get validation modal that displays external property errors
-function getValidationOverlay(printess: iPrintessApi, error: iExternalError) {
+function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>) {
   const modal = document.createElement("div");
   modal.className = "modal show";
   modal.setAttribute("tabindex", "-1");
@@ -536,14 +536,13 @@ function getValidationOverlay(printess: iPrintessApi, error: iExternalError) {
   const content = document.createElement("div");
   content.className = "modal-content";
 
-  const header = document.createElement("div");
-  header.className = "modal-header bg-primary";
+  const modalHeader = document.createElement("div");
+  modalHeader.className = "modal-header bg-primary";
 
-  const title = document.createElement("h5");
+  const title = document.createElement("h3");
   title.className = "modal-title";
-  title.innerHTML = printess.gl(`errors.${error.errorCode}Title`).replace(/\n/g, "<br>")
+  title.innerHTML = printess.gl(`errors.${errors[0].errorCode}Title`).replace(/\n/g, "<br>")
   title.style.color = "#fff";
-  title.style.fontSize = "1.8rem";
 
   const modalBody = document.createElement("div");
   modalBody.className = "modal-body";
@@ -559,16 +558,54 @@ function getValidationOverlay(printess: iPrintessApi, error: iExternalError) {
   }
 
   const p = document.createElement("p");
-  p.style.display = "flex";
-  p.style.justifyContent = "space-between";
-  p.style.alignItems = "center";
   p.className = "error-message";
-  p.textContent = `${printess.gl(`errors.${error.errorCode}`, error.errorValue1)}`;
+  p.textContent = `${printess.gl(`errors.${errors[0].errorCode}`, errors[0].errorValue1)}`;
 
-  header.appendChild(title);
+  const errorLink = document.createElement("p");
+  errorLink.className = "text-primary";
+  errorLink.textContent = (errors.length - 1) + " More Problems";
+  errorLink.style.display = "flex";
+  errorLink.style.alignItems = "center";
+  errorLink.style.marginBottom = "0px";
+
+  const svg = printess.getIcon("angle-down-light");
+  svg.style.width = "15px";
+  svg.style.marginLeft = "15px";
+  svg.style.cursor = "pointer";
+  errorLink.appendChild(svg);
+
+  const errorList = document.createElement("ul");
+  errorList.className = "list-group list-group-flush";
+  for (let i = 1; i < errors.length; i++) {
+    const item = document.createElement("li");
+    const errorText = "errors." + errors[i].errorCode + "Short";
+    item.className = "list-group-item";
+    item.textContent = printess.gl(errorText);
+    errorList.appendChild(item);
+  }
+
+  modalHeader.appendChild(title);
   modalBody.appendChild(p);
+
+  if (errors.length > 1) {
+    let showErrorList = false;
+
+    modalBody.appendChild(errorLink);
+
+    svg.onclick = () => {
+      showErrorList = !showErrorList;
+      if (showErrorList) {
+        modalBody.appendChild(errorList);
+        svg.style.transform = "rotate(180deg)";
+      } else if (!showErrorList && errorList) {
+        modalBody.removeChild(errorList);
+        svg.style.transform = "rotate(0deg)";
+      }
+    }
+  }
+
   footer.appendChild(ok);
-  content.appendChild(header);
+  content.appendChild(modalHeader);
   content.appendChild(modalBody);
   content.appendChild(footer);
   dialog.appendChild(content);
@@ -655,7 +692,7 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
 
   if (forMobile) {
     inp.className = "mobile-text-area";
-    return inp;
+    return addLabel(printess, inp, p, forMobile);
   } else {
     inp.className = "desktop-text-area";
     return addLabel(printess, inp, p, forMobile);
@@ -704,7 +741,7 @@ function addLabel(printess: iPrintessApi, input: HTMLElement, p: iExternalProper
   const validation = document.createElement("div");
   validation.id = "val_" + p.id;
   validation.classList.add("invalid-feedback");
-  validation.innerText = printess.gl("errors.textValidation");
+  validation.innerText = printess.gl("errors.textMissingInline");
 
   container.appendChild(validation);
 
@@ -723,7 +760,7 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
         if (p.value.toString().length > p.validation.maxChars) {
           // container.classList.remove("was-validated");// add to activate BS-green-marker
           input.classList.add("is-invalid");
-          validation.innerText = printess.gl("errors.maxCharValidation", p.validation.maxChars);
+          validation.innerText = printess.gl("errors.maxCharsExceededInline", p.validation.maxChars);
           return;
         }
       }
@@ -731,7 +768,7 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
       if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
         // container.classList.remove("was-validated"); // add to activate BS-green-marker
         input.classList.add("is-invalid");
-        validation.innerText = p.kind === "image" ? printess.gl("errors.imageUpload") : printess.gl("errors.enterText");
+        validation.innerText = p.kind === "image" ? printess.gl("errors.imageMissingInline") : printess.gl("errors.enterText");
         return
       }
 
@@ -741,7 +778,7 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
         window.setTimeout(() => {
           if (printess.hasTextOverflow(p.id)) {
             input.classList.add("is-invalid");
-            validation.innerText = printess.gl("errors.textOverflowInfo");
+            validation.innerText = printess.gl("errors.textOverflowShort");
             return
           }
         }, 500);
@@ -1154,10 +1191,6 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   container.appendChild(progressDiv);
   container.appendChild(fileUpload);
 
-
-
-
-
   const imagePanel = document.createElement("div");
   imagePanel.className = "image-panel";
 
@@ -1202,8 +1235,6 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   }
 
 }
-
-
 
 
 function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean = false): HTMLElement {
@@ -1289,10 +1320,6 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
   }
   return rangeLabel;
 }
-
-
-
-
 
 
 function getFontSizeDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, dropdown?: HTMLDivElement, fullWidth: boolean = true): HTMLElement {

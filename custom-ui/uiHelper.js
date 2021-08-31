@@ -35,7 +35,7 @@ function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
         const errors = printess.validate("all");
         if (errors.length > 0) {
-            getValidationOverlay(printess, errors[0]);
+            getValidationOverlay(printess, errors);
             return;
         }
         yield printess.clearSelection();
@@ -55,7 +55,7 @@ function addToBasket(printess) {
 function gotoNextStep(printess) {
     const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
     if (errors.length > 0) {
-        getValidationOverlay(printess, errors[0]);
+        getValidationOverlay(printess, errors);
         return;
     }
     if (printess.hasNextStep()) {
@@ -317,7 +317,7 @@ function getDoneButton(printess) {
         else {
             const errors = printess.validate("selection");
             if (errors.length > 0) {
-                getValidationOverlay(printess, errors[0]);
+                getValidationOverlay(printess, errors);
                 return;
             }
             printess.clearSelection();
@@ -420,7 +420,7 @@ function getDesktopTitle(printess) {
     container.appendChild(hr);
     return container;
 }
-function getValidationOverlay(printess, error) {
+function getValidationOverlay(printess, errors) {
     const modal = document.createElement("div");
     modal.className = "modal show";
     modal.setAttribute("tabindex", "-1");
@@ -432,13 +432,12 @@ function getValidationOverlay(printess, error) {
     dialog.style.minWidth = "500px";
     const content = document.createElement("div");
     content.className = "modal-content";
-    const header = document.createElement("div");
-    header.className = "modal-header bg-primary";
-    const title = document.createElement("h5");
+    const modalHeader = document.createElement("div");
+    modalHeader.className = "modal-header bg-primary";
+    const title = document.createElement("h3");
     title.className = "modal-title";
-    title.innerHTML = printess.gl(`errors.${error.errorCode}Title`).replace(/\n/g, "<br>");
+    title.innerHTML = printess.gl(`errors.${errors[0].errorCode}Title`).replace(/\n/g, "<br>");
     title.style.color = "#fff";
-    title.style.fontSize = "1.8rem";
     const modalBody = document.createElement("div");
     modalBody.className = "modal-body";
     const footer = document.createElement("div");
@@ -450,15 +449,47 @@ function getValidationOverlay(printess, error) {
         modal.style.display = "none";
     };
     const p = document.createElement("p");
-    p.style.display = "flex";
-    p.style.justifyContent = "space-between";
-    p.style.alignItems = "center";
     p.className = "error-message";
-    p.textContent = `${printess.gl(`errors.${error.errorCode}`, error.errorValue1)}`;
-    header.appendChild(title);
+    p.textContent = `${printess.gl(`errors.${errors[0].errorCode}`, errors[0].errorValue1)}`;
+    const errorLink = document.createElement("p");
+    errorLink.className = "text-primary";
+    errorLink.textContent = (errors.length - 1) + " More Problems";
+    errorLink.style.display = "flex";
+    errorLink.style.alignItems = "center";
+    errorLink.style.marginBottom = "0px";
+    const svg = printess.getIcon("angle-down-light");
+    svg.style.width = "15px";
+    svg.style.marginLeft = "15px";
+    svg.style.cursor = "pointer";
+    errorLink.appendChild(svg);
+    const errorList = document.createElement("ul");
+    errorList.className = "list-group list-group-flush";
+    for (let i = 1; i < errors.length; i++) {
+        const item = document.createElement("li");
+        const errorText = "errors." + errors[i].errorCode + "Short";
+        item.className = "list-group-item";
+        item.textContent = printess.gl(errorText);
+        errorList.appendChild(item);
+    }
+    modalHeader.appendChild(title);
     modalBody.appendChild(p);
+    if (errors.length > 1) {
+        let showErrorList = false;
+        modalBody.appendChild(errorLink);
+        svg.onclick = () => {
+            showErrorList = !showErrorList;
+            if (showErrorList) {
+                modalBody.appendChild(errorList);
+                svg.style.transform = "rotate(180deg)";
+            }
+            else if (!showErrorList && errorList) {
+                modalBody.removeChild(errorList);
+                svg.style.transform = "rotate(0deg)";
+            }
+        };
+    }
     footer.appendChild(ok);
-    content.appendChild(header);
+    content.appendChild(modalHeader);
     content.appendChild(modalBody);
     content.appendChild(footer);
     dialog.appendChild(content);
@@ -531,7 +562,7 @@ function getTextArea(printess, p, forMobile) {
     inp.rows = 6;
     if (forMobile) {
         inp.className = "mobile-text-area";
-        return inp;
+        return addLabel(printess, inp, p, forMobile);
     }
     else {
         inp.className = "desktop-text-area";
@@ -573,7 +604,7 @@ function addLabel(printess, input, p, forMobile, label) {
     const validation = document.createElement("div");
     validation.id = "val_" + p.id;
     validation.classList.add("invalid-feedback");
-    validation.innerText = printess.gl("errors.textValidation");
+    validation.innerText = printess.gl("errors.textMissingInline");
     container.appendChild(validation);
     return container;
 }
@@ -586,20 +617,20 @@ function validate(printess, p) {
             if (p.validation.maxChars) {
                 if (p.value.toString().length > p.validation.maxChars) {
                     input.classList.add("is-invalid");
-                    validation.innerText = printess.gl("errors.maxCharValidation", p.validation.maxChars);
+                    validation.innerText = printess.gl("errors.maxCharsExceededInline", p.validation.maxChars);
                     return;
                 }
             }
             if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
                 input.classList.add("is-invalid");
-                validation.innerText = p.kind === "image" ? printess.gl("errors.imageUpload") : printess.gl("errors.enterText");
+                validation.innerText = p.kind === "image" ? printess.gl("errors.imageMissingInline") : printess.gl("errors.enterText");
                 return;
             }
             if (p.kind === "multi-line-text") {
                 window.setTimeout(() => {
                     if (printess.hasTextOverflow(p.id)) {
                         input.classList.add("is-invalid");
-                        validation.innerText = printess.gl("errors.textOverflowInfo");
+                        validation.innerText = printess.gl("errors.textOverflowShort");
                         return;
                     }
                 }, 500);
