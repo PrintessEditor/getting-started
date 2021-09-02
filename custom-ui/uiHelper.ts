@@ -125,11 +125,17 @@ function _viewPortScroll(printess: iPrintessApi, _what: "scroll" | "resize") {
       } else {
         // safari can't determine grid row-height automatically (1fr);
         const desktopGrid: HTMLElement | null = document.getElementById("printess-desktop-grid");
-        if (desktopGrid && !printess.autoScaleEnabled()) {
-          const height = desktopGrid.offsetHeight || window.innerHeight; // fallback when running inside printess-editor
-          const calcHeight = "calc(" + height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
-          printessDiv.style.height = calcHeight;
-          printess.resizePrintess(); //false, undefined, undefined, height);
+        if (desktopGrid) {
+          if (printess.autoScaleDetails().enabled) {
+            printessDiv.style.height = printess.autoScaleDetails().height + "px";
+            printessDiv.style.width = printess.autoScaleDetails().width + "px";
+            printess.resizePrintess();
+          } else {
+            const height = desktopGrid.offsetHeight || window.innerHeight; // fallback when running inside printess-editor
+            const calcHeight = "calc(" + height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+            printessDiv.style.height = calcHeight;
+            printess.resizePrintess(); //false, undefined, undefined, height);
+          }
         }
       }
     }
@@ -161,8 +167,10 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
       uih_viewportHeight = -1; // force re-rendering the view
       _viewPortScroll(printess, "resize");
     } else {
-      printess.resizePrintess(false, false, undefined,);
+      printess.resizePrintess();
     }
+  } else if (uih_currentRender === "mobile" && printess.autoScaleDetails().enabled) {
+    printess.resizePrintess();
   }
 
 
@@ -312,9 +320,9 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
         }
       }
       return getTabPanel([
-        { id: "upload", title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
-        { id: "filter", title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) },
-        { id: "rotate", title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
+        { id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
+        { id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) },
+        { id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
       ]);
 
 
@@ -343,8 +351,7 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
 
 function getChangeBackgroundButton(printess: iPrintessApi): HTMLElement {
   const ok = document.createElement("button");
-  ok.className = "btn btn-secondary"
-  ok.style.alignSelf = "flex-start";
+  ok.className = "btn btn-secondary align-self-start";
   ok.innerText = printess.gl("ui.buttonChangeBackground");
   ok.onclick = () => {
     printess.selectBackground();
@@ -505,7 +512,7 @@ function getDesktopTitle(printess: iPrintessApi): HTMLElement {
   inner.className = "desktop-title-bar mb-2"
 
   const h2 = document.createElement("h2");
-  h2.innerText = printess.getTemplateTitle();
+  h2.innerText = printess.gl(printess.getTemplateTitle());
   inner.appendChild(h2);
 
   const basketBtn = document.createElement("button");
@@ -523,11 +530,10 @@ function getDesktopTitle(printess: iPrintessApi): HTMLElement {
 // get validation modal that displays external property errors
 function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>) {
   const modal = document.createElement("div");
-  modal.className = "modal show";
+  modal.className = "modal show align-items-center";
   modal.setAttribute("tabindex", "-1");
   modal.style.backgroundColor = "rgba(0,0,0,0.7)";
   modal.style.display = "flex";
-  modal.style.alignItems = "center";
 
   const dialog = document.createElement("div");
   dialog.className = "modal-dialog";
@@ -562,10 +568,8 @@ function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalErr
   p.textContent = `${printess.gl(`errors.${errors[0].errorCode}`, errors[0].errorValue1)}`;
 
   const errorLink = document.createElement("p");
-  errorLink.className = "text-primary";
+  errorLink.className = "text-primary d-flex align-items-center";
   errorLink.textContent = (errors.length - 1) + " More Problems";
-  errorLink.style.display = "flex";
-  errorLink.style.alignItems = "center";
   errorLink.style.marginBottom = "0px";
 
   const svg = printess.getIcon("angle-down-light");
@@ -578,9 +582,21 @@ function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalErr
   errorList.className = "list-group list-group-flush";
   for (let i = 1; i < errors.length; i++) {
     const item = document.createElement("li");
+    const editBtn = printess.getIcon("edit");
     const errorText = "errors." + errors[i].errorCode + "Short";
-    item.className = "list-group-item";
-    item.textContent = printess.gl(errorText);
+
+    item.className = "list-group-item d-flex justify-content-between align-items-center";
+    item.textContent = printess.gl(errorText, errors[i].errorValue1);
+
+    editBtn.style.width = "20px";
+    editBtn.style.marginLeft = "10px";
+    editBtn.style.cursor = "pointer";
+    editBtn.onclick = () => {
+      printess.bringErrorIntoView(errors[i]);
+      modal.style.display = "none";
+    }
+
+    item.appendChild(editBtn);
     errorList.appendChild(item);
   }
 
@@ -620,9 +636,7 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
   container.appendChild(hr);
 
   const flex = document.createElement("div");
-  flex.className = "mb-2 align-items-center";
-  flex.style.display = "flex";
-
+  flex.className = "mb-2 d-flex align-items-center";
 
   if (printess.hasPreviousStep()) {
     const prevStep = document.createElement("button");
@@ -645,7 +659,7 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
     const h1 = document.createElement("h2");
     h1.style.flexGrow = "1";
     h1.className = "mb-0";
-    h1.innerText = cur.title || printess.gl("ui.step") + (cur.index + 1);
+    h1.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
     flex.appendChild(h1);
 
   } else {
@@ -686,7 +700,7 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
     const mobileButtonDiv = document.getElementById(p.id + ":");
     if (mobileButtonDiv) {
       drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
-    } 
+    }
   }
   inp.rows = 6;
 
@@ -709,25 +723,17 @@ function addLabel(printess: iPrintessApi, input: HTMLElement, p: iExternalProper
   container.id = "cnt_" + p.id;
 
   if (p.label || label) {
-    // check if translation is available for p.label
-    const propsLabel = printess.gl(p.label).includes("not found") ? p.label : printess.gl(p.label);
     const htmlLabel = document.createElement("label");
     htmlLabel.className = "form-label";
     htmlLabel.setAttribute("for", "inp_" + p.id);
-    htmlLabel.innerText = (label || propsLabel || "");
+    htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(p.label) || "");
     htmlLabel.style.display = forMobile ? "none" : "inline-block";
 
     if (p.kind === "image") {
       const button = document.createElement("button");
-      button.className = "btn btn-primary";
-      button.id = "upload-btn";
-      button.style.padding = "0px";
-      button.style.width = "100%";
-      htmlLabel.style.cursor = "pointer";
-      htmlLabel.style.display = "inline-block";
-      htmlLabel.style.margin = "0px";
-      htmlLabel.style.padding = ".375rem .75rem";
-      htmlLabel.style.width = "100%";
+      button.className = "btn btn-primary image-upload-btn";
+      button.id = "upload-btn-" + p.id;
+      htmlLabel.classList.add("image-upload-label");
       button.appendChild(htmlLabel);
       container.appendChild(button);
     } else {
@@ -937,7 +943,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
     button.dataset.bsAutoClose = "true"
     button.setAttribute("aria-expanded", "false");
     if (selectedItem) {
-      button.appendChild(getDropdownItemContent(p.listMeta, selectedItem))
+      button.appendChild(getDropdownItemContent(printess, p.listMeta, selectedItem))
     }
     dropdown.appendChild(button);
 
@@ -967,14 +973,14 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
         }
         if (p.listMeta) {
           button.innerHTML = "";
-          button.appendChild(getDropdownItemContent(p.listMeta, entry));
+          button.appendChild(getDropdownItemContent(printess, p.listMeta, entry));
           if (asList) {
             ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
             li.classList.add("active")
           }
         }
       }
-      a.appendChild(getDropdownItemContent(p.listMeta, entry));
+      a.appendChild(getDropdownItemContent(printess, p.listMeta, entry));
       li.appendChild(a);
       ddContent.appendChild(li)
     }
@@ -987,7 +993,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
   }
 }
 
-function getDropdownItemContent(meta: iExternalListMeta, entry: iExternalFieldListEntry): HTMLElement {
+function getDropdownItemContent(printess: iPrintessApi, meta: iExternalListMeta, entry: iExternalFieldListEntry): HTMLElement {
   const div = document.createElement("div");
   div.classList.add("dropdown-list-entry");
 
@@ -1011,7 +1017,7 @@ function getDropdownItemContent(meta: iExternalListMeta, entry: iExternalFieldLi
 
   const label = document.createElement("div");
   label.classList.add("dropdown-list-label");
-  label.innerText = entry.label;
+  label.innerText = printess.gl(entry.label);
   div.appendChild(label);
 
   return div;
@@ -1160,7 +1166,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
       imagePanel.style.display = "none";
       progressDiv.style.display = "flex";
 
-      const label = document.getElementById("upload-btn");
+      const label = document.getElementById("upload-btn-" + p.id);
       if (label) {
         label.style.display = "none";
       }
@@ -1312,7 +1318,7 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
     }
   }
   const span = document.createElement("span");
-  span.textContent = metaProperty ? printess.gl('ui.' + metaProperty) : p.label;
+  span.textContent = metaProperty ? printess.gl('ui.' + metaProperty) : printess.gl(p.label);
   rangeLabel.appendChild(span);
   rangeLabel.appendChild(range);
   if (forMobile) {
@@ -1980,7 +1986,7 @@ function getTableControl(printess: iPrintessApi, p: iExternalProperty, _forMobil
         if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
           const th = document.createElement("th");
           th.scope = "col";
-          th.innerText = col.label || col.name;
+          th.innerText = col.label && printess.gl(col.label) || printess.gl(col.name);
           tr.appendChild(th);
         }
       }
@@ -1996,7 +2002,7 @@ function getTableControl(printess: iPrintessApi, p: iExternalProperty, _forMobil
           for (const col of p.tableMeta.columns) {
             if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
               const td = document.createElement("td");
-              td.innerText = row[col.name];
+              td.innerText = printess.gl(row[col.name].toString());
               tr.appendChild(td);
             }
           }
@@ -2190,7 +2196,7 @@ function getTableDetailsDropDown(printess: iPrintessApi, p: iExternalProperty, r
     button.dataset.bsAutoClose = "true"
     button.setAttribute("aria-expanded", "false");
     if (selectedItem) {
-      button.appendChild(getTableDropdownItemContent(value))
+      button.appendChild(getTableDropdownItemContent(printess, value))
     }
     dropdown.appendChild(button);
 
@@ -2217,14 +2223,14 @@ function getTableDetailsDropDown(printess: iPrintessApi, p: iExternalProperty, r
 
         if (col.list) {
           button.innerHTML = "";
-          button.appendChild(getTableDropdownItemContent(entry));
+          button.appendChild(getTableDropdownItemContent(printess, entry));
           if (asList) {
             ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
             li.classList.add("active")
           }
         }
       }
-      a.appendChild(getTableDropdownItemContent(entry));
+      a.appendChild(getTableDropdownItemContent(printess, entry));
       li.appendChild(a);
       ddContent.appendChild(li)
     }
@@ -2236,13 +2242,13 @@ function getTableDetailsDropDown(printess: iPrintessApi, p: iExternalProperty, r
     return addLabel(printess, dropdown, p, false, col.label || col.name);
   }
 }
-function getTableDropdownItemContent(value: string | number): HTMLElement {
+function getTableDropdownItemContent(printess: iPrintessApi, value: string | number): HTMLElement {
   const div = document.createElement("div");
   div.classList.add("dropdown-list-entry");
 
   const label = document.createElement("div");
   label.classList.add("dropdown-list-label");
-  label.innerText = value.toString();
+  label.innerText = printess.gl(value.toString());
   div.appendChild(label);
 
   return div;
@@ -2521,7 +2527,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
 
           step.appendChild(badge);
           const h6 = document.createElement("h6");
-          h6.innerText = s.title;
+          h6.innerText = printess.gl(s.title);
           h6.style.margin = "0";
           h6.className = "text-light";
           step.appendChild(h6)
@@ -2666,6 +2672,9 @@ function resizeMobileUi(printess: iPrintessApi, focusSelection: boolean = false)
 
         printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
         printessDiv.style.top = printessTop;
+
+        printessDiv.style.width = "";
+        printessDiv.style.height = "";
 
         printess.resizePrintess(true, focusSelection, undefined, printessHeight);
         // console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
@@ -2935,8 +2944,7 @@ function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, pr
 
     const buttonText = document.createElement("div");
     buttonText.className = "text";
-    // check if translation is available for b.caption, else use directly b.caption and don't translate
-    buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
+    buttonText.innerText = b.caption;
 
     const buttonIcon = document.createElement("div");
     buttonIcon.className = "icon";
@@ -2952,8 +2960,7 @@ function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, pr
 
     const buttonText = document.createElement("div");
     buttonText.className = "mobile-property-caption";
-    // check if translation is available for b.caption
-    buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
+    buttonText.innerText = printess.gl(b.caption);
 
     buttonDiv.appendChild(buttonCircle);
     buttonDiv.appendChild(buttonText);
@@ -2980,7 +2987,7 @@ function getButtonCircle(printess: iPrintessApi, m: iMobileUIButton, isSelected:
   if (c.hasCaption) {
     const caption = document.createElement("div");
     caption.className = c.captionClass;
-    caption.innerText = c.captionInCircle;
+    caption.innerText = printess.gl(c.captionInCircle);
     circle.appendChild(caption);
   }
   if (c.hasColor) {
@@ -2988,7 +2995,7 @@ function getButtonCircle(printess: iPrintessApi, m: iMobileUIButton, isSelected:
     color.classList.add("circular-color");
 
     color.style.backgroundColor = c.color;
-    color.innerText = c.captionInCircle;
+    color.innerText = printess.gl(c.captionInCircle);
     circle.appendChild(color);
   }
   if (c.hasIcon && c.icon !== "none") {

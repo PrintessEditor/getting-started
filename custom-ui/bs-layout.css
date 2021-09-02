@@ -324,6 +324,18 @@ input[type='range'] {
   background-repeat: no-repeat;
 }
 
+.image-upload-btn {
+  padding: 0px;
+  width: 100%;
+}
+
+.image-upload-label {
+  cursor: pointer;
+  display: inline-block !important;
+  margin: 0px;
+  padding: .375rem .75rem;
+  width: 100%;
+}
 
 .text-properties {
   display: flex;

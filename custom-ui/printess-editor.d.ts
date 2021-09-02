@@ -87,7 +87,12 @@ export interface printessAttachParameters {
    * The use of offensive words can either throw an error during the validation or trigger the replacement of a bad word. 
    * https://printess.com/kb/api-reference/custom-integration/index.html#offensive-language
    */
-  offensiveWords? : string 
+  offensiveWords?: string
+
+  /**
+   * Optional: set frame warnings via api (can be set in template-presets as well) 
+   */
+  showFrameWarnings?: "sign and hint" | "sign only" | "hint only" | "none";
 
   /**
    * If you application displays a loading animation, this call tells you to start
@@ -223,6 +228,12 @@ export interface iPrintessApi {
    * Select frame by propertyId. Fires a subsequent selection changed callback.
    */
   selectFrames(propertyId: string): Promise<void>;
+
+  /**
+   * Select and zoom to the frame(s) mentioned in the error object.
+   * @param err
+   */
+  bringErrorIntoView(err: iExternalError): Promise<void> 
 
   /**
    * Selects all frames which are marked as **background**
@@ -593,9 +604,16 @@ export interface iPrintessApi {
   hideOverlay(): void;
 
   /**
+   * @deprecated
    * Returns true if `autoScale` was set in `attachPrintess` call
    */
   autoScaleEnabled(): boolean
+
+  /**
+   * Retrieves information if the `auto-scale` option was enabled on `attachPrintess()` 
+   * Also returns the calculated pixel-dimension of printess container on desktop
+   */
+  autoScaleDetails(): { enabled: boolean, width: number, height: number }
 
   /**
    * 
@@ -619,7 +637,7 @@ export interface iPrintessApi {
    * Returns an array of external property errors that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
-   validate(mode?: "all" | "until-current-step" | "selection"): Array<iExternalError>
+  validate(mode?: "all" | "until-current-step" | "selection"): Array<iExternalError>
 
   /**
    * Returns true if the associated mutli-line text-frame has text which does not fit into the frame
