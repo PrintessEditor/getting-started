@@ -32,6 +32,8 @@ let uih_lastPrintessWidth = 0;
 let uih_lastPrintessTop = "";
 let uih_lastPrintessBottom = 0;
 
+let uih_lastOverflowState = false;
+
 console.log("Printess ui-helper loaded");
 
 
@@ -569,7 +571,8 @@ function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalErr
 
   const errorLink = document.createElement("p");
   errorLink.className = "text-primary d-flex align-items-center";
-  errorLink.textContent = (errors.length - 1) + " More Problems";
+  const numberOfErrors = errors.length - 1 > 1 ? "errors.moreProblems" : "errors.oneMoreProblem";
+  errorLink.textContent = printess.gl(numberOfErrors, (errors.length - 1));
   errorLink.style.marginBottom = "0px";
 
   const svg = printess.getIcon("angle-down-light");
@@ -782,13 +785,20 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
         // check if an overflow occured
         // story text is changed via debounce method, so we need to wait a little before checking for overflow
         window.setTimeout(() => {
-          if (printess.hasTextOverflow(p.id)) {
+          uih_lastOverflowState = printess.hasTextOverflow(p.id);
+          if (uih_lastOverflowState) {
             input.classList.add("is-invalid");
             validation.innerText = printess.gl("errors.textOverflowShort");
-            return
+          } else {
+            input.classList.remove("is-invalid");
           }
         }, 500);
 
+        if (uih_lastOverflowState) {
+          input.classList.add("is-invalid");
+          validation.innerText = printess.gl("errors.textOverflowShort");
+          return;
+        } 
       }
 
       // container.classList.add("was-validated"); // add to activate BS-green-marker

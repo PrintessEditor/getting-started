@@ -81,6 +81,11 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="#" id="btnHasEdits" title="Analyse if spread has Buyer Edits">
+            e
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="#" id="btnDelete" title="Delete Selected Frames">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash"
               viewBox="0 0 16 16">
@@ -363,6 +368,9 @@
     document.getElementById("btnClearSelection").onclick = () => {
       printess.resizePrintess();
       printess.clearSelection();
+    };
+    document.getElementById("btnHasEdits").onclick = () => {
+      alert(printess.hasBuyerContentEdits(""));
     };
     document.getElementById("btnDelete").onclick = () => {
       printess.deleteSelectedFrames();

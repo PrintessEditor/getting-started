@@ -263,7 +263,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Async version waits for Printess to be fully loaded.
    */
-  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean }>
+  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }>
 
 
   /**
@@ -272,7 +272,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Sync version returns dummy data if Printess is not fully loaded.
    */
-  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean }
+  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }
 
   /**
    * Returns information about all spreads of the displayed document as an Array of `iExternalSpreadInfo` 
@@ -283,6 +283,12 @@ export interface iPrintessApi {
    * Returns total number of spreads (not pages)
    */
   spreadCount(): number
+
+   /**
+   * Returns true is the user has made edits on a spread.
+   * @param spreadId: ID of Spread to check for edits - otherwise checks for current spread
+   */
+   hasBuyerContentEdits(spreadId?: string): boolean
 
   /**
    * Returns all available properties in teh current document

@@ -30,6 +30,7 @@ let uih_lastPrintessHeight = 0;
 let uih_lastPrintessWidth = 0;
 let uih_lastPrintessTop = "";
 let uih_lastPrintessBottom = 0;
+let uih_lastOverflowState = false;
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -461,7 +462,8 @@ function getValidationOverlay(printess, errors) {
     p.textContent = `${printess.gl(`errors.${errors[0].errorCode}`, errors[0].errorValue1)}`;
     const errorLink = document.createElement("p");
     errorLink.className = "text-primary d-flex align-items-center";
-    errorLink.textContent = (errors.length - 1) + " More Problems";
+    const numberOfErrors = errors.length - 1 > 1 ? "errors.moreProblems" : "errors.oneMoreProblem";
+    errorLink.textContent = printess.gl(numberOfErrors, (errors.length - 1));
     errorLink.style.marginBottom = "0px";
     const svg = printess.getIcon("angle-down-light");
     svg.style.width = "15px";
@@ -635,12 +637,20 @@ function validate(printess, p) {
             }
             if (p.kind === "multi-line-text") {
                 window.setTimeout(() => {
-                    if (printess.hasTextOverflow(p.id)) {
+                    uih_lastOverflowState = printess.hasTextOverflow(p.id);
+                    if (uih_lastOverflowState) {
                         input.classList.add("is-invalid");
                         validation.innerText = printess.gl("errors.textOverflowShort");
-                        return;
+                    }
+                    else {
+                        input.classList.remove("is-invalid");
                     }
                 }, 500);
+                if (uih_lastOverflowState) {
+                    input.classList.add("is-invalid");
+                    validation.innerText = printess.gl("errors.textOverflowShort");
+                    return;
+                }
             }
             input.classList.remove("is-invalid");
         }
