@@ -77,10 +77,22 @@ export interface printessAttachParameters {
   };
 
   /**
-   * TODO(aka): link to git-hub JSON
+   * list if custom-translations to be used by Printess buyer-side.
+   * https://printess.com/kb/api-reference/custom-integration/index.html#translations
    */
   translations?: Record<string, Record<string, string> | string>;
 
+  /**
+   * To prevent the use of offensive language in customizeable texts, you can pass a list of forbidden words.
+   * The use of offensive words can either throw an error during the validation or trigger the replacement of a bad word. 
+   * https://printess.com/kb/api-reference/custom-integration/index.html#offensive-language
+   */
+  offensiveWords?: string
+
+  /**
+   * Optional: set frame warnings via api (can be set in template-presets as well) 
+   */
+  showFrameWarnings?: "sign and hint" | "sign only" | "hint only" | "none";
 
   /**
    * If you application displays a loading animation, this call tells you to start
@@ -218,6 +230,12 @@ export interface iPrintessApi {
   selectFrames(propertyId: string): Promise<void>;
 
   /**
+   * Select and zoom to the frame(s) mentioned in the error object.
+   * @param err
+   */
+  bringErrorIntoView(err: iExternalError): Promise<void> 
+
+  /**
    * Selects all frames which are marked as **background**
    */
   selectBackground(): Promise<void>;
@@ -245,7 +263,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Async version waits for Printess to be fully loaded.
    */
-  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean }>
+  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }>
 
 
   /**
@@ -254,7 +272,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Sync version returns dummy data if Printess is not fully loaded.
    */
-  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean }
+  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }
 
   /**
    * Returns information about all spreads of the displayed document as an Array of `iExternalSpreadInfo` 
@@ -265,6 +283,12 @@ export interface iPrintessApi {
    * Returns total number of spreads (not pages)
    */
   spreadCount(): number
+
+   /**
+   * Returns true is the user has made edits on a spread.
+   * @param spreadId: ID of Spread to check for edits - otherwise checks for current spread
+   */
+   hasBuyerContentEdits(spreadId?: string): boolean
 
   /**
    * Returns all available properties in teh current document
@@ -586,9 +610,16 @@ export interface iPrintessApi {
   hideOverlay(): void;
 
   /**
+   * @deprecated
    * Returns true if `autoScale` was set in `attachPrintess` call
    */
   autoScaleEnabled(): boolean
+
+  /**
+   * Retrieves information if the `auto-scale` option was enabled on `attachPrintess()` 
+   * Also returns the calculated pixel-dimension of printess container on desktop
+   */
+  autoScaleDetails(): { enabled: boolean, width: number, height: number }
 
   /**
    * 
@@ -612,8 +643,12 @@ export interface iPrintessApi {
    * Returns an array of external property errors that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
-  validate(mode: "all" | "until-current-step" | "selection" = "all"): Array<iExternalError>
+  validate(mode?: "all" | "until-current-step" | "selection"): Array<iExternalError>
 
+  /**
+   * Returns true if the associated mutli-line text-frame has text which does not fit into the frame
+   * @param propertyId 
+   */
   hasTextOverflow(propertyId: string): boolean
 
   /**
@@ -1102,4 +1137,8 @@ export type iconName =
   | "angle-down"
   | "sync"
   | "mirror-x"
-  | "mirror-y";
+  | "mirror-y"
+  | "angle-up-light"
+  | "angle-down-light"
+  | "chevron-up-light"
+  | "chevron-down-light";

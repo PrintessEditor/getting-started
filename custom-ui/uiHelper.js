@@ -30,12 +30,13 @@ let uih_lastPrintessHeight = 0;
 let uih_lastPrintessWidth = 0;
 let uih_lastPrintessTop = "";
 let uih_lastPrintessBottom = 0;
+let uih_lastOverflowState = false;
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
         const errors = printess.validate("all");
         if (errors.length > 0) {
-            getValidationOverlay(printess, errors[0]);
+            getValidationOverlay(printess, errors);
             return;
         }
         yield printess.clearSelection();
@@ -55,7 +56,7 @@ function addToBasket(printess) {
 function gotoNextStep(printess) {
     const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
     if (errors.length > 0) {
-        getValidationOverlay(printess, errors[0]);
+        getValidationOverlay(printess, errors);
         return;
     }
     if (printess.hasNextStep()) {
@@ -112,11 +113,18 @@ function _viewPortScroll(printess, _what) {
             }
             else {
                 const desktopGrid = document.getElementById("printess-desktop-grid");
-                if (desktopGrid && !printess.autoScaleEnabled()) {
-                    const height = desktopGrid.offsetHeight || window.innerHeight;
-                    const calcHeight = "calc(" + height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
-                    printessDiv.style.height = calcHeight;
-                    printess.resizePrintess();
+                if (desktopGrid) {
+                    if (printess.autoScaleDetails().enabled) {
+                        printessDiv.style.height = printess.autoScaleDetails().height + "px";
+                        printessDiv.style.width = printess.autoScaleDetails().width + "px";
+                        printess.resizePrintess();
+                    }
+                    else {
+                        const height = desktopGrid.offsetHeight || window.innerHeight;
+                        const calcHeight = "calc(" + height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+                        printessDiv.style.height = calcHeight;
+                        printess.resizePrintess();
+                    }
                 }
             }
         }
@@ -144,8 +152,11 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
             _viewPortScroll(printess, "resize");
         }
         else {
-            printess.resizePrintess(false, false, undefined);
+            printess.resizePrintess();
         }
+    }
+    else if (uih_currentRender === "mobile" && printess.autoScaleDetails().enabled) {
+        printess.resizePrintess();
     }
     uih_currentGroupSnippets = groupSnippets;
     uih_currentState = state;
@@ -269,9 +280,9 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                 }
             }
             return getTabPanel([
-                { id: "upload", title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
-                { id: "filter", title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) },
-                { id: "rotate", title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
+                { id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
+                { id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) },
+                { id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
             ]);
         case "select-list":
             return getDropDown(printess, p, forMobile);
@@ -286,8 +297,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
 }
 function getChangeBackgroundButton(printess) {
     const ok = document.createElement("button");
-    ok.className = "btn btn-secondary";
-    ok.style.alignSelf = "flex-start";
+    ok.className = "btn btn-secondary align-self-start";
     ok.innerText = printess.gl("ui.buttonChangeBackground");
     ok.onclick = () => {
         printess.selectBackground();
@@ -317,7 +327,7 @@ function getDoneButton(printess) {
         else {
             const errors = printess.validate("selection");
             if (errors.length > 0) {
-                getValidationOverlay(printess, errors[0]);
+                getValidationOverlay(printess, errors);
                 return;
             }
             printess.clearSelection();
@@ -409,7 +419,7 @@ function getDesktopTitle(printess) {
     const inner = document.createElement("div");
     inner.className = "desktop-title-bar mb-2";
     const h2 = document.createElement("h2");
-    h2.innerText = printess.getTemplateTitle();
+    h2.innerText = printess.gl(printess.getTemplateTitle());
     inner.appendChild(h2);
     const basketBtn = document.createElement("button");
     basketBtn.className = "btn btn-primary";
@@ -420,25 +430,23 @@ function getDesktopTitle(printess) {
     container.appendChild(hr);
     return container;
 }
-function getValidationOverlay(printess, error) {
+function getValidationOverlay(printess, errors) {
     const modal = document.createElement("div");
-    modal.className = "modal show";
+    modal.className = "modal show align-items-center";
     modal.setAttribute("tabindex", "-1");
     modal.style.backgroundColor = "rgba(0,0,0,0.7)";
     modal.style.display = "flex";
-    modal.style.alignItems = "center";
     const dialog = document.createElement("div");
     dialog.className = "modal-dialog";
     dialog.style.minWidth = "500px";
     const content = document.createElement("div");
     content.className = "modal-content";
-    const header = document.createElement("div");
-    header.className = "modal-header bg-primary";
-    const title = document.createElement("h5");
+    const modalHeader = document.createElement("div");
+    modalHeader.className = "modal-header bg-primary";
+    const title = document.createElement("h3");
     title.className = "modal-title";
-    title.innerHTML = printess.gl(`errors.${error.errorCode}Title`).replace(/\n/g, "<br>");
+    title.innerHTML = printess.gl(`errors.${errors[0].errorCode}Title`).replace(/\n/g, "<br>");
     title.style.color = "#fff";
-    title.style.fontSize = "1.8rem";
     const modalBody = document.createElement("div");
     modalBody.className = "modal-body";
     const footer = document.createElement("div");
@@ -450,15 +458,55 @@ function getValidationOverlay(printess, error) {
         modal.style.display = "none";
     };
     const p = document.createElement("p");
-    p.style.display = "flex";
-    p.style.justifyContent = "space-between";
-    p.style.alignItems = "center";
     p.className = "error-message";
-    p.textContent = `${printess.gl(`errors.${error.errorCode}`, error.errorValue1)}`;
-    header.appendChild(title);
+    p.textContent = `${printess.gl(`errors.${errors[0].errorCode}`, errors[0].errorValue1)}`;
+    const errorLink = document.createElement("p");
+    errorLink.className = "text-primary d-flex align-items-center";
+    const numberOfErrors = errors.length - 1 > 1 ? "errors.moreProblems" : "errors.oneMoreProblem";
+    errorLink.textContent = printess.gl(numberOfErrors, (errors.length - 1));
+    errorLink.style.marginBottom = "0px";
+    const svg = printess.getIcon("angle-down-light");
+    svg.style.width = "15px";
+    svg.style.marginLeft = "15px";
+    svg.style.cursor = "pointer";
+    errorLink.appendChild(svg);
+    const errorList = document.createElement("ul");
+    errorList.className = "list-group list-group-flush";
+    for (let i = 1; i < errors.length; i++) {
+        const item = document.createElement("li");
+        const editBtn = printess.getIcon("edit");
+        const errorText = "errors." + errors[i].errorCode + "Short";
+        item.className = "list-group-item d-flex justify-content-between align-items-center";
+        item.textContent = printess.gl(errorText, errors[i].errorValue1);
+        editBtn.style.width = "20px";
+        editBtn.style.marginLeft = "10px";
+        editBtn.style.cursor = "pointer";
+        editBtn.onclick = () => {
+            printess.bringErrorIntoView(errors[i]);
+            modal.style.display = "none";
+        };
+        item.appendChild(editBtn);
+        errorList.appendChild(item);
+    }
+    modalHeader.appendChild(title);
     modalBody.appendChild(p);
+    if (errors.length > 1) {
+        let showErrorList = false;
+        modalBody.appendChild(errorLink);
+        svg.onclick = () => {
+            showErrorList = !showErrorList;
+            if (showErrorList) {
+                modalBody.appendChild(errorList);
+                svg.style.transform = "rotate(180deg)";
+            }
+            else if (!showErrorList && errorList) {
+                modalBody.removeChild(errorList);
+                svg.style.transform = "rotate(0deg)";
+            }
+        };
+    }
     footer.appendChild(ok);
-    content.appendChild(header);
+    content.appendChild(modalHeader);
     content.appendChild(modalBody);
     content.appendChild(footer);
     dialog.appendChild(content);
@@ -470,8 +518,7 @@ function getDesktopStepsUi(printess) {
     const hr = document.createElement("hr");
     container.appendChild(hr);
     const flex = document.createElement("div");
-    flex.className = "mb-2 align-items-center";
-    flex.style.display = "flex";
+    flex.className = "mb-2 d-flex align-items-center";
     if (printess.hasPreviousStep()) {
         const prevStep = document.createElement("button");
         prevStep.className = "btn";
@@ -491,7 +538,7 @@ function getDesktopStepsUi(printess) {
         const h1 = document.createElement("h2");
         h1.style.flexGrow = "1";
         h1.className = "mb-0";
-        h1.innerText = cur.title || printess.gl("ui.step") + (cur.index + 1);
+        h1.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
         flex.appendChild(h1);
     }
     else {
@@ -531,7 +578,7 @@ function getTextArea(printess, p, forMobile) {
     inp.rows = 6;
     if (forMobile) {
         inp.className = "mobile-text-area";
-        return inp;
+        return addLabel(printess, inp, p, forMobile);
     }
     else {
         inp.className = "desktop-text-area";
@@ -544,23 +591,16 @@ function addLabel(printess, input, p, forMobile, label) {
     container.classList.add("mb-3");
     container.id = "cnt_" + p.id;
     if (p.label || label) {
-        const propsLabel = printess.gl(p.label).includes("not found") ? p.label : printess.gl(p.label);
         const htmlLabel = document.createElement("label");
         htmlLabel.className = "form-label";
         htmlLabel.setAttribute("for", "inp_" + p.id);
-        htmlLabel.innerText = (label || propsLabel || "");
+        htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(p.label) || "");
         htmlLabel.style.display = forMobile ? "none" : "inline-block";
         if (p.kind === "image") {
             const button = document.createElement("button");
-            button.className = "btn btn-primary";
-            button.id = "upload-btn";
-            button.style.padding = "0px";
-            button.style.width = "100%";
-            htmlLabel.style.cursor = "pointer";
-            htmlLabel.style.display = "inline-block";
-            htmlLabel.style.margin = "0px";
-            htmlLabel.style.padding = ".375rem .75rem";
-            htmlLabel.style.width = "100%";
+            button.className = "btn btn-primary image-upload-btn";
+            button.id = "upload-btn-" + p.id;
+            htmlLabel.classList.add("image-upload-label");
             button.appendChild(htmlLabel);
             container.appendChild(button);
         }
@@ -573,7 +613,7 @@ function addLabel(printess, input, p, forMobile, label) {
     const validation = document.createElement("div");
     validation.id = "val_" + p.id;
     validation.classList.add("invalid-feedback");
-    validation.innerText = printess.gl("errors.textValidation");
+    validation.innerText = printess.gl("errors.textMissingInline");
     container.appendChild(validation);
     return container;
 }
@@ -586,23 +626,31 @@ function validate(printess, p) {
             if (p.validation.maxChars) {
                 if (p.value.toString().length > p.validation.maxChars) {
                     input.classList.add("is-invalid");
-                    validation.innerText = printess.gl("errors.maxCharValidation", p.validation.maxChars);
+                    validation.innerText = printess.gl("errors.maxCharsExceededInline", p.validation.maxChars);
                     return;
                 }
             }
             if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
                 input.classList.add("is-invalid");
-                validation.innerText = p.kind === "image" ? printess.gl("errors.imageUpload") : printess.gl("errors.enterText");
+                validation.innerText = p.kind === "image" ? printess.gl("errors.imageMissingInline") : printess.gl("errors.enterText");
                 return;
             }
             if (p.kind === "multi-line-text") {
                 window.setTimeout(() => {
-                    if (printess.hasTextOverflow(p.id)) {
+                    uih_lastOverflowState = printess.hasTextOverflow(p.id);
+                    if (uih_lastOverflowState) {
                         input.classList.add("is-invalid");
-                        validation.innerText = printess.gl("errors.textOverflowInfo");
-                        return;
+                        validation.innerText = printess.gl("errors.textOverflowShort");
+                    }
+                    else {
+                        input.classList.remove("is-invalid");
                     }
                 }, 500);
+                if (uih_lastOverflowState) {
+                    input.classList.add("is-invalid");
+                    validation.innerText = printess.gl("errors.textOverflowShort");
+                    return;
+                }
             }
             input.classList.remove("is-invalid");
         }
@@ -731,7 +779,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
         if (selectedItem) {
-            button.appendChild(getDropdownItemContent(p.listMeta, selectedItem));
+            button.appendChild(getDropdownItemContent(printess, p.listMeta, selectedItem));
         }
         dropdown.appendChild(button);
         if (asList) {
@@ -761,14 +809,14 @@ function getDropDown(printess, p, asList, fullWidth = true) {
                 }
                 if (p.listMeta) {
                     button.innerHTML = "";
-                    button.appendChild(getDropdownItemContent(p.listMeta, entry));
+                    button.appendChild(getDropdownItemContent(printess, p.listMeta, entry));
                     if (asList) {
                         ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
                         li.classList.add("active");
                     }
                 }
             };
-            a.appendChild(getDropdownItemContent(p.listMeta, entry));
+            a.appendChild(getDropdownItemContent(printess, p.listMeta, entry));
             li.appendChild(a);
             ddContent.appendChild(li);
         }
@@ -781,7 +829,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
         return addLabel(printess, dropdown, p, false);
     }
 }
-function getDropdownItemContent(meta, entry) {
+function getDropdownItemContent(printess, meta, entry) {
     const div = document.createElement("div");
     div.classList.add("dropdown-list-entry");
     if (entry.imageUrl) {
@@ -802,7 +850,7 @@ function getDropdownItemContent(meta, entry) {
     }
     const label = document.createElement("div");
     label.classList.add("dropdown-list-label");
-    label.innerText = entry.label;
+    label.innerText = printess.gl(entry.label);
     div.appendChild(label);
     return div;
 }
@@ -930,7 +978,7 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
                 scaleControl.style.display = "none";
             imagePanel.style.display = "none";
             progressDiv.style.display = "flex";
-            const label = document.getElementById("upload-btn");
+            const label = document.getElementById("upload-btn-" + p.id);
             if (label) {
                 label.style.display = "none";
             }
@@ -1050,7 +1098,7 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
         }
     };
     const span = document.createElement("span");
-    span.textContent = metaProperty ? printess.gl('ui.' + metaProperty) : p.label;
+    span.textContent = metaProperty ? printess.gl('ui.' + metaProperty) : printess.gl(p.label);
     rangeLabel.appendChild(span);
     rangeLabel.appendChild(range);
     if (forMobile) {
@@ -1601,7 +1649,7 @@ function getTableControl(printess, p, _forMobile) {
                 if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
                     const th = document.createElement("th");
                     th.scope = "col";
-                    th.innerText = col.label || col.name;
+                    th.innerText = col.label && printess.gl(col.label) || printess.gl(col.name);
                     tr.appendChild(th);
                 }
             }
@@ -1616,7 +1664,7 @@ function getTableControl(printess, p, _forMobile) {
                     for (const col of p.tableMeta.columns) {
                         if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
                             const td = document.createElement("td");
-                            td.innerText = row[col.name];
+                            td.innerText = printess.gl(row[col.name].toString());
                             tr.appendChild(td);
                         }
                     }
@@ -1797,7 +1845,7 @@ function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWi
         button.dataset.bsAutoClose = "true";
         button.setAttribute("aria-expanded", "false");
         if (selectedItem) {
-            button.appendChild(getTableDropdownItemContent(value));
+            button.appendChild(getTableDropdownItemContent(printess, value));
         }
         dropdown.appendChild(button);
         if (asList) {
@@ -1823,14 +1871,14 @@ function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWi
                 setTableValue(col, entry);
                 if (col.list) {
                     button.innerHTML = "";
-                    button.appendChild(getTableDropdownItemContent(entry));
+                    button.appendChild(getTableDropdownItemContent(printess, entry));
                     if (asList) {
                         ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
                         li.classList.add("active");
                     }
                 }
             };
-            a.appendChild(getTableDropdownItemContent(entry));
+            a.appendChild(getTableDropdownItemContent(printess, entry));
             li.appendChild(a);
             ddContent.appendChild(li);
         }
@@ -1843,12 +1891,12 @@ function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWi
         return addLabel(printess, dropdown, p, false, col.label || col.name);
     }
 }
-function getTableDropdownItemContent(value) {
+function getTableDropdownItemContent(printess, value) {
     const div = document.createElement("div");
     div.classList.add("dropdown-list-entry");
     const label = document.createElement("div");
     label.classList.add("dropdown-list-label");
-    label.innerText = value.toString();
+    label.innerText = printess.gl(value.toString());
     div.appendChild(label);
     return div;
 }
@@ -2061,7 +2109,7 @@ function renderMobileNavBar(printess) {
                     badge.innerText = (s.index + 1).toString();
                     step.appendChild(badge);
                     const h6 = document.createElement("h6");
-                    h6.innerText = s.title;
+                    h6.innerText = printess.gl(s.title);
                     h6.style.margin = "0";
                     h6.className = "text-light";
                     step.appendChild(h6);
@@ -2164,6 +2212,8 @@ function resizeMobileUi(printess, focusSelection = false) {
                 printessDiv.style.right = "0";
                 printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
                 printessDiv.style.top = printessTop;
+                printessDiv.style.width = "";
+                printessDiv.style.height = "";
                 printess.resizePrintess(true, focusSelection, undefined, printessHeight);
             }
         }
@@ -2393,7 +2443,7 @@ function drawButtonContent(printess, buttonDiv, properties) {
     if (printess.isTextButton(b)) {
         const buttonText = document.createElement("div");
         buttonText.className = "text";
-        buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
+        buttonText.innerText = b.caption;
         const buttonIcon = document.createElement("div");
         buttonIcon.className = "icon";
         buttonIcon.innerText = "T";
@@ -2404,7 +2454,7 @@ function drawButtonContent(printess, buttonDiv, properties) {
         const buttonCircle = getButtonCircle(printess, b, isSelected);
         const buttonText = document.createElement("div");
         buttonText.className = "mobile-property-caption";
-        buttonText.innerText = printess.gl(b.caption).includes("not found") ? b.caption : printess.gl(b.caption);
+        buttonText.innerText = printess.gl(b.caption);
         buttonDiv.appendChild(buttonCircle);
         buttonDiv.appendChild(buttonText);
     }
@@ -2428,14 +2478,14 @@ function getButtonCircle(printess, m, isSelected) {
     if (c.hasCaption) {
         const caption = document.createElement("div");
         caption.className = c.captionClass;
-        caption.innerText = c.captionInCircle;
+        caption.innerText = printess.gl(c.captionInCircle);
         circle.appendChild(caption);
     }
     if (c.hasColor) {
         const color = document.createElement("div");
         color.classList.add("circular-color");
         color.style.backgroundColor = c.color;
-        color.innerText = c.captionInCircle;
+        color.innerText = printess.gl(c.captionInCircle);
         circle.appendChild(color);
     }
     if (c.hasIcon && c.icon !== "none") {
