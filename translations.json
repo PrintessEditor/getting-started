@@ -43,7 +43,7 @@
   },
   "errors": {
     "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
-    "imageResolutionLowShort": "Low image quality ($1dpi)",
+    "imageResolutionLowShort": "Low image quality ($1)",
     "imageResolutionLow": "Please add a photo with a higher resolution!",
     "invalidCharacterTitle": "Oops!\nLooks like some characters could not be printed ...",
     "invalidCharacterShort": "Missing character in font",
@@ -66,6 +66,8 @@
     "offensiveLanguageDetectedTitle": "Oops!\nLooks like you used offensive language ...",
     "offensiveLanguageDetectedShort": "Offensive language detected",
     "offensiveLanguageDetected": "Please edit the text before you continue!",
-    "enterText": "Please enter some text here"
+    "enterText": "Please enter some text here",
+    "oneMoreProblem": "$1 More Problem",
+    "moreProblems": "$1 More Problems"
   }
 }
