@@ -528,10 +528,10 @@ export interface iPrintessApi {
 
   /**
    * Renders all pages as images for the given document. 
-   * @param fileNameSuffix Optional: The file name suffix when uploading the image. All files will be prefixed with the page index + underscore character.
+   * @param fileNameSuffix The file name suffix when uploading the image. All files will be prefixed with the page index + underscore character.
    * @param documentName Optional: The name of the document you want to render the pages images for. If not provided the one marked as thumbnail will be taken, otherwise the preview document, or as last try the first/primary document.
-   * @param maxWidth Optional: Maximum render width.
-   * @param maxHeight Optional: Maximum render height.
+   * @param maxWidth Optional: Maximum render width. Defaults to 400.
+   * @param maxHeight Optional: Maximum render height. Defaults to 400.
    */
   renderPageImages(fileNameSuffix: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string[]>;
 
@@ -627,7 +627,7 @@ export interface iPrintessApi {
    * @param serveEndpoint The url the files are served from. This can differ from the upload endpoint to make CDN distribution possible. E.g. https://mycloudfrontid.amazonaws.com/
    * @param keyGenerator The method to generate the S3 key. The built-in one just makes sure that the file name is unique per session.
    */
-  createAwsUploaderProvider(uploadEndpoint: string, serveEndpoint?: string, keyGenerator?: (fileName: string) => string): AwsUploadProvider;
+  createAwsUploaderProvider(uploadEndpoint: string, serveEndpoint?: string, keyGenerator?: (fileName: string, fileHash?: string) => string): AwsUploadProvider;
 
   /**
    * @deprecated
@@ -687,7 +687,7 @@ export interface UploadProvider {
 
 export interface AwsUploadProvider extends UploadProvider {
   /** The method which generates the final key to store within S3. */
-  keyGenerator: (fileName: string) => string;
+  keyGenerator: (fileName: string, fileHash: string) => string;
 }
 
 
