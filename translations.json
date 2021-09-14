@@ -39,7 +39,8 @@
     "sendBackward": "Send Backward",
     "sendBack": "Send to Back",
     "bringForward": "Bring Forward",
-    "bringFront": "Bring to Front"
+    "bringFront": "Bring to Front",
+    "switchingLayout": "Switching layout ..."
   },
   "errors": {
     "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
