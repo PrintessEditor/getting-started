@@ -191,12 +191,30 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
         container.appendChild(getDesktopTitle(printess));
     }
     if (state === "document") {
+        const propsDiv = document.createElement("div");
+        let setEventTab = false;
         for (const p of properties) {
+            setEventTab = p.label === "events" ? true : false;
             t.push(JSON.stringify(p, undefined, 2));
-            container.appendChild(getPropertyControl(printess, p));
+            propsDiv.appendChild(getPropertyControl(printess, p));
             validate(printess, p);
         }
-        container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+        if (printess.showImageTab()) {
+            const tabsPanel = [];
+            if (properties.length > 0) {
+                const tabLabel = setEventTab ? printess.gl("ui.eventTab") : printess.gl("ui.propertyTab");
+                tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv });
+            }
+            tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImages(printess) });
+            if (groupSnippets.length > 0) {
+                tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) });
+            }
+            container.appendChild(getTabPanel(tabsPanel));
+        }
+        else {
+            container.appendChild(propsDiv);
+            container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+        }
     }
     else {
         let colorsContainer = null;
@@ -892,9 +910,9 @@ function getTabPanel(tabs) {
     panel.appendChild(content);
     return panel;
 }
-function getImageFilterControl(printess, p) {
+function getImageFilterControl(printess, p, filterDiv) {
     var _a;
-    const container = document.createElement("div");
+    const container = filterDiv || document.createElement("div");
     (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.allows.forEach(metaProperty => {
         switch (metaProperty) {
             case "brightness":
@@ -914,6 +932,24 @@ function getImageFilterControl(printess, p) {
                 break;
         }
     });
+    const filterBtn = document.createElement("button");
+    filterBtn.className = "btn btn-secondary";
+    filterBtn.textContent = "Reset Filter";
+    filterBtn.style.width = "100%";
+    filterBtn.style.marginTop = "30px";
+    filterBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+        if (p.imageMeta) {
+            p.imageMeta.brightness = 0;
+            p.imageMeta.sepia = 0;
+            p.imageMeta.hueRotate = 0;
+            p.imageMeta.contrast = 0;
+            p.imageMeta.vivid = 0;
+            yield printess.resetImageFilters(p.id, p.imageMeta);
+        }
+        container.innerHTML = "";
+        getImageFilterControl(printess, p, container);
+    });
+    container.appendChild(filterBtn);
     return container;
 }
 function getImageRotateControl(printess, p) {
@@ -1077,6 +1113,7 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
     const rangeLabel = document.createElement("label");
     const range = document.createElement("input");
     range.className = "form-range";
+    range.id = metaProperty !== null && metaProperty !== void 0 ? metaProperty : "";
     range.type = "range";
     range.min = ui.meta.min.toString();
     range.max = ui.meta.max.toString();
@@ -1556,6 +1593,32 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
         }
         pages.appendChild(ul);
     }
+}
+function renderMyImages(printess) {
+    const container = document.createElement("div");
+    const imagePanel = document.createElement("div");
+    imagePanel.className = "image-panel";
+    const imageList = document.createElement("div");
+    imageList.classList.add("image-list");
+    const images = printess.getImages();
+    for (const im of images) {
+        const thumb = document.createElement("div");
+        thumb.className = "big";
+        thumb.draggable = true;
+        thumb.ondragstart = (ev) => { var _a; return (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${im.id}`); };
+        thumb.style.backgroundImage = im.thumbCssUrl;
+        imageList.appendChild(thumb);
+    }
+    imagePanel.appendChild(imageList);
+    container.appendChild(imageList);
+    const distributeButton = document.createElement("button");
+    distributeButton.className = "btn btn-primary mb-3";
+    distributeButton.innerText = "Distribute Images";
+    distributeButton.onclick = () => {
+        printess.distributeImages();
+    };
+    container.appendChild(distributeButton);
+    return container;
 }
 function renderGroupSnippets(printess, groupSnippets, forMobile) {
     const div = document.createElement("div");

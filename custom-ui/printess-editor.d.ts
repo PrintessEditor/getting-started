@@ -233,7 +233,7 @@ export interface iPrintessApi {
    * Select and zoom to the frame(s) mentioned in the error object.
    * @param err
    */
-  bringErrorIntoView(err: iExternalError): Promise<void> 
+  bringErrorIntoView(err: iExternalError): Promise<void>
 
   /**
    * Selects all frames which are marked as **background**
@@ -263,7 +263,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Async version waits for Printess to be fully loaded.
    */
-  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }>
+  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string }>
 
 
   /**
@@ -272,7 +272,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Sync version returns dummy data if Printess is not fully loaded.
    */
-  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }
+  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string }
 
   /**
    * Returns information about all spreads of the displayed document as an Array of `iExternalSpreadInfo` 
@@ -284,11 +284,11 @@ export interface iPrintessApi {
    */
   spreadCount(): number
 
-   /**
-   * Returns true is the user has made edits on a spread.
-   * @param spreadId: ID of Spread to check for edits - otherwise checks for current spread
-   */
-   hasBuyerContentEdits(spreadId?: string): boolean
+  /**
+  * Returns true is the user has made edits on a spread.
+  * @param spreadIdOrIndex: ID or Index of Spread to check for - if empty it checks for current spread
+  */
+  hasBuyerContentEdits(spreadIdOrIndex?: string | number): boolean
 
   /**
    * Returns all available properties in teh current document
@@ -422,7 +422,7 @@ export interface iPrintessApi {
    * Resets all image filters (meta-values) of an image-property to default
    * @param propertyId 
    */
-  resetImageFilters(propertyId: string): Promise<void>;
+  resetImageFilters(propertyId: string, imageMeta?: iExternalimageMeta): Promise<void>;
 
   /**
    * Uploads one or many images to Printess and can auto assign the first image
@@ -459,7 +459,25 @@ export interface iPrintessApi {
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
 
-  getImages(propertyId: string): Array<iExternalImage>;
+  /**
+   * Returns Buyer-Side Flag if ui should show a dedicated image tab
+   */
+  showImageTab(): boolean;
+  /**
+   * automatically distribute all non used uploaded images to frames which have not been assigned yet.
+   */
+  distributeImages(): void;
+  /**
+   * If property is empty it returns the list of buyer uploaded images.
+   * @param propertyId id of property which shows the image list
+   */
+  getImages(propertyId?: string): Array<iExternalImage>
+
+  /**
+   * Returns all buyer uploaded images including information if the image is in use
+   */
+  getAllImages(propertyId?: string): Array<iExternalImage & iExternalImageUsage>
+
 
   getFonts(propertyId: string): Array<{
     name: string;
@@ -871,6 +889,10 @@ export interface iExternalImage {
   width: number;
   height: number;
 }
+export interface iExternalImageUsage {
+  inUse: boolean;
+}
+
 export interface iExternalButton {
   type: "callback" | "print" | "back" | "next" | "addToBasket" | "undo" | "redo",
   callback?: () => void,

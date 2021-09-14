@@ -221,12 +221,29 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
 
   if (state === "document") {
     //****** Show Document Wide Options
+    const propsDiv = document.createElement("div");
+    let setEventTab = false;
     for (const p of properties) {
+      setEventTab = p.label === "events" ? true : false;
       t.push(JSON.stringify(p, undefined, 2));
-      container.appendChild(getPropertyControl(printess, p));
+      propsDiv.appendChild(getPropertyControl(printess, p));
       validate(printess, p);
     }
-    container.appendChild(renderGroupSnippets(printess, groupSnippets, false))
+    if (printess.showImageTab()) {
+      const tabsPanel = [];
+      if (properties.length > 0) {
+        const tabLabel = setEventTab ? printess.gl("ui.eventTab") : printess.gl("ui.propertyTab");
+        tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv })
+      }
+      tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImages(printess) })
+      if (groupSnippets.length > 0) {
+        tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) })
+      }
+      container.appendChild(getTabPanel(tabsPanel));
+    } else {
+      container.appendChild(propsDiv);
+      container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+    }
   } else {
     //****** Show Just the frame / text Properties
     let colorsContainer = null;
@@ -798,7 +815,7 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
           input.classList.add("is-invalid");
           validation.innerText = printess.gl("errors.textOverflowShort");
           return;
-        } 
+        }
       }
 
       // container.classList.add("was-validated"); // add to activate BS-green-marker
@@ -1081,8 +1098,9 @@ function getTabPanel(tabs: Array<{ title: string, id: string, content: HTMLEleme
 
 }
 
-function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
-  const container = document.createElement("div");
+function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty, filterDiv?: HTMLDivElement): HTMLElement {
+  const container = filterDiv || document.createElement("div");
+
   /*** Effects ***/
   p.imageMeta?.allows.forEach(metaProperty => {
     switch (metaProperty) {
@@ -1093,6 +1111,26 @@ function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty): HT
       case "hueRotate": container.appendChild(getNumberSlider(printess, p, "image-hueRotate")); break;
     }
   })
+
+  const filterBtn = document.createElement("button");
+  filterBtn.className = "btn btn-secondary";
+  filterBtn.textContent = "Reset Filter";
+  filterBtn.style.width = "100%";
+  filterBtn.style.marginTop = "30px";
+  filterBtn.onclick = async () => {
+    if (p.imageMeta) {
+      p.imageMeta.brightness = 0;
+      p.imageMeta.sepia = 0;
+      p.imageMeta.hueRotate = 0;
+      p.imageMeta.contrast = 0;
+      p.imageMeta.vivid = 0;
+      await printess.resetImageFilters(p.id, p.imageMeta);
+    }
+    container.innerHTML = "";
+    getImageFilterControl(printess, p, container);
+  }
+
+  container.appendChild(filterBtn);
   return container;
 }
 
@@ -1305,6 +1343,7 @@ function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaPrope
   const rangeLabel = document.createElement("label");
   const range: HTMLInputElement = document.createElement("input");
   range.className = "form-range";
+  range.id = metaProperty ?? "";
   range.type = "range";
   range.min = ui.meta.min.toString();
   range.max = ui.meta.max.toString();
@@ -1877,10 +1916,40 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
 
     pages.appendChild(ul);
   }
-
 }
 
+/*
+ * My Images List
+ */
 
+function renderMyImages(printess: iPrintessApi): HTMLElement {
+  const container =  document.createElement("div");
+  const imagePanel = document.createElement("div");
+  imagePanel.className = "image-panel";
+  const imageList = document.createElement("div");
+  imageList.classList.add("image-list");
+  const images = printess.getImages();
+  for (const im of images) {
+    const thumb = document.createElement("div");
+    thumb.className = "big";
+    thumb.draggable = true;
+    thumb.ondragstart = (ev: DragEvent) => ev.dataTransfer?.setData('text/plain', `${im.id}`);
+    thumb.style.backgroundImage = im.thumbCssUrl;
+    imageList.appendChild(thumb);
+  }
+  imagePanel.appendChild(imageList);
+  container.appendChild(imageList);
+ 
+  const distributeButton = document.createElement("button");
+  distributeButton.className = "btn btn-primary mb-3";
+  distributeButton.innerText = "Distribute Images"
+  distributeButton.onclick = () => {
+    printess.distributeImages();
+  }
+  container.appendChild(distributeButton);
+
+  return container;
+}
 
 /*
  * Snippets Lists
@@ -3090,7 +3159,6 @@ function easeInOutQuad(t: number, b: number, c: number, d: number) {
 /*
  *   Overlay Callbacks
  */
-// TODO get overlay style injection 
 function getOverlay(printess: iPrintessApi, properties: Array<iExternalProperty>): HTMLElement {
   // console.log("+++++++Properties", properties);
   const isSingleLineText = properties.filter(p => p.kind === "single-line-text").length > 0;
