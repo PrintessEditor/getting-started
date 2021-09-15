@@ -36,6 +36,7 @@ function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
         const errors = printess.validate("all");
         if (errors.length > 0) {
+            printess.bringErrorIntoView(errors[0]);
             getValidationOverlay(printess, errors);
             return;
         }
@@ -56,6 +57,7 @@ function addToBasket(printess) {
 function gotoNextStep(printess) {
     const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
     if (errors.length > 0) {
+        printess.bringErrorIntoView(errors[0]);
         getValidationOverlay(printess, errors);
         return;
     }
@@ -192,9 +194,7 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
     }
     if (state === "document") {
         const propsDiv = document.createElement("div");
-        let setEventTab = false;
         for (const p of properties) {
-            setEventTab = p.label === "events" ? true : false;
             t.push(JSON.stringify(p, undefined, 2));
             propsDiv.appendChild(getPropertyControl(printess, p));
             validate(printess, p);
@@ -202,10 +202,10 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
         if (printess.showImageTab()) {
             const tabsPanel = [];
             if (properties.length > 0) {
-                const tabLabel = setEventTab ? printess.gl("ui.eventTab") : printess.gl("ui.propertyTab");
+                const tabLabel = printess.formFieldTabCaption();
                 tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv });
             }
-            tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImages(printess) });
+            tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImagesTab(printess) });
             if (groupSnippets.length > 0) {
                 tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) });
             }
@@ -427,7 +427,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
             inp.value = "";
         }
     };
-    const r = addLabel(printess, inp, p, forMobile);
+    const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
     return r;
 }
 function getDesktopTitle(printess) {
@@ -596,28 +596,28 @@ function getTextArea(printess, p, forMobile) {
     inp.rows = 6;
     if (forMobile) {
         inp.className = "mobile-text-area";
-        return addLabel(printess, inp, p, forMobile);
+        return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
     }
     else {
         inp.className = "desktop-text-area";
-        return addLabel(printess, inp, p, forMobile);
+        return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
     }
 }
-function addLabel(printess, input, p, forMobile, label) {
+function addLabel(printess, input, id, forMobile, kind, label) {
     input.classList.add("form-control");
     const container = document.createElement("div");
     container.classList.add("mb-3");
-    container.id = "cnt_" + p.id;
-    if (p.label || label) {
+    container.id = "cnt_" + id;
+    if (label) {
         const htmlLabel = document.createElement("label");
         htmlLabel.className = "form-label";
-        htmlLabel.setAttribute("for", "inp_" + p.id);
-        htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(p.label) || "");
+        htmlLabel.setAttribute("for", "inp_" + id);
+        htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(label) || "");
         htmlLabel.style.display = forMobile ? "none" : "inline-block";
-        if (p.kind === "image") {
+        if (kind === "image") {
             const button = document.createElement("button");
             button.className = "btn btn-primary image-upload-btn";
-            button.id = "upload-btn-" + p.id;
+            button.id = "upload-btn-" + id;
             htmlLabel.classList.add("image-upload-label");
             button.appendChild(htmlLabel);
             container.appendChild(button);
@@ -626,10 +626,10 @@ function addLabel(printess, input, p, forMobile, label) {
             container.appendChild(htmlLabel);
         }
     }
-    input.id = "inp_" + p.id;
+    input.id = "inp_" + id;
     container.appendChild(input);
     const validation = document.createElement("div");
-    validation.id = "val_" + p.id;
+    validation.id = "val_" + id;
     validation.classList.add("invalid-feedback");
     validation.innerText = printess.gl("errors.textMissingInline");
     container.appendChild(validation);
@@ -714,7 +714,7 @@ function getImageSelectList(printess, p, forMobile) {
         return container;
     }
     else {
-        return addLabel(printess, container, p, forMobile);
+        return addLabel(printess, container, p.id, forMobile, p.kind, p.label);
     }
 }
 function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
@@ -844,7 +844,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
         return ddContent;
     }
     else {
-        return addLabel(printess, dropdown, p, false);
+        return addLabel(printess, dropdown, p.id, false, p.kind, p.label);
     }
 }
 function getDropdownItemContent(printess, meta, entry) {
@@ -933,10 +933,8 @@ function getImageFilterControl(printess, p, filterDiv) {
         }
     });
     const filterBtn = document.createElement("button");
-    filterBtn.className = "btn btn-secondary";
+    filterBtn.className = "btn btn-secondary mt-4 w-100";
     filterBtn.textContent = "Reset Filter";
-    filterBtn.style.width = "100%";
-    filterBtn.style.marginTop = "30px";
     filterBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
         if (p.imageMeta) {
             p.imageMeta.brightness = 0;
@@ -988,50 +986,10 @@ function getImageRotateControl(printess, p) {
 function getImageUploadControl(printess, p, container, forMobile = false) {
     var _a;
     container = container || document.createElement("div");
-    const fileUpload = document.createElement("div");
-    fileUpload.className = "mb-3";
-    fileUpload.id = "cnt_" + p.id;
-    const progressDiv = document.createElement("div");
-    progressDiv.className = "progress";
-    const progressBar = document.createElement("div");
-    progressBar.className = "progress-bar";
-    progressBar.style.width = "0%";
-    progressDiv.style.display = "none";
-    progressDiv.appendChild(progressBar);
-    const inp = document.createElement("input");
-    inp.type = "file";
-    inp.id = "inp_" + p.id;
-    inp.className = "form-control";
-    inp.accept = "image/png,image/jpg,image/jpeg";
-    inp.multiple = true;
-    inp.style.display = "none";
-    inp.onchange = () => {
-        var _a;
-        if (inp && ((_a = inp.files) === null || _a === void 0 ? void 0 : _a.length)) {
-            inp.disabled = true;
-            inp.style.display = "none";
-            if (scaleControl)
-                scaleControl.style.display = "none";
-            imagePanel.style.display = "none";
-            progressDiv.style.display = "flex";
-            const label = document.getElementById("upload-btn-" + p.id);
-            if (label) {
-                label.style.display = "none";
-            }
-            printess.uploadImages(inp.files, (progress) => {
-                progressBar.style.width = (progress * 100) + "%";
-            }, true, p.id);
-        }
-    };
-    const uploadLabel = document.createElement("label");
-    uploadLabel.className = "form-label";
-    uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
-    uploadLabel.setAttribute("for", "inp_" + p.id);
-    fileUpload.appendChild(addLabel(printess, inp, p, forMobile, ""));
-    container.appendChild(progressDiv);
-    container.appendChild(fileUpload);
+    container.appendChild(getImageUplaodButton(printess, p.id, forMobile, true));
     const imagePanel = document.createElement("div");
     imagePanel.className = "image-panel";
+    imagePanel.id = "image-panel" + p.id;
     const imageListWrapper = document.createElement("div");
     imageListWrapper.classList.add("image-list-wrapper");
     const imageList = document.createElement("div");
@@ -1050,8 +1008,8 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
             thumb.style.border = "2px solid red";
         thumb.onclick = () => {
             printess.setProperty(p.id, im.id);
-            p.value = im.id,
-                validate(printess, p);
+            p.value = im.id;
+            validate(printess, p);
         };
         imageList.appendChild(thumb);
     }
@@ -1070,9 +1028,61 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
         return container;
     }
 }
+function getImageUplaodButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true) {
+    const container = document.createElement("div");
+    const fileUpload = document.createElement("div");
+    fileUpload.className = "mb-3";
+    fileUpload.id = "cnt_" + id;
+    const progressDiv = document.createElement("div");
+    progressDiv.className = "progress";
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar";
+    progressBar.style.width = "0%";
+    progressDiv.style.display = "none";
+    progressDiv.appendChild(progressBar);
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.id = "inp_" + id;
+    inp.className = "form-control";
+    inp.accept = "image/png,image/jpg,image/jpeg";
+    inp.multiple = true;
+    inp.style.display = "none";
+    inp.onchange = () => {
+        var _a;
+        if (inp && ((_a = inp.files) === null || _a === void 0 ? void 0 : _a.length)) {
+            inp.disabled = true;
+            inp.style.display = "none";
+            const scaleControl = document.getElementById("range-label");
+            if (scaleControl)
+                scaleControl.style.display = "none";
+            const imagePanel = document.getElementById("image-panel" + id);
+            if (imagePanel)
+                imagePanel.style.display = "none";
+            progressDiv.style.display = "flex";
+            const label = document.getElementById("upload-btn-" + id);
+            if (label) {
+                label.style.display = "none";
+            }
+            printess.uploadImages(inp.files, (progress) => {
+                progressBar.style.width = (progress * 100) + "%";
+            }, assignToFrameOrNewFrame, id);
+            if (!assignToFrameOrNewFrame)
+                renderMyImagesTab(printess);
+        }
+    };
+    const uploadLabel = document.createElement("label");
+    uploadLabel.className = "form-label";
+    uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
+    uploadLabel.setAttribute("for", "inp_" + id);
+    fileUpload.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage"));
+    container.appendChild(progressDiv);
+    container.appendChild(fileUpload);
+    return container;
+}
 function getImageScaleControl(printess, p, forMobile = false) {
     var _a, _b, _c, _d, _f, _g;
     const rangeLabel = document.createElement("label");
+    rangeLabel.id = "range-label";
     const range = document.createElement("input");
     range.className = "form-range";
     range.type = "range";
@@ -1594,30 +1604,29 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
         pages.appendChild(ul);
     }
 }
-function renderMyImages(printess) {
+function renderMyImagesTab(printess) {
     const container = document.createElement("div");
-    const imagePanel = document.createElement("div");
-    imagePanel.className = "image-panel";
+    container.innerHTML = "";
     const imageList = document.createElement("div");
     imageList.classList.add("image-list");
-    const images = printess.getImages();
+    const images = printess.getAllImages();
     for (const im of images) {
         const thumb = document.createElement("div");
         thumb.className = "big";
         thumb.draggable = true;
         thumb.ondragstart = (ev) => { var _a; return (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${im.id}`); };
         thumb.style.backgroundImage = im.thumbCssUrl;
+        thumb.style.opacity = im.inUse ? "0.5" : "1.0";
         imageList.appendChild(thumb);
     }
-    imagePanel.appendChild(imageList);
+    const distributeBtn = document.createElement("button");
+    distributeBtn.className = "btn btn-primary my-3 w-100";
+    distributeBtn.innerText = printess.gl("ui.buttonDistribute");
+    distributeBtn.onclick = () => printess.distributeImages();
     container.appendChild(imageList);
-    const distributeButton = document.createElement("button");
-    distributeButton.className = "btn btn-primary mb-3";
-    distributeButton.innerText = "Distribute Images";
-    distributeButton.onclick = () => {
-        printess.distributeImages();
-    };
-    container.appendChild(distributeButton);
+    if (images.length > 0)
+        container.appendChild(distributeBtn);
+    container.appendChild(getImageUplaodButton(printess, "file-uploader", false, false));
     return container;
 }
 function renderGroupSnippets(printess, groupSnippets, forMobile) {
@@ -1951,7 +1960,7 @@ function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWi
         return ddContent;
     }
     else {
-        return addLabel(printess, dropdown, p, false, col.label || col.name);
+        return addLabel(printess, dropdown, p.id, false, p.kind, col.label || col.name);
     }
 }
 function getTableDropdownItemContent(printess, value) {
@@ -1978,7 +1987,7 @@ function getTableTextBox(printess, p, rowIndex, row, col, forMobile) {
         return inp;
     }
     else {
-        const r = addLabel(printess, inp, p, forMobile, col.label || col.name);
+        const r = addLabel(printess, inp, p.id, forMobile, p.kind, col.label || col.name);
         return r;
     }
 }

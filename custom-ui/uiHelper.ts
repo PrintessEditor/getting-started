@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import { iconName, iExternalError, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn } from "./printess-editor";
+import { iconName, iExternalError, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn, iExternalPropertyKind } from "./printess-editor";
 
 declare const bootstrap: any;
 
@@ -40,6 +40,7 @@ console.log("Printess ui-helper loaded");
 async function addToBasket(printess: iPrintessApi) {
   const errors = printess.validate("all");
   if (errors.length > 0) {
+    printess.bringErrorIntoView(errors[0]);
     getValidationOverlay(printess, errors);
     return;
   }
@@ -62,6 +63,7 @@ function gotoNextStep(printess: iPrintessApi) {
 
   const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
   if (errors.length > 0) {
+    printess.bringErrorIntoView(errors[0]);
     getValidationOverlay(printess, errors);
     return;
   }
@@ -222,9 +224,9 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
   if (state === "document") {
     //****** Show Document Wide Options
     const propsDiv = document.createElement("div");
-    let setEventTab = false;
+    //let setEventTab = false;
     for (const p of properties) {
-      setEventTab = p.label === "events" ? true : false;
+      //setEventTab = p.tableMeta && p.tableMeta.tableType === "calendar-events" ? true : false;
       t.push(JSON.stringify(p, undefined, 2));
       propsDiv.appendChild(getPropertyControl(printess, p));
       validate(printess, p);
@@ -232,10 +234,11 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
     if (printess.showImageTab()) {
       const tabsPanel = [];
       if (properties.length > 0) {
-        const tabLabel = setEventTab ? printess.gl("ui.eventTab") : printess.gl("ui.propertyTab");
+        //const tabLabel = setEventTab ? printess.gl("ui.eventTab") : printess.formFieldTabCaption();
+        const tabLabel = printess.formFieldTabCaption();
         tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv })
       }
-      tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImages(printess) })
+      tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImagesTab(printess) })
       if (groupSnippets.length > 0) {
         tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) })
       }
@@ -512,7 +515,7 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
     }
   }
 
-  const r = addLabel(printess, inp, p, forMobile);
+  const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
   return r;
 
   /* window.setTimeout(() => {
@@ -726,33 +729,33 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
 
   if (forMobile) {
     inp.className = "mobile-text-area";
-    return addLabel(printess, inp, p, forMobile);
+    return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
   } else {
     inp.className = "desktop-text-area";
-    return addLabel(printess, inp, p, forMobile);
+    return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
   }
 
 
 }
 
-function addLabel(printess: iPrintessApi, input: HTMLElement, p: iExternalProperty, forMobile: boolean, label?: string): HTMLElement {
+function addLabel(printess: iPrintessApi, input: HTMLElement, id: string, forMobile: boolean, kind: iExternalPropertyKind, label?: string): HTMLElement {
   input.classList.add("form-control");
 
   const container = document.createElement("div");
   container.classList.add("mb-3");
-  container.id = "cnt_" + p.id;
+  container.id = "cnt_" + id;
 
-  if (p.label || label) {
+  if (label) {
     const htmlLabel = document.createElement("label");
     htmlLabel.className = "form-label";
-    htmlLabel.setAttribute("for", "inp_" + p.id);
-    htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(p.label) || "");
+    htmlLabel.setAttribute("for", "inp_" + id);
+    htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(label) || "");
     htmlLabel.style.display = forMobile ? "none" : "inline-block";
 
-    if (p.kind === "image") {
+    if (kind === "image") {
       const button = document.createElement("button");
       button.className = "btn btn-primary image-upload-btn";
-      button.id = "upload-btn-" + p.id;
+      button.id = "upload-btn-" + id;
       htmlLabel.classList.add("image-upload-label");
       button.appendChild(htmlLabel);
       container.appendChild(button);
@@ -761,11 +764,11 @@ function addLabel(printess: iPrintessApi, input: HTMLElement, p: iExternalProper
     }
   }
 
-  input.id = "inp_" + p.id;
+  input.id = "inp_" + id;
   container.appendChild(input);
 
   const validation = document.createElement("div");
-  validation.id = "val_" + p.id;
+  validation.id = "val_" + id;
   validation.classList.add("invalid-feedback");
   validation.innerText = printess.gl("errors.textMissingInline");
 
@@ -869,10 +872,8 @@ function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMob
   if (forMobile) {
     return container;
   } else {
-    return addLabel(printess, container, p, forMobile);
+    return addLabel(printess, container, p.id, forMobile, p.kind, p.label);
   }
-
-
 }
 
 
@@ -1016,7 +1017,7 @@ function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boole
   if (asList) {
     return ddContent;
   } else {
-    return addLabel(printess, dropdown, p, false);
+    return addLabel(printess, dropdown, p.id, false, p.kind, p.label);
   }
 }
 
@@ -1113,10 +1114,8 @@ function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty, fil
   })
 
   const filterBtn = document.createElement("button");
-  filterBtn.className = "btn btn-secondary";
+  filterBtn.className = "btn btn-secondary mt-4 w-100";
   filterBtn.textContent = "Reset Filter";
-  filterBtn.style.width = "100%";
-  filterBtn.style.marginTop = "30px";
   filterBtn.onclick = async () => {
     if (p.imageMeta) {
       p.imageMeta.brightness = 0;
@@ -1182,71 +1181,12 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   // for redraw after upoad, take passed container instead
   container = container || document.createElement("div");
 
-
-  /***+ IMAGE UPLOAD ****/
-  const fileUpload = document.createElement("div");
-  fileUpload.className = "mb-3";
-  fileUpload.id = "cnt_" + p.id;
-
-  const progressDiv = document.createElement("div");
-  progressDiv.className = "progress";
-  const progressBar = document.createElement("div");
-  progressBar.className = "progress-bar";
-  progressBar.style.width = "0%";
-  progressDiv.style.display = "none";
-  progressDiv.appendChild(progressBar);
-
-
-  const inp = document.createElement("input");
-  inp.type = "file";
-  inp.id = "inp_" + p.id;
-  inp.className = "form-control"
-  inp.accept = "image/png,image/jpg,image/jpeg"; // do not add pdf or svg, since it cannot be rotated!!
-  inp.multiple = true;
-  inp.style.display = "none";
-  inp.onchange = () => {
-
-    // printess.setProperty(p.id, inp.value);
-    if (inp && inp.files?.length) {
-      inp.disabled = true;
-      inp.style.display = "none";
-      if (scaleControl) scaleControl.style.display = "none";
-      imagePanel.style.display = "none";
-      progressDiv.style.display = "flex";
-
-      const label = document.getElementById("upload-btn-" + p.id);
-      if (label) {
-        label.style.display = "none";
-      }
-
-      // can upload multiple files at once
-      printess.uploadImages(inp.files, (progress) => {
-        progressBar.style.width = (progress * 100) + "%"
-      }
-        , true, p.id); // true auto assigns image and triggers selection change which redraws this control.
-
-      // optional: promise resolution returns list of added images 
-      // if auto assign is "false" you must reset progress-bar width and control visibilty manually
-      // .then(images => {console.log(images)};
-
-    }
-  };
-
-  /* optinally add label before upload */
-  const uploadLabel = document.createElement("label");
-  uploadLabel.className = "form-label";
-  uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
-  uploadLabel.setAttribute("for", "inp_" + p.id);
-  // remove comments below to  add label
-  // fileUpload.appendChild(uploadLabel);
-
-
-  fileUpload.appendChild(addLabel(printess, inp, p, forMobile, "")); // to add error-message display 
-  container.appendChild(progressDiv);
-  container.appendChild(fileUpload);
+  /**** IMAGE UPLOAD ****/
+  container.appendChild(getImageUplaodButton(printess, p.id, forMobile, true));
 
   const imagePanel = document.createElement("div");
   imagePanel.className = "image-panel";
+  imagePanel.id = "image-panel" + p.id;
 
   const imageListWrapper = document.createElement("div");
   imageListWrapper.classList.add("image-list-wrapper");
@@ -1265,15 +1205,13 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
     if (im.id === p.value) thumb.style.border = "2px solid red";
     thumb.onclick = () => {
       printess.setProperty(p.id, im.id);
-      p.value = im.id,
-        validate(printess, p);
+      p.value = im.id;
+      validate(printess, p);
     }
     imageList.appendChild(thumb);
   }
   imageListWrapper.appendChild(imageList);
   imagePanel.appendChild(imageListWrapper)
-
-
 
   /*** SCALE ***/
   let scaleControl: HTMLElement | undefined = undefined;
@@ -1287,13 +1225,82 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
     container.appendChild(scaleControl);
     return container;
   }
-
 }
 
+function getImageUplaodButton(printess: iPrintessApi, id: string, forMobile: boolean = false, assignToFrameOrNewFrame: boolean = true): HTMLDivElement {
+  const container = document.createElement("div");
+
+  /***+ IMAGE UPLOAD ****/
+  const fileUpload = document.createElement("div");
+  fileUpload.className = "mb-3";
+  fileUpload.id = "cnt_" + id;
+
+  const progressDiv = document.createElement("div");
+  progressDiv.className = "progress";
+  const progressBar = document.createElement("div");
+  progressBar.className = "progress-bar";
+  progressBar.style.width = "0%";
+  progressDiv.style.display = "none";
+  progressDiv.appendChild(progressBar);
+
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.id = "inp_" + id;
+  inp.className = "form-control"
+  inp.accept = "image/png,image/jpg,image/jpeg"; // do not add pdf or svg, since it cannot be rotated!!
+  inp.multiple = true;
+  inp.style.display = "none";
+  inp.onchange = () => {
+
+    // printess.setProperty(p.id, inp.value);
+    if (inp && inp.files?.length) {
+      inp.disabled = true;
+      inp.style.display = "none";
+
+      const scaleControl = document.getElementById("range-label");
+      if (scaleControl) scaleControl.style.display = "none";
+      const imagePanel = document.getElementById("image-panel" + id);
+      if (imagePanel) imagePanel.style.display = "none";
+      progressDiv.style.display = "flex";
+
+      const label = document.getElementById("upload-btn-" + id);
+      if (label) {
+        label.style.display = "none";
+      }
+
+      // can upload multiple files at once
+      printess.uploadImages(inp.files, (progress) => {
+        progressBar.style.width = (progress * 100) + "%"
+      }
+        , assignToFrameOrNewFrame, id); // true auto assigns image and triggers selection change which redraws this control.
+
+      // optional: promise resolution returns list of added images 
+      // if auto assign is "false" you must reset progress-bar width and control visibilty manually
+      // .then(images => {console.log(images)};
+
+      if (!assignToFrameOrNewFrame) renderMyImagesTab(printess);
+    }
+  };
+
+  /* optinally add label before upload */
+  const uploadLabel = document.createElement("label");
+  uploadLabel.className = "form-label";
+  uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
+  uploadLabel.setAttribute("for", "inp_" + id);
+  // remove comments below to  add label
+  // fileUpload.appendChild(uploadLabel);
+
+  fileUpload.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage")); // to add error-message display 
+  container.appendChild(progressDiv);
+  container.appendChild(fileUpload);
+
+  return container;
+}
 
 function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean = false): HTMLElement {
 
   const rangeLabel = document.createElement("label");
+  rangeLabel.id = "range-label"
   const range: HTMLInputElement = document.createElement("input");
   range.className = "form-range";
 
@@ -1922,32 +1929,32 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
  * My Images List
  */
 
-function renderMyImages(printess: iPrintessApi): HTMLElement {
-  const container =  document.createElement("div");
-  const imagePanel = document.createElement("div");
-  imagePanel.className = "image-panel";
+function renderMyImagesTab(printess: iPrintessApi): HTMLElement {
+  const container = document.createElement("div");
+  container.innerHTML = "";
+
   const imageList = document.createElement("div");
   imageList.classList.add("image-list");
-  const images = printess.getImages();
+  const images = printess.getAllImages();
+
   for (const im of images) {
     const thumb = document.createElement("div");
     thumb.className = "big";
     thumb.draggable = true;
     thumb.ondragstart = (ev: DragEvent) => ev.dataTransfer?.setData('text/plain', `${im.id}`);
     thumb.style.backgroundImage = im.thumbCssUrl;
+    thumb.style.opacity = im.inUse ? "0.5" : "1.0";
     imageList.appendChild(thumb);
   }
-  imagePanel.appendChild(imageList);
-  container.appendChild(imageList);
- 
-  const distributeButton = document.createElement("button");
-  distributeButton.className = "btn btn-primary mb-3";
-  distributeButton.innerText = "Distribute Images"
-  distributeButton.onclick = () => {
-    printess.distributeImages();
-  }
-  container.appendChild(distributeButton);
 
+  const distributeBtn = document.createElement("button");
+  distributeBtn.className = "btn btn-primary my-3 w-100";
+  distributeBtn.innerText = printess.gl("ui.buttonDistribute");
+  distributeBtn.onclick = () => printess.distributeImages();
+
+  container.appendChild(imageList);
+  if (images.length > 0) container.appendChild(distributeBtn);
+  container.appendChild(getImageUplaodButton(printess, "file-uploader", false, false));
   return container;
 }
 
@@ -2318,7 +2325,7 @@ function getTableDetailsDropDown(printess: iPrintessApi, p: iExternalProperty, r
   if (asList) {
     return ddContent;
   } else {
-    return addLabel(printess, dropdown, p, false, col.label || col.name);
+    return addLabel(printess, dropdown, p.id, false, p.kind, col.label || col.name);
   }
 }
 function getTableDropdownItemContent(printess: iPrintessApi, value: string | number): HTMLElement {
@@ -2351,7 +2358,7 @@ function getTableTextBox(printess: iPrintessApi, p: iExternalProperty, rowIndex:
     inp.classList.add("form-control");
     return inp;
   } else {
-    const r = addLabel(printess, inp, p, forMobile, col.label || col.name);
+    const r = addLabel(printess, inp, p.id, forMobile, p.kind, col.label || col.name);
     return r;
   }
 }

@@ -95,6 +95,11 @@ export interface printessAttachParameters {
   showFrameWarnings?: "sign and hint" | "sign only" | "hint only" | "none";
 
   /**
+   * Turns animations for selected frames of, no matter what is set in the template. 
+   */
+  buyerSelectionAnimation?: boolean;
+
+  /**
    * If you application displays a loading animation, this call tells you to start
    * your fade-out animation. Loading will be done soon. 
    */
@@ -160,6 +165,12 @@ export interface printessAttachParameters {
    * Design is automtically saved and function gets a [token] to load or print this design
    */
   backButtonCallback?: (saveToken: string) => void,
+
+  /**
+   * Provide a callback function which is called whenever the buyer-image-list changed or an image is assigned to a frame
+   * Use it, to redraw your buyer-image list if you have one.
+   */
+  imageListChangeCallback?: (saveToken: string) => void,
 }
 
 /**
@@ -232,8 +243,9 @@ export interface iPrintessApi {
   /**
    * Select and zoom to the frame(s) mentioned in the error object.
    * @param err
+   * @param zoomToSelection Overrides the default zoom behaviour of the item / template
    */
-  bringErrorIntoView(err: iExternalError): Promise<void>
+   bringErrorIntoView(err: iExternalError, zoomToSelection?: boolean): Promise<void> 
 
   /**
    * Selects all frames which are marked as **background**
@@ -463,10 +475,17 @@ export interface iPrintessApi {
    * Returns Buyer-Side Flag if ui should show a dedicated image tab
    */
   showImageTab(): boolean;
+
+  /**
+   * Retrieve the caption for the document-form-field-tab 
+   */
+  formFieldTabCaption(): string
+
   /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
    */
   distributeImages(): void;
+
   /**
    * If property is empty it returns the list of buyer uploaded images.
    * @param propertyId id of property which shows the image list
