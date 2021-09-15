@@ -78,9 +78,15 @@ export interface printessAttachParameters {
 
   /**
    * list if custom-translations to be used by Printess buyer-side.
+   * If set, it overrides all translations from your account-settings
    * https://printess.com/kb/api-reference/custom-integration/index.html#translations
    */
   translations?: Record<string, Record<string, string> | string>;
+
+  /**
+   * Pass key of desired languages, fallbacks to "auto" -> window.navigator.language
+   */
+  translationKey?: string | "auto";
 
   /**
    * To prevent the use of offensive language in customizeable texts, you can pass a list of forbidden words.
