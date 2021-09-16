@@ -251,7 +251,7 @@ export interface iPrintessApi {
    * @param err
    * @param zoomToSelection Overrides the default zoom behaviour of the item / template
    */
-   bringErrorIntoView(err: iExternalError, zoomToSelection?: boolean): Promise<void> 
+  bringErrorIntoView(err: iExternalError, zoomToSelection?: boolean): Promise<void>
 
   /**
    * Selects all frames which are marked as **background**
@@ -439,8 +439,17 @@ export interface iPrintessApi {
   /**
    * Resets all image filters (meta-values) of an image-property to default
    * @param propertyId 
+   * @param imageMeta optinonal parameter, can be used to set all image-filters to specific values.
    */
-  resetImageFilters(propertyId: string, imageMeta?: iExternalimageMeta): Promise<void>;
+  resetImageFilters(
+    propertyId: string,
+    imageMeta?: {
+      brightness?: number,
+      sepia?: number,
+      hueRotate?: number,
+      contrast?: number,
+      vivid?: number,
+    }): Promise<void>;
 
   /**
    * Uploads one or many images to Printess and can auto assign the first image
