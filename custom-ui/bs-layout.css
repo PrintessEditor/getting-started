@@ -38,6 +38,9 @@ body.no-mobile-button-bar {
   --mobile-buttonbar-height: 0px;
 }
 
+body.mobile-has-steps-header {
+  --mobile-navbar-height: 78px;
+}
 hr {
   margin: 0;  
 }
@@ -210,6 +213,7 @@ input[type="radio"]:checked+label > svg {
 
 .show-layouts-button {
   position: absolute;
+  visibility: hidden;
   left: 0px;
   top: calc(50% - 200px);
   display: flex;
@@ -370,10 +374,10 @@ input[type='range'] {
 }
 
 .step-badge-sm {
-  width: 26px;  
-  height: 26px;
-  line-height: 26px;
-  font-size: 16px;
+  width: 22px;  
+  height: 22px;
+  line-height: 22px;
+  font-size: 14px;
 }
 
 /*
@@ -911,14 +915,26 @@ input[type='range'] {
 .mobile-navbar {
   display: none;
   position: absolute !important; /* to not be overidden by BS */
+  flex-direction: column;
   left: 0;
   top: 0;
   right: 0;
 }
+.mobile-step-bar {
+   height: 30px;
+   overflow: hidden;
+/*  padding-bottom: 4px;
+  margin-top: 0px;*/
+}
+
 .mobile-navbar .icon {
-  width:20px;
-  height:20px;
+  width:24px;
+  height:24px;
   color:white;
+}
+.mobile-navbar .main-button {
+  min-width: 20px;
+  white-space: nowrap;
 }
 .mobile-pagebar {
   display: none;
@@ -990,6 +1006,12 @@ body.inline-mobile-page-bar .mobile-pagebar {
     column-gap: 0;
     height: 100px !important; /* to ensure its not bigger than the viewport */
   }
+
+#desktop-printess-container {
+  box-shadow: none;
+  border:  none;
+}
+
   #printessin {
     position: absolute;
     z-index: var(--mobile-printess-z-index);
