@@ -107,7 +107,7 @@ export interface printessAttachParameters {
   * `const url = await printess.renderFirstPageImage("thumbnail.png");`
   */
   noBasketThumbnail?: false,
- 
+
   /**
    * Optional: set frame warnings via api (can be set in template-presets as well) 
    */
@@ -243,7 +243,7 @@ export interface iPrintessApi {
   /**
    * Returns true if the `noBasketThumbnail` flag was set on attach.
    */
-  noBasketThumbnail() : boolean
+  noBasketThumbnail(): boolean
 
   /**
    * Returns the back button callback you have set in `attachPrintess()`
@@ -526,7 +526,7 @@ export interface iPrintessApi {
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
    * Returns a list of all applied image-ids.
    */
-   distributeImages(): Promise<Array<string>>
+  distributeImages(): Promise<Array<string>>
 
   /**
    * If property is empty it returns the list of buyer uploaded images.
@@ -537,7 +537,7 @@ export interface iPrintessApi {
   /**
    * Returns all buyer uploaded images including information if the image is in use
    */
-  getAllImages(): Array<iExternalImage & iExternalImageUsage>
+  getAllImages(): Array<iExternalImage>
 
   /**
    * Returns if a specific image is used in buyer editable frame.
@@ -959,8 +959,6 @@ export interface iExternalImage {
   thumbCssUrl: string;
   width: number;
   height: number;
-}
-export interface iExternalImageUsage {
   inUse: boolean;
 }
 

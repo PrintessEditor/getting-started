@@ -2540,16 +2540,7 @@ function getMobileBackButton(printess: iPrintessApi, state: MobileUiState): HTML
 }
 
 function renderMobileNavBar(printess: iPrintessApi) {
-
-  const buttons = <const>["back", "undo", "next"];
-
-
-
-  //  const p = document.getElementById("desktop-printess-container");
-  // console.warn("Resize Printess Height: " + p?.offsetHeight)
-  // printess.resizePrintess(true, false, undefined, p?.offsetHeight ?? undefined);
-
-
+ 
   const navBar = getMobileNavbarDiv();
   navBar.innerHTML = "";
   let nav = document.createElement("div");

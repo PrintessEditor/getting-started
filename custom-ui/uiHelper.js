@@ -2126,7 +2126,6 @@ function getMobileBackButton(printess, state) {
     return button;
 }
 function renderMobileNavBar(printess) {
-    const buttons = ["back", "undo", "next"];
     const navBar = getMobileNavbarDiv();
     navBar.innerHTML = "";
     let nav = document.createElement("div");
