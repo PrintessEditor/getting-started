@@ -46,7 +46,10 @@ function addToBasket(printess) {
         if (callback) {
             printess.showOverlay(printess.gl("ui.saveProgress"));
             const saveToken = yield printess.save();
-            const url = yield printess.renderFirstPageImage("thumbnail.png");
+            let url = "";
+            if (printess.noBasketThumbnail() !== true) {
+                url = yield printess.renderFirstPageImage("thumbnail.png");
+            }
             callback(saveToken, url);
             printess.hideOverlay();
         }
@@ -1505,7 +1508,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
     if (pages) {
         let pageNo = 0;
         pages.innerHTML = "";
-        if (!forMobile) {
+        if (!forMobile && printess.getBackButtonCallback()) {
             const miniBar = document.createElement("div");
             const btnBack = document.createElement("button");
             btnBack.className = "btn btn-sm";
@@ -2129,99 +2132,100 @@ function renderMobileNavBar(printess) {
     let nav = document.createElement("div");
     nav.className = "navbar navbar-dark";
     nav.style.flexWrap = "nowrap";
-    for (const b of buttons) {
+    if (printess.getBackButtonCallback()) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm";
+        btn.classList.add("ms-2");
+        btn.classList.add("me-2");
+        btn.classList.add("main-button");
+        if (printess.hasPreviousStep()) {
+            const ico = printess.getIcon("arrow-left");
+            ico.classList.add("icon");
+            btn.appendChild(ico);
+        }
+        else {
+            btn.classList.add("btn-outline-light");
+            btn.innerText = printess.gl("ui.buttonBack");
+        }
+        btn.onclick = () => {
+            const callback = printess.getBackButtonCallback();
+            if (printess.hasPreviousStep()) {
+                printess.previousStep();
+                renderMobileNavBar(printess);
+            }
+            else if (callback) {
+                if (printess.isInDesignerMode()) {
+                    callback("");
+                }
+                else {
+                    printess.save().then((token) => {
+                        callback(token);
+                    });
+                }
+            }
+            else {
+                const offcanvas = document.getElementById("templateOffcanvas");
+                if (offcanvas) {
+                    const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
+                    bsOffcanvas.show();
+                }
+                else {
+                    alert(printess.gl("backButtonCallback"));
+                }
+            }
+        };
+        nav.appendChild(btn);
+    }
+    const undoredo = document.createElement("div");
+    undoredo.style.display = "flex";
+    {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm";
+        const ico = printess.getIcon("undo");
+        ico.classList.add("icon");
+        btn.onclick = () => {
+            printess.undo();
+        };
+        btn.appendChild(ico);
+        undoredo.appendChild(btn);
+    }
+    {
         const btn = document.createElement("button");
         btn.classList.add("btn");
         btn.classList.add("btn-sm");
-        switch (b) {
-            case "back":
-                btn.classList.add("ms-2");
-                btn.classList.add("me-2");
-                btn.classList.add("main-button");
-                if (printess.hasPreviousStep()) {
-                    const ico = printess.getIcon("arrow-left");
-                    ico.classList.add("icon");
-                    btn.appendChild(ico);
-                }
-                else {
-                    btn.classList.add("btn-outline-light");
-                    btn.innerText = printess.gl("ui.buttonBack");
-                }
-                btn.onclick = () => {
-                    const callback = printess.getBackButtonCallback();
-                    if (printess.hasPreviousStep()) {
-                        printess.previousStep();
-                        renderMobileNavBar(printess);
-                    }
-                    else if (callback) {
-                        if (printess.isInDesignerMode()) {
-                            callback("");
-                        }
-                        else {
-                            printess.save().then((token) => {
-                                callback(token);
-                            });
-                        }
-                    }
-                    else {
-                        const offcanvas = document.getElementById("templateOffcanvas");
-                        if (offcanvas) {
-                            const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
-                            bsOffcanvas.show();
-                        }
-                        else {
-                            alert(printess.gl("backButtonCallback"));
-                        }
-                    }
-                };
-                nav.appendChild(btn);
-                break;
-            case "next":
-                btn.classList.add("ms-2");
-                btn.classList.add("me-2");
-                btn.classList.add("btn-outline-light");
-                btn.classList.add("main-button");
-                if (printess.hasNextStep()) {
-                    btn.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
-                    const curStep = printess.getStep();
-                    const lastStep = printess.lastStep();
-                    if (curStep && lastStep) {
-                        btn.title = "Step " + curStep.index + " of " + lastStep.index;
-                    }
-                    btn.onclick = () => {
-                        gotoNextStep(printess);
-                        renderMobileNavBar(printess);
-                    };
-                }
-                else {
-                    btn.innerText = printess.gl("ui.buttonBasket");
-                    btn.onclick = () => addToBasket(printess);
-                }
-                nav.appendChild(btn);
-                break;
-            case "undo": {
-                const undoredo = document.createElement("div");
-                undoredo.style.display = "flex";
-                const ico = printess.getIcon("undo");
-                ico.classList.add("icon");
-                btn.onclick = () => {
-                    printess.undo();
-                };
-                btn.appendChild(ico);
-                undoredo.appendChild(btn);
-                const btn2 = document.createElement("button");
-                btn2.classList.add("btn");
-                btn2.classList.add("btn-sm");
-                const ico2 = printess.getIcon("redo");
-                ico2.classList.add("icon");
-                btn2.onclick = () => {
-                    printess.redo();
-                };
-                btn2.appendChild(ico2);
-                undoredo.appendChild(btn2);
-                nav.appendChild(undoredo);
-                break;
+        const ico = printess.getIcon("redo");
+        ico.classList.add("icon");
+        btn.onclick = () => {
+            printess.redo();
+        };
+        btn.appendChild(ico);
+        undoredo.appendChild(btn);
+    }
+    nav.appendChild(undoredo);
+    {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm";
+        btn.classList.add("ms-2");
+        btn.classList.add("me-2");
+        btn.classList.add("btn-outline-light");
+        btn.classList.add("main-button");
+        if (printess.hasNextStep()) {
+            btn.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
+            const curStep = printess.getStep();
+            const lastStep = printess.lastStep();
+            if (curStep && lastStep) {
+                btn.title = "Step " + curStep.index + " of " + lastStep.index;
             }
+            btn.onclick = () => {
+                gotoNextStep(printess);
+                renderMobileNavBar(printess);
+            };
+            nav.appendChild(btn);
+        }
+        else if (printess.getAddToBasketCallback()) {
+            btn.innerText = printess.gl("ui.buttonBasket");
+            btn.onclick = () => addToBasket(printess);
+            nav.appendChild(btn);
         }
     }
     navBar.appendChild(nav);
