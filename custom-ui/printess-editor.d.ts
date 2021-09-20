@@ -524,8 +524,9 @@ export interface iPrintessApi {
 
   /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
+   * Returns a list of all applied image-ids.
    */
-  distributeImages(): void;
+   distributeImages(): Promise<Array<string>>
 
   /**
    * If property is empty it returns the list of buyer uploaded images.
@@ -538,6 +539,11 @@ export interface iPrintessApi {
    */
   getAllImages(): Array<iExternalImage & iExternalImageUsage>
 
+  /**
+   * Returns if a specific image is used in buyer editable frame.
+   * @param imageId Id of image to test
+   */
+  isImageInUse(imageId: string): boolean
 
   getFonts(propertyId: string): Array<{
     name: string;
