@@ -14,6 +14,7 @@ window.uiHelper = {
     renderMobileNavBar: renderMobileNavBar,
     renderDesktopUi: renderDesktopUi,
     refreshUndoRedoState: refreshUndoRedoState,
+    refreshPagination: refreshPagination,
     viewPortScroll: viewPortScroll,
     viewPortResize: viewPortResize,
     viewPortScrollInIFrame: viewPortScrollInIFrame,
@@ -99,6 +100,17 @@ function checkAndSwitchViews(printess) {
         if (!mobile && uih_currentRender !== "desktop") {
             renderDesktopUi(printess);
         }
+    }
+}
+function refreshPagination(printess) {
+    if (uih_currentRender === "mobile") {
+        renderMobileUi(printess);
+        renderMobileNavBar(printess);
+    }
+    else {
+        const spreads = printess.getAllSpreads();
+        const info = printess.pageInfoSync();
+        renderPageNavigation(printess, spreads, info);
     }
 }
 function _viewPortScroll(printess, _what) {
@@ -244,6 +256,9 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
                 validate(printess, p);
             }
             t.push(JSON.stringify(p, undefined, 2));
+        }
+        if (properties.length === 0) {
+            container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
         }
         const hr = document.createElement("hr");
         container.appendChild(hr);
@@ -425,7 +440,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
     inp.autocapitalize = "off";
     inp.spellcheck = false;
     inp.oninput = () => {
-        printess.setProperty(p.id, inp.value);
+        printess.setProperty(p.id, inp.value).then(() => setPropertyVisibilities(printess));
         p.value = inp.value;
         validate(printess, p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -546,34 +561,25 @@ function getDesktopStepsUi(printess) {
     const hr = document.createElement("hr");
     container.appendChild(hr);
     const flex = document.createElement("div");
-    flex.className = "mb-2 d-flex align-items-center";
-    if (printess.hasPreviousStep()) {
-        const prevStep = document.createElement("button");
-        prevStep.className = "btn";
-        prevStep.style.paddingLeft = "0";
-        const svg = printess.getIcon("arrow-left");
-        svg.style.width = "20px";
-        prevStep.appendChild(svg);
-        prevStep.onclick = () => printess.previousStep();
-        flex.appendChild(prevStep);
-    }
+    flex.className = "mb-2";
+    flex.style.display = "grid";
     const cur = printess.getStep();
     const hd = printess.stepHeaderDisplay();
-    if (cur && printess.isCurrentStepActive()) {
-        if (hd === "never") {
-            const h2 = document.createElement("h2");
-            h2.style.flexGrow = "1";
-            h2.className = "mb-0";
-            h2.innerText = printess.getTemplateTitle();
-            flex.appendChild(h2);
-        }
+    if (cur && printess.isCurrentStepActive() && hd !== "never") {
+        flex.style.gridTemplateColumns = "auto 1fr auto auto";
         if (hd === "only badge" || hd === "title and badge") {
             const badge = document.createElement("div");
             badge.className = "step-badge";
             badge.innerText = (cur.index + 1).toString();
             flex.appendChild(badge);
+            if (hd === "only badge") {
+                flex.appendChild(document.createElement("div"));
+            }
         }
         if (hd === "only title" || hd === "title and badge") {
+            if (hd === "only title") {
+                flex.appendChild(document.createElement("div"));
+            }
             const h2 = document.createElement("h2");
             h2.style.flexGrow = "1";
             h2.className = "mb-0";
@@ -582,12 +588,38 @@ function getDesktopStepsUi(printess) {
         }
     }
     else {
-        flex.style.justifyContent = "space-between";
+        flex.style.gridTemplateColumns = "1fr auto auto";
+        const h2 = document.createElement("h2");
+        h2.style.flexGrow = "1";
+        h2.className = "mb-0";
+        h2.innerText = printess.getTemplateTitle();
+        flex.appendChild(h2);
+    }
+    if (printess.hasPreviousStep()) {
+        const prevStep = document.createElement("button");
+        prevStep.className = "btn btn-outline-primary me-1";
+        const svg = printess.getIcon("arrow-left");
+        svg.style.width = "18px";
+        svg.style.verticalAlign = "sub";
+        prevStep.appendChild(svg);
+        prevStep.onclick = () => printess.previousStep();
+        flex.appendChild(prevStep);
+    }
+    else {
+        flex.appendChild(document.createElement("div"));
     }
     if (printess.hasNextStep()) {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-outline-primary";
-        nextStep.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
+        if (printess.isNextStepPreview()) {
+            nextStep.innerText = printess.gl("ui.buttonPreview");
+        }
+        else {
+            const svg = printess.getIcon("arrow-right");
+            svg.style.width = "18px";
+            svg.style.verticalAlign = "sub";
+            nextStep.appendChild(svg);
+        }
         nextStep.onclick = () => gotoNextStep(printess);
         flex.appendChild(nextStep);
     }
@@ -607,7 +639,7 @@ function getTextArea(printess, p, forMobile) {
     inp.value = p.value.toString();
     inp.autocomplete = "off";
     inp.oninput = () => __awaiter(this, void 0, void 0, function* () {
-        yield printess.setProperty(p.id, inp.value);
+        yield printess.setProperty(p.id, inp.value).then(() => setPropertyVisibilities(printess));
         p.value = inp.value;
         validate(printess, p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -630,6 +662,7 @@ function addLabel(printess, input, id, forMobile, kind, label) {
     const container = document.createElement("div");
     container.classList.add("mb-3");
     container.id = "cnt_" + id;
+    container.style.display = printess.isPropertyVisible(id) ? "block" : "none";
     if (label) {
         const htmlLabel = document.createElement("label");
         htmlLabel.className = "form-label";
@@ -696,6 +729,24 @@ function validate(printess, p) {
         }
     }
 }
+function setPropertyVisibilities(printess) {
+    for (const p of uih_currentProperties) {
+        if (p.validation && p.validation.visibility !== "always") {
+            const div = document.getElementById("cnt_" + p.id);
+            if (div) {
+                const v = printess.isPropertyVisible(p.id);
+                if (v) {
+                    if (div.style.display === "none") {
+                        div.style.display = "block";
+                    }
+                }
+                else {
+                    div.style.display = "none";
+                }
+            }
+        }
+    }
+}
 function getImageSelectList(printess, p, forMobile) {
     const container = document.createElement("div");
     if (p.listMeta && p.listMeta.list) {
@@ -719,7 +770,7 @@ function getImageSelectList(printess, p, forMobile) {
             if (entry.key === p.value)
                 thumb.classList.add("selected");
             thumb.onclick = () => {
-                printess.setProperty(p.id, entry.key);
+                printess.setProperty(p.id, entry.key).then(() => setPropertyVisibilities(printess));
                 imageList.childNodes.forEach((c) => c.classList.remove("selected"));
                 thumb.classList.add("selected");
                 p.value = entry.key;
@@ -782,7 +833,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
                 }
             }
             else {
-                yield printess.setProperty(p.id, f.name);
+                yield printess.setProperty(p.id, f.name).then(() => setPropertyVisibilities(printess));
                 p.value = f.color;
                 const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
                 if (mobileButtonDiv) {
@@ -842,7 +893,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
             a.href = "#";
             a.classList.add("dropdown-item");
             a.onclick = () => {
-                printess.setProperty(p.id, entry.key);
+                printess.setProperty(p.id, entry.key).then(() => setPropertyVisibilities(printess));
                 const mobileButtonDiv = document.getElementById(p.id + ":");
                 if (mobileButtonDiv) {
                     drawButtonContent(printess, mobileButtonDiv, [p]);
@@ -1508,19 +1559,18 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
     if (pages) {
         let pageNo = 0;
         pages.innerHTML = "";
-        if (!forMobile && printess.getBackButtonCallback()) {
+        if (!forMobile) {
             const miniBar = document.createElement("div");
             const btnBack = document.createElement("button");
             btnBack.className = "btn btn-sm";
             btnBack.classList.add("btn-outline-secondary");
             btnBack.innerText = printess.gl("ui.buttonBack");
+            if (!printess.getBackButtonCallback()) {
+                btnBack.classList.add("disabled");
+            }
             btnBack.onclick = () => {
                 const callback = printess.getBackButtonCallback();
-                if (forMobile && printess.hasPreviousStep()) {
-                    printess.previousStep();
-                    renderMobileNavBar(printess);
-                }
-                else if (callback) {
+                if (callback) {
                     if (printess.isInDesignerMode()) {
                         callback("");
                     }
@@ -2131,7 +2181,7 @@ function renderMobileNavBar(printess) {
     let nav = document.createElement("div");
     nav.className = "navbar navbar-dark";
     nav.style.flexWrap = "nowrap";
-    if (printess.getBackButtonCallback()) {
+    {
         const btn = document.createElement("button");
         btn.className = "btn btn-sm";
         btn.classList.add("ms-2");
@@ -2145,6 +2195,9 @@ function renderMobileNavBar(printess) {
         else {
             btn.classList.add("btn-outline-light");
             btn.innerText = printess.gl("ui.buttonBack");
+            if (!printess.getBackButtonCallback()) {
+                btn.classList.add("disabled");
+            }
         }
         btn.onclick = () => {
             const callback = printess.getBackButtonCallback();

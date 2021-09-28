@@ -141,6 +141,16 @@ export interface printessAttachParameters {
   formFields: Array<{ name: string, value: string }>;
 
   /**
+  * Minimum width of any image loaded in the browser
+  * Default is 1600, best alternatives are 200, 400, 800
+  * If you display the Printess editor very small in your website/shop
+  * you might want to avoid the editor loading large images into memory. 
+  * You can also set **minImageWidth** for certain products with many pages. 
+  */
+  minImageWidth?: number;
+
+
+  /**
    * For every Form Field which is set to **Impact-Price**
    * Printess fires a callback when the value has changed
    */
@@ -163,16 +173,10 @@ export interface printessAttachParameters {
    */
   getOverlayCallback?: externalGetOverlayCallback;
 
-
   /**
-    * Minimum width of any image loaded in the browser
-    * Default is 1600, best alternatives are 200, 400, 800
-    * If you display the Printess editor very small in your website/shop
-    * you might want to avoid the editor loading large images into memory. 
-    * You can also set **minImageWidth** for certain products with many pages. 
-    */
-  minImageWidth?: number;
-
+   * Is called when the page navigation has changed (and needs redraw) but selection has stayed the same.
+   */
+  refreshPaginationCallback?: refreshPaginationCallback;
 
   /**
    * Provide a callback function which is called when the buyer presses the [Add to Basket] button
@@ -192,6 +196,7 @@ export interface printessAttachParameters {
    */
   imageListChangeCallback?: () => void,
 }
+
 
 /**
  * **iPrintessApi** is returned by the ```attachPrintess()``` call and provides you access to the Printess editor. 
@@ -326,6 +331,12 @@ export interface iPrintessApi {
   * @param spreadIdOrIndex: ID or Index of Spread to check for - if empty it checks for current spread
   */
   hasBuyerContentEdits(spreadIdOrIndex?: string | number): boolean
+
+  /**
+   * Returns only false if property refers to a formfield which is not visible, because it doesn' match a specific condition.
+   * @param propertyId ID of property to check
+   */
+  isPropertyVisible(propertyId: string): boolean
 
   /**
    * Returns all available properties in teh current document
@@ -465,7 +476,7 @@ export interface iPrintessApi {
   /**
    * Resets all image filters (meta-values) of an image-property to default
    * @param propertyId 
-   * @param imageMeta optinonal parameter, can be used to set all image-filters to specific values.
+   * @param imageMeta optional parameter, can be used to set all image-filters to specific values.
    */
   resetImageFilters(
     propertyId: string,
@@ -873,6 +884,7 @@ export interface iExternalValidation {
   defaultValue: string;
   isMandatory: boolean;
   noOffensiveLanguage: boolean;
+  visibility: "always" | "conditional-on" | "conditional-off";
 }
 export interface iExternalListMeta {
   list: Array<iExternalFieldListEntry>;
@@ -952,6 +964,7 @@ export declare type externalFormFieldChangeCallback = (name: string, value: stri
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<iExternalProperty>) => HTMLDivElement;
+export declare type refreshPaginationCallback = null | (() => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
 export interface iExternalImage {
   id: string;
