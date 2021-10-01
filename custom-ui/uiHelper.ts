@@ -48,9 +48,10 @@ async function addToBasket(printess: iPrintessApi) {
     return;
   }
 
-  await printess.clearSelection();
+
   const callback = printess.getAddToBasketCallback();
   if (callback) {
+    await printess.clearSelection();
     printess.showOverlay(printess.gl("ui.saveProgress"))
     const saveToken = await printess.save();
     let url = "";
@@ -65,8 +66,6 @@ async function addToBasket(printess: iPrintessApi) {
 }
 
 function gotoNextStep(printess: iPrintessApi) {
-
-
   const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
   if (errors.length > 0) {
     printess.bringErrorIntoView(errors[0]);
@@ -78,6 +77,15 @@ function gotoNextStep(printess: iPrintessApi) {
   } else {
     addToBasket(printess);
   }
+}
+function gotoStep(printess: iPrintessApi, stepIndex: number) {
+  const errors = printess.validate("until-current-step");
+  if (errors.length > 0) {
+    printess.bringErrorIntoView(errors[0]);
+    getValidationOverlay(printess, errors);
+    return;
+  }
+  printess.setStep(stepIndex);
 }
 
 
@@ -248,7 +256,7 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
     container.appendChild(getDesktopTitle(printess))
   }
 
-  if (state === "document" ) { 
+  if (state === "document") {
     //****** Show Document Wide Options
     const propsDiv = document.createElement("div");
     //let setEventTab = false;
@@ -293,8 +301,8 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
       t.push(JSON.stringify(p, undefined, 2));
     }
     if (properties.length === 0) {
-       // render Group Snippets in case there is no property associated with the current selection
-       container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+      // render Group Snippets in case there is no property associated with the current selection
+      container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
     }
     const hr = document.createElement("hr");
     container.appendChild(hr);
@@ -383,6 +391,7 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
       return getDropDown(printess, p, forMobile);
 
     case "image-list":
+    case "color-list":
       return getImageSelectList(printess, p, forMobile);
 
     case "table":
@@ -541,8 +550,10 @@ function getSingleLineTextBox(printess: iPrintessApi, p: iExternalProperty, forM
     }
   }
   inp.onfocus = () => {
-    if (inp.value && p.validation && p.validation.isMandatory && inp.value === p.validation.defaultValue) {
+    if (inp.value && p.validation && p.validation.clearOnFocus && inp.value === p.validation.defaultValue) {
       inp.value = "";
+    } else {
+      window.setTimeout(() => inp.select(), 0);
     }
   }
 
@@ -689,9 +700,9 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
   const hr = document.createElement("hr");
   container.appendChild(hr);
 
-  const flex = document.createElement("div");
-  flex.className = "mb-2"; // d-flex align-items-center";
-  flex.style.display = "grid";
+  const grid = document.createElement("div");
+  grid.className = "desktop-title-bar mb-2"; // d-flex align-items-center";
+
 
 
   const cur = printess.getStep();
@@ -699,37 +710,68 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
 
   if (cur && printess.isCurrentStepActive() && hd !== "never") {
 
-    flex.style.gridTemplateColumns = "auto 1fr auto auto";
-
-    if (hd === "only badge" || hd === "title and badge") {
-      const badge = document.createElement("div");
-      badge.className = "step-badge";
-      badge.innerText = (cur.index + 1).toString();
-      flex.appendChild(badge);
-      if (hd === "only badge") {
-        flex.appendChild(document.createElement("div")); // placeholder for title
-      }
-    }
     if (hd === "only title" || hd === "title and badge") {
+      grid.classList.add("active-step");
       if (hd === "only title") {
-        flex.appendChild(document.createElement("div")); // placeholder for title
+        grid.appendChild(document.createElement("div")); // placeholder for badge
+      } else {
+        grid.appendChild(getStepBadge((cur.index + 1).toString()));
       }
       const h2 = document.createElement("h2");
       h2.style.flexGrow = "1";
       h2.className = "mb-0";
       h2.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
-      flex.appendChild(h2);
-    }
-  } else {
-    // debugger;
-    //  flex.style.justifyContent = "space-between";
-    flex.style.gridTemplateColumns = "1fr auto auto";
+      grid.appendChild(h2);
 
+    } else if (hd === "badge list") {
+      grid.classList.add("active-step-badge-list");
+      grid.appendChild(getStepsBadgeList(printess)); // placeholder right align of buttons
+      grid.appendChild(document.createElement("div"));
+      grid.appendChild(getStepsPutToBasketButton(printess));
+      container.appendChild(grid);
+      container.appendChild(hr);
+      return container;
+
+    } else {
+      // badge Only / Badge List = badge between previous and text 
+      grid.classList.add("active-step-only-badge");
+      grid.appendChild(document.createElement("div")); // placeholder right align of buttons
+    }
+
+  } else {
+    // render just the title
+    grid.classList.add("steps");
     const h2 = document.createElement("h2");
     h2.style.flexGrow = "1";
     h2.className = "mb-0";
     h2.innerText = printess.getTemplateTitle();
-    flex.appendChild(h2);
+    grid.appendChild(h2);
+  }
+
+  // render header  
+
+
+  if (hd === "only badge" && cur && printess.isCurrentStepActive()) {
+    const div = document.createElement("div");
+    div.className = "step-n-of";
+
+    const text1 = document.createElement("h2");
+    text1.innerText = "Step";
+
+    const badge = getStepBadge((cur.index + 1).toString());
+
+    const text2 = document.createElement("h2");
+    text2.innerText = "of"; //  + ((printess.lastStep()?.index ?? 0) + 1);
+
+    const badge2 = getStepBadge(((printess.lastStep()?.index ?? 0) + 1).toString());
+    badge2.classList.add("gray");
+
+    div.appendChild(text1);
+    div.appendChild(badge);
+    div.appendChild(text2);
+    div.appendChild(badge2);
+
+    grid.appendChild(div);
   }
 
   if (printess.hasPreviousStep()) {
@@ -740,9 +782,9 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
     svg.style.verticalAlign = "sub";
     prevStep.appendChild(svg);
     prevStep.onclick = () => printess.previousStep();
-    flex.appendChild(prevStep);
+    grid.appendChild(prevStep);
   } else {
-    flex.appendChild(document.createElement("div"));
+    grid.appendChild(document.createElement("div"));
   }
 
   if (printess.hasNextStep()) {
@@ -758,19 +800,83 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
     }
     // nextStep.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
     nextStep.onclick = () => gotoNextStep(printess);
-    flex.appendChild(nextStep);
+    grid.appendChild(nextStep);
+
   } else {
-    // put to basket callback?
-    const nextStep = document.createElement("button");
-    nextStep.className = "btn btn-primary";
-    nextStep.innerText = printess.gl("ui.buttonBasket");
-    nextStep.onclick = () => addToBasket(printess);
-    flex.appendChild(nextStep);
+    //instead pf next step render basket button
+    grid.appendChild(getStepsPutToBasketButton(printess));
   }
 
-  container.appendChild(flex);
+
+  container.appendChild(grid);
   container.appendChild(hr);
   return container;
+}
+
+function getStepBadge(content: HTMLElement | string): HTMLDivElement {
+  const badge = document.createElement("div");
+  badge.className = "step-badge";
+  if (typeof content === "string") {
+    badge.innerText = content;
+  } else {
+    badge.appendChild(content);
+  }
+  return badge;
+}
+
+function getStepsBadgeList(printess: iPrintessApi): HTMLDivElement {
+
+  const div = document.createElement("div");
+  div.className = "badge-list";
+
+  const cur = printess.getStep();
+  if (cur && printess.isCurrentStepActive()) {
+
+    const prevBadge = document.createElement("div");
+    prevBadge.className = "step-badge outline gray";
+    prevBadge.appendChild(printess.getIcon("carret-left-solid"));
+    if (printess.hasPreviousStep()) {
+      prevBadge.onclick = () => printess.previousStep();
+      prevBadge.classList.add("selectable");
+    } else {
+      prevBadge.classList.add("disabled");
+    }
+    div.appendChild(prevBadge);
+
+
+    for (let i = 0; i <= (printess.lastStep()?.index ?? 0); i++) {
+      const badge = document.createElement("div");
+      badge.className = "step-badge";
+      if (cur.index !== i) {
+        badge.classList.add("gray");
+        badge.classList.add("selectable");
+      }
+      badge.innerText = (i + 1).toString();
+      badge.onclick = () => gotoStep(printess, i);
+      div.appendChild(badge);
+    }
+
+    const nextBadge = document.createElement("div");
+    nextBadge.className = "step-badge outline gray";
+    nextBadge.appendChild(printess.getIcon("carret-right-solid"));
+    if (printess.hasNextStep()) {
+      nextBadge.onclick = () => gotoNextStep(printess);
+      nextBadge.classList.add("selectable");
+    } else {
+      nextBadge.classList.add("disabled");
+    }
+    div.appendChild(nextBadge);
+  }
+  return div;
+}
+
+function getStepsPutToBasketButton(printess: iPrintessApi): HTMLButtonElement {
+  // put to basket callback
+  const basketButton = document.createElement("button");
+  basketButton.className = "btn btn-primary";
+  basketButton.innerText = printess.gl("ui.buttonBasket");
+  basketButton.onclick = () => addToBasket(printess);
+  return basketButton;
 }
 
 
@@ -779,6 +885,8 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
   const inp = document.createElement("textarea");
   inp.value = p.value.toString();
   inp.autocomplete = "off";
+  inp.rows = 6;
+
   inp.oninput = async () => {
     await printess.setProperty(p.id, inp.value).then(() => setPropertyVisibilities(printess));
     p.value = inp.value;
@@ -788,7 +896,15 @@ function getTextArea(printess: iPrintessApi, p: iExternalProperty, forMobile: bo
       drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
     }
   }
-  inp.rows = 6;
+  inp.onfocus = () => {
+    if (inp.value && p.validation && p.validation.clearOnFocus && inp.value === p.validation.defaultValue) {
+      inp.value = "";
+    } else {
+      window.setTimeout(() => inp.select(), 0);
+    }
+  }
+
+
 
   if (forMobile) {
     inp.className = "mobile-text-area";
@@ -935,7 +1051,12 @@ function getImageSelectList(printess: iPrintessApi, p: iExternalProperty, forMob
     for (const entry of p.listMeta.list) {
       const thumb = document.createElement("div");
       thumb.className = "image" + cssId;
-      thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
+      if (p.kind === "color-list") {
+        thumb.style.backgroundColor = entry.key;
+      } else {
+        thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
+      }
+
       thumb.style.width = p.listMeta.thumbWidth + "px";
       thumb.style.height = p.listMeta.thumbHeight + "px";
       if (entry.key === p.value) thumb.classList.add("selected");
@@ -3085,6 +3206,7 @@ function getMobileControlHeightClass(property: iExternalProperty, meta?: iExtern
     case "text-area":
     case "select-list":
     case "image-list":
+    case "color-list":
       return "mobile-control-lg"
     case "table":
       return "mobile-control-xl"

@@ -149,6 +149,15 @@ export interface printessAttachParameters {
   */
   minImageWidth?: number;
 
+  /**
+   * Fires when an template has been opened from the open menu.
+   */
+  templateOpenedCallback?: (templateName: string, hasPublishedVersion: boolean) => void;
+
+  /**
+  * Fires when an template has been saved and published.
+  */
+  templatePublishedCallback?: (templateName: string) => void;
 
   /**
    * For every Form Field which is set to **Impact-Price**
@@ -638,10 +647,19 @@ export interface iPrintessApi {
    * TRUE if the current step is part of the selection.
    */
   isCurrentStepActive(): boolean;
+
   /**
    * Indicates if the current template has buyer-steps 
    */
   hasSteps(): boolean
+
+  /**
+   * 
+   * @param index Sets step by index
+   * @param zoom 
+   */
+  setStep(index: number, zoom?: "frame" | "spread"): Promise<void>
+
   /**
    * 
    */
@@ -696,7 +714,7 @@ export interface iPrintessApi {
   /**
    * Returns the template settings for display of steps header on desktop and mobile
    */
-  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge"
+  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list"
 
   /**
    * Displays a grey overlay on printess editor
@@ -854,7 +872,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "table";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "color-list" | "table";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
@@ -883,6 +901,7 @@ export interface iExternalValidation {
   maxChars: number;
   defaultValue: string;
   isMandatory: boolean;
+  clearOnFocus: boolean;
   noOffensiveLanguage: boolean;
   visibility: "always" | "conditional-on" | "conditional-off";
 }
