@@ -14,6 +14,7 @@ window.uiHelper = {
     renderMobileNavBar: renderMobileNavBar,
     renderDesktopUi: renderDesktopUi,
     refreshUndoRedoState: refreshUndoRedoState,
+    refreshPagination: refreshPagination,
     viewPortScroll: viewPortScroll,
     viewPortResize: viewPortResize,
     viewPortScrollInIFrame: viewPortScrollInIFrame,
@@ -30,21 +31,26 @@ let uih_lastPrintessHeight = 0;
 let uih_lastPrintessWidth = 0;
 let uih_lastPrintessTop = "";
 let uih_lastPrintessBottom = 0;
+let uih_lastFormFieldId = undefined;
 let uih_lastOverflowState = false;
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
         const errors = printess.validate("all");
         if (errors.length > 0) {
+            printess.bringErrorIntoView(errors[0]);
             getValidationOverlay(printess, errors);
             return;
         }
-        yield printess.clearSelection();
         const callback = printess.getAddToBasketCallback();
         if (callback) {
+            yield printess.clearSelection();
             printess.showOverlay(printess.gl("ui.saveProgress"));
             const saveToken = yield printess.save();
-            const url = yield printess.renderFirstPageImage("thumbnail.png");
+            let url = "";
+            if (printess.noBasketThumbnail() !== true) {
+                url = yield printess.renderFirstPageImage("thumbnail.png");
+            }
             callback(saveToken, url);
             printess.hideOverlay();
         }
@@ -56,6 +62,7 @@ function addToBasket(printess) {
 function gotoNextStep(printess) {
     const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
     if (errors.length > 0) {
+        printess.bringErrorIntoView(errors[0]);
         getValidationOverlay(printess, errors);
         return;
     }
@@ -65,6 +72,15 @@ function gotoNextStep(printess) {
     else {
         addToBasket(printess);
     }
+}
+function gotoStep(printess, stepIndex) {
+    const errors = printess.validate("until-current-step");
+    if (errors.length > 0) {
+        printess.bringErrorIntoView(errors[0]);
+        getValidationOverlay(printess, errors);
+        return;
+    }
+    printess.setStep(stepIndex);
 }
 function viewPortScroll(printess) {
     if (printess) {
@@ -93,6 +109,17 @@ function checkAndSwitchViews(printess) {
         if (!mobile && uih_currentRender !== "desktop") {
             renderDesktopUi(printess);
         }
+    }
+}
+function refreshPagination(printess) {
+    if (uih_currentRender === "mobile") {
+        renderMobileUi(printess);
+        renderMobileNavBar(printess);
+    }
+    else {
+        const spreads = printess.getAllSpreads();
+        const info = printess.pageInfoSync();
+        renderPageNavigation(printess, spreads, info);
     }
 }
 function _viewPortScroll(printess, _what) {
@@ -129,6 +156,13 @@ function _viewPortScroll(printess, _what) {
             }
         }
     }
+}
+function getActiveFormFieldId() {
+    const ele = document.querySelector('.mobile-control-host input[type="text"]');
+    if (ele && ele.id && ele.id.startsWith("inp_FF_")) {
+        return ele.id.substr(7);
+    }
+    return undefined;
 }
 function viewPortScrollInIFrame(printess, vpHeight, vpOffsetTop) {
     uih_viewportHeight = vpHeight;
@@ -191,12 +225,28 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
         container.appendChild(getDesktopTitle(printess));
     }
     if (state === "document") {
+        const propsDiv = document.createElement("div");
         for (const p of properties) {
             t.push(JSON.stringify(p, undefined, 2));
-            container.appendChild(getPropertyControl(printess, p));
+            propsDiv.appendChild(getPropertyControl(printess, p));
             validate(printess, p);
         }
-        container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+        if (printess.showImageTab()) {
+            const tabsPanel = [];
+            if (properties.length > 0) {
+                const tabLabel = printess.formFieldTabCaption();
+                tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv });
+            }
+            tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImagesTab(printess) });
+            if (groupSnippets.length > 0) {
+                tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) });
+            }
+            container.appendChild(getTabPanel(tabsPanel));
+        }
+        else {
+            container.appendChild(propsDiv);
+            container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+        }
     }
     else {
         let colorsContainer = null;
@@ -215,6 +265,9 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
                 validate(printess, p);
             }
             t.push(JSON.stringify(p, undefined, 2));
+        }
+        if (properties.length === 0) {
+            container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
         }
         const hr = document.createElement("hr");
         container.appendChild(hr);
@@ -287,6 +340,7 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
         case "select-list":
             return getDropDown(printess, p, forMobile);
         case "image-list":
+        case "color-list":
             return getImageSelectList(printess, p, forMobile);
         case "table":
             return getTableControl(printess, p, forMobile);
@@ -396,7 +450,7 @@ function getSingleLineTextBox(printess, p, forMobile) {
     inp.autocapitalize = "off";
     inp.spellcheck = false;
     inp.oninput = () => {
-        printess.setProperty(p.id, inp.value);
+        printess.setProperty(p.id, inp.value).then(() => setPropertyVisibilities(printess));
         p.value = inp.value;
         validate(printess, p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -405,11 +459,14 @@ function getSingleLineTextBox(printess, p, forMobile) {
         }
     };
     inp.onfocus = () => {
-        if (inp.value && p.validation && p.validation.isMandatory && inp.value === p.validation.defaultValue) {
+        if (inp.value && p.validation && p.validation.clearOnFocus && inp.value === p.validation.defaultValue) {
             inp.value = "";
         }
+        else {
+            window.setTimeout(() => inp.select(), 0);
+        }
     };
-    const r = addLabel(printess, inp, p, forMobile);
+    const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
     return r;
 }
 function getDesktopTitle(printess) {
@@ -438,7 +495,6 @@ function getValidationOverlay(printess, errors) {
     modal.style.display = "flex";
     const dialog = document.createElement("div");
     dialog.className = "modal-dialog";
-    dialog.style.minWidth = "500px";
     const content = document.createElement("div");
     content.className = "modal-content";
     const modalHeader = document.createElement("div");
@@ -514,60 +570,169 @@ function getValidationOverlay(printess, errors) {
     document.body.appendChild(modal);
 }
 function getDesktopStepsUi(printess) {
+    var _a, _b;
     const container = document.createElement("div");
     const hr = document.createElement("hr");
     container.appendChild(hr);
-    const flex = document.createElement("div");
-    flex.className = "mb-2 d-flex align-items-center";
-    if (printess.hasPreviousStep()) {
-        const prevStep = document.createElement("button");
-        prevStep.className = "btn";
-        prevStep.style.paddingLeft = "0";
-        const svg = printess.getIcon("arrow-left");
-        svg.style.width = "20px";
-        prevStep.appendChild(svg);
-        prevStep.onclick = () => printess.previousStep();
-        flex.appendChild(prevStep);
-    }
+    const grid = document.createElement("div");
+    grid.className = "desktop-title-bar mb-2";
     const cur = printess.getStep();
-    if (cur && printess.isCurrentStepActive()) {
-        const badge = document.createElement("div");
-        badge.className = "step-badge";
-        badge.innerText = (cur.index + 1).toString();
-        flex.appendChild(badge);
-        const h1 = document.createElement("h2");
-        h1.style.flexGrow = "1";
-        h1.className = "mb-0";
-        h1.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
-        flex.appendChild(h1);
+    const hd = printess.stepHeaderDisplay();
+    if (cur && printess.isCurrentStepActive() && hd !== "never") {
+        if (hd === "only title" || hd === "title and badge") {
+            grid.classList.add("active-step");
+            if (hd === "only title") {
+                grid.appendChild(document.createElement("div"));
+            }
+            else {
+                grid.appendChild(getStepBadge((cur.index + 1).toString()));
+            }
+            const h2 = document.createElement("h2");
+            h2.style.flexGrow = "1";
+            h2.className = "mb-0";
+            h2.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
+            grid.appendChild(h2);
+        }
+        else if (hd === "badge list") {
+            grid.classList.add("active-step-badge-list");
+            grid.appendChild(getStepsBadgeList(printess));
+            grid.appendChild(document.createElement("div"));
+            grid.appendChild(getStepsPutToBasketButton(printess));
+            container.appendChild(grid);
+            container.appendChild(hr);
+            return container;
+        }
+        else {
+            grid.classList.add("active-step-only-badge");
+            grid.appendChild(document.createElement("div"));
+        }
     }
     else {
-        flex.style.justifyContent = "space-between";
+        grid.classList.add("steps");
+        const h2 = document.createElement("h2");
+        h2.style.flexGrow = "1";
+        h2.className = "mb-0";
+        h2.innerText = printess.getTemplateTitle();
+        grid.appendChild(h2);
+    }
+    if (hd === "only badge" && cur && printess.isCurrentStepActive()) {
+        const div = document.createElement("div");
+        div.className = "step-n-of";
+        const text1 = document.createElement("h2");
+        text1.innerText = "Step";
+        const badge = getStepBadge((cur.index + 1).toString());
+        const text2 = document.createElement("h2");
+        text2.innerText = "of";
+        const badge2 = getStepBadge((((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0) + 1).toString());
+        badge2.classList.add("gray");
+        div.appendChild(text1);
+        div.appendChild(badge);
+        div.appendChild(text2);
+        div.appendChild(badge2);
+        grid.appendChild(div);
+    }
+    if (printess.hasPreviousStep()) {
+        const prevStep = document.createElement("button");
+        prevStep.className = "btn btn-outline-primary me-1";
+        const svg = printess.getIcon("arrow-left");
+        svg.style.width = "18px";
+        svg.style.verticalAlign = "sub";
+        prevStep.appendChild(svg);
+        prevStep.onclick = () => printess.previousStep();
+        grid.appendChild(prevStep);
+    }
+    else {
+        grid.appendChild(document.createElement("div"));
     }
     if (printess.hasNextStep()) {
         const nextStep = document.createElement("button");
         nextStep.className = "btn btn-outline-primary";
-        nextStep.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
+        if (printess.isNextStepPreview()) {
+            nextStep.innerText = printess.gl("ui.buttonPreview");
+        }
+        else {
+            const svg = printess.getIcon("arrow-right");
+            svg.style.width = "18px";
+            svg.style.verticalAlign = "sub";
+            nextStep.appendChild(svg);
+        }
         nextStep.onclick = () => gotoNextStep(printess);
-        flex.appendChild(nextStep);
+        grid.appendChild(nextStep);
     }
     else {
-        const nextStep = document.createElement("button");
-        nextStep.className = "btn btn-primary";
-        nextStep.innerText = printess.gl("ui.buttonBasket");
-        nextStep.onclick = () => addToBasket(printess);
-        flex.appendChild(nextStep);
+        grid.appendChild(getStepsPutToBasketButton(printess));
     }
-    container.appendChild(flex);
+    container.appendChild(grid);
     container.appendChild(hr);
     return container;
+}
+function getStepBadge(content) {
+    const badge = document.createElement("div");
+    badge.className = "step-badge";
+    if (typeof content === "string") {
+        badge.innerText = content;
+    }
+    else {
+        badge.appendChild(content);
+    }
+    return badge;
+}
+function getStepsBadgeList(printess) {
+    var _a, _b;
+    const div = document.createElement("div");
+    div.className = "badge-list";
+    const cur = printess.getStep();
+    if (cur && printess.isCurrentStepActive()) {
+        const prevBadge = document.createElement("div");
+        prevBadge.className = "step-badge outline gray";
+        prevBadge.appendChild(printess.getIcon("carret-left-solid"));
+        if (printess.hasPreviousStep()) {
+            prevBadge.onclick = () => printess.previousStep();
+            prevBadge.classList.add("selectable");
+        }
+        else {
+            prevBadge.classList.add("disabled");
+        }
+        div.appendChild(prevBadge);
+        for (let i = 0; i <= ((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0); i++) {
+            const badge = document.createElement("div");
+            badge.className = "step-badge";
+            if (cur.index !== i) {
+                badge.classList.add("gray");
+                badge.classList.add("selectable");
+            }
+            badge.innerText = (i + 1).toString();
+            badge.onclick = () => gotoStep(printess, i);
+            div.appendChild(badge);
+        }
+        const nextBadge = document.createElement("div");
+        nextBadge.className = "step-badge outline gray";
+        nextBadge.appendChild(printess.getIcon("carret-right-solid"));
+        if (printess.hasNextStep()) {
+            nextBadge.onclick = () => gotoNextStep(printess);
+            nextBadge.classList.add("selectable");
+        }
+        else {
+            nextBadge.classList.add("disabled");
+        }
+        div.appendChild(nextBadge);
+    }
+    return div;
+}
+function getStepsPutToBasketButton(printess) {
+    const basketButton = document.createElement("button");
+    basketButton.className = "btn btn-primary";
+    basketButton.innerText = printess.gl("ui.buttonBasket");
+    basketButton.onclick = () => addToBasket(printess);
+    return basketButton;
 }
 function getTextArea(printess, p, forMobile) {
     const inp = document.createElement("textarea");
     inp.value = p.value.toString();
     inp.autocomplete = "off";
+    inp.rows = 6;
     inp.oninput = () => __awaiter(this, void 0, void 0, function* () {
-        yield printess.setProperty(p.id, inp.value);
+        yield printess.setProperty(p.id, inp.value).then(() => setPropertyVisibilities(printess));
         p.value = inp.value;
         validate(printess, p);
         const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -575,31 +740,39 @@ function getTextArea(printess, p, forMobile) {
             drawButtonContent(printess, mobileButtonDiv, [p]);
         }
     });
-    inp.rows = 6;
+    inp.onfocus = () => {
+        if (inp.value && p.validation && p.validation.clearOnFocus && inp.value === p.validation.defaultValue) {
+            inp.value = "";
+        }
+        else {
+            window.setTimeout(() => inp.select(), 0);
+        }
+    };
     if (forMobile) {
         inp.className = "mobile-text-area";
-        return addLabel(printess, inp, p, forMobile);
+        return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
     }
     else {
         inp.className = "desktop-text-area";
-        return addLabel(printess, inp, p, forMobile);
+        return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
     }
 }
-function addLabel(printess, input, p, forMobile, label) {
+function addLabel(printess, input, id, forMobile, kind, label) {
     input.classList.add("form-control");
     const container = document.createElement("div");
     container.classList.add("mb-3");
-    container.id = "cnt_" + p.id;
-    if (p.label || label) {
+    container.id = "cnt_" + id;
+    container.style.display = printess.isPropertyVisible(id) ? "block" : "none";
+    if (label) {
         const htmlLabel = document.createElement("label");
         htmlLabel.className = "form-label";
-        htmlLabel.setAttribute("for", "inp_" + p.id);
-        htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(p.label) || "");
+        htmlLabel.setAttribute("for", "inp_" + id);
+        htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(label) || "");
         htmlLabel.style.display = forMobile ? "none" : "inline-block";
-        if (p.kind === "image") {
+        if (kind === "image") {
             const button = document.createElement("button");
             button.className = "btn btn-primary image-upload-btn";
-            button.id = "upload-btn-" + p.id;
+            button.id = "upload-btn-" + id;
             htmlLabel.classList.add("image-upload-label");
             button.appendChild(htmlLabel);
             container.appendChild(button);
@@ -608,10 +781,10 @@ function addLabel(printess, input, p, forMobile, label) {
             container.appendChild(htmlLabel);
         }
     }
-    input.id = "inp_" + p.id;
+    input.id = "inp_" + id;
     container.appendChild(input);
     const validation = document.createElement("div");
-    validation.id = "val_" + p.id;
+    validation.id = "val_" + id;
     validation.classList.add("invalid-feedback");
     validation.innerText = printess.gl("errors.textMissingInline");
     container.appendChild(validation);
@@ -656,6 +829,24 @@ function validate(printess, p) {
         }
     }
 }
+function setPropertyVisibilities(printess) {
+    for (const p of uih_currentProperties) {
+        if (p.validation && p.validation.visibility !== "always") {
+            const div = document.getElementById("cnt_" + p.id);
+            if (div) {
+                const v = printess.isPropertyVisible(p.id);
+                if (v) {
+                    if (div.style.display === "none") {
+                        div.style.display = "block";
+                    }
+                }
+                else {
+                    div.style.display = "none";
+                }
+            }
+        }
+    }
+}
 function getImageSelectList(printess, p, forMobile) {
     const container = document.createElement("div");
     if (p.listMeta && p.listMeta.list) {
@@ -673,13 +864,18 @@ function getImageSelectList(printess, p, forMobile) {
         for (const entry of p.listMeta.list) {
             const thumb = document.createElement("div");
             thumb.className = "image" + cssId;
-            thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
+            if (p.kind === "color-list") {
+                thumb.style.backgroundColor = entry.key;
+            }
+            else {
+                thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
+            }
             thumb.style.width = p.listMeta.thumbWidth + "px";
             thumb.style.height = p.listMeta.thumbHeight + "px";
             if (entry.key === p.value)
                 thumb.classList.add("selected");
             thumb.onclick = () => {
-                printess.setProperty(p.id, entry.key);
+                printess.setProperty(p.id, entry.key).then(() => setPropertyVisibilities(printess));
                 imageList.childNodes.forEach((c) => c.classList.remove("selected"));
                 thumb.classList.add("selected");
                 p.value = entry.key;
@@ -696,7 +892,7 @@ function getImageSelectList(printess, p, forMobile) {
         return container;
     }
     else {
-        return addLabel(printess, container, p, forMobile);
+        return addLabel(printess, container, p.id, forMobile, p.kind, p.label);
     }
 }
 function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
@@ -742,7 +938,7 @@ function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown
                 }
             }
             else {
-                yield printess.setProperty(p.id, f.name);
+                yield printess.setProperty(p.id, f.name).then(() => setPropertyVisibilities(printess));
                 p.value = f.color;
                 const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
                 if (mobileButtonDiv) {
@@ -802,7 +998,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
             a.href = "#";
             a.classList.add("dropdown-item");
             a.onclick = () => {
-                printess.setProperty(p.id, entry.key);
+                printess.setProperty(p.id, entry.key).then(() => setPropertyVisibilities(printess));
                 const mobileButtonDiv = document.getElementById(p.id + ":");
                 if (mobileButtonDiv) {
                     drawButtonContent(printess, mobileButtonDiv, [p]);
@@ -826,7 +1022,7 @@ function getDropDown(printess, p, asList, fullWidth = true) {
         return ddContent;
     }
     else {
-        return addLabel(printess, dropdown, p, false);
+        return addLabel(printess, dropdown, p.id, false, p.kind, p.label);
     }
 }
 function getDropdownItemContent(printess, meta, entry) {
@@ -892,9 +1088,9 @@ function getTabPanel(tabs) {
     panel.appendChild(content);
     return panel;
 }
-function getImageFilterControl(printess, p) {
+function getImageFilterControl(printess, p, filterDiv) {
     var _a;
-    const container = document.createElement("div");
+    const container = filterDiv || document.createElement("div");
     (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.allows.forEach(metaProperty => {
         switch (metaProperty) {
             case "brightness":
@@ -914,6 +1110,22 @@ function getImageFilterControl(printess, p) {
                 break;
         }
     });
+    const filterBtn = document.createElement("button");
+    filterBtn.className = "btn btn-secondary mt-4 w-100";
+    filterBtn.textContent = "Reset Filter";
+    filterBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+        if (p.imageMeta) {
+            p.imageMeta.brightness = 0;
+            p.imageMeta.sepia = 0;
+            p.imageMeta.hueRotate = 0;
+            p.imageMeta.contrast = 0;
+            p.imageMeta.vivid = 0;
+            yield printess.resetImageFilters(p.id, p.imageMeta);
+        }
+        container.innerHTML = "";
+        getImageFilterControl(printess, p, container);
+    });
+    container.appendChild(filterBtn);
     return container;
 }
 function getImageRotateControl(printess, p) {
@@ -952,50 +1164,10 @@ function getImageRotateControl(printess, p) {
 function getImageUploadControl(printess, p, container, forMobile = false) {
     var _a;
     container = container || document.createElement("div");
-    const fileUpload = document.createElement("div");
-    fileUpload.className = "mb-3";
-    fileUpload.id = "cnt_" + p.id;
-    const progressDiv = document.createElement("div");
-    progressDiv.className = "progress";
-    const progressBar = document.createElement("div");
-    progressBar.className = "progress-bar";
-    progressBar.style.width = "0%";
-    progressDiv.style.display = "none";
-    progressDiv.appendChild(progressBar);
-    const inp = document.createElement("input");
-    inp.type = "file";
-    inp.id = "inp_" + p.id;
-    inp.className = "form-control";
-    inp.accept = "image/png,image/jpg,image/jpeg";
-    inp.multiple = true;
-    inp.style.display = "none";
-    inp.onchange = () => {
-        var _a;
-        if (inp && ((_a = inp.files) === null || _a === void 0 ? void 0 : _a.length)) {
-            inp.disabled = true;
-            inp.style.display = "none";
-            if (scaleControl)
-                scaleControl.style.display = "none";
-            imagePanel.style.display = "none";
-            progressDiv.style.display = "flex";
-            const label = document.getElementById("upload-btn-" + p.id);
-            if (label) {
-                label.style.display = "none";
-            }
-            printess.uploadImages(inp.files, (progress) => {
-                progressBar.style.width = (progress * 100) + "%";
-            }, true, p.id);
-        }
-    };
-    const uploadLabel = document.createElement("label");
-    uploadLabel.className = "form-label";
-    uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
-    uploadLabel.setAttribute("for", "inp_" + p.id);
-    fileUpload.appendChild(addLabel(printess, inp, p, forMobile, ""));
-    container.appendChild(progressDiv);
-    container.appendChild(fileUpload);
+    container.appendChild(getImageUplaodButton(printess, p.id, forMobile, true));
     const imagePanel = document.createElement("div");
     imagePanel.className = "image-panel";
+    imagePanel.id = "image-panel" + p.id;
     const imageListWrapper = document.createElement("div");
     imageListWrapper.classList.add("image-list-wrapper");
     const imageList = document.createElement("div");
@@ -1014,8 +1186,8 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
             thumb.style.border = "2px solid red";
         thumb.onclick = () => {
             printess.setProperty(p.id, im.id);
-            p.value = im.id,
-                validate(printess, p);
+            p.value = im.id;
+            validate(printess, p);
         };
         imageList.appendChild(thumb);
     }
@@ -1034,9 +1206,61 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
         return container;
     }
 }
+function getImageUplaodButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true) {
+    const container = document.createElement("div");
+    const fileUpload = document.createElement("div");
+    fileUpload.className = "mb-3";
+    fileUpload.id = "cnt_" + id;
+    const progressDiv = document.createElement("div");
+    progressDiv.className = "progress";
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar";
+    progressBar.style.width = "0%";
+    progressDiv.style.display = "none";
+    progressDiv.appendChild(progressBar);
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.id = "inp_" + id;
+    inp.className = "form-control";
+    inp.accept = "image/png,image/jpg,image/jpeg";
+    inp.multiple = true;
+    inp.style.display = "none";
+    inp.onchange = () => {
+        var _a;
+        if (inp && ((_a = inp.files) === null || _a === void 0 ? void 0 : _a.length)) {
+            inp.disabled = true;
+            inp.style.display = "none";
+            const scaleControl = document.getElementById("range-label");
+            if (scaleControl)
+                scaleControl.style.display = "none";
+            const imagePanel = document.getElementById("image-panel" + id);
+            if (imagePanel)
+                imagePanel.style.display = "none";
+            progressDiv.style.display = "flex";
+            const label = document.getElementById("upload-btn-" + id);
+            if (label) {
+                label.style.display = "none";
+            }
+            printess.uploadImages(inp.files, (progress) => {
+                progressBar.style.width = (progress * 100) + "%";
+            }, assignToFrameOrNewFrame, id);
+            if (!assignToFrameOrNewFrame)
+                renderMyImagesTab(printess);
+        }
+    };
+    const uploadLabel = document.createElement("label");
+    uploadLabel.className = "form-label";
+    uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
+    uploadLabel.setAttribute("for", "inp_" + id);
+    fileUpload.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage"));
+    container.appendChild(progressDiv);
+    container.appendChild(fileUpload);
+    return container;
+}
 function getImageScaleControl(printess, p, forMobile = false) {
     var _a, _b, _c, _d, _f, _g;
     const rangeLabel = document.createElement("label");
+    rangeLabel.id = "range-label";
     const range = document.createElement("input");
     range.className = "form-range";
     range.type = "range";
@@ -1077,6 +1301,7 @@ function getNumberSlider(printess, p, metaProperty = null, forMobile = false) {
     const rangeLabel = document.createElement("label");
     const range = document.createElement("input");
     range.className = "form-range";
+    range.id = metaProperty !== null && metaProperty !== void 0 ? metaProperty : "";
     range.type = "range";
     range.min = ui.meta.min.toString();
     range.max = ui.meta.max.toString();
@@ -1445,13 +1670,12 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
             btnBack.className = "btn btn-sm";
             btnBack.classList.add("btn-outline-secondary");
             btnBack.innerText = printess.gl("ui.buttonBack");
+            if (!printess.getBackButtonCallback()) {
+                btnBack.classList.add("disabled");
+            }
             btnBack.onclick = () => {
                 const callback = printess.getBackButtonCallback();
-                if (forMobile && printess.hasPreviousStep()) {
-                    printess.previousStep();
-                    renderMobileNavBar(printess);
-                }
-                else if (callback) {
+                if (callback) {
                     if (printess.isInDesignerMode()) {
                         callback("");
                     }
@@ -1556,6 +1780,31 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
         }
         pages.appendChild(ul);
     }
+}
+function renderMyImagesTab(printess) {
+    const container = document.createElement("div");
+    container.innerHTML = "";
+    const imageList = document.createElement("div");
+    imageList.classList.add("image-list");
+    const images = printess.getAllImages();
+    for (const im of images) {
+        const thumb = document.createElement("div");
+        thumb.className = "big";
+        thumb.draggable = true;
+        thumb.ondragstart = (ev) => { var _a; return (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${im.id}`); };
+        thumb.style.backgroundImage = im.thumbCssUrl;
+        thumb.style.opacity = im.inUse ? "0.5" : "1.0";
+        imageList.appendChild(thumb);
+    }
+    const distributeBtn = document.createElement("button");
+    distributeBtn.className = "btn btn-primary my-3 w-100";
+    distributeBtn.innerText = printess.gl("ui.buttonDistribute");
+    distributeBtn.onclick = () => printess.distributeImages();
+    container.appendChild(imageList);
+    if (images.length > 0)
+        container.appendChild(distributeBtn);
+    container.appendChild(getImageUplaodButton(printess, "file-uploader", false, false));
+    return container;
 }
 function renderGroupSnippets(printess, groupSnippets, forMobile) {
     const div = document.createElement("div");
@@ -1888,7 +2137,7 @@ function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWi
         return ddContent;
     }
     else {
-        return addLabel(printess, dropdown, p, false, col.label || col.name);
+        return addLabel(printess, dropdown, p.id, false, p.kind, col.label || col.name);
     }
 }
 function getTableDropdownItemContent(printess, value) {
@@ -1915,7 +2164,7 @@ function getTableTextBox(printess, p, rowIndex, row, col, forMobile) {
         return inp;
     }
     else {
-        const r = addLabel(printess, inp, p, forMobile, col.label || col.name);
+        const r = addLabel(printess, inp, p.id, forMobile, p.kind, col.label || col.name);
         return r;
     }
 }
@@ -1944,7 +2193,7 @@ function getMobileNavbarDiv() {
     let mobileNav = document.querySelector(".mobile-navbar");
     if (!mobileNav) {
         mobileNav = document.createElement("nav");
-        mobileNav.className = "mobile-navbar navbar navbar-dark bg-primary";
+        mobileNav.className = "mobile-navbar bg-primary";
         document.body.appendChild(mobileNav);
     }
     return mobileNav;
@@ -2032,115 +2281,142 @@ function getMobileBackButton(printess, state) {
     return button;
 }
 function renderMobileNavBar(printess) {
-    const buttons = ["back", "undo", "redo", "step", "next"];
-    const nav = getMobileNavbarDiv();
-    nav.innerHTML = "";
-    for (const b of buttons) {
+    const navBar = getMobileNavbarDiv();
+    navBar.innerHTML = "";
+    let nav = document.createElement("div");
+    nav.className = "navbar navbar-dark";
+    nav.style.flexWrap = "nowrap";
+    {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm";
+        btn.classList.add("ms-2");
+        btn.classList.add("me-2");
+        btn.classList.add("main-button");
+        if (printess.hasPreviousStep()) {
+            const ico = printess.getIcon("arrow-left");
+            ico.classList.add("icon");
+            btn.appendChild(ico);
+        }
+        else {
+            btn.classList.add("btn-outline-light");
+            btn.innerText = printess.gl("ui.buttonBack");
+            if (!printess.getBackButtonCallback()) {
+                btn.classList.add("disabled");
+            }
+        }
+        btn.onclick = () => {
+            const callback = printess.getBackButtonCallback();
+            if (printess.hasPreviousStep()) {
+                printess.previousStep();
+                renderMobileNavBar(printess);
+            }
+            else if (callback) {
+                if (printess.isInDesignerMode()) {
+                    callback("");
+                }
+                else {
+                    printess.save().then((token) => {
+                        callback(token);
+                    });
+                }
+            }
+            else {
+                const offcanvas = document.getElementById("templateOffcanvas");
+                if (offcanvas) {
+                    const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
+                    bsOffcanvas.show();
+                }
+                else {
+                    alert(printess.gl("backButtonCallback"));
+                }
+            }
+        };
+        nav.appendChild(btn);
+    }
+    const undoredo = document.createElement("div");
+    undoredo.style.display = "flex";
+    {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm";
+        const ico = printess.getIcon("undo");
+        ico.classList.add("icon");
+        btn.onclick = () => {
+            printess.undo();
+        };
+        btn.appendChild(ico);
+        undoredo.appendChild(btn);
+    }
+    {
         const btn = document.createElement("button");
         btn.classList.add("btn");
         btn.classList.add("btn-sm");
+        const ico = printess.getIcon("redo");
+        ico.classList.add("icon");
+        btn.onclick = () => {
+            printess.redo();
+        };
+        btn.appendChild(ico);
+        undoredo.appendChild(btn);
+    }
+    nav.appendChild(undoredo);
+    {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm";
+        btn.classList.add("ms-2");
         btn.classList.add("me-2");
-        switch (b) {
-            case "back":
-                btn.classList.add("ms-2");
-                if (printess.hasPreviousStep()) {
-                    const ico = printess.getIcon("arrow-left");
-                    ico.classList.add("icon");
-                    btn.appendChild(ico);
-                }
-                else {
-                    btn.classList.add("btn-outline-light");
-                    btn.innerText = printess.gl("ui.buttonBack");
-                }
-                btn.onclick = () => {
-                    const callback = printess.getBackButtonCallback();
-                    if (printess.hasPreviousStep()) {
-                        printess.previousStep();
-                        renderMobileNavBar(printess);
-                    }
-                    else if (callback) {
-                        if (printess.isInDesignerMode()) {
-                            callback("");
-                        }
-                        else {
-                            printess.save().then((token) => {
-                                callback(token);
-                            });
-                        }
-                    }
-                    else {
-                        const offcanvas = document.getElementById("templateOffcanvas");
-                        const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
-                        bsOffcanvas.show();
-                    }
-                };
-                nav.appendChild(btn);
-                break;
-            case "next":
-                btn.classList.add("btn-outline-light");
-                if (printess.hasNextStep()) {
-                    btn.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
-                    const curStep = printess.getStep();
-                    const lastStep = printess.lastStep();
-                    if (curStep && lastStep) {
-                        btn.title = "Step " + curStep.index + " of " + lastStep.index;
-                    }
-                    btn.onclick = () => {
-                        gotoNextStep(printess);
-                        renderMobileNavBar(printess);
-                    };
-                }
-                else {
-                    btn.innerText = printess.gl("ui.buttonBasket");
-                    btn.onclick = () => addToBasket(printess);
-                }
-                nav.appendChild(btn);
-                break;
-            case "step": {
-                const step = document.createElement("div");
-                step.style.flexGrow = "1";
-                step.style.display = "flex";
-                step.style.alignItems = "center";
-                step.style.justifyContent = "center";
-                const s = printess.getStep();
-                if (s && printess.isCurrentStepActive()) {
-                    const badge = document.createElement("div");
-                    badge.className = "step-badge step-badge-sm";
-                    badge.innerText = (s.index + 1).toString();
-                    step.appendChild(badge);
-                    const h6 = document.createElement("h6");
-                    h6.innerText = printess.gl(s.title);
-                    h6.style.margin = "0";
-                    h6.className = "text-light";
-                    step.appendChild(h6);
-                }
-                nav.appendChild(step);
-                break;
+        btn.classList.add("btn-outline-light");
+        btn.classList.add("main-button");
+        if (printess.hasNextStep()) {
+            btn.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
+            const curStep = printess.getStep();
+            const lastStep = printess.lastStep();
+            if (curStep && lastStep) {
+                btn.title = "Step " + curStep.index + " of " + lastStep.index;
             }
-            case "undo": {
-                const ico = printess.getIcon("undo");
-                ico.classList.add("icon");
-                btn.onclick = () => {
-                    printess.undo();
-                };
-                btn.appendChild(ico);
-                nav.appendChild(btn);
-                break;
-            }
-            case "redo": {
-                btn.classList.remove("me-2");
-                const ico = printess.getIcon("redo");
-                ico.classList.add("icon");
-                btn.onclick = () => {
-                    printess.redo();
-                };
-                btn.appendChild(ico);
-                nav.appendChild(btn);
-                break;
-            }
+            btn.onclick = () => {
+                gotoNextStep(printess);
+                renderMobileNavBar(printess);
+            };
+            nav.appendChild(btn);
+        }
+        else if (printess.getAddToBasketCallback()) {
+            btn.innerText = printess.gl("ui.buttonBasket");
+            btn.onclick = () => addToBasket(printess);
+            nav.appendChild(btn);
         }
     }
-    return nav;
+    navBar.appendChild(nav);
+    const s = printess.getStep();
+    const hd = printess.stepHeaderDisplay();
+    if (s && printess.isCurrentStepActive() && hd !== "never") {
+        nav = document.createElement("div");
+        nav.className = "mobile-step-bar";
+        const step = document.createElement("div");
+        step.style.flexGrow = "1";
+        step.style.display = "flex";
+        step.style.alignItems = "center";
+        step.style.justifyContent = "center";
+        document.body.classList.add("mobile-has-steps-header");
+        if (hd === "only badge" || hd === "title and badge") {
+            const badge = document.createElement("div");
+            badge.className = "step-badge step-badge-sm";
+            badge.innerText = (s.index + 1).toString();
+            step.appendChild(badge);
+        }
+        if (hd === "only title" || hd === "title and badge") {
+            const h6 = document.createElement("h6");
+            h6.innerText = printess.gl(s.title);
+            h6.style.margin = "0";
+            h6.className = "text-light";
+            step.appendChild(h6);
+        }
+        nav.appendChild(step);
+        navBar.appendChild(nav);
+    }
+    else {
+        document.body.classList.remove("mobile-has-steps-header");
+    }
+    return navBar;
 }
 function getMobilePageBarDiv() {
     let pagebar = document.querySelector(".mobile-pagebar");
@@ -2164,8 +2440,8 @@ function resizeMobileUi(printess, focusSelection = false) {
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
         mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
         const printessDiv = document.getElementById("desktop-printess-container");
-        const viewPortHeight = uih_viewportHeight || window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const viewPortWidth = uih_viewportWidth || window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        const viewPortHeight = uih_viewportHeight ? uih_viewportHeight : window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const viewPortWidth = uih_viewportWidth ? uih_viewportWidth : window.visualViewport ? window.visualViewport.width : window.innerWidth;
         const viewPortTopOffset = uih_viewportOffsetTop;
         let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
         if (printessDiv) {
@@ -2202,11 +2478,13 @@ function resizeMobileUi(printess, focusSelection = false) {
                 printessTop = top + "px";
             }
             const printessBottom = mobileButtonBarHeight + controlHostHeight;
-            if (printessBottom !== uih_lastPrintessBottom || printessTop !== uih_lastPrintessTop || printessHeight !== uih_lastPrintessHeight || viewPortWidth !== uih_lastPrintessWidth) {
+            const activeFFId = getActiveFormFieldId();
+            if ((focusSelection && activeFFId !== uih_lastFormFieldId) || printessBottom !== uih_lastPrintessBottom || printessTop !== uih_lastPrintessTop || printessHeight !== uih_lastPrintessHeight || viewPortWidth !== uih_lastPrintessWidth) {
                 uih_lastPrintessBottom = printessBottom;
                 uih_lastPrintessTop = printessTop;
                 uih_lastPrintessHeight = printessHeight;
                 uih_lastPrintessWidth = viewPortWidth;
+                uih_lastFormFieldId = activeFFId;
                 printessDiv.style.position = "fixed";
                 printessDiv.style.left = "0";
                 printessDiv.style.right = "0";
@@ -2214,7 +2492,7 @@ function resizeMobileUi(printess, focusSelection = false) {
                 printessDiv.style.top = printessTop;
                 printessDiv.style.width = "";
                 printessDiv.style.height = "";
-                printess.resizePrintess(true, focusSelection, undefined, printessHeight);
+                printess.resizePrintess(true, focusSelection, undefined, printessHeight, focusSelection ? activeFFId : undefined);
             }
         }
     }
@@ -2398,6 +2676,7 @@ function getMobileControlHeightClass(property, meta) {
         case "text-area":
         case "select-list":
         case "image-list":
+        case "color-list":
             return "mobile-control-lg";
         case "table":
             return "mobile-control-xl";

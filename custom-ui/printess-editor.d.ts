@@ -78,21 +78,45 @@ export interface printessAttachParameters {
 
   /**
    * list if custom-translations to be used by Printess buyer-side.
+   * If set, it overrides all translations from your account-settings
    * https://printess.com/kb/api-reference/custom-integration/index.html#translations
    */
   translations?: Record<string, Record<string, string> | string>;
+
+  /**
+   * Pass key of desired languages, fallbacks to "auto" -> window.navigator.language
+   */
+  translationKey?: string | "auto";
 
   /**
    * To prevent the use of offensive language in customizeable texts, you can pass a list of forbidden words.
    * The use of offensive words can either throw an error during the validation or trigger the replacement of a bad word. 
    * https://printess.com/kb/api-reference/custom-integration/index.html#offensive-language
    */
-  offensiveWords?: string
+  offensiveWords?: string,
+
+  /**
+   * Enables offensive word check for all editable text frames 
+   */
+  offensiveCheckAll?: false,
+
+  /**
+  * Disables thumbnail-creation when pressing the add to basket button.
+  * Its checked only in uiHelper. 
+  * Thumbnails can independendtly created with:
+  * `const url = await printess.renderFirstPageImage("thumbnail.png");`
+  */
+  noBasketThumbnail?: false,
 
   /**
    * Optional: set frame warnings via api (can be set in template-presets as well) 
    */
   showFrameWarnings?: "sign and hint" | "sign only" | "hint only" | "none";
+
+  /**
+   * Turns animations for selected frames of, no matter what is set in the template. 
+   */
+  buyerSelectionAnimation?: boolean;
 
   /**
    * If you application displays a loading animation, this call tells you to start
@@ -117,6 +141,25 @@ export interface printessAttachParameters {
   formFields: Array<{ name: string, value: string }>;
 
   /**
+  * Minimum width of any image loaded in the browser
+  * Default is 1600, best alternatives are 200, 400, 800
+  * If you display the Printess editor very small in your website/shop
+  * you might want to avoid the editor loading large images into memory. 
+  * You can also set **minImageWidth** for certain products with many pages. 
+  */
+  minImageWidth?: number;
+
+  /**
+   * Fires when an template has been opened from the open menu.
+   */
+  templateOpenedCallback?: (templateName: string, hasPublishedVersion: boolean) => void;
+
+  /**
+  * Fires when an template has been saved and published.
+  */
+  templatePublishedCallback?: (templateName: string) => void;
+
+  /**
    * For every Form Field which is set to **Impact-Price**
    * Printess fires a callback when the value has changed
    */
@@ -139,28 +182,30 @@ export interface printessAttachParameters {
    */
   getOverlayCallback?: externalGetOverlayCallback;
 
-
   /**
-    * Minimum width of any image loaded in the browser
-    * Default is 1600, best alternatives are 200, 400, 800
-    * If you display the Printess editor very small in your website/shop
-    * you might want to avoid the editor loading large images into memory. 
-    * You can also set **minImageWidth** for certain products with many pages. 
-    */
-  minImageWidth?: number;
-
+   * Is called when the page navigation has changed (and needs redraw) but selection has stayed the same.
+   */
+  refreshPaginationCallback?: refreshPaginationCallback;
 
   /**
    * Provide a callback function which is called when the buyer presses the [Add to Basket] button
    * Design is automtically saved and function gets a [token] to load or print this design.
    */
   addToBasketCallback?: (saveToken: string, thumbnailUrl: string) => void,
+
   /**
    * Provide a callback function which is called when the buyer presses the [Back] button
    * Design is automtically saved and function gets a [token] to load or print this design
    */
   backButtonCallback?: (saveToken: string) => void,
+
+  /**
+   * Provide a callback function which is called whenever the buyer-image-list changed or an image is assigned to a frame
+   * Use it, to redraw your buyer-image list if you have one.
+   */
+  imageListChangeCallback?: () => void,
 }
+
 
 /**
  * **iPrintessApi** is returned by the ```attachPrintess()``` call and provides you access to the Printess editor. 
@@ -210,6 +255,11 @@ export interface iPrintessApi {
   getAddToBasketCallback(): null | ((saveToken: string, url: string) => void);
 
   /**
+   * Returns true if the `noBasketThumbnail` flag was set on attach.
+   */
+  noBasketThumbnail(): boolean
+
+  /**
    * Returns the back button callback you have set in `attachPrintess()`
    */
   getBackButtonCallback(): null | ((saveToken: string) => void);
@@ -232,8 +282,9 @@ export interface iPrintessApi {
   /**
    * Select and zoom to the frame(s) mentioned in the error object.
    * @param err
+   * @param zoomToSelection Overrides the default zoom behaviour of the item / template
    */
-  bringErrorIntoView(err: iExternalError): Promise<void> 
+  bringErrorIntoView(err: iExternalError, zoomToSelection?: boolean): Promise<void>
 
   /**
    * Selects all frames which are marked as **background**
@@ -263,7 +314,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Async version waits for Printess to be fully loaded.
    */
-  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }>
+  pageInfo(): Promise<{ current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string }>
 
 
   /**
@@ -272,7 +323,7 @@ export interface iPrintessApi {
    * First and last pages are identical to the spread in facing page documents. 
    * Sync version returns dummy data if Printess is not fully loaded.
    */
-  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string  }
+  pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string }
 
   /**
    * Returns information about all spreads of the displayed document as an Array of `iExternalSpreadInfo` 
@@ -284,11 +335,17 @@ export interface iPrintessApi {
    */
   spreadCount(): number
 
-   /**
-   * Returns true is the user has made edits on a spread.
-   * @param spreadId: ID of Spread to check for edits - otherwise checks for current spread
+  /**
+  * Returns true is the user has made edits on a spread.
+  * @param spreadIdOrIndex: ID or Index of Spread to check for - if empty it checks for current spread
+  */
+  hasBuyerContentEdits(spreadIdOrIndex?: string | number): boolean
+
+  /**
+   * Returns only false if property refers to a formfield which is not visible, because it doesn' match a specific condition.
+   * @param propertyId ID of property to check
    */
-   hasBuyerContentEdits(spreadId?: string): boolean
+  isPropertyVisible(propertyId: string): boolean
 
   /**
    * Returns all available properties in teh current document
@@ -362,6 +419,13 @@ export interface iPrintessApi {
    */
   setFormFieldValue(fieldName: string, newValue: string): Promise<void>;
 
+  /**
+   * Sets the size of a specific document 
+   * @param documentName Name of the document to change
+   * @param widthInDocUnit 12 equals e.g. "12cm"
+   * @param heightInDocUnit 12 equals e.g. "12cm"
+   */
+  setDocumentSize(documentName: string, widthInDocUnit: number, heightInDocUnit: number): Promise<void>
 
   /**
    * Returns the current form field value and its possible list values if available
@@ -421,8 +485,17 @@ export interface iPrintessApi {
   /**
    * Resets all image filters (meta-values) of an image-property to default
    * @param propertyId 
+   * @param imageMeta optional parameter, can be used to set all image-filters to specific values.
    */
-  resetImageFilters(propertyId: string): Promise<void>;
+  resetImageFilters(
+    propertyId: string,
+    imageMeta?: {
+      brightness?: number,
+      sepia?: number,
+      hueRotate?: number,
+      contrast?: number,
+      vivid?: number,
+    }): Promise<void>;
 
   /**
    * Uploads one or many images to Printess and can auto assign the first image
@@ -459,7 +532,38 @@ export interface iPrintessApi {
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
 
-  getImages(propertyId: string): Array<iExternalImage>;
+  /**
+   * Returns Buyer-Side Flag if ui should show a dedicated image tab
+   */
+  showImageTab(): boolean;
+
+  /**
+   * Retrieve the caption for the document-form-field-tab 
+   */
+  formFieldTabCaption(): string
+
+  /**
+   * automatically distribute all non used uploaded images to frames which have not been assigned yet.
+   * Returns a list of all applied image-ids.
+   */
+  distributeImages(): Promise<Array<string>>
+
+  /**
+   * If property is empty it returns the list of buyer uploaded images.
+   * @param propertyId id of property which shows the image list
+   */
+  getImages(propertyId?: string): Array<iExternalImage>
+
+  /**
+   * Returns all buyer uploaded images including information if the image is in use
+   */
+  getAllImages(): Array<iExternalImage>
+
+  /**
+   * Returns if a specific image is used in buyer editable frame.
+   * @param imageId Id of image to test
+   */
+  isImageInUse(imageId: string): boolean
 
   getFonts(propertyId: string): Array<{
     name: string;
@@ -496,7 +600,7 @@ export interface iPrintessApi {
    * @param width Optional: Overrides the retrieved offsetWidth of the printess container - helpfull when animation are longer running
    * @param height Optional: Overrides the retrieved offsetHeight of the printess container - helpfull when animation are longer running
    */
-  resizePrintess(immediate?: boolean, focusSelection?: boolean, width?: number, height?: number): void;
+  resizePrintess(immediate?: boolean, focusSelection?: boolean, width?: number, height?: number, focusFormFieldId?: string): void;
 
   getTemplateTitle(): string;
 
@@ -543,10 +647,19 @@ export interface iPrintessApi {
    * TRUE if the current step is part of the selection.
    */
   isCurrentStepActive(): boolean;
+
   /**
    * Indicates if the current template has buyer-steps 
    */
   hasSteps(): boolean
+
+  /**
+   * 
+   * @param index Sets step by index
+   * @param zoom 
+   */
+  setStep(index: number, zoom?: "frame" | "spread"): Promise<void>
+
   /**
    * 
    */
@@ -599,6 +712,11 @@ export interface iPrintessApi {
   stepNumbersDisplayed(): boolean
 
   /**
+   * Returns the template settings for display of steps header on desktop and mobile
+   */
+  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list"
+
+  /**
    * Displays a grey overlay on printess editor
    * @param message Message to show on overlay
    */
@@ -627,7 +745,7 @@ export interface iPrintessApi {
    * @param serveEndpoint The url the files are served from. This can differ from the upload endpoint to make CDN distribution possible. E.g. https://mycloudfrontid.amazonaws.com/
    * @param keyGenerator The method to generate the S3 key. The built-in one just makes sure that the file name is unique per session.
    */
-  createAwsUploaderProvider(uploadEndpoint: string, serveEndpoint?: string, keyGenerator?: (fileName: string, fileHash?: string) => string): AwsUploadProvider;
+  createAwsUploaderProvider(uploadEndpoint: string, serveEndpoint?: string, keyGenerator?: (fileName: string, fileHash: string) => string): AwsUploadProvider;
 
   /**
    * @deprecated
@@ -754,7 +872,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "table";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "color-list" | "table";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
@@ -783,7 +901,9 @@ export interface iExternalValidation {
   maxChars: number;
   defaultValue: string;
   isMandatory: boolean;
+  clearOnFocus: boolean;
   noOffensiveLanguage: boolean;
+  visibility: "always" | "conditional-on" | "conditional-off";
 }
 export interface iExternalListMeta {
   list: Array<iExternalFieldListEntry>;
@@ -863,6 +983,7 @@ export declare type externalFormFieldChangeCallback = (name: string, value: stri
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<iExternalProperty>) => HTMLDivElement;
+export declare type refreshPaginationCallback = null | (() => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
 export interface iExternalImage {
   id: string;
@@ -870,7 +991,9 @@ export interface iExternalImage {
   thumbCssUrl: string;
   width: number;
   height: number;
+  inUse: boolean;
 }
+
 export interface iExternalButton {
   type: "callback" | "print" | "back" | "next" | "addToBasket" | "undo" | "redo",
   callback?: () => void,
