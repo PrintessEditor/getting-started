@@ -560,6 +560,12 @@ export interface iPrintessApi {
   getAllImages(): Array<iExternalImage>
 
   /**
+   * Returns image-count in "Buyer Upload" folder.
+   */
+  getUploadedImagesCount(): number
+
+
+  /**
    * Returns if a specific image is used in buyer editable frame.
    * @param imageId Id of image to test
    */
@@ -982,9 +988,10 @@ export type MergeResource = "snippets" | "fonts" | "colors" | "images";
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
-export declare type externalGetOverlayCallback = (properties: Array<iExternalProperty>) => HTMLDivElement;
+export declare type externalGetOverlayCallback = (properties: Array<{kind: iExternalPropertyKind}>) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
+
 export interface iExternalImage {
   id: string;
   thumbUrl: string;

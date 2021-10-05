@@ -421,7 +421,7 @@ input[type='range'] {
 }
 
 .step-badge.gray {
-  background-color: gray;
+  background-color: rgba(0,0,0,0.4);
 }
 
 .step-badge.outline {
@@ -429,13 +429,10 @@ input[type='range'] {
   border: 1px solid red;
   color: red;
 }
-
-.step-badge.gray {
-  background-color: gray;
-}
+ 
 
 .step-badge.outline.gray {
-  background-color: white;
+  background-color: transparent;
   border-color: gray;
   color: gray;
 }
@@ -452,7 +449,7 @@ input[type='range'] {
   line-height: 22px;
   font-size: 14px;
 }
-
+ 
 .step-badge.selectable:hover {
   background-color: red;
 }
@@ -640,6 +637,9 @@ input[type='range'] {
 }
 .mobile-control-xl {
   height: 200px;
+}
+.mobile-control-overlay {
+  height: 450px;
 }
 
 .no-mobile-button-bar .mobile-control-host {
@@ -1089,10 +1089,17 @@ body.inline-mobile-page-bar .mobile-pagebar {
     height: 100px !important; /* to ensure its not bigger than the viewport */
   }
 
-#desktop-printess-container {
-  box-shadow: none;
-  border:  none;
-}
+  #desktop-printess-container {
+    box-shadow: none;
+    border:  none;
+  }
+
+
+  .step-badge.outline.gray {
+    background-color: transparent;
+    border-color: white;
+    color: white;
+  }
 
   #printessin {
     position: absolute;

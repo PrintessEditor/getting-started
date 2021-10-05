@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import { iconName, iExternalError, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn, iExternalPropertyKind } from "./printess-editor";
+import { iconName, iExternalError, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn, iExternalPropertyKind, iExternalImage } from "./printess-editor";
 
 declare const bootstrap: any;
 
@@ -756,12 +756,12 @@ function getDesktopStepsUi(printess: iPrintessApi): HTMLElement {
     div.className = "step-n-of";
 
     const text1 = document.createElement("h2");
-    text1.innerText = "Step";
+    text1.innerText = printess.gl("ui.step");
 
     const badge = getStepBadge((cur.index + 1).toString());
 
     const text2 = document.createElement("h2");
-    text2.innerText = "of"; //  + ((printess.lastStep()?.index ?? 0) + 1);
+    text2.innerText = printess.gl("ui.of");
 
     const badge2 = getStepBadge(((printess.lastStep()?.index ?? 0) + 1).toString());
     badge2.classList.add("gray");
@@ -824,8 +824,9 @@ function getStepBadge(content: HTMLElement | string): HTMLDivElement {
   return badge;
 }
 
-function getStepsBadgeList(printess: iPrintessApi): HTMLDivElement {
+function getStepsBadgeList(printess: iPrintessApi, forMobile: boolean = false): HTMLDivElement {
 
+  const sm = ""; //  forMobile ? " step-badge-sm" :"";
   const div = document.createElement("div");
   div.className = "badge-list";
 
@@ -833,7 +834,7 @@ function getStepsBadgeList(printess: iPrintessApi): HTMLDivElement {
   if (cur && printess.isCurrentStepActive()) {
 
     const prevBadge = document.createElement("div");
-    prevBadge.className = "step-badge outline gray";
+    prevBadge.className = "step-badge outline gray" + sm;
     prevBadge.appendChild(printess.getIcon("carret-left-solid"));
     if (printess.hasPreviousStep()) {
       prevBadge.onclick = () => printess.previousStep();
@@ -846,7 +847,7 @@ function getStepsBadgeList(printess: iPrintessApi): HTMLDivElement {
 
     for (let i = 0; i <= (printess.lastStep()?.index ?? 0); i++) {
       const badge = document.createElement("div");
-      badge.className = "step-badge";
+      badge.className = "step-badge" + sm;
       if (cur.index !== i) {
         badge.classList.add("gray");
         badge.classList.add("selectable");
@@ -857,7 +858,7 @@ function getStepsBadgeList(printess: iPrintessApi): HTMLDivElement {
     }
 
     const nextBadge = document.createElement("div");
-    nextBadge.className = "step-badge outline gray";
+    nextBadge.className = "step-badge outline gray" + sm;
     nextBadge.appendChild(printess.getIcon("carret-right-solid"));
     if (printess.hasNextStep()) {
       nextBadge.onclick = () => gotoNextStep(printess);
@@ -1389,57 +1390,82 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
   container = container || document.createElement("div");
 
   /**** IMAGE UPLOAD ****/
-  container.appendChild(getImageUplaodButton(printess, p.id, forMobile, true));
 
   const imagePanel = document.createElement("div");
   imagePanel.className = "image-panel";
   imagePanel.id = "image-panel" + p.id;
 
-  const imageListWrapper = document.createElement("div");
-  imageListWrapper.classList.add("image-list-wrapper");
-  const imageList = document.createElement("div");
-  imageList.classList.add("image-list");
-  const images = printess.getImages(p.id);
-  const mainThumb = document.createElement("div");
-  if (p.imageMeta?.thumbCssUrl) {
-    mainThumb.className = "main";
-    mainThumb.style.backgroundImage = p.imageMeta.thumbCssUrl;
-    imagePanel.appendChild(mainThumb);
-  }
-  for (const im of images) {
-    const thumb = document.createElement("div");
-    thumb.style.backgroundImage = im.thumbCssUrl;
-    if (im.id === p.value) thumb.style.border = "2px solid red";
-    thumb.onclick = () => {
-      printess.setProperty(p.id, im.id);
-      p.value = im.id;
-      validate(printess, p);
-    }
-    imageList.appendChild(thumb);
-  }
-  imageListWrapper.appendChild(imageList);
-  imagePanel.appendChild(imageListWrapper)
+  /* if on desktop and only a single property is present render "my-images" instead of compact image control */
 
-  /*** SCALE ***/
-  let scaleControl: HTMLElement | undefined = undefined;
-  if (forMobile) {
-    container.classList.add("form-control");
-    container.appendChild(imageList);
-    return container;
-  } else {
+  const images = printess.getImages(p.id);
+  const imageList = document.createElement("div");
+
+  if (forMobile || uih_currentProperties.length === 1) {
+
+    /*** SCALE ***/
+    if (!forMobile) {
+      const scaleControl: HTMLElement = getImageScaleControl(printess, p);
+      scaleControl.classList.add("mb-3");
+      container.appendChild(scaleControl);
+    }
+    imagePanel.appendChild(renderMyImagesTab(printess, p, images));
+    imagePanel.style.gridTemplateRows = "auto";
     container.appendChild(imagePanel);
-    scaleControl = getImageScaleControl(printess, p);
-    container.appendChild(scaleControl);
     return container;
+
+  } else {
+
+    container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
+
+    const imageListWrapper = document.createElement("div");
+    imageListWrapper.classList.add("image-list-wrapper");
+
+    imageList.classList.add("image-list");
+
+    const mainThumb = document.createElement("div");
+    if (p.imageMeta?.thumbCssUrl) {
+      mainThumb.className = "main";
+      mainThumb.style.backgroundImage = p.imageMeta.thumbCssUrl;
+      imagePanel.appendChild(mainThumb);
+    }
+    for (const im of images) {
+      const thumb = document.createElement("div");
+      thumb.style.backgroundImage = im.thumbCssUrl;
+      if (im.id === p.value) thumb.style.border = "2px solid red";
+      thumb.onclick = () => {
+        printess.setProperty(p.id, im.id);
+        p.value = im.id;
+        validate(printess, p);
+      }
+      imageList.appendChild(thumb);
+    }
+    imageListWrapper.appendChild(imageList);
+    imagePanel.appendChild(imageListWrapper)
+
+    if (forMobile) {
+      container.classList.add("form-control");
+      container.appendChild(imageList);
+      return container;
+    } else {
+      container.appendChild(imagePanel);
+      /*** SCALE ***/
+      const scaleControl: HTMLElement = getImageScaleControl(printess, p);
+      container.appendChild(scaleControl);
+      return container;
+    }
+
   }
+
+
+
 }
 
-function getImageUplaodButton(printess: iPrintessApi, id: string, forMobile: boolean = false, assignToFrameOrNewFrame: boolean = true): HTMLDivElement {
+function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boolean = false, assignToFrameOrNewFrame: boolean = true, addBottomMargin: boolean = true): HTMLDivElement {
   const container = document.createElement("div");
 
   /***+ IMAGE UPLOAD ****/
   const fileUpload = document.createElement("div");
-  fileUpload.className = "mb-3";
+  if (addBottomMargin) fileUpload.className = "mb-3";
   fileUpload.id = "cnt_" + id;
 
   const progressDiv = document.createElement("div");
@@ -2131,13 +2157,33 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
  * My Images List
  */
 
-function renderMyImagesTab(printess: iPrintessApi): HTMLElement {
+function renderMyImagesTab(printess: iPrintessApi, p?: iExternalProperty, images?: Array<iExternalImage>): HTMLElement {
   const container = document.createElement("div");
   container.innerHTML = "";
 
+
   const imageList = document.createElement("div");
   imageList.classList.add("image-list");
-  const images = printess.getAllImages();
+  images = images || printess.getAllImages();
+
+  const distributeBtn = document.createElement("button");
+  distributeBtn.className = "btn btn-secondary mb-3"; // my-3 w-100";
+  distributeBtn.innerText = printess.gl("ui.buttonDistribute");
+  distributeBtn.onclick = () => printess.distributeImages();
+
+  const twoButtons = document.createElement("div");
+  twoButtons.style.display = "grid";
+
+
+  twoButtons.appendChild(getImageUploadButton(printess, "file-uploader", false, p !== undefined, false));
+
+  if (images.length > 0 && images.filter(im => !im.inUse).length > 0) {
+    twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
+    twoButtons.appendChild(document.createElement("div"));
+    twoButtons.appendChild(distributeBtn);
+  }
+
+  container.appendChild(twoButtons);
 
   for (const im of images) {
     const thumb = document.createElement("div");
@@ -2145,18 +2191,41 @@ function renderMyImagesTab(printess: iPrintessApi): HTMLElement {
     thumb.draggable = true;
     thumb.ondragstart = (ev: DragEvent) => ev.dataTransfer?.setData('text/plain', `${im.id}`);
     thumb.style.backgroundImage = im.thumbCssUrl;
-    thumb.style.opacity = im.inUse ? "0.5" : "1.0";
+    thumb.style.position = "relative";
+    thumb.style.width = "91px";
+    thumb.style.height = "91px";
+    if (im.inUse) {
+      const chk = printess.getIcon("check-square");
+      chk.style.width = "28px";
+      chk.style.height = "28px";
+      chk.style.position = "absolute";
+      chk.style.right = "5px";
+      chk.style.bottom = "5px";
+      chk.style.color = "#6aad00";
+      chk.style.backgroundColor = "white";
+      chk.style.borderRadius = "4px";
+      chk.style.boxShadow = "2px 2px black";
+      thumb.appendChild(chk);
+    }
+    //  thumb.style.opacity = im.inUse ? "0.5" : "1.0";
+
+    if (p) {
+      if (im.id === p.value) {
+        thumb.style.border = "2px solid var(--bs-primary)";
+        thumb.style.outline = "3px solid var(--bs-primary)";
+      }
+      thumb.onclick = () => {
+        printess.setProperty(p.id, im.id);
+        p.value = im.id;
+        validate(printess, p);
+      }
+    }
+
     imageList.appendChild(thumb);
   }
 
-  const distributeBtn = document.createElement("button");
-  distributeBtn.className = "btn btn-primary my-3 w-100";
-  distributeBtn.innerText = printess.gl("ui.buttonDistribute");
-  distributeBtn.onclick = () => printess.distributeImages();
-
   container.appendChild(imageList);
-  if (images.length > 0) container.appendChild(distributeBtn);
-  container.appendChild(getImageUplaodButton(printess, "file-uploader", false, false));
+
   return container;
 }
 
@@ -2835,7 +2904,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
 
   navBar.appendChild(nav);
 
-
+  // *********** Mobile Steps bar 
   const s = printess.getStep();
   const hd = printess.stepHeaderDisplay();
   if (s && printess.isCurrentStepActive() && hd !== "never") {
@@ -2849,6 +2918,7 @@ function renderMobileNavBar(printess: iPrintessApi) {
     step.style.justifyContent = "center";
     document.body.classList.add("mobile-has-steps-header");
 
+
     if (hd === "only badge" || hd === "title and badge") {
       const badge = document.createElement("div");
       badge.className = "step-badge step-badge-sm";
@@ -2861,6 +2931,11 @@ function renderMobileNavBar(printess: iPrintessApi) {
       h6.style.margin = "0";
       h6.className = "text-light";
       step.appendChild(h6)
+    }
+    if (hd === "badge list") {
+      step.classList.add("active-step-badge-list");
+      step.appendChild(getStepsBadgeList(printess, true)); // placeholder right align of buttons
+
     }
     nav.appendChild(step);
     navBar.appendChild(nav);
@@ -3176,7 +3251,7 @@ function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState) 
       controlHost.appendChild(snippets);
 
     } else if (state.externalProperty) {
-      controlHost.classList.add(getMobileControlHeightClass(state.externalProperty, state.metaProperty))
+      controlHost.classList.add(getMobileControlHeightClass(printess, state.externalProperty, state.metaProperty))
       let control: HTMLElement;
       if (state.state === "table-add" || state.state === "table-edit") {
         control = renderTableDetails(printess, state.externalProperty, true)
@@ -3190,11 +3265,15 @@ function renderMobileControlHost(printess: iPrintessApi, state: iMobileUiState) 
   }
 }
 
-function getMobileControlHeightClass(property: iExternalProperty, meta?: iExternalMetaPropertyKind): string {
+function getMobileControlHeightClass(printess: iPrintessApi, property: iExternalProperty, meta?: iExternalMetaPropertyKind): string {
   switch (property.kind) {
     case "image":
       if (!meta) {
-        return "mobile-control-lg"
+        if (printess.getUploadedImagesCount() <= 3) {
+          return "mobile-control-lg"
+        } else {
+          return "mobile-control-overlay"
+        }
       }
       break;
     case "multi-line-text":

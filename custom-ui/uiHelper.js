@@ -619,10 +619,10 @@ function getDesktopStepsUi(printess) {
         const div = document.createElement("div");
         div.className = "step-n-of";
         const text1 = document.createElement("h2");
-        text1.innerText = "Step";
+        text1.innerText = printess.gl("ui.step");
         const badge = getStepBadge((cur.index + 1).toString());
         const text2 = document.createElement("h2");
-        text2.innerText = "of";
+        text2.innerText = printess.gl("ui.of");
         const badge2 = getStepBadge((((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0) + 1).toString());
         badge2.classList.add("gray");
         div.appendChild(text1);
@@ -677,14 +677,15 @@ function getStepBadge(content) {
     }
     return badge;
 }
-function getStepsBadgeList(printess) {
+function getStepsBadgeList(printess, forMobile = false) {
     var _a, _b;
+    const sm = "";
     const div = document.createElement("div");
     div.className = "badge-list";
     const cur = printess.getStep();
     if (cur && printess.isCurrentStepActive()) {
         const prevBadge = document.createElement("div");
-        prevBadge.className = "step-badge outline gray";
+        prevBadge.className = "step-badge outline gray" + sm;
         prevBadge.appendChild(printess.getIcon("carret-left-solid"));
         if (printess.hasPreviousStep()) {
             prevBadge.onclick = () => printess.previousStep();
@@ -696,7 +697,7 @@ function getStepsBadgeList(printess) {
         div.appendChild(prevBadge);
         for (let i = 0; i <= ((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0); i++) {
             const badge = document.createElement("div");
-            badge.className = "step-badge";
+            badge.className = "step-badge" + sm;
             if (cur.index !== i) {
                 badge.classList.add("gray");
                 badge.classList.add("selectable");
@@ -706,7 +707,7 @@ function getStepsBadgeList(printess) {
             div.appendChild(badge);
         }
         const nextBadge = document.createElement("div");
-        nextBadge.className = "step-badge outline gray";
+        nextBadge.className = "step-badge outline gray" + sm;
         nextBadge.appendChild(printess.getIcon("carret-right-solid"));
         if (printess.hasNextStep()) {
             nextBadge.onclick = () => gotoNextStep(printess);
@@ -1164,52 +1165,65 @@ function getImageRotateControl(printess, p) {
 function getImageUploadControl(printess, p, container, forMobile = false) {
     var _a;
     container = container || document.createElement("div");
-    container.appendChild(getImageUplaodButton(printess, p.id, forMobile, true));
     const imagePanel = document.createElement("div");
     imagePanel.className = "image-panel";
     imagePanel.id = "image-panel" + p.id;
-    const imageListWrapper = document.createElement("div");
-    imageListWrapper.classList.add("image-list-wrapper");
-    const imageList = document.createElement("div");
-    imageList.classList.add("image-list");
     const images = printess.getImages(p.id);
-    const mainThumb = document.createElement("div");
-    if ((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.thumbCssUrl) {
-        mainThumb.className = "main";
-        mainThumb.style.backgroundImage = p.imageMeta.thumbCssUrl;
-        imagePanel.appendChild(mainThumb);
-    }
-    for (const im of images) {
-        const thumb = document.createElement("div");
-        thumb.style.backgroundImage = im.thumbCssUrl;
-        if (im.id === p.value)
-            thumb.style.border = "2px solid red";
-        thumb.onclick = () => {
-            printess.setProperty(p.id, im.id);
-            p.value = im.id;
-            validate(printess, p);
-        };
-        imageList.appendChild(thumb);
-    }
-    imageListWrapper.appendChild(imageList);
-    imagePanel.appendChild(imageListWrapper);
-    let scaleControl = undefined;
-    if (forMobile) {
-        container.classList.add("form-control");
-        container.appendChild(imageList);
+    const imageList = document.createElement("div");
+    if (forMobile || uih_currentProperties.length === 1) {
+        if (!forMobile) {
+            const scaleControl = getImageScaleControl(printess, p);
+            scaleControl.classList.add("mb-3");
+            container.appendChild(scaleControl);
+        }
+        imagePanel.appendChild(renderMyImagesTab(printess, p, images));
+        imagePanel.style.gridTemplateRows = "auto";
+        container.appendChild(imagePanel);
         return container;
     }
     else {
-        container.appendChild(imagePanel);
-        scaleControl = getImageScaleControl(printess, p);
-        container.appendChild(scaleControl);
-        return container;
+        container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
+        const imageListWrapper = document.createElement("div");
+        imageListWrapper.classList.add("image-list-wrapper");
+        imageList.classList.add("image-list");
+        const mainThumb = document.createElement("div");
+        if ((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.thumbCssUrl) {
+            mainThumb.className = "main";
+            mainThumb.style.backgroundImage = p.imageMeta.thumbCssUrl;
+            imagePanel.appendChild(mainThumb);
+        }
+        for (const im of images) {
+            const thumb = document.createElement("div");
+            thumb.style.backgroundImage = im.thumbCssUrl;
+            if (im.id === p.value)
+                thumb.style.border = "2px solid red";
+            thumb.onclick = () => {
+                printess.setProperty(p.id, im.id);
+                p.value = im.id;
+                validate(printess, p);
+            };
+            imageList.appendChild(thumb);
+        }
+        imageListWrapper.appendChild(imageList);
+        imagePanel.appendChild(imageListWrapper);
+        if (forMobile) {
+            container.classList.add("form-control");
+            container.appendChild(imageList);
+            return container;
+        }
+        else {
+            container.appendChild(imagePanel);
+            const scaleControl = getImageScaleControl(printess, p);
+            container.appendChild(scaleControl);
+            return container;
+        }
     }
 }
-function getImageUplaodButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true) {
+function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true, addBottomMargin = true) {
     const container = document.createElement("div");
     const fileUpload = document.createElement("div");
-    fileUpload.className = "mb-3";
+    if (addBottomMargin)
+        fileUpload.className = "mb-3";
     fileUpload.id = "cnt_" + id;
     const progressDiv = document.createElement("div");
     progressDiv.className = "progress";
@@ -1781,29 +1795,61 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
         pages.appendChild(ul);
     }
 }
-function renderMyImagesTab(printess) {
+function renderMyImagesTab(printess, p, images) {
     const container = document.createElement("div");
     container.innerHTML = "";
     const imageList = document.createElement("div");
     imageList.classList.add("image-list");
-    const images = printess.getAllImages();
+    images = images || printess.getAllImages();
+    const distributeBtn = document.createElement("button");
+    distributeBtn.className = "btn btn-secondary mb-3";
+    distributeBtn.innerText = printess.gl("ui.buttonDistribute");
+    distributeBtn.onclick = () => printess.distributeImages();
+    const twoButtons = document.createElement("div");
+    twoButtons.style.display = "grid";
+    twoButtons.appendChild(getImageUploadButton(printess, "file-uploader", false, p !== undefined, false));
+    if (images.length > 0 && images.filter(im => !im.inUse).length > 0) {
+        twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
+        twoButtons.appendChild(document.createElement("div"));
+        twoButtons.appendChild(distributeBtn);
+    }
+    container.appendChild(twoButtons);
     for (const im of images) {
         const thumb = document.createElement("div");
         thumb.className = "big";
         thumb.draggable = true;
         thumb.ondragstart = (ev) => { var _a; return (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${im.id}`); };
         thumb.style.backgroundImage = im.thumbCssUrl;
-        thumb.style.opacity = im.inUse ? "0.5" : "1.0";
+        thumb.style.position = "relative";
+        thumb.style.width = "91px";
+        thumb.style.height = "91px";
+        if (im.inUse) {
+            const chk = printess.getIcon("check-square");
+            chk.style.width = "28px";
+            chk.style.height = "28px";
+            chk.style.position = "absolute";
+            chk.style.right = "5px";
+            chk.style.bottom = "5px";
+            chk.style.color = "#6aad00";
+            chk.style.backgroundColor = "white";
+            chk.style.borderRadius = "4px";
+            chk.style.boxShadow = "2px 2px black";
+            thumb.appendChild(chk);
+        }
+        if (p) {
+            if (im.id === p.value) {
+                thumb.style.border = "2px solid var(--bs-primary)";
+                thumb.style.outline = "3px solid var(--bs-primary)";
+            }
+            thumb.onclick = () => {
+                printess.setProperty(p.id, im.id);
+                p.value = im.id;
+                validate(printess, p);
+            };
+        }
         imageList.appendChild(thumb);
     }
-    const distributeBtn = document.createElement("button");
-    distributeBtn.className = "btn btn-primary my-3 w-100";
-    distributeBtn.innerText = printess.gl("ui.buttonDistribute");
-    distributeBtn.onclick = () => printess.distributeImages();
     container.appendChild(imageList);
-    if (images.length > 0)
-        container.appendChild(distributeBtn);
-    container.appendChild(getImageUplaodButton(printess, "file-uploader", false, false));
     return container;
 }
 function renderGroupSnippets(printess, groupSnippets, forMobile) {
@@ -2410,6 +2456,10 @@ function renderMobileNavBar(printess) {
             h6.className = "text-light";
             step.appendChild(h6);
         }
+        if (hd === "badge list") {
+            step.classList.add("active-step-badge-list");
+            step.appendChild(getStepsBadgeList(printess, true));
+        }
         nav.appendChild(step);
         navBar.appendChild(nav);
     }
@@ -2646,7 +2696,7 @@ function renderMobileControlHost(printess, state) {
             controlHost.appendChild(snippets);
         }
         else if (state.externalProperty) {
-            controlHost.classList.add(getMobileControlHeightClass(state.externalProperty, state.metaProperty));
+            controlHost.classList.add(getMobileControlHeightClass(printess, state.externalProperty, state.metaProperty));
             let control;
             if (state.state === "table-add" || state.state === "table-edit") {
                 control = renderTableDetails(printess, state.externalProperty, true);
@@ -2660,11 +2710,16 @@ function renderMobileControlHost(printess, state) {
         }
     }
 }
-function getMobileControlHeightClass(property, meta) {
+function getMobileControlHeightClass(printess, property, meta) {
     switch (property.kind) {
         case "image":
             if (!meta) {
-                return "mobile-control-lg";
+                if (printess.getUploadedImagesCount() <= 3) {
+                    return "mobile-control-lg";
+                }
+                else {
+                    return "mobile-control-overlay";
+                }
             }
             break;
         case "multi-line-text":
