@@ -549,6 +549,13 @@ export interface iPrintessApi {
   distributeImages(): Promise<Array<string>>
 
   /**
+   * delete buyer uploaded images that are not in use
+   * Returns the number of successfully deleted images.
+   * @param images array of images to be deleted
+   */
+  deleteImages(images: Array<iExternalImage>): number
+
+  /**
    * If property is empty it returns the list of buyer uploaded images.
    * @param propertyId id of property which shows the image list
    */
@@ -966,6 +973,7 @@ export interface iExternalimageMeta {
   hueRotate: number;
   thumbUrl: string;
   thumbCssUrl: string;
+  canUpload: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate">;
 }
 export interface iExternalImageScaleHints {
@@ -977,7 +985,8 @@ export interface iExternalImageScaleHints {
 export type iExternalErrors = Array<iExternalError>
 
 export interface iExternalError {
-  errorCode: "imageResolutionLow" | "imageMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected",
+  boxIds: Array<string>,
+  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected",
   errorValue1: string | number,
   errorValue2?: string | number,
 }
@@ -988,7 +997,7 @@ export type MergeResource = "snippets" | "fonts" | "colors" | "images";
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
-export declare type externalGetOverlayCallback = (properties: Array<{kind: iExternalPropertyKind}>) => HTMLDivElement;
+export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind }>) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
 

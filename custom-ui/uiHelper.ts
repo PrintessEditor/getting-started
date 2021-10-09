@@ -37,14 +37,17 @@ let uih_lastFormFieldId: undefined | string = undefined;
 
 let uih_lastOverflowState = false;
 
+const uih_ignoredLowResolutionErrors: Array<string> = [];
+
 console.log("Printess ui-helper loaded");
 
 
 async function addToBasket(printess: iPrintessApi) {
   const errors = printess.validate("all");
-  if (errors.length > 0) {
-    printess.bringErrorIntoView(errors[0]);
-    getValidationOverlay(printess, errors);
+  const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+  if (filteredErrors.length > 0) {
+    printess.bringErrorIntoView(filteredErrors[0]);
+    getValidationOverlay(printess, filteredErrors);
     return;
   }
 
@@ -67,9 +70,10 @@ async function addToBasket(printess: iPrintessApi) {
 
 function gotoNextStep(printess: iPrintessApi) {
   const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
-  if (errors.length > 0) {
-    printess.bringErrorIntoView(errors[0]);
-    getValidationOverlay(printess, errors);
+  const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+  if (filteredErrors.length > 0) {
+    printess.bringErrorIntoView(filteredErrors[0]);
+    getValidationOverlay(printess, filteredErrors);
     return;
   }
   if (printess.hasNextStep()) {
@@ -80,9 +84,10 @@ function gotoNextStep(printess: iPrintessApi) {
 }
 function gotoStep(printess: iPrintessApi, stepIndex: number) {
   const errors = printess.validate("until-current-step");
-  if (errors.length > 0) {
-    printess.bringErrorIntoView(errors[0]);
-    getValidationOverlay(printess, errors);
+  const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+  if (filteredErrors.length > 0) {
+    printess.bringErrorIntoView(filteredErrors[0]);
+    getValidationOverlay(printess, filteredErrors);
     return;
   }
   printess.setStep(stepIndex);
@@ -273,7 +278,7 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
         const tabLabel = printess.formFieldTabCaption();
         tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv })
       }
-      tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImagesTab(printess) })
+      tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImagesTab(printess, false) })
       if (groupSnippets.length > 0) {
         tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) })
       }
@@ -440,8 +445,9 @@ function getDoneButton(printess: iPrintessApi): HTMLElement {
       gotoNextStep(printess)
     } else {
       const errors = printess.validate("selection");
-      if (errors.length > 0) {
-        getValidationOverlay(printess, errors);
+      const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+      if (filteredErrors.length > 0) {
+        getValidationOverlay(printess, filteredErrors);
         return;
       }
       printess.clearSelection();
@@ -592,8 +598,10 @@ function getDesktopTitle(printess: iPrintessApi): HTMLElement {
 }
 
 // get validation modal that displays external property errors
-function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>) {
+function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>): void {
+  const error = errors[0];
   const modal = document.createElement("div");
+  modal.id = "validation-modal";
   modal.className = "modal show align-items-center";
   modal.setAttribute("tabindex", "-1");
   modal.style.backgroundColor = "rgba(0,0,0,0.7)";
@@ -611,7 +619,7 @@ function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalErr
 
   const title = document.createElement("h3");
   title.className = "modal-title";
-  title.innerHTML = printess.gl(`errors.${errors[0].errorCode}Title`).replace(/\n/g, "<br>")
+  title.innerHTML = printess.gl(`errors.${error.errorCode}Title`).replace(/\n/g, "<br>")
   title.style.color = "#fff";
 
   const modalBody = document.createElement("div");
@@ -620,16 +628,38 @@ function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalErr
   const footer = document.createElement("div");
   footer.className = "modal-footer";
 
+  const ignore = document.createElement("button");
+  ignore.className = "btn btn-secondary";
+  ignore.textContent = printess.gl("ui.buttonIgnore");
+  ignore.onclick = () => {
+    modal.style.display = "none";
+    uih_ignoredLowResolutionErrors.push(error.boxIds[0]);
+    const el = document.getElementById("validation-modal");
+    el?.remove();
+    errors.shift();
+    if (printess.isCurrentStepActive()) {
+      gotoNextStep(printess);
+    } else {
+      if (errors.length > 0) {
+        getValidationOverlay(printess, errors);
+        return;
+      }
+      printess.clearSelection();
+    }
+  }
+
   const ok = document.createElement("button");
   ok.className = "btn btn-primary";
   ok.textContent = printess.gl("ui.buttonOk");
   ok.onclick = () => {
     modal.style.display = "none";
+    const el = document.getElementById("validation-modal");
+    el?.remove();
   }
 
   const p = document.createElement("p");
   p.className = "error-message";
-  p.textContent = `${printess.gl(`errors.${errors[0].errorCode}`, errors[0].errorValue1)}`;
+  p.textContent = `${printess.gl(`errors.${error.errorCode}`, error.errorValue1)}`;
 
   const errorLink = document.createElement("p");
   errorLink.className = "text-primary d-flex align-items-center";
@@ -685,6 +715,7 @@ function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalErr
     }
   }
 
+  error.errorCode === "imageResolutionLow" && footer.appendChild(ignore);
   footer.appendChild(ok);
   content.appendChild(modalHeader);
   content.appendChild(modalBody);
@@ -824,7 +855,7 @@ function getStepBadge(content: HTMLElement | string): HTMLDivElement {
   return badge;
 }
 
-function getStepsBadgeList(printess: iPrintessApi, forMobile: boolean = false): HTMLDivElement {
+function getStepsBadgeList(printess: iPrintessApi, _forMobile: boolean = false): HTMLDivElement {
 
   const sm = ""; //  forMobile ? " step-badge-sm" :"";
   const div = document.createElement("div");
@@ -1408,14 +1439,17 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
       scaleControl.classList.add("mb-3");
       container.appendChild(scaleControl);
     }
-    imagePanel.appendChild(renderMyImagesTab(printess, p, images));
+    imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
     imagePanel.style.gridTemplateRows = "auto";
+    imagePanel.style.gridTemplateColumns = "1fr";
     container.appendChild(imagePanel);
     return container;
 
   } else {
 
-    container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
+    if (p.imageMeta?.canUpload) {
+      container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
+    }
 
     const imageListWrapper = document.createElement("div");
     imageListWrapper.classList.add("image-list-wrapper");
@@ -1492,8 +1526,12 @@ function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boo
 
       const scaleControl = document.getElementById("range-label");
       if (scaleControl) scaleControl.style.display = "none";
-      const imagePanel = document.getElementById("image-panel" + id);
-      if (imagePanel) imagePanel.style.display = "none";
+      // const imagePanel = document.getElementById("image-panel" + id);
+      // if (imagePanel) imagePanel.style.display = "none";
+      const twoButtons = document.getElementById("two-buttons");
+      if (twoButtons) twoButtons.style.gridTemplateColumns = "1fr";
+      const distributeBtn = document.getElementById("distribute-button");
+      if (distributeBtn) distributeBtn.style.display = "none";
       progressDiv.style.display = "flex";
 
       const label = document.getElementById("upload-btn-" + id);
@@ -1511,7 +1549,7 @@ function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boo
       // if auto assign is "false" you must reset progress-bar width and control visibilty manually
       // .then(images => {console.log(images)};
 
-      if (!assignToFrameOrNewFrame) renderMyImagesTab(printess);
+      if (!assignToFrameOrNewFrame) renderMyImagesTab(printess, forMobile);
     }
   };
 
@@ -2157,33 +2195,36 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
  * My Images List
  */
 
-function renderMyImagesTab(printess: iPrintessApi, p?: iExternalProperty, images?: Array<iExternalImage>): HTMLElement {
+function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExternalProperty, images?: Array<iExternalImage>): HTMLElement {
   const container = document.createElement("div");
   container.innerHTML = "";
-
 
   const imageList = document.createElement("div");
   imageList.classList.add("image-list");
   images = images || printess.getAllImages();
 
-  const distributeBtn = document.createElement("button");
-  distributeBtn.className = "btn btn-secondary mb-3"; // my-3 w-100";
-  distributeBtn.innerText = printess.gl("ui.buttonDistribute");
-  distributeBtn.onclick = () => printess.distributeImages();
+  // Wenn keine Property gesetzt ist, dann rendern wir den glaobel My-Images Tab
+  if (!p || p?.imageMeta?.canUpload) {
+    const distributeBtn = document.createElement("button");
+    distributeBtn.id = "distribute-button";
+    distributeBtn.className = "btn btn-secondary mb-3"; // my-3 w-100";
+    distributeBtn.innerText = printess.gl("ui.buttonDistribute");
+    distributeBtn.onclick = () => printess.distributeImages();
 
-  const twoButtons = document.createElement("div");
-  twoButtons.style.display = "grid";
+    const twoButtons = document.createElement("div");
+    twoButtons.id = "two-buttons";
+    twoButtons.style.display = "grid";
 
+    twoButtons.appendChild(getImageUploadButton(printess, p?.id ?? "", false, p !== undefined, false));
 
-  twoButtons.appendChild(getImageUploadButton(printess, "file-uploader", false, p !== undefined, false));
+    if (images.length > 0 && images.filter(im => !im.inUse).length > 0) {
+      twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
+      twoButtons.appendChild(document.createElement("div"));
+      twoButtons.appendChild(distributeBtn);
+    }
 
-  if (images.length > 0 && images.filter(im => !im.inUse).length > 0) {
-    twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
-    twoButtons.appendChild(document.createElement("div"));
-    twoButtons.appendChild(distributeBtn);
+    container.appendChild(twoButtons);
   }
-
-  container.appendChild(twoButtons);
 
   for (const im of images) {
     const thumb = document.createElement("div");
@@ -2206,6 +2247,33 @@ function renderMyImagesTab(printess: iPrintessApi, p?: iExternalProperty, images
       chk.style.borderRadius = "4px";
       chk.style.boxShadow = "2px 2px black";
       thumb.appendChild(chk);
+    } else {
+      const cls = printess.getIcon("close-square");
+      cls.style.display = forMobile ? "block" : "none";
+      cls.style.width = "28px";
+      cls.style.height = "28px";
+      cls.style.position = "absolute";
+      cls.style.right = "5px";
+      cls.style.bottom = "5px";
+      cls.style.color = "#ad1700";
+      cls.style.backgroundColor = "white";
+      cls.style.borderRadius = "4px";
+      cls.style.boxShadow = "2px 2px black";
+      cls.style.cursor = "pointer";
+      cls.onclick = (e) => {
+        e.stopImmediatePropagation();
+        imageList.removeChild(thumb);
+        printess.deleteImages([im]);
+      }
+      if (!forMobile) {
+        thumb.onmouseenter = () => {
+          cls.style.display = "block";
+        }
+        thumb.onmouseleave = () => {
+          cls.style.display = "none";
+        }
+      }
+      thumb.appendChild(cls);
     }
     //  thumb.style.opacity = im.inUse ? "0.5" : "1.0";
 
@@ -2703,6 +2771,7 @@ function renderMobileUi(printess: iPrintessApi,
       document.body.classList.remove("inline-mobile-page-bar");
     }
   }
+  document.body.classList.remove("inline-mobile-page-bar");
 
   if (state !== "add") {
     // render properties UI
@@ -3091,7 +3160,7 @@ function getMobileButtons(printess: iPrintessApi, container?: HTMLDivElement, pr
   if (printess.spreadCount() > 1) {
     const spreads = printess.getAllSpreads();
     const info = printess.pageInfoSync();
-    if (hasButtons && !document.body.classList.contains('inline-mobile-page-bar')) {
+    if (hasButtons || !document.body.classList.contains('inline-mobile-page-bar')) {
       renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
     } else if (!hasButtons) {
       // if we have no properties on document level, we can render an even larger page navigation in the button bar 

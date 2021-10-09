@@ -33,13 +33,15 @@ let uih_lastPrintessTop = "";
 let uih_lastPrintessBottom = 0;
 let uih_lastFormFieldId = undefined;
 let uih_lastOverflowState = false;
+const uih_ignoredLowResolutionErrors = [];
 console.log("Printess ui-helper loaded");
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
         const errors = printess.validate("all");
-        if (errors.length > 0) {
-            printess.bringErrorIntoView(errors[0]);
-            getValidationOverlay(printess, errors);
+        const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+        if (filteredErrors.length > 0) {
+            printess.bringErrorIntoView(filteredErrors[0]);
+            getValidationOverlay(printess, filteredErrors);
             return;
         }
         const callback = printess.getAddToBasketCallback();
@@ -61,9 +63,10 @@ function addToBasket(printess) {
 }
 function gotoNextStep(printess) {
     const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
-    if (errors.length > 0) {
-        printess.bringErrorIntoView(errors[0]);
-        getValidationOverlay(printess, errors);
+    const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+    if (filteredErrors.length > 0) {
+        printess.bringErrorIntoView(filteredErrors[0]);
+        getValidationOverlay(printess, filteredErrors);
         return;
     }
     if (printess.hasNextStep()) {
@@ -75,9 +78,10 @@ function gotoNextStep(printess) {
 }
 function gotoStep(printess, stepIndex) {
     const errors = printess.validate("until-current-step");
-    if (errors.length > 0) {
-        printess.bringErrorIntoView(errors[0]);
-        getValidationOverlay(printess, errors);
+    const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+    if (filteredErrors.length > 0) {
+        printess.bringErrorIntoView(filteredErrors[0]);
+        getValidationOverlay(printess, filteredErrors);
         return;
     }
     printess.setStep(stepIndex);
@@ -237,7 +241,7 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
                 const tabLabel = printess.formFieldTabCaption();
                 tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv });
             }
-            tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImagesTab(printess) });
+            tabsPanel.push({ id: "my-images", title: printess.gl("ui.imagesTab"), content: renderMyImagesTab(printess, false) });
             if (groupSnippets.length > 0) {
                 tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) });
             }
@@ -380,8 +384,9 @@ function getDoneButton(printess) {
         }
         else {
             const errors = printess.validate("selection");
-            if (errors.length > 0) {
-                getValidationOverlay(printess, errors);
+            const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+            if (filteredErrors.length > 0) {
+                getValidationOverlay(printess, filteredErrors);
                 return;
             }
             printess.clearSelection();
@@ -488,7 +493,9 @@ function getDesktopTitle(printess) {
     return container;
 }
 function getValidationOverlay(printess, errors) {
+    const error = errors[0];
     const modal = document.createElement("div");
+    modal.id = "validation-modal";
     modal.className = "modal show align-items-center";
     modal.setAttribute("tabindex", "-1");
     modal.style.backgroundColor = "rgba(0,0,0,0.7)";
@@ -501,21 +508,43 @@ function getValidationOverlay(printess, errors) {
     modalHeader.className = "modal-header bg-primary";
     const title = document.createElement("h3");
     title.className = "modal-title";
-    title.innerHTML = printess.gl(`errors.${errors[0].errorCode}Title`).replace(/\n/g, "<br>");
+    title.innerHTML = printess.gl(`errors.${error.errorCode}Title`).replace(/\n/g, "<br>");
     title.style.color = "#fff";
     const modalBody = document.createElement("div");
     modalBody.className = "modal-body";
     const footer = document.createElement("div");
     footer.className = "modal-footer";
+    const ignore = document.createElement("button");
+    ignore.className = "btn btn-secondary";
+    ignore.textContent = printess.gl("ui.buttonIgnore");
+    ignore.onclick = () => {
+        modal.style.display = "none";
+        uih_ignoredLowResolutionErrors.push(error.boxIds[0]);
+        const el = document.getElementById("validation-modal");
+        el === null || el === void 0 ? void 0 : el.remove();
+        errors.shift();
+        if (printess.isCurrentStepActive()) {
+            gotoNextStep(printess);
+        }
+        else {
+            if (errors.length > 0) {
+                getValidationOverlay(printess, errors);
+                return;
+            }
+            printess.clearSelection();
+        }
+    };
     const ok = document.createElement("button");
     ok.className = "btn btn-primary";
     ok.textContent = printess.gl("ui.buttonOk");
     ok.onclick = () => {
         modal.style.display = "none";
+        const el = document.getElementById("validation-modal");
+        el === null || el === void 0 ? void 0 : el.remove();
     };
     const p = document.createElement("p");
     p.className = "error-message";
-    p.textContent = `${printess.gl(`errors.${errors[0].errorCode}`, errors[0].errorValue1)}`;
+    p.textContent = `${printess.gl(`errors.${error.errorCode}`, error.errorValue1)}`;
     const errorLink = document.createElement("p");
     errorLink.className = "text-primary d-flex align-items-center";
     const numberOfErrors = errors.length - 1 > 1 ? "errors.moreProblems" : "errors.oneMoreProblem";
@@ -561,6 +590,7 @@ function getValidationOverlay(printess, errors) {
             }
         };
     }
+    error.errorCode === "imageResolutionLow" && footer.appendChild(ignore);
     footer.appendChild(ok);
     content.appendChild(modalHeader);
     content.appendChild(modalBody);
@@ -677,7 +707,7 @@ function getStepBadge(content) {
     }
     return badge;
 }
-function getStepsBadgeList(printess, forMobile = false) {
+function getStepsBadgeList(printess, _forMobile = false) {
     var _a, _b;
     const sm = "";
     const div = document.createElement("div");
@@ -1163,7 +1193,7 @@ function getImageRotateControl(printess, p) {
     return container;
 }
 function getImageUploadControl(printess, p, container, forMobile = false) {
-    var _a;
+    var _a, _b;
     container = container || document.createElement("div");
     const imagePanel = document.createElement("div");
     imagePanel.className = "image-panel";
@@ -1176,18 +1206,21 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
             scaleControl.classList.add("mb-3");
             container.appendChild(scaleControl);
         }
-        imagePanel.appendChild(renderMyImagesTab(printess, p, images));
+        imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
         imagePanel.style.gridTemplateRows = "auto";
+        imagePanel.style.gridTemplateColumns = "1fr";
         container.appendChild(imagePanel);
         return container;
     }
     else {
-        container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
+        if ((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.canUpload) {
+            container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
+        }
         const imageListWrapper = document.createElement("div");
         imageListWrapper.classList.add("image-list-wrapper");
         imageList.classList.add("image-list");
         const mainThumb = document.createElement("div");
-        if ((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.thumbCssUrl) {
+        if ((_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.thumbCssUrl) {
             mainThumb.className = "main";
             mainThumb.style.backgroundImage = p.imageMeta.thumbCssUrl;
             imagePanel.appendChild(mainThumb);
@@ -1247,9 +1280,12 @@ function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNe
             const scaleControl = document.getElementById("range-label");
             if (scaleControl)
                 scaleControl.style.display = "none";
-            const imagePanel = document.getElementById("image-panel" + id);
-            if (imagePanel)
-                imagePanel.style.display = "none";
+            const twoButtons = document.getElementById("two-buttons");
+            if (twoButtons)
+                twoButtons.style.gridTemplateColumns = "1fr";
+            const distributeBtn = document.getElementById("distribute-button");
+            if (distributeBtn)
+                distributeBtn.style.display = "none";
             progressDiv.style.display = "flex";
             const label = document.getElementById("upload-btn-" + id);
             if (label) {
@@ -1259,7 +1295,7 @@ function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNe
                 progressBar.style.width = (progress * 100) + "%";
             }, assignToFrameOrNewFrame, id);
             if (!assignToFrameOrNewFrame)
-                renderMyImagesTab(printess);
+                renderMyImagesTab(printess, forMobile);
         }
     };
     const uploadLabel = document.createElement("label");
@@ -1795,25 +1831,30 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
         pages.appendChild(ul);
     }
 }
-function renderMyImagesTab(printess, p, images) {
+function renderMyImagesTab(printess, forMobile, p, images) {
+    var _a, _b;
     const container = document.createElement("div");
     container.innerHTML = "";
     const imageList = document.createElement("div");
     imageList.classList.add("image-list");
     images = images || printess.getAllImages();
-    const distributeBtn = document.createElement("button");
-    distributeBtn.className = "btn btn-secondary mb-3";
-    distributeBtn.innerText = printess.gl("ui.buttonDistribute");
-    distributeBtn.onclick = () => printess.distributeImages();
-    const twoButtons = document.createElement("div");
-    twoButtons.style.display = "grid";
-    twoButtons.appendChild(getImageUploadButton(printess, "file-uploader", false, p !== undefined, false));
-    if (images.length > 0 && images.filter(im => !im.inUse).length > 0) {
-        twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
-        twoButtons.appendChild(document.createElement("div"));
-        twoButtons.appendChild(distributeBtn);
+    if (!p || ((_a = p === null || p === void 0 ? void 0 : p.imageMeta) === null || _a === void 0 ? void 0 : _a.canUpload)) {
+        const distributeBtn = document.createElement("button");
+        distributeBtn.id = "distribute-button";
+        distributeBtn.className = "btn btn-secondary mb-3";
+        distributeBtn.innerText = printess.gl("ui.buttonDistribute");
+        distributeBtn.onclick = () => printess.distributeImages();
+        const twoButtons = document.createElement("div");
+        twoButtons.id = "two-buttons";
+        twoButtons.style.display = "grid";
+        twoButtons.appendChild(getImageUploadButton(printess, (_b = p === null || p === void 0 ? void 0 : p.id) !== null && _b !== void 0 ? _b : "", false, p !== undefined, false));
+        if (images.length > 0 && images.filter(im => !im.inUse).length > 0) {
+            twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
+            twoButtons.appendChild(document.createElement("div"));
+            twoButtons.appendChild(distributeBtn);
+        }
+        container.appendChild(twoButtons);
     }
-    container.appendChild(twoButtons);
     for (const im of images) {
         const thumb = document.createElement("div");
         thumb.className = "big";
@@ -1835,6 +1876,34 @@ function renderMyImagesTab(printess, p, images) {
             chk.style.borderRadius = "4px";
             chk.style.boxShadow = "2px 2px black";
             thumb.appendChild(chk);
+        }
+        else {
+            const cls = printess.getIcon("close-square");
+            cls.style.display = forMobile ? "block" : "none";
+            cls.style.width = "28px";
+            cls.style.height = "28px";
+            cls.style.position = "absolute";
+            cls.style.right = "5px";
+            cls.style.bottom = "5px";
+            cls.style.color = "#ad1700";
+            cls.style.backgroundColor = "white";
+            cls.style.borderRadius = "4px";
+            cls.style.boxShadow = "2px 2px black";
+            cls.style.cursor = "pointer";
+            cls.onclick = (e) => {
+                e.stopImmediatePropagation();
+                imageList.removeChild(thumb);
+                printess.deleteImages([im]);
+            };
+            if (!forMobile) {
+                thumb.onmouseenter = () => {
+                    cls.style.display = "block";
+                };
+                thumb.onmouseleave = () => {
+                    cls.style.display = "none";
+                };
+            }
+            thumb.appendChild(cls);
         }
         if (p) {
             if (im.id === p.value) {
@@ -2263,6 +2332,7 @@ function renderMobileUi(printess, properties = uih_currentProperties, state = ui
             document.body.classList.remove("inline-mobile-page-bar");
         }
     }
+    document.body.classList.remove("inline-mobile-page-bar");
     if (state !== "add") {
         const buttonsOrPages = getMobileButtons(printess);
         mobileUi.innerHTML = "";
@@ -2560,7 +2630,7 @@ function getMobileButtons(printess, container, propertyIdFilter) {
     if (printess.spreadCount() > 1) {
         const spreads = printess.getAllSpreads();
         const info = printess.pageInfoSync();
-        if (hasButtons && !document.body.classList.contains('inline-mobile-page-bar')) {
+        if (hasButtons || !document.body.classList.contains('inline-mobile-page-bar')) {
             renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
         }
         else if (!hasButtons) {
