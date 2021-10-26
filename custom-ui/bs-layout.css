@@ -395,6 +395,36 @@ input[type='range'] {
   width: 100%;
 }
 
+.image-inuse-checker {
+  width: 28px;
+  height: 28px;
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  color: #6aad00;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 2px 2px black;
+}
+
+.delete-btn {
+  display: none;
+  width: 28px;
+  height: 28px;
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  color: #ad1700;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 2px 2px black;
+  cursor: pointer;
+}
+
+div.big:hover > .delete-btn {
+  display: block;
+}
+
 .text-properties {
   display: flex;
   flex-direction: row;
@@ -645,6 +675,10 @@ input[type='range'] {
 .no-mobile-button-bar .mobile-control-host {
   /* add additional padding to control host, to increase space between control and back arrow */
   padding-top: 30px;
+}
+
+.no-mobile-button-bar .mobile-control-sm {
+  height: 100px;
 }
 
 .mobile-control-host > .list-group {

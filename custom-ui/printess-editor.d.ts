@@ -292,6 +292,11 @@ export interface iPrintessApi {
   selectBackground(): Promise<void>;
 
   /**
+   * Indicates if the current spread has editable background frames
+   */
+  hasBackground(): boolean
+
+  /**
    * Selects a spread and brings it into view. spread-index is zero based and even a facing page counts as a single spread. You can pass the focus area in the `part`parameter.
    * @param spreadIndex zero-based 
    * @param part  "entire" | "left-page" | "right-page"
@@ -352,6 +357,8 @@ export interface iPrintessApi {
    */
   getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
 
+
+
   /**
    * Returns a list of all available properties on a specific spread
    * @param spreadId 
@@ -391,6 +398,10 @@ export interface iPrintessApi {
    */
   getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string): Array<iMobileUIButton>;
 
+  /**
+   * Returns change background button if available
+   */
+  getMobileUiBackgroundButton(): Array<iMobileUIButton>
 
   /**
    * Mobile UI helper method to get model to draw a circle button including icons, gauge, etc.
@@ -547,6 +558,12 @@ export interface iPrintessApi {
    * Returns a list of all applied image-ids.
    */
   distributeImages(): Promise<Array<string>>
+
+  /**
+   * check number of distributable image boxes 
+   * if greater than 1 return true
+   */
+  allowImageDistribution(): boolean
 
   /**
    * delete buyer uploaded images that are not in use
@@ -885,7 +902,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "color-list" | "table";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
@@ -974,6 +991,10 @@ export interface iExternalimageMeta {
   thumbUrl: string;
   thumbCssUrl: string;
   canUpload: boolean;
+  /**
+  * Indicates if you can modify scaling on that image 
+  */
+  canScale: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate">;
 }
 export interface iExternalImageScaleHints {

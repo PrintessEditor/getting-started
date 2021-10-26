@@ -269,11 +269,14 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
       //setEventTab = p.tableMeta && p.tableMeta.tableType === "calendar-events" ? true : false;
       t.push(JSON.stringify(p, undefined, 2));
       propsDiv.appendChild(getPropertyControl(printess, p));
-      validate(printess, p);
+      //validate(printess, p);
+    }
+    if (printess.hasBackground()) {
+      propsDiv.appendChild(getChangeBackgroundButton(printess));
     }
     if (printess.showImageTab()) {
       const tabsPanel = [];
-      if (properties.length > 0) {
+      if (properties.length > 0 || printess.hasBackground()) {
         //const tabLabel = setEventTab ? printess.gl("ui.eventTab") : printess.formFieldTabCaption();
         const tabLabel = printess.formFieldTabCaption();
         tabsPanel.push({ id: "props-list", title: tabLabel, content: propsDiv })
@@ -287,6 +290,7 @@ function renderDesktopUi(printess: iPrintessApi, properties: Array<iExternalProp
       container.appendChild(propsDiv);
       container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
     }
+    properties.forEach(p => validate(printess, p));
   } else {
     //****** Show Just the frame / text Properties
     let colorsContainer = null;
@@ -323,8 +327,8 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
 
   switch (p.kind) {
 
-    case "background-button":
-      return getChangeBackgroundButton(printess);
+    /* case "background-button":
+      return getChangeBackgroundButton(printess); */
 
     case "single-line-text":
       return getSingleLineTextBox(printess, p, forMobile);
@@ -365,6 +369,17 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
     case "number":
       return getNumberSlider(printess, p);
 
+    case "image-id": // like image form field
+
+      if (forMobile) {
+        return getImageUploadControl(printess, p, undefined, forMobile);
+      } else {
+        return getTabPanel([
+          { id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
+          { id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
+        ]);
+      }
+
     case "image":
       if (forMobile) {
         if (metaProperty) {
@@ -376,7 +391,11 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
             case "image-vivid":
               return getNumberSlider(printess, p, metaProperty, true);
             case "image-scale":
-              return getImageScaleControl(printess, p, true);
+              {
+                const s = getImageScaleControl(printess, p, true);
+                if (!s) return document.createElement("div");
+                return s;
+              }
           }
           const d = document.createElement("div");
           d.innerText = printess.gl("ui.missingControl");
@@ -412,13 +431,13 @@ function getPropertyControl(printess: iPrintessApi, p: iExternalProperty, metaPr
 }
 
 /*
- * All varoious controls rendering 
+ * All various controls rendering 
  */
 
 
 function getChangeBackgroundButton(printess: iPrintessApi): HTMLElement {
   const ok = document.createElement("button");
-  ok.className = "btn btn-secondary align-self-start";
+  ok.className = "btn btn-primary w-100 align-self-start mb-3";
   ok.innerText = printess.gl("ui.buttonChangeBackground");
   ok.onclick = () => {
     printess.selectBackground();
@@ -985,7 +1004,7 @@ function addLabel(printess: iPrintessApi, input: HTMLElement, id: string, forMob
   validation.classList.add("invalid-feedback");
   validation.innerText = printess.gl("errors.textMissingInline");
 
-  container.appendChild(validation);
+  if (kind !== "image") container.appendChild(validation);
 
   return container;
 }
@@ -1010,7 +1029,7 @@ function validate(printess: iPrintessApi, p: iExternalProperty): void {
       if (p.validation.isMandatory && (!p.value || p.value === p.validation.defaultValue)) {
         // container.classList.remove("was-validated"); // add to activate BS-green-marker
         input.classList.add("is-invalid");
-        validation.innerText = p.kind === "image" ? printess.gl("errors.imageMissingInline") : printess.gl("errors.enterText");
+        validation.innerText = printess.gl("errors.enterText");
         return
       }
 
@@ -1415,6 +1434,7 @@ function getImageRotateControl(printess: iPrintessApi, p: iExternalProperty): HT
   return container;
 }
 
+
 function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, container?: HTMLDivElement, forMobile: boolean = false): HTMLElement {
 
   // for redraw after upoad, take passed container instead
@@ -1435,9 +1455,11 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
 
     /*** SCALE ***/
     if (!forMobile) {
-      const scaleControl: HTMLElement = getImageScaleControl(printess, p);
-      scaleControl.classList.add("mb-3");
-      container.appendChild(scaleControl);
+      const scaleControl: HTMLElement | null = getImageScaleControl(printess, p);
+      if (scaleControl) {
+        scaleControl.classList.add("mb-3");
+        container.appendChild(scaleControl);
+      }
     }
     imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
     imagePanel.style.gridTemplateRows = "auto";
@@ -1469,7 +1491,7 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
       thumb.onclick = () => {
         printess.setProperty(p.id, im.id);
         p.value = im.id;
-        validate(printess, p);
+        // validate(printess, p);
       }
       imageList.appendChild(thumb);
     }
@@ -1483,8 +1505,10 @@ function getImageUploadControl(printess: iPrintessApi, p: iExternalProperty, con
     } else {
       container.appendChild(imagePanel);
       /*** SCALE ***/
-      const scaleControl: HTMLElement = getImageScaleControl(printess, p);
-      container.appendChild(scaleControl);
+      const scaleControl: HTMLElement | null = getImageScaleControl(printess, p);
+      if (scaleControl) {
+        container.appendChild(scaleControl);
+      }
       return container;
     }
 
@@ -1517,7 +1541,7 @@ function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boo
   inp.accept = "image/png,image/jpg,image/jpeg"; // do not add pdf or svg, since it cannot be rotated!!
   inp.multiple = true;
   inp.style.display = "none";
-  inp.onchange = () => {
+  inp.onchange = async () => {
 
     // printess.setProperty(p.id, inp.value);
     if (inp && inp.files?.length) {
@@ -1540,7 +1564,7 @@ function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boo
       }
 
       // can upload multiple files at once
-      printess.uploadImages(inp.files, (progress) => {
+      await printess.uploadImages(inp.files, (progress) => {
         progressBar.style.width = (progress * 100) + "%"
       }
         , assignToFrameOrNewFrame, id); // true auto assigns image and triggers selection change which redraws this control.
@@ -1549,7 +1573,11 @@ function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boo
       // if auto assign is "false" you must reset progress-bar width and control visibilty manually
       // .then(images => {console.log(images)};
 
-      if (!assignToFrameOrNewFrame) renderMyImagesTab(printess, forMobile);
+      if (!assignToFrameOrNewFrame) {
+        const imageTabContainer = <HTMLDivElement>document.getElementById("tab-my-images");
+        imageTabContainer.innerHTML = "";
+        if (imageTabContainer) imageTabContainer.appendChild(renderMyImagesTab(printess, forMobile));
+      }
     }
   };
 
@@ -1568,8 +1596,15 @@ function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boo
   return container;
 }
 
-function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean = false): HTMLElement {
+function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean = false): HTMLElement | null {
 
+  if (!p.imageMeta?.canScale) {
+    return null;
+  }
+  if (p.kind === "image-id" || !p.imageMeta) {
+    // no scalling for form fileds
+    return null;
+  }
   const rangeLabel = document.createElement("label");
   rangeLabel.id = "range-label"
   const range: HTMLInputElement = document.createElement("input");
@@ -2195,13 +2230,17 @@ function renderPageNavigation(printess: iPrintessApi, spreads: Array<iExternalSp
  * My Images List
  */
 
-function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExternalProperty, images?: Array<iExternalImage>): HTMLElement {
-  const container = document.createElement("div");
+function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExternalProperty, images?: Array<iExternalImage>, imagesContainer?: HTMLDivElement): HTMLElement {
+  const container = imagesContainer || document.createElement("div");
   container.innerHTML = "";
 
   const imageList = document.createElement("div");
   imageList.classList.add("image-list");
   images = images || printess.getAllImages();
+
+  const dragDropHint = document.createElement("p");
+  dragDropHint.style.marginTop = "10px";
+  dragDropHint.textContent = printess.gl("ui.dragDropHint");
 
   // Wenn keine Property gesetzt ist, dann rendern wir den glaobel My-Images Tab
   if (!p || p?.imageMeta?.canUpload) {
@@ -2209,7 +2248,10 @@ function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExte
     distributeBtn.id = "distribute-button";
     distributeBtn.className = "btn btn-secondary mb-3"; // my-3 w-100";
     distributeBtn.innerText = printess.gl("ui.buttonDistribute");
-    distributeBtn.onclick = () => printess.distributeImages();
+    distributeBtn.onclick = async () => {
+      await printess.distributeImages();
+      renderMyImagesTab(printess, forMobile, p, printess.getAllImages(), container);
+    };
 
     const twoButtons = document.createElement("div");
     twoButtons.id = "two-buttons";
@@ -2217,7 +2259,7 @@ function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExte
 
     twoButtons.appendChild(getImageUploadButton(printess, p?.id ?? "", false, p !== undefined, false));
 
-    if (images.length > 0 && images.filter(im => !im.inUse).length > 0) {
+    if (images.length > 0 && images.filter(im => !im.inUse).length > 0 && printess.allowImageDistribution()) {
       twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
       twoButtons.appendChild(document.createElement("div"));
       twoButtons.appendChild(distributeBtn);
@@ -2237,43 +2279,18 @@ function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExte
     thumb.style.height = "91px";
     if (im.inUse) {
       const chk = printess.getIcon("check-square");
-      chk.style.width = "28px";
-      chk.style.height = "28px";
-      chk.style.position = "absolute";
-      chk.style.right = "5px";
-      chk.style.bottom = "5px";
-      chk.style.color = "#6aad00";
-      chk.style.backgroundColor = "white";
-      chk.style.borderRadius = "4px";
-      chk.style.boxShadow = "2px 2px black";
+      chk.classList.add("image-inuse-checker");
       thumb.appendChild(chk);
     } else {
       const cls = printess.getIcon("close-square");
-      cls.style.display = forMobile ? "block" : "none";
-      cls.style.width = "28px";
-      cls.style.height = "28px";
-      cls.style.position = "absolute";
-      cls.style.right = "5px";
-      cls.style.bottom = "5px";
-      cls.style.color = "#ad1700";
-      cls.style.backgroundColor = "white";
-      cls.style.borderRadius = "4px";
-      cls.style.boxShadow = "2px 2px black";
-      cls.style.cursor = "pointer";
+      cls.classList.add("delete-btn");
       cls.onclick = (e) => {
         e.stopImmediatePropagation();
         imageList.removeChild(thumb);
         printess.deleteImages([im]);
       }
-      if (!forMobile) {
-        thumb.onmouseenter = () => {
-          cls.style.display = "block";
-        }
-        thumb.onmouseleave = () => {
-          cls.style.display = "none";
-        }
-      }
-      thumb.appendChild(cls);
+      if (forMobile) cls.style.display = "block";
+      if (!p || p?.imageMeta?.canUpload) thumb.appendChild(cls);
     }
     //  thumb.style.opacity = im.inUse ? "0.5" : "1.0";
 
@@ -2285,7 +2302,7 @@ function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExte
       thumb.onclick = () => {
         printess.setProperty(p.id, im.id);
         p.value = im.id;
-        validate(printess, p);
+        // validate(printess, p);
       }
     }
 
@@ -2293,6 +2310,7 @@ function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExte
   }
 
   container.appendChild(imageList);
+  if (!forMobile && images.length > 0) container.appendChild(dragDropHint);
 
   return container;
 }
@@ -3155,6 +3173,10 @@ function getMobileButtons(printess: iPrintessApi, container?: HTMLDivElement, pr
 
   const buttons = printess.getMobileUiButtons(uih_currentProperties, propertyIdFilter || "root");
 
+  if (uih_currentState === "document") {
+    buttons.unshift(...printess.getMobileUiBackgroundButton());
+  }
+
   const hasButtons = buttons.length > 0;
 
   if (printess.spreadCount() > 1) {
@@ -3291,8 +3313,19 @@ function getMobileButtons(printess: iPrintessApi, container?: HTMLDivElement, pr
         renderMobileControlHost(printess, b.newState);
       }
 
-      drawButtonContent(printess, buttonDiv, uih_currentProperties);
+      if (b.newState.externalProperty?.kind === "background-button") {
+        drawButtonContent(printess, buttonDiv, [b.newState.externalProperty])
+      } else {
+        drawButtonContent(printess, buttonDiv, uih_currentProperties);
+      }
+      /* window.setTimeout(() => {
+        const b = buttons[0];
+        console.log(b.newState.externalProperty?.id, b.hasCollapsedMetaProperties)
+        if (buttons.length > 0 && buttons[0].newState.externalProperty?.kind === "image" && !printess.hasNextStep()) {
+          renderMobileControlHost(printess, b.newState);
+        }
 
+      }, 50); */
       buttonContainer.appendChild(buttonDiv);
 
     }
@@ -3347,17 +3380,32 @@ function getMobileControlHeightClass(printess: iPrintessApi, property: iExternal
       break;
     case "multi-line-text":
       if (!meta || meta === "text-style-color" || meta === "text-style-font" || meta === "text-style-size") {
-        return "mobile-control-lg"
+        if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
+          return "mobile-control-xl"
+        } else {
+          return "mobile-control-lg"
+        }
       }
       break;
     case "color":
-    case "text-area":
     case "select-list":
     case "image-list":
     case "color-list":
       return "mobile-control-lg"
+    case "text-area":
+      if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
+        return "mobile-control-xl"
+      } else {
+        return "mobile-control-lg"
+      }
     case "table":
       return "mobile-control-xl"
+    case "single-line-text":
+      if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
+        return "mobile-control-md"
+      } else {
+        return "mobile-control-sm"
+      }
   }
 
   return "mobile-control-sm"
