@@ -24,6 +24,9 @@
     "buttonAdd": "Add",
     "buttonBack": "Back",
     "buttonOk": "OK",
+    "buttonYes": "Yes",
+    "buttonNo": "No",
+    "buttonIgnore": "Ignore",
     "buttonSubmit": "Submit",
     "buttonCancel": "Cancel",
     "buttonRemove": "Remove",
@@ -64,7 +67,13 @@
     "edit": "Edit",
     "text": "Text",
     "change-background": "Change Background",
-    "table": "Table"
+    "table": "Table",
+    "dragDropHint": "Drag and drop images to the desired frames.",
+    "distributionDialogTitle": "Image Distribution",
+    "distributionText": "Would you like to distribute your images between the different frames?",
+    "cropTab": "Crop",
+    "buttonCrop": "Crop Image",
+    "imageTabSelect": "Select Image"
   },
   "errors": {
     "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
