@@ -35,13 +35,19 @@ let uih_lastFormFieldId = undefined;
 let uih_lastOverflowState = false;
 const uih_ignoredLowResolutionErrors = [];
 console.log("Printess ui-helper loaded");
+function validateAllInputs(printess) {
+    const errors = printess.validate("all");
+    const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+    if (filteredErrors.length > 0) {
+        printess.bringErrorIntoView(filteredErrors[0]);
+        getValidationOverlay(printess, filteredErrors);
+        return false;
+    }
+    return true;
+}
 function addToBasket(printess) {
     return __awaiter(this, void 0, void 0, function* () {
-        const errors = printess.validate("all");
-        const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
-        if (filteredErrors.length > 0) {
-            printess.bringErrorIntoView(filteredErrors[0]);
-            getValidationOverlay(printess, filteredErrors);
+        if (validateAllInputs(printess) === false) {
             return;
         }
         const callback = printess.getAddToBasketCallback();
@@ -116,13 +122,12 @@ function checkAndSwitchViews(printess) {
     }
 }
 function refreshPagination(printess) {
+    const spreads = printess.getAllSpreads();
+    const info = printess.pageInfoSync();
     if (uih_currentRender === "mobile") {
-        renderMobileUi(printess);
-        renderMobileNavBar(printess);
+        renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
     }
     else {
-        const spreads = printess.getAllSpreads();
-        const info = printess.pageInfoSync();
         renderPageNavigation(printess, spreads, info);
     }
 }
@@ -283,6 +288,7 @@ function renderDesktopUi(printess, properties = uih_currentProperties, state = u
     return t;
 }
 function getPropertyControl(printess, p, metaProperty, forMobile = false) {
+    var _a, _b, _c, _d, _e, _f;
     switch (p.kind) {
         case "single-line-text":
             return getSingleLineTextBox(printess, p, forMobile);
@@ -318,15 +324,31 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
             return getNumberSlider(printess, p);
         case "image-id":
             if (forMobile) {
+                if (metaProperty) {
+                    switch (metaProperty) {
+                        case "image-rotation":
+                            return getImageRotateControl(printess, p);
+                        case "image-crop":
+                            showModal(printess, "CROPMODAL", getImageCropControl(printess, p, true), printess.gl("ui.cropTab"));
+                    }
+                }
                 return getImageUploadControl(printess, p, undefined, forMobile);
             }
             else {
-                return getTabPanel([
-                    { id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
-                    { id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
-                ]);
+                const tabs = [];
+                if ((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.canUpload) {
+                    tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
+                }
+                else {
+                    tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTabSelect"), content: getImageUploadControl(printess, p) });
+                }
+                if (((_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.canUpload) && p.value !== ((_c = p.validation) === null || _c === void 0 ? void 0 : _c.defaultValue)) {
+                    tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
+                    tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
+                }
+                return getTabPanel(tabs);
             }
-        case "image":
+        case "image": {
             if (forMobile) {
                 if (metaProperty) {
                     switch (metaProperty) {
@@ -343,6 +365,8 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                                     return document.createElement("div");
                                 return s;
                             }
+                        case "image-rotation":
+                            return getImageRotateControl(printess, p);
                     }
                     const d = document.createElement("div");
                     d.innerText = printess.gl("ui.missingControl");
@@ -352,11 +376,19 @@ function getPropertyControl(printess, p, metaProperty, forMobile = false) {
                     return getImageUploadControl(printess, p, undefined, forMobile);
                 }
             }
-            return getTabPanel([
-                { id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) },
-                { id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) },
-                { id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) }
-            ]);
+            const tabs = [];
+            if ((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.canUpload) {
+                tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
+            }
+            else {
+                tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTabSelect"), content: getImageUploadControl(printess, p) });
+            }
+            if (((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canUpload) && p.value !== ((_f = p.validation) === null || _f === void 0 ? void 0 : _f.defaultValue)) {
+                tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
+                tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
+            }
+            return getTabPanel(tabs);
+        }
         case "select-list":
             return getDropDown(printess, p, forMobile);
         case "image-list":
@@ -499,11 +531,37 @@ function getDesktopTitle(printess) {
     const h2 = document.createElement("h2");
     h2.innerText = printess.gl(printess.getTemplateTitle());
     inner.appendChild(h2);
+    if (printess.hasPreviewBackButton()) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-outline-primary me-1";
+        const svg = printess.getIcon("arrow-left");
+        svg.style.width = "18px";
+        svg.style.verticalAlign = "sub";
+        btn.appendChild(svg);
+        btn.onclick = () => printess.gotoPreviousPreviewDocument();
+        inner.appendChild(btn);
+    }
+    else {
+        inner.appendChild(document.createElement("div"));
+    }
+    const basketBtnBehaviour = printess.getBasketButtonBehaviour();
     const basketBtn = document.createElement("button");
-    basketBtn.className = "btn btn-primary";
-    basketBtn.innerText = printess.gl("ui.buttonBasket");
-    basketBtn.onclick = () => addToBasket(printess);
-    inner.appendChild(basketBtn);
+    if (basketBtnBehaviour === "go-to-preview") {
+        basketBtn.className = "btn btn-outline-primary";
+        basketBtn.innerText = printess.gl("ui.buttonPreview");
+        basketBtn.onclick = () => {
+            if (validateAllInputs(printess) === true) {
+                printess.gotoNextPreviewDocument();
+            }
+        };
+        inner.appendChild(basketBtn);
+    }
+    else {
+        basketBtn.className = "btn btn-primary";
+        basketBtn.innerText = printess.gl("ui.buttonBasket");
+        basketBtn.onclick = () => addToBasket(printess);
+        inner.appendChild(basketBtn);
+    }
     container.appendChild(inner);
     container.appendChild(hr);
     return container;
@@ -572,7 +630,7 @@ function getValidationOverlay(printess, errors) {
     svg.style.cursor = "pointer";
     errorLink.appendChild(svg);
     const errorList = document.createElement("ul");
-    errorList.className = "list-group list-group-flush";
+    errorList.className = "list-group list-group-flush error-list";
     for (let i = 1; i < errors.length; i++) {
         const item = document.createElement("li");
         const editBtn = printess.getIcon("edit");
@@ -731,7 +789,8 @@ function getStepsBadgeList(printess, _forMobile = false) {
     const cur = printess.getStep();
     if (cur && printess.isCurrentStepActive()) {
         const prevBadge = document.createElement("div");
-        prevBadge.className = "step-badge outline gray" + sm;
+        prevBadge.className = "step-badge outline gray d-flex justify-content-center align-items-center" + sm;
+        prevBadge.style.paddingRight = "2px";
         prevBadge.appendChild(printess.getIcon("carret-left-solid"));
         if (printess.hasPreviousStep()) {
             prevBadge.onclick = () => printess.previousStep();
@@ -753,7 +812,8 @@ function getStepsBadgeList(printess, _forMobile = false) {
             div.appendChild(badge);
         }
         const nextBadge = document.createElement("div");
-        nextBadge.className = "step-badge outline gray" + sm;
+        nextBadge.className = "step-badge outline gray d-flex justify-content-center align-items-center" + sm;
+        nextBadge.style.paddingLeft = "2px";
         nextBadge.appendChild(printess.getIcon("carret-right-solid"));
         if (printess.hasNextStep()) {
             nextBadge.onclick = () => gotoNextStep(printess);
@@ -890,6 +950,25 @@ function setPropertyVisibilities(printess) {
                 }
                 else {
                     div.style.display = "none";
+                }
+            }
+            else {
+                const div = document.getElementById(p.id + ":");
+                if (div) {
+                    const v = printess.isPropertyVisible(p.id);
+                    if (v) {
+                        if (div.style.display === "none") {
+                            if (div.classList.contains("mobile-property-text")) {
+                                div.style.display = "flex";
+                            }
+                            else {
+                                div.style.display = "grid";
+                            }
+                        }
+                    }
+                    else {
+                        div.style.display = "none";
+                    }
                 }
             }
         }
@@ -1209,9 +1288,102 @@ function getImageRotateControl(printess, p) {
     }
     return container;
 }
+function hideModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+function showModal(printess, id, content, titelHtml, footer) {
+    const modal = document.createElement("div");
+    modal.className = "modal show align-items-center";
+    modal.id = id;
+    modal.setAttribute("tabindex", "-1");
+    modal.style.backgroundColor = "rgba(0,0,0,0.7)";
+    modal.style.display = "flex";
+    modal.style.width = "100%";
+    modal.style.height = "100%";
+    const dialog = document.createElement("div");
+    dialog.className = "modal-dialog";
+    const modalContent = document.createElement("div");
+    modalContent.className = "modal-content";
+    const modalHeader = document.createElement("div");
+    modalHeader.className = "modal-header bg-primary";
+    const title = document.createElement("h3");
+    title.className = "modal-title";
+    title.innerHTML = titelHtml;
+    title.style.color = "#fff";
+    const closer = printess.getIcon("close");
+    closer.style.color = "white";
+    closer.style.width = "28px";
+    closer.style.height = "28px";
+    closer.style.cursor = "pointer";
+    closer.onclick = () => {
+        hideModal(id);
+    };
+    const modalBody = document.createElement("div");
+    modalBody.className = "modal-body";
+    modalBody.appendChild(content);
+    modalHeader.appendChild(title);
+    modalHeader.appendChild(closer);
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    if (footer)
+        modalContent.appendChild(footer);
+    dialog.appendChild(modalContent);
+    modal.appendChild(dialog);
+    document.body.appendChild(modal);
+}
+function getImageCropControl(printess, p, forMobile) {
+    const container = document.createElement("div");
+    if (p.value) {
+        const ui = printess.createCropUi(p.id);
+        if (!ui) {
+            container.innerText = "Image not found!";
+            return container;
+        }
+        ui.container.classList.add("mb-3");
+        const rangeLabel = document.createElement("label");
+        rangeLabel.id = "range-label";
+        const range = document.createElement("input");
+        range.className = "form-range";
+        range.type = "range";
+        range.min = "1";
+        range.max = "5";
+        range.step = "0.01";
+        range.value = "1";
+        const span = document.createElement("span");
+        if (p.imageMeta) {
+            span.textContent = printess.gl("ui.scale");
+        }
+        rangeLabel.appendChild(span);
+        rangeLabel.appendChild(range);
+        rangeLabel.classList.add("mb-3");
+        range.oninput = () => {
+            const newScale = parseFloat(range.value);
+            ui.setScale(newScale);
+        };
+        const okBtn = document.createElement("button");
+        okBtn.id = "distribute-button";
+        okBtn.className = "btn btn-primary mb-3";
+        okBtn.innerText = printess.gl("ui.buttonCrop");
+        okBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+            printess.cropImage(p.id, ui.getCropBox());
+            if (forMobile) {
+                hideModal("CROPMODAL");
+            }
+        });
+        container.appendChild(rangeLabel);
+        container.appendChild(ui.container);
+        container.appendChild(okBtn);
+        container.appendChild;
+    }
+    return container;
+}
 function getImageUploadControl(printess, p, container, forMobile = false) {
     var _a, _b;
     container = container || document.createElement("div");
+    container.innerHTML = "";
     const imagePanel = document.createElement("div");
     imagePanel.className = "image-panel";
     imagePanel.id = "image-panel" + p.id;
@@ -1249,10 +1421,16 @@ function getImageUploadControl(printess, p, container, forMobile = false) {
             thumb.style.backgroundImage = im.thumbCssUrl;
             if (im.id === p.value)
                 thumb.style.border = "2px solid red";
-            thumb.onclick = () => {
-                printess.setProperty(p.id, im.id);
+            thumb.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                const scaleHints = yield printess.setProperty(p.id, im.id);
                 p.value = im.id;
-            };
+                if (scaleHints && p.imageMeta) {
+                    p.imageMeta.scaleHints = scaleHints;
+                    p.imageMeta.scale = scaleHints.scale;
+                    p.imageMeta.thumbCssUrl = im.thumbCssUrl;
+                }
+                getImageUploadControl(printess, p, container, forMobile);
+            });
             imageList.appendChild(thumb);
         }
         imageListWrapper.appendChild(imageList);
@@ -1332,7 +1510,7 @@ function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNe
     return container;
 }
 function getImageScaleControl(printess, p, forMobile = false) {
-    var _a, _b, _c, _d, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g;
     if (!((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.canScale)) {
         return null;
     }
@@ -1345,9 +1523,9 @@ function getImageScaleControl(printess, p, forMobile = false) {
     range.className = "form-range";
     range.type = "range";
     range.min = (_c = (_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.scaleHints.min.toString()) !== null && _c !== void 0 ? _c : "0";
-    range.max = (_f = (_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.scaleHints.max.toString()) !== null && _f !== void 0 ? _f : "0";
+    range.max = (_e = (_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.scaleHints.max.toString()) !== null && _e !== void 0 ? _e : "0";
     range.step = "0.01";
-    range.value = (_h = (_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.scale.toString()) !== null && _h !== void 0 ? _h : "0";
+    range.value = (_g = (_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.scale.toString()) !== null && _g !== void 0 ? _g : "0";
     const span = document.createElement("span");
     if (p.imageMeta) {
         span.textContent = printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale));
@@ -1775,7 +1953,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
             if (printess.undoCount() === 0) {
                 btnUndo.disabled = true;
             }
-            const icoUndo = printess.getIcon("undo");
+            const icoUndo = printess.getIcon("undo-arrow");
             icoUndo.classList.add("icon");
             btnUndo.onclick = () => {
                 printess.undo();
@@ -1784,7 +1962,7 @@ function renderPageNavigation(printess, spreads, info, container, large = false,
             miniBar.appendChild(btnUndo);
             const btnRedo = document.createElement("button");
             btnRedo.className = "btn btn-sm me-2 redo-button";
-            const iconRedo = printess.getIcon("redo");
+            const iconRedo = printess.getIcon("redo-arrow");
             iconRedo.classList.add("icon");
             if (printess.redoCount() === 0) {
                 btnRedo.disabled = true;
@@ -1876,10 +2054,9 @@ function renderMyImagesTab(printess, forMobile, p, images, imagesContainer) {
         distributeBtn.id = "distribute-button";
         distributeBtn.className = "btn btn-secondary mb-3";
         distributeBtn.innerText = printess.gl("ui.buttonDistribute");
-        distributeBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
-            yield printess.distributeImages();
-            renderMyImagesTab(printess, forMobile, p, printess.getAllImages(), container);
-        });
+        distributeBtn.onclick = () => {
+            getDistributionOverlay(printess, forMobile, p, container);
+        };
         const twoButtons = document.createElement("div");
         twoButtons.id = "two-buttons";
         twoButtons.style.display = "grid";
@@ -1906,7 +2083,7 @@ function renderMyImagesTab(printess, forMobile, p, images, imagesContainer) {
             thumb.appendChild(chk);
         }
         else {
-            const cls = printess.getIcon("close-square");
+            const cls = printess.getIcon("trash");
             cls.classList.add("delete-btn");
             cls.onclick = (e) => {
                 e.stopImmediatePropagation();
@@ -1923,10 +2100,25 @@ function renderMyImagesTab(printess, forMobile, p, images, imagesContainer) {
                 thumb.style.border = "2px solid var(--bs-primary)";
                 thumb.style.outline = "3px solid var(--bs-primary)";
             }
-            thumb.onclick = () => {
-                printess.setProperty(p.id, im.id);
+            thumb.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                const scaleHints = yield printess.setProperty(p.id, im.id);
                 p.value = im.id;
-            };
+                if (scaleHints && p.imageMeta) {
+                    p.imageMeta.scaleHints = scaleHints;
+                    p.imageMeta.scale = scaleHints.scale;
+                    p.imageMeta.thumbCssUrl = im.thumbCssUrl;
+                }
+                const mobileButtonDiv = document.getElementById(p.id + ":");
+                if (mobileButtonDiv) {
+                    drawButtonContent(printess, mobileButtonDiv, [p]);
+                }
+                const mobileButtonDivScale = document.getElementById(p.id + ":image-scale");
+                if (mobileButtonDivScale) {
+                    drawButtonContent(printess, mobileButtonDivScale, [p]);
+                }
+                const newImages = printess.getImages(p === null || p === void 0 ? void 0 : p.id);
+                renderMyImagesTab(printess, forMobile, p, newImages, container);
+            });
         }
         imageList.appendChild(thumb);
     }
@@ -1934,6 +2126,38 @@ function renderMyImagesTab(printess, forMobile, p, images, imagesContainer) {
     if (!forMobile && images.length > 0)
         container.appendChild(dragDropHint);
     return container;
+}
+function getDistributionOverlay(printess, forMobile, p, container) {
+    const content = document.createElement("div");
+    content.className = "d-flex flex-column align-items-center";
+    const id = "DISTRIBUTEMODAL";
+    const txt = document.createElement("p");
+    txt.textContent = printess.gl("ui.distributionText");
+    const img = document.createElement("img");
+    img.src = "../printess-editor/img/distribute-images.png";
+    img.alt = "distribute images";
+    img.style.maxWidth = "188px";
+    content.appendChild(txt);
+    content.appendChild(img);
+    const footer = document.createElement("div");
+    footer.className = "modal-footer";
+    const close = document.createElement("button");
+    close.className = "btn btn-secondary";
+    close.textContent = printess.gl("ui.buttonNo");
+    close.onclick = () => {
+        hideModal(id);
+    };
+    const ok = document.createElement("button");
+    ok.className = "btn btn-primary";
+    ok.textContent = printess.gl("ui.buttonYes");
+    ok.onclick = () => __awaiter(this, void 0, void 0, function* () {
+        hideModal(id);
+        yield printess.distributeImages();
+        renderMyImagesTab(printess, forMobile, p, printess.getAllImages(), container);
+    });
+    footer.appendChild(close);
+    footer.appendChild(ok);
+    showModal(printess, id, content, printess.gl("ui.distributionDialogTitle"), footer);
 }
 function renderGroupSnippets(printess, groupSnippets, forMobile) {
     const div = document.createElement("div");
@@ -2338,24 +2562,26 @@ function renderMobileUi(printess, properties = uih_currentProperties, state = ui
     if (desktopProperties) {
         desktopProperties.innerHTML = "";
     }
-    if (state === "document") {
-        if (properties.length === 0 || printess.spreadCount() < 2) {
-            document.body.classList.add("inline-mobile-page-bar");
-        }
-        else {
-            document.body.classList.remove("inline-mobile-page-bar");
-        }
+    if (printess.spreadCount() > 1) {
+        document.body.classList.add("has-mobile-page-bar");
     }
-    document.body.classList.remove("inline-mobile-page-bar");
+    else {
+        document.body.classList.remove("has-mobile-page-bar");
+    }
     if (state !== "add") {
         const buttonsOrPages = getMobileButtons(printess);
         mobileUi.innerHTML = "";
         mobileUi.appendChild(buttonsOrPages);
+        setPropertyVisibilities(printess);
     }
     const controlHost = document.createElement("div");
     controlHost.className = "mobile-control-host";
     controlHost.id = "mobile-control-host";
     mobileUi.appendChild(controlHost);
+    if (printess.hasSteps())
+        mobileUi.appendChild(getMobileForwardButton(printess));
+    if (printess.hasPreviousStep())
+        mobileUi.appendChild(getMobileBackwardButton(printess, state));
     if (state === "add") {
         document.body.classList.add("no-mobile-button-bar");
         renderMobileControlHost(printess, { state: "add" });
@@ -2364,7 +2590,7 @@ function renderMobileUi(printess, properties = uih_currentProperties, state = ui
         mobileUi.appendChild(getMobilePlusButton(printess));
     }
     if (state !== "document") {
-        mobileUi.appendChild(getMobileBackButton(printess, state));
+        mobileUi.appendChild(getMobileBackwardButton(printess, state));
     }
     else {
         if (uih_viewportOffsetTop) {
@@ -2410,147 +2636,346 @@ function getMobileBackButton(printess, state) {
     button.appendChild(circle);
     return button;
 }
+function getMobileBackwardButton(printess, state) {
+    document.querySelectorAll(".mobile-property-back-button").forEach(ele => { var _a; return (_a = ele.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(ele); });
+    if (printess.hasSteps() && !printess.hasPreviousStep() && state === "frames") {
+        return document.createElement("div");
+    }
+    const button = document.createElement("div");
+    button.className = "mobile-property-back-button";
+    button.style.right = "60px";
+    button.style.left = "unset";
+    if (!printess.hasSteps()) {
+        button.style.right = "10px";
+    }
+    const circle = document.createElement("div");
+    circle.className = "mobile-property-circle bg-primary text-white";
+    if ((printess.hasSteps() && state === "details" && (uih_currentProperties.length > 1 || !printess.isCurrentStepActive())) || (printess.hasSteps() && !printess.isCurrentStepActive() && state === "frames")) {
+        circle.className = "mobile-property-circle bg-white text-primary border border-primary";
+    }
+    circle.onclick = () => {
+        if (!printess.isCurrentStepActive() && state === "frames") {
+            printess.clearSelection();
+        }
+        else if ((printess.isCurrentStepActive() || !printess.hasSteps()) && state === "details" && uih_currentProperties.length > 1) {
+            renderMobileUi(printess, uih_currentProperties, "frames");
+        }
+        else if (printess.hasPreviousStep() && (state === "document" || state === "frames" || (state === "details" && uih_currentProperties.length === 1) && (state === "details" && printess.isCurrentStepActive()))) {
+            printess.previousStep();
+            renderMobileNavBar(printess);
+        }
+        else {
+            printess.clearSelection();
+        }
+    };
+    let icon = printess.getIcon("check");
+    if (!printess.isCurrentStepActive() && state === "frames") {
+        icon = printess.getIcon("check");
+    }
+    else if (printess.hasPreviousStep() && (state === "document" || state === "frames" || (state === "details" && uih_currentProperties.length === 1) && (state === "details" && printess.isCurrentStepActive()))) {
+        icon = printess.getIcon("arrow-left");
+    }
+    circle.appendChild(icon);
+    button.appendChild(circle);
+    return button;
+}
+function getMobileForwardButton(printess) {
+    document.querySelectorAll(".mobile-property-next-button").forEach(ele => { var _a; return (_a = ele.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(ele); });
+    if (!printess.hasSteps()) {
+        return document.createElement("div");
+    }
+    const button = document.createElement("div");
+    button.className = "mobile-property-next-button";
+    button.style.right = "10px";
+    button.style.left = "unset";
+    const circle = document.createElement("div");
+    circle.className = "mobile-property-circle bg-primary text-white";
+    circle.onclick = () => {
+        if (printess.hasNextStep()) {
+            gotoNextStep(printess);
+            renderMobileNavBar(printess);
+        }
+        else {
+            addToBasket(printess);
+        }
+    };
+    let icon = printess.getIcon("shopping-cart");
+    if (printess.hasNextStep()) {
+        icon = printess.getIcon("arrow-right");
+    }
+    circle.appendChild(icon);
+    button.appendChild(circle);
+    return button;
+}
 function renderMobileNavBar(printess) {
     const navBar = getMobileNavbarDiv();
     navBar.innerHTML = "";
-    let nav = document.createElement("div");
+    const nav = document.createElement("div");
     nav.className = "navbar navbar-dark";
     nav.style.flexWrap = "nowrap";
     {
         const btn = document.createElement("button");
         btn.className = "btn btn-sm";
-        btn.classList.add("ms-2");
         btn.classList.add("me-2");
         btn.classList.add("main-button");
-        if (printess.hasPreviousStep()) {
-            const ico = printess.getIcon("arrow-left");
-            ico.classList.add("icon");
-            btn.appendChild(ico);
+        if (!printess.hasSteps() && !printess.showUndoRedo()) {
+            const callback = printess.getBackButtonCallback();
+            btn.className = "btn btn-sm text-white me-2 ms-2 border border-white";
+            btn.textContent = printess.gl("ui.buttonBack");
+            if (!callback)
+                btn.classList.add("disabled");
+            btn.onclick = () => {
+                if (callback) {
+                    if (printess.isInDesignerMode()) {
+                        callback("");
+                    }
+                    else {
+                        printess.save().then((token) => {
+                            callback(token);
+                        });
+                    }
+                }
+            };
         }
         else {
-            btn.classList.add("btn-outline-light");
-            btn.innerText = printess.gl("ui.buttonBack");
-            if (!printess.getBackButtonCallback()) {
-                btn.classList.add("disabled");
-            }
+            const ico = printess.getIcon("ellipsis-v");
+            ico.classList.add("icon");
+            btn.appendChild(ico);
+            let showMenuList = false;
+            btn.onclick = () => {
+                showMenuList = !showMenuList;
+                const menuList = document.getElementById("mobile-menu-list");
+                if (menuList)
+                    navBar.removeChild(menuList);
+                if (showMenuList)
+                    navBar.appendChild(getMobileMenuList(printess));
+            };
         }
-        btn.onclick = () => {
-            const callback = printess.getBackButtonCallback();
-            if (printess.hasPreviousStep()) {
-                printess.previousStep();
-                renderMobileNavBar(printess);
-            }
-            else if (callback) {
-                if (printess.isInDesignerMode()) {
-                    callback("");
-                }
-                else {
-                    printess.save().then((token) => {
-                        callback(token);
-                    });
-                }
-            }
-            else {
-                const offcanvas = document.getElementById("templateOffcanvas");
-                if (offcanvas) {
-                    const bsOffcanvas = new bootstrap.Offcanvas(offcanvas);
-                    bsOffcanvas.show();
-                }
-                else {
-                    alert(printess.gl("backButtonCallback"));
-                }
-            }
-        };
         nav.appendChild(btn);
     }
-    const undoredo = document.createElement("div");
-    undoredo.style.display = "flex";
-    {
-        const btn = document.createElement("button");
-        btn.className = "btn btn-sm";
-        const ico = printess.getIcon("undo");
-        ico.classList.add("icon");
-        btn.onclick = () => {
-            printess.undo();
-        };
-        btn.appendChild(ico);
-        undoredo.appendChild(btn);
-    }
-    {
-        const btn = document.createElement("button");
-        btn.classList.add("btn");
-        btn.classList.add("btn-sm");
-        const ico = printess.getIcon("redo");
-        ico.classList.add("icon");
-        btn.onclick = () => {
-            printess.redo();
-        };
-        btn.appendChild(ico);
-        undoredo.appendChild(btn);
-    }
-    nav.appendChild(undoredo);
-    {
-        const btn = document.createElement("button");
-        btn.className = "btn btn-sm";
-        btn.classList.add("ms-2");
-        btn.classList.add("me-2");
-        btn.classList.add("btn-outline-light");
-        btn.classList.add("main-button");
-        if (printess.hasNextStep()) {
-            btn.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
-            const curStep = printess.getStep();
-            const lastStep = printess.lastStep();
-            if (curStep && lastStep) {
-                btn.title = "Step " + curStep.index + " of " + lastStep.index;
+    const basketBtnBehaviour = printess.getBasketButtonBehaviour();
+    const showTitle = printess.hasSteps();
+    const showUndoRedo = printess.showUndoRedo() && !printess.hasSteps() && !printess.hasPreviewBackButton();
+    if (showTitle) {
+        const s = printess.getStep();
+        const hd = printess.stepHeaderDisplay();
+        if (s && hd !== "never") {
+            const step = document.createElement("div");
+            step.style.flexGrow = "1";
+            step.style.display = "flex";
+            step.style.alignItems = "center";
+            step.style.justifyContent = "center";
+            document.body.classList.add("mobile-has-steps-header");
+            if (hd === "only badge" || hd === "title and badge") {
+                const badge = document.createElement("div");
+                badge.className = "step-badge step-badge-sm";
+                badge.innerText = (s.index + 1).toString();
+                step.appendChild(badge);
             }
+            if (hd === "only title" || hd === "title and badge") {
+                const h6 = document.createElement("h6");
+                h6.innerText = printess.gl(s.title);
+                h6.style.margin = "0";
+                h6.className = "text-light text-truncate";
+                h6.style.maxWidth = "calc(100vw - 150px)";
+                step.appendChild(h6);
+            }
+            if (hd === "badge list") {
+                step.classList.add("active-step-badge-list");
+                step.appendChild(getStepsBadgeList(printess, true));
+            }
+            nav.appendChild(step);
+        }
+        else {
+            document.body.classList.remove("mobile-has-steps-header");
+        }
+    }
+    else if (showUndoRedo) {
+        const undoredo = document.createElement("div");
+        undoredo.style.display = "flex";
+        {
+            const btn = document.createElement("button");
+            btn.className = "btn btn-sm";
+            const ico = printess.getIcon("undo-arrow");
+            ico.classList.add("icon");
             btn.onclick = () => {
-                gotoNextStep(printess);
-                renderMobileNavBar(printess);
+                printess.undo();
             };
-            nav.appendChild(btn);
+            btn.appendChild(ico);
+            undoredo.appendChild(btn);
         }
-        else if (printess.getAddToBasketCallback()) {
-            btn.innerText = printess.gl("ui.buttonBasket");
+        {
+            const btn = document.createElement("button");
+            btn.classList.add("btn");
+            btn.classList.add("btn-sm");
+            const ico = printess.getIcon("redo-arrow");
+            ico.classList.add("icon");
+            btn.onclick = () => {
+                printess.redo();
+            };
+            btn.appendChild(ico);
+            undoredo.appendChild(btn);
+        }
+        nav.appendChild(undoredo);
+    }
+    const wrapper = document.createElement("div");
+    wrapper.className = "d-flex";
+    if (printess.hasPreviewBackButton()) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm ms-2 main-button";
+        const ico = printess.getIcon("arrow-left");
+        ico.classList.add("icon");
+        btn.appendChild(ico);
+        btn.onclick = () => printess.gotoPreviousPreviewDocument();
+        wrapper.appendChild(btn);
+    }
+    {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm ms-2 me-2 main-button";
+        if (basketBtnBehaviour === "go-to-preview") {
+            btn.classList.add("btn-outline-light");
+            btn.innerText = printess.gl("ui.buttonPreview");
+            btn.onclick = () => {
+                if (validateAllInputs(printess) === true) {
+                    printess.gotoNextPreviewDocument();
+                }
+            };
+            wrapper.appendChild(btn);
+        }
+        else {
+            const ico = printess.getIcon("shopping-cart");
+            ico.classList.add("icon");
+            btn.appendChild(ico);
             btn.onclick = () => addToBasket(printess);
-            nav.appendChild(btn);
+            wrapper.appendChild(btn);
         }
     }
+    nav.appendChild(wrapper);
     navBar.appendChild(nav);
-    const s = printess.getStep();
-    const hd = printess.stepHeaderDisplay();
-    if (s && printess.isCurrentStepActive() && hd !== "never") {
-        nav = document.createElement("div");
-        nav.className = "mobile-step-bar";
-        const step = document.createElement("div");
-        step.style.flexGrow = "1";
-        step.style.display = "flex";
-        step.style.alignItems = "center";
-        step.style.justifyContent = "center";
-        document.body.classList.add("mobile-has-steps-header");
-        if (hd === "only badge" || hd === "title and badge") {
-            const badge = document.createElement("div");
-            badge.className = "step-badge step-badge-sm";
-            badge.innerText = (s.index + 1).toString();
-            step.appendChild(badge);
-        }
-        if (hd === "only title" || hd === "title and badge") {
-            const h6 = document.createElement("h6");
-            h6.innerText = printess.gl(s.title);
-            h6.style.margin = "0";
-            h6.className = "text-light";
-            step.appendChild(h6);
-        }
-        if (hd === "badge list") {
-            step.classList.add("active-step-badge-list");
-            step.appendChild(getStepsBadgeList(printess, true));
-        }
-        nav.appendChild(step);
-        navBar.appendChild(nav);
-    }
-    else {
-        document.body.classList.remove("mobile-has-steps-header");
-    }
     return navBar;
+}
+function getMobileMenuList(printess) {
+    const listWrapper = document.createElement("div");
+    listWrapper.id = "mobile-menu-list";
+    const menuList = document.createElement("div");
+    menuList.className = "btn-group w-100 d-flex flex-wrap bg-primary";
+    menuList.style.position = "absolute";
+    menuList.style.top = "48px";
+    menuList.style.left = "0px";
+    menuList.style.zIndex = "1000";
+    const menuItems = [
+        {
+            id: "back",
+            title: "ui.buttonBack",
+            icon: "back",
+            disabled: !printess.getBackButtonCallback(),
+            show: true,
+            task: function () {
+                const callback = printess.getBackButtonCallback();
+                if (callback) {
+                    if (printess.isInDesignerMode()) {
+                        callback("");
+                    }
+                    else {
+                        printess.save().then((token) => {
+                            callback(token);
+                        });
+                    }
+                }
+            }
+        }, {
+            id: "undo",
+            title: "ui.undo",
+            icon: "undo-arrow",
+            disabled: printess.undoCount() === 0,
+            show: printess.showUndoRedo(),
+            task: printess.undo
+        }, {
+            id: "redo",
+            title: "ui.redo",
+            icon: "redo-arrow",
+            show: printess.showUndoRedo(),
+            disabled: printess.redoCount() === 0,
+            task: printess.redo
+        }, {
+            id: "previous",
+            title: "ui.buttonPrevStep",
+            icon: "arrow-left",
+            disabled: !printess.hasPreviousStep(),
+            show: printess.hasSteps(),
+            task: printess.previousStep
+        }, {
+            id: "next",
+            title: "ui.buttonNext",
+            icon: "arrow-right",
+            disabled: !printess.hasNextStep(),
+            show: printess.hasSteps(),
+            task: printess.nextStep
+        }, {
+            id: "firstStep",
+            title: "ui.buttonFirstStep",
+            icon: printess.previewStepsCount() > 0 ? "primary" : "angle-double-left",
+            disabled: !printess.hasSteps() || !printess.hasPreviousStep(),
+            show: printess.hasSteps(),
+            task: printess.gotoFirstStep
+        }, {
+            id: "lastStep",
+            title: printess.previewStepsCount() > 0 ? "ui.buttonPreview" : "Last Step",
+            icon: printess.previewStepsCount() > 0 ? "preview-doc" : "angle-double-right",
+            disabled: !printess.hasNextStep(),
+            show: printess.hasSteps(),
+            task: () => {
+                if (printess.previewStepsCount() > 0) {
+                    printess.gotoPreviewStep();
+                }
+                else {
+                    printess.gotoLastStep();
+                }
+            }
+        }
+    ];
+    menuItems.forEach((mi, idx) => {
+        const item = document.createElement("li");
+        item.className = "btn btn-primary d-flex w-25 justify-content-center align-items-center";
+        if (mi.disabled)
+            item.classList.add("disabled");
+        if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep"))
+            item.classList.add("reverse-menu-btn-content");
+        item.style.border = "1px solid rgba(0,0,0,.125)";
+        if (idx < 3)
+            item.style.minWidth = "33%";
+        if (idx >= 3)
+            item.style.minWidth = "50%";
+        if (mi.id === "back" && !printess.showUndoRedo())
+            item.style.minWidth = "100%";
+        const span = document.createElement("span");
+        span.textContent = printess.gl(mi.title);
+        const icon = printess.getIcon(mi.icon);
+        icon.style.width = "15px";
+        icon.style.height = "15px";
+        icon.style.marginRight = "10px";
+        if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
+            icon.style.marginLeft = "10px";
+            icon.style.marginRight = "0px";
+        }
+        if (printess.previewStepsCount() === 0 && (mi.id === "firstStep" || mi.id === "lastStep")) {
+            icon.style.width = "20px";
+            icon.style.height = "20px";
+        }
+        item.appendChild(icon);
+        item.appendChild(span);
+        item.onclick = () => {
+            var _a;
+            const list = document.getElementById("mobile-menu-list");
+            if (list)
+                (_a = list.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(list);
+            mi.task();
+        };
+        if (mi.show)
+            menuList.appendChild(item);
+    });
+    listWrapper.appendChild(menuList);
+    return listWrapper;
 }
 function getMobilePageBarDiv() {
     let pagebar = document.querySelector(".mobile-pagebar");
@@ -2572,6 +2997,11 @@ function resizeMobileUi(printess, focusSelection = false) {
         const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
         const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
         const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
+        if (mobileButtonBarHeight > 15) {
+            if (document.body.classList.contains("no-mobile-button-bar")) {
+                debugger;
+            }
+        }
         mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
         const printessDiv = document.getElementById("desktop-printess-container");
         const viewPortHeight = uih_viewportHeight ? uih_viewportHeight : window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -2583,7 +3013,7 @@ function resizeMobileUi(printess, focusSelection = false) {
             if (viewPortTopOffset > 0) {
                 printessTop = viewPortTopOffset + "px";
             }
-            else if (controlHostHeight > 100 || viewPortTopOffset > 0) {
+            else if (controlHostHeight + mobileButtonBarHeight > 175 || viewPortTopOffset > 0) {
                 printessTop = "0";
                 window.setTimeout(() => {
                     const toolBar = document.querySelector(".mobile-navbar");
@@ -2631,9 +3061,9 @@ function resizeMobileUi(printess, focusSelection = false) {
         }
     }
 }
-function getMobileButtons(printess, container, propertyIdFilter) {
-    var _a, _b, _c, _d, _f, _g;
-    container = container || document.createElement("div");
+function getMobileButtons(printess, barContainer, propertyIdFilter) {
+    var _a, _b, _c, _d, _e, _f;
+    const container = barContainer || document.createElement("div");
     container.className = "mobile-buttons-container";
     const scrollContainer = document.createElement("div");
     scrollContainer.className = "mobile-buttons-scroll-container";
@@ -2647,121 +3077,42 @@ function getMobileButtons(printess, container, propertyIdFilter) {
     if (printess.spreadCount() > 1) {
         const spreads = printess.getAllSpreads();
         const info = printess.pageInfoSync();
-        if (hasButtons || !document.body.classList.contains('inline-mobile-page-bar')) {
-            renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
-        }
-        else if (!hasButtons) {
-            document.body.classList.remove("no-mobile-button-bar");
-            buttonContainer.style.width = "100%";
-            renderPageNavigation(printess, spreads, info, buttonContainer, true, true);
-        }
+        renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
     }
     let autoSelect = false;
+    let autoSelectHasMeta = false;
     if (buttons.length === 1) {
         const ep = buttons[0].newState.externalProperty;
-        if (ep && ep.id.startsWith("FF_")) {
-            if (ep.kind === 'single-line-text') {
+        if (ep) {
+            if (ep.kind === "image") {
                 autoSelect = true;
             }
-        }
-        else {
-            autoSelect = false;
+            if (ep.kind === "single-line-text") {
+                autoSelect = true;
+            }
+            autoSelectHasMeta = printess.hasMetaProperties(ep);
         }
     }
-    if (autoSelect) {
+    if (!hasButtons || (autoSelect && autoSelectHasMeta === false)) {
         document.body.classList.add("no-mobile-button-bar");
-        window.setTimeout(() => {
-            var _a;
-            const b = buttons[0];
-            if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
-                printess.selectBackground();
-            }
-            else {
-                renderMobileControlHost(printess, b.newState);
-            }
-        }, 50);
     }
-    else if (hasButtons) {
+    else {
         document.body.classList.remove("no-mobile-button-bar");
+    }
+    if (hasButtons && (autoSelect === false || autoSelectHasMeta === true)) {
         for (const b of buttons) {
             const buttonDiv = document.createElement("div");
             if (b.newState.tableRowIndex !== undefined) {
                 buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + "$$$" + b.newState.tableRowIndex;
             }
             else {
-                buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + ":" + ((_f = b.newState.metaProperty) !== null && _f !== void 0 ? _f : "");
+                buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + ":" + ((_e = b.newState.metaProperty) !== null && _e !== void 0 ? _e : "");
             }
             buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
-            buttonDiv.onclick = (_e) => {
-                var _a, _b, _c, _d;
-                if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
-                    printess.selectBackground();
-                }
-                else if (b.newState.state === "table-add") {
-                    const p = b.newState.externalProperty;
-                    if (p === null || p === void 0 ? void 0 : p.tableMeta) {
-                        tableEditRowIndex = -1;
-                        tableEditRow = {};
-                        for (const col of p.tableMeta.columns) {
-                            tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
-                        }
-                        if (p.tableMeta.tableType === "calendar-events") {
-                            tableEditRow.month = p.tableMeta.month || 1;
-                            tableEditRow.event = "Birthday";
-                        }
-                        renderMobileControlHost(printess, b.newState);
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, "document"));
-                    }
-                }
-                else if (b.newState.state === "table-edit") {
-                    const p = b.newState.externalProperty;
-                    const rowIndex = (_b = b.newState.tableRowIndex) !== null && _b !== void 0 ? _b : -1;
-                    if ((p === null || p === void 0 ? void 0 : p.tableMeta) && (rowIndex !== null && rowIndex !== void 0 ? rowIndex : -1) >= 0) {
-                        try {
-                            const data = JSON.parse(p.value.toString());
-                            tableEditRow = data[rowIndex];
-                            tableEditRowIndex = rowIndex;
-                            renderMobileControlHost(printess, b.newState);
-                            getMobileUiDiv().appendChild(getMobileBackButton(printess, "document"));
-                        }
-                        catch (error) {
-                            console.error("property table has no array data:" + p.id);
-                        }
-                    }
-                }
-                else if (b.hasCollapsedMetaProperties === true && b.newState.externalProperty) {
-                    const buttonContainer = document.querySelector(".mobile-buttons-container");
-                    if (buttonContainer) {
-                        buttonContainer.innerHTML = "";
-                        getMobileButtons(printess, container, b.newState.externalProperty.id);
-                        const backButton = document.querySelector(".mobile-property-back-button");
-                        if (backButton) {
-                            (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
-                        }
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, "details"));
-                    }
-                }
-                else {
-                    document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
-                    document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-                    buttonDiv.classList.toggle("selected");
-                    buttonDiv.innerHTML = "";
-                    drawButtonContent(printess, buttonDiv, uih_currentProperties);
-                    centerMobileButton(buttonDiv);
-                    const backButton = document.querySelector(".mobile-property-back-button");
-                    if (backButton) {
-                        (_d = backButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(backButton);
-                    }
-                    if (printess.isCurrentStepActive()) {
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, "details"));
-                    }
-                    else {
-                        getMobileUiDiv().appendChild(getMobileBackButton(printess, uih_currentState));
-                    }
-                }
-                renderMobileControlHost(printess, b.newState);
+            buttonDiv.onclick = () => {
+                mobileUiButtonClick(printess, b, buttonDiv, container);
             };
-            if (((_g = b.newState.externalProperty) === null || _g === void 0 ? void 0 : _g.kind) === "background-button") {
+            if (((_f = b.newState.externalProperty) === null || _f === void 0 ? void 0 : _f.kind) === "background-button") {
                 drawButtonContent(printess, buttonDiv, [b.newState.externalProperty]);
             }
             else {
@@ -2770,9 +3121,107 @@ function getMobileButtons(printess, container, propertyIdFilter) {
             buttonContainer.appendChild(buttonDiv);
         }
     }
+    if (autoSelect) {
+        window.setTimeout(() => {
+            var _a, _b, _c, _d, _e, _f;
+            const b = buttons[0];
+            if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
+                printess.selectBackground();
+            }
+            else if (autoSelectHasMeta) {
+                let bid;
+                if (b.newState.tableRowIndex !== undefined) {
+                    bid = ((_c = (_b = b.newState.externalProperty) === null || _b === void 0 ? void 0 : _b.id) !== null && _c !== void 0 ? _c : "") + "$$$" + b.newState.tableRowIndex;
+                }
+                else {
+                    bid = ((_e = (_d = b.newState.externalProperty) === null || _d === void 0 ? void 0 : _d.id) !== null && _e !== void 0 ? _e : "") + ":" + ((_f = b.newState.metaProperty) !== null && _f !== void 0 ? _f : "");
+                }
+                const buttonDiv = (document.getElementById(bid));
+                if (buttonDiv) {
+                    mobileUiButtonClick(printess, b, buttonDiv, container);
+                }
+                else {
+                    console.error("Auto-Click Button not found: " + bid);
+                }
+            }
+            else {
+                renderMobileControlHost(printess, b.newState);
+            }
+        }, 50);
+    }
     scrollContainer.appendChild(buttonContainer);
     container.appendChild(scrollContainer);
     return container;
+}
+function mobileUiButtonClick(printess, b, buttonDiv, container) {
+    var _a, _b, _c, _d;
+    if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
+        printess.selectBackground();
+    }
+    else if (b.newState.state === "table-add") {
+        const p = b.newState.externalProperty;
+        if (p === null || p === void 0 ? void 0 : p.tableMeta) {
+            tableEditRowIndex = -1;
+            tableEditRow = {};
+            for (const col of p.tableMeta.columns) {
+                tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
+            }
+            if (p.tableMeta.tableType === "calendar-events") {
+                tableEditRow.month = p.tableMeta.month || 1;
+                tableEditRow.event = "Birthday";
+            }
+            renderMobileControlHost(printess, b.newState);
+            getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "document"));
+        }
+    }
+    else if (b.newState.state === "table-edit") {
+        const p = b.newState.externalProperty;
+        const rowIndex = (_b = b.newState.tableRowIndex) !== null && _b !== void 0 ? _b : -1;
+        if ((p === null || p === void 0 ? void 0 : p.tableMeta) && (rowIndex !== null && rowIndex !== void 0 ? rowIndex : -1) >= 0) {
+            try {
+                const data = JSON.parse(p.value.toString());
+                tableEditRow = data[rowIndex];
+                tableEditRowIndex = rowIndex;
+                renderMobileControlHost(printess, b.newState);
+                getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "document"));
+            }
+            catch (error) {
+                console.error("property table has no array data:" + p.id);
+            }
+        }
+    }
+    else if (b.hasCollapsedMetaProperties === true && b.newState.externalProperty) {
+        uih_currentState = "details";
+        const buttonContainer = document.querySelector(".mobile-buttons-container");
+        if (buttonContainer) {
+            buttonContainer.innerHTML = "";
+            getMobileButtons(printess, container, b.newState.externalProperty.id);
+            const backButton = document.querySelector(".mobile-property-back-button");
+            if (backButton) {
+                (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
+            }
+            getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "details"));
+        }
+    }
+    else {
+        document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
+        document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+        buttonDiv.classList.toggle("selected");
+        buttonDiv.innerHTML = "";
+        drawButtonContent(printess, buttonDiv, uih_currentProperties);
+        centerMobileButton(buttonDiv);
+        const backButton = document.querySelector(".mobile-property-back-button");
+        if (backButton) {
+            (_d = backButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(backButton);
+        }
+        if (printess.isCurrentStepActive() || uih_currentState === "details") {
+            getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "details"));
+        }
+        else {
+            getMobileUiDiv().appendChild(getMobileBackwardButton(printess, uih_currentState));
+        }
+    }
+    renderMobileControlHost(printess, b.newState);
 }
 function renderMobileControlHost(printess, state) {
     const controlHost = document.getElementById("mobile-control-host");
@@ -2805,6 +3254,7 @@ function renderMobileControlHost(printess, state) {
 function getMobileControlHeightClass(printess, property, meta) {
     switch (property.kind) {
         case "image":
+        case "image-id":
             if (!meta) {
                 if (printess.getUploadedImagesCount() <= 3) {
                     return "mobile-control-lg";
@@ -2812,6 +3262,9 @@ function getMobileControlHeightClass(printess, property, meta) {
                 else {
                     return "mobile-control-overlay";
                 }
+            }
+            else if (meta === "image-rotation") {
+                return "mobile-control-lg";
             }
             break;
         case "multi-line-text":

@@ -412,16 +412,29 @@ export interface iPrintessApi {
   getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
 
   /**
+   * Returns a simple ui to change the postion of an image 
+   */
+  createCropUi(propertyId: string): null | { container: HTMLDivElement, setScale: (s: number) => void, getCropBox(): { top: number, left: number, width: number, height: number } }
+
+  /**
+   * Creates a new cropped image and assigns it to the passed form-field. Takes the currently assigned image as master
+   * @param propertyId id of a form-field-property (type of image-id) pointing to a valid image 
+   * @param box all box coordinates are expected to be in the range of 0 to 1 
+   */
+  cropImage(propertyId: string, box: { left: number, top: number, width: number, height: number }): Promise<iExternalImage | null>
+
+  /**
    * Returns if a iMobileUIButton should display text instead of an icon
    */
   isTextButton(m: iMobileUIButton): boolean
 
+  
   /**
    * Sets the value of any top-level property passed to the external UI
    * @param propertyId 
    * @param propertyValue Must be string and will be converted if neccessary
    */
-  setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void | iExternalImageScaleHints>; // | Array<iExternalColorUpdate>>;
+  setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void | (iExternalImageScaleHints & { scale: number })>; // | Array<iExternalColorUpdate>>;
 
   /**
    * Sets the vaue of a form field
@@ -588,6 +601,11 @@ export interface iPrintessApi {
    */
   getUploadedImagesCount(): number
 
+  /**
+   * Returns if an externalProperty resolves to multiple mobile-ui-buttons
+   * @param p 
+   */
+  hasMetaProperties(p: iExternalProperty): boolean
 
   /**
    * Returns if a specific image is used in buyer editable frame.
@@ -637,6 +655,11 @@ export interface iPrintessApi {
   insertLayoutSnippet(snippetUrl: string): Promise<void>;
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
+  /**
+   * Returns if buyer ui should display undo and redo buttons
+   */
+   showUndoRedo(): boolean 
+   
   /**
    * Executes an undo step if available.
    */
@@ -691,21 +714,53 @@ export interface iPrintessApi {
   setStep(index: number, zoom?: "frame" | "spread"): Promise<void>
 
   /**
-   * 
+   * Retrieves last step
    */
   lastStep(): iBuyerStep | null;
+
+  /**
+   * Returns true if a next step is available
+   */
   hasNextStep(): boolean;
+
+  /**
+   * Returns true if a previous step is availabel
+   */
   hasPreviousStep(): boolean;
+
   /**
    * Indicates if the next step is the preview document.
    */
   isNextStepPreview(): boolean;
 
   /**
+   * Return true if buyer can deselect an item on the current spread. 
+   * Important to keep buyer in the step-logic
+   */
+  buyerCanHaveEmptySelection(): boolean;
+
+  /** 
+   * returns desired behaviour of basket button  
+   * In steps-mode basket button always points to the basket. 
+   * If no steps are present basket button should lead to the preview
+   */
+  getBasketButtonBehaviour(): "add-to-basket" | "go-to-preview"
+
+  hasPreviewBackButton(): boolean
+
+  gotoPreviousPreviewDocument(): Promise<void>
+
+  gotoNextPreviewDocument(): Promise<void>
+
+
+
+
+  /**
    * Goes to the next available step (if any)
    * @param zoom overrides the frames zoom settings for all devices
    */
   nextStep(zoom?: "frame" | "spread"): Promise<void>;
+
 
   /**
    * Goes to the previous step (if any)
@@ -730,6 +785,12 @@ export interface iPrintessApi {
    * @param zoom overrides the frames zoom settings for all devices
    */
   gotoFirstStep(zoom?: "frame" | "spread"): Promise<void>;
+
+  /**
+   * Returns to the last step, helpful if you want to skip steps.
+   * @param zoom overrides the frames zoom settings for all devices
+   */
+  gotoLastStep(zoom?: "frame" | "spread"): Promise<void>;
 
   /**
    * Turns the display of step numbers on or off
@@ -906,7 +967,7 @@ export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" |
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
-  "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-hueRotate";
+  "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-hueRotate" | "image-rotation" | "image-crop";
 
 export interface iExternalProperty {
   id: string;
@@ -1041,10 +1102,10 @@ export interface iExternalButton {
 export interface iMobileUIButton {
   icon?: iconName | "none",
   thumbCssUrl?: string,
-  circleStyle?: string;
+  circleStyle?: string,
   ffCircleCaption?: string,
   caption: string,
-  hasCollapsedMetaProperties?: boolean,
+  hasCollapsedMetaProperties: boolean,
   newState: iMobileUiState
 }
 
@@ -1057,6 +1118,15 @@ export interface iMobileUiState {
 
 
 export type MobileUiState = "document" | "frames" | "add" | "details";
+
+export interface MobileUiMenuItems {
+  id: "back" | "undo" | "redo" | "previous" | "next" | "firstStep" | "lastStep",
+  title: string,
+  icon: iconName,
+  disabled: boolean,
+  show: boolean,
+  task: any
+}
 
 export interface iButtonCircle {
   hasSvgCircle: boolean,
@@ -1301,4 +1371,18 @@ export type iconName =
   | "angle-up-light"
   | "angle-down-light"
   | "chevron-up-light"
-  | "chevron-down-light";
+  | "chevron-down-light"
+  | "sign-in-light"
+  | "share-light"
+  | "share-solid"
+  | "reply-light"
+  | "reply-solid"
+  | "undo-arrow"
+  | "redo-arrow"
+  | "rotate"
+  | "primary"
+  | "back"
+  | "angle-double-right"
+  | "angle-double-left"
+  | "arrow-to-right"
+  | "arrow-to-left";
