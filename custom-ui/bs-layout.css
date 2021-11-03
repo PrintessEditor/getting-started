@@ -598,6 +598,10 @@ div.big:hover > .delete-btn {
   color: var(--bs-white);
 }
 
+.list-group-item.active img {
+  filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0100%) contrast(100%);
+}
+
 .color-picker-button {
   width: 30px;
   height: 30px;
@@ -774,7 +778,9 @@ div.big:hover > .delete-btn {
  
 .mobile-buttons-scroll-container {
   width: 100%;
-  overflow: scroll;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  position: relative;
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
@@ -782,6 +788,38 @@ div.big:hover > .delete-btn {
 /* hide scrollbar safari, chrome, opera */ 
 .mobile-buttons-scroll-container::-webkit-scrollbar {
   display: none;
+}
+
+
+.scroll-right-indicator {
+  position: absolute;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+  color: white;
+  background-color: #888888;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 19px;
+  padding-left: 3px;
+  opacity: 1;
+  z-index: 10;
+  /* box-shadow: 0 0px 4px 10px black; */
+  padding-bottom: 3px;
+  pointer-events: none;
+}
+.scroll-right-indicator > svg {
+  width: 26px;
+  height: 26px;
+}
+.mobile-buttons-container  {
+  overflow: hidden;
+}
+
+.mobile-buttons-container.scroll-right .scroll-right-indicator {
+  display: flex;
 }
 
 .mobile-buttons {

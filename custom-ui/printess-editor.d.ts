@@ -428,7 +428,7 @@ export interface iPrintessApi {
    */
   isTextButton(m: iMobileUIButton): boolean
 
-  
+
   /**
    * Sets the value of any top-level property passed to the external UI
    * @param propertyId 
@@ -658,8 +658,8 @@ export interface iPrintessApi {
   /**
    * Returns if buyer ui should display undo and redo buttons
    */
-   showUndoRedo(): boolean 
-   
+  showUndoRedo(): boolean
+
   /**
    * Executes an undo step if available.
    */
@@ -1385,4 +1385,5 @@ export type iconName =
   | "angle-double-right"
   | "angle-double-left"
   | "arrow-to-right"
-  | "arrow-to-left";
+  | "arrow-to-left"
+  | "distribute-image";
