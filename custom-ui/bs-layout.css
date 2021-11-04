@@ -338,6 +338,20 @@ input[type='range'] {
 }
 
 
+.image-rotate-overlay {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 1;
+  pointer-events: auto;
+  background-color: rgba(0, 0, 0, 0.7);
+  transition: opacity 1s ease 0s;
+  z-index: 999999;
+  inset: 0px;
+}
+
+
 .image-list-wrapper {
   width: 100%;
   overflow-y: auto;
@@ -798,22 +812,16 @@ div.big:hover > .delete-btn {
   justify-content: center;
   font-family: sans-serif;
   color: white;
-  background-color: #888888;
+  background-image: linear-gradient(to right, rgba(168,168,168,0), #f8f8f8);
   right: 0;
   top: 0;
   bottom: 0;
-  width: 19px;
-  padding-left: 3px;
+  width: 80px;
   opacity: 1;
   z-index: 10;
-  /* box-shadow: 0 0px 4px 10px black; */
-  padding-bottom: 3px;
   pointer-events: none;
 }
-.scroll-right-indicator > svg {
-  width: 26px;
-  height: 26px;
-}
+ 
 .mobile-buttons-container  {
   overflow: hidden;
 }
@@ -890,7 +898,9 @@ div.big:hover > .delete-btn {
   font-size: 14px;
 }
 .mobile-property-button:first-child,   .mobile-property-text:first-child {
-  margin-left: 20vw;
+  margin-left: 100vw;
+  transition: margin-left 0.6s;
+  /*margin-left: 15px;*/
 }
 .mobile-property-button:last-child, .mobile-property-text:last-child {
   margin-right: 45vw !important;

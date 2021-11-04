@@ -345,7 +345,7 @@ declare const bootstrap: any;
         if (forMobile) {
           switch (metaProperty) {
             case "text-style-color":
-              return getColorDropDown(printess, p, "color");
+              return getColorDropDown(printess, p, "color", true);
             case "text-style-font":
               return getFontDropDown(printess, p, true)
             case "text-style-hAlign":
@@ -1053,7 +1053,7 @@ declare const bootstrap: any;
     if (label) {
       const htmlLabel = document.createElement("label");
       htmlLabel.className = "form-label";
-      htmlLabel.setAttribute("for", "inp_" + id);
+      htmlLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
       htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(label) || "");
       htmlLabel.style.display = forMobile ? "none" : "inline-block";
 
@@ -1069,7 +1069,7 @@ declare const bootstrap: any;
       }
     }
 
-    input.id = "inp_" + id;
+    input.id = "inp_" + id.replace("#", "-HASH-");
     container.appendChild(input);
 
     const validation = document.createElement("div");
@@ -1085,7 +1085,7 @@ declare const bootstrap: any;
   function validate(printess: iPrintessApi, p: iExternalProperty): void {
     if (p.validation) {
       const container = document.getElementById("cnt_" + p.id);
-      const input = document.getElementById("inp_" + p.id);
+      const input = document.getElementById("inp_" + p.id.replace("#", "-HASH-"));
       const validation = document.getElementById("val_" + p.id);
 
       if (container && input && validation) {
@@ -1497,6 +1497,17 @@ declare const bootstrap: any;
         thumbDiv.appendChild(thumb);
 
         thumbDiv.onclick = () => {
+          const overlay = document.createElement("div");
+          overlay.className = "image-rotate-overlay";
+
+          const spinner = document.createElement("div");
+          spinner.className = "spinner-border text-light";
+          spinner.style.width = "3rem";
+          spinner.style.height = "3rem";
+
+          overlay.appendChild(spinner);
+          container.appendChild(overlay);
+
           const rotAngle = (i * 90).toString();
 
           printess.rotateImage(p.id, <"90" | "180" | "270">rotAngle).finally(() => {
@@ -1617,6 +1628,17 @@ declare const bootstrap: any;
       okBtn.className = "btn btn-primary mb-3"; // my-3 w-100";
       okBtn.innerText = printess.gl("ui.buttonCrop");
       okBtn.onclick = async () => {
+        const spinner = document.createElement("span");
+        spinner.className = "spinner-border spinner-border-sm me-3";
+
+        const spinnerText = document.createElement("span");
+        spinnerText.textContent = printess.gl("ui.cropping");
+
+        okBtn.textContent = "";
+        okBtn.appendChild(spinner);
+        okBtn.appendChild(spinnerText);
+        okBtn.classList.add("disabled");
+
         printess.cropImage(p.id, ui.getCropBox());
         if (forMobile) {
           hideModal("CROPMODAL");
@@ -1751,7 +1773,7 @@ declare const bootstrap: any;
 
     const inp = document.createElement("input");
     inp.type = "file";
-    inp.id = "inp_" + id;
+    inp.id = "inp_" + id.replace("#", "-HASH-");
     inp.className = "form-control"
     inp.accept = "image/png,image/jpg,image/jpeg"; // do not add pdf or svg, since it cannot be rotated!!
     inp.multiple = true;
@@ -1800,7 +1822,7 @@ declare const bootstrap: any;
     const uploadLabel = document.createElement("label");
     uploadLabel.className = "form-label";
     uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
-    uploadLabel.setAttribute("for", "inp_" + id);
+    uploadLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
     // remove comments below to  add label
     // fileUpload.appendChild(uploadLabel);
 
@@ -2331,31 +2353,33 @@ declare const bootstrap: any;
         miniBar.appendChild(btnBack);
 
 
-        const btnUndo = document.createElement("button");
-        btnUndo.className = "btn btn-sm undo-button";
-        if (printess.undoCount() === 0) {
-          btnUndo.disabled = true;
-        }
-        const icoUndo = printess.getIcon("undo-arrow");
-        icoUndo.classList.add("icon");
-        btnUndo.onclick = () => {
-          printess.undo();
-        }
-        btnUndo.appendChild(icoUndo);
-        miniBar.appendChild(btnUndo);
+        if (printess.showUndoRedo()) {
+          const btnUndo = document.createElement("button");
+          btnUndo.className = "btn btn-sm undo-button";
+          if (printess.undoCount() === 0) {
+            btnUndo.disabled = true;
+          }
+          const icoUndo = printess.getIcon("undo-arrow");
+          icoUndo.classList.add("icon");
+          btnUndo.onclick = () => {
+            printess.undo();
+          }
+          btnUndo.appendChild(icoUndo);
+          miniBar.appendChild(btnUndo);
 
-        const btnRedo = document.createElement("button");
-        btnRedo.className = "btn btn-sm me-2 redo-button";
-        const iconRedo = printess.getIcon("redo-arrow");
-        iconRedo.classList.add("icon");
-        if (printess.redoCount() === 0) {
-          btnRedo.disabled = true;
+          const btnRedo = document.createElement("button");
+          btnRedo.className = "btn btn-sm me-2 redo-button";
+          const iconRedo = printess.getIcon("redo-arrow");
+          iconRedo.classList.add("icon");
+          if (printess.redoCount() === 0) {
+            btnRedo.disabled = true;
+          }
+          btnRedo.onclick = () => {
+            printess.redo();
+          }
+          btnRedo.appendChild(iconRedo);
+          miniBar.appendChild(btnRedo);
         }
-        btnRedo.onclick = () => {
-          printess.redo();
-        }
-        btnRedo.appendChild(iconRedo);
-        miniBar.appendChild(btnRedo);
 
         miniBar.className = "undo-redo-bar";
         pages.appendChild(miniBar);
@@ -2451,7 +2475,7 @@ declare const bootstrap: any;
 
     const imageList = document.createElement("div");
     imageList.classList.add("image-list");
-    images = images || printess.getAllImages();
+    images = images || printess.getImages(p?.id);
 
     const dragDropHint = document.createElement("p");
     dragDropHint.style.marginTop = "10px";
@@ -2540,7 +2564,7 @@ declare const bootstrap: any;
     }
 
     container.appendChild(imageList);
-    if (!forMobile && images.length > 0) container.appendChild(dragDropHint);
+    if (!forMobile && images.length > 0 && p?.kind !== "image-id") container.appendChild(dragDropHint);
 
     return container;
   }
@@ -2576,7 +2600,7 @@ declare const bootstrap: any;
     ok.onclick = async () => {
       hideModal(id);
       await printess.distributeImages();
-      renderMyImagesTab(printess, forMobile, p, printess.getAllImages(), container);
+      renderMyImagesTab(printess, forMobile, p, printess.getImages(p?.id ), container);
     }
 
     footer.appendChild(close);
@@ -3722,6 +3746,7 @@ declare const bootstrap: any;
 
     let autoSelect = false;
     let autoSelectHasMeta = false;
+    let firstButton: HTMLDivElement | null = null;
     if (buttons.length === 1) {
       const ep = buttons[0].newState.externalProperty;
       if (ep) {
@@ -3763,7 +3788,9 @@ declare const bootstrap: any;
         }
 
         buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
-
+        if (!firstButton) {
+          firstButton = buttonDiv;
+        }
         buttonDiv.onclick = () => {
           mobileUiButtonClick(printess, b, buttonDiv, container);
         }
@@ -3810,7 +3837,7 @@ declare const bootstrap: any;
 
     const scrollRight = document.createElement("div");
     scrollRight.className = "scroll-right-indicator"
-    scrollRight.appendChild(printess.getIcon("carret-right-solid"));
+    //scrollRight.appendChild(printess.getIcon("carret-right-solid"));
 
     scrollContainer.appendChild(buttonContainer);
     container.appendChild(scrollContainer);
@@ -3819,14 +3846,24 @@ declare const bootstrap: any;
 
 
     window.setTimeout(() => {
-      if (buttonContainer.offsetWidth > container.offsetWidth) {
-        container.classList.add("scroll-right");
-        scrollContainer.onscroll = () => {
-          if (scrollContainer.scrollLeft > buttonContainer.offsetWidth - (container.offsetWidth * 1.45)) {
-            container.classList.remove("scroll-right");
-          } else {
-            container.classList.add("scroll-right");
+      if (firstButton) {
+        const containerWidth = container.offsetWidth;
+        const buttonsWidth = buttonContainer.offsetWidth  + 15 - (containerWidth * 1.45); // substract the animation way + right margin (0.45);
+        if (buttonsWidth > containerWidth) {
+          firstButton.style.marginLeft = "15px";
+          container.classList.add("scroll-right");
+          scrollContainer.onscroll = () => {
+            if (scrollContainer.scrollLeft > buttonContainer.offsetWidth - (container.offsetWidth * 1.45)) {
+              container.classList.remove("scroll-right");
+            } else {
+              container.classList.add("scroll-right");
+            }
           }
+        } else {
+          // center buttons;
+          const space  =( containerWidth - buttonsWidth) / 2;
+          firstButton.style.marginLeft = space + "px";
+
         }
       }
     }, 50);

@@ -299,7 +299,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (forMobile) {
                     switch (metaProperty) {
                         case "text-style-color":
-                            return getColorDropDown(printess, p, "color");
+                            return getColorDropDown(printess, p, "color", true);
                         case "text-style-font":
                             return getFontDropDown(printess, p, true);
                         case "text-style-hAlign":
@@ -874,7 +874,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (label) {
             const htmlLabel = document.createElement("label");
             htmlLabel.className = "form-label";
-            htmlLabel.setAttribute("for", "inp_" + id);
+            htmlLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
             htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(label) || "");
             htmlLabel.style.display = forMobile ? "none" : "inline-block";
             if (kind === "image") {
@@ -889,7 +889,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 container.appendChild(htmlLabel);
             }
         }
-        input.id = "inp_" + id;
+        input.id = "inp_" + id.replace("#", "-HASH-");
         container.appendChild(input);
         const validation = document.createElement("div");
         validation.id = "val_" + id;
@@ -902,7 +902,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function validate(printess, p) {
         if (p.validation) {
             const container = document.getElementById("cnt_" + p.id);
-            const input = document.getElementById("inp_" + p.id);
+            const input = document.getElementById("inp_" + p.id.replace("#", "-HASH-"));
             const validation = document.getElementById("val_" + p.id);
             if (container && input && validation) {
                 if (p.validation.maxChars) {
@@ -1268,6 +1268,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 thumb.src = p.imageMeta.thumbUrl;
                 thumbDiv.appendChild(thumb);
                 thumbDiv.onclick = () => {
+                    const overlay = document.createElement("div");
+                    overlay.className = "image-rotate-overlay";
+                    const spinner = document.createElement("div");
+                    spinner.className = "spinner-border text-light";
+                    spinner.style.width = "3rem";
+                    spinner.style.height = "3rem";
+                    overlay.appendChild(spinner);
+                    container.appendChild(overlay);
                     const rotAngle = (i * 90).toString();
                     printess.rotateImage(p.id, rotAngle).finally(() => {
                         imagePanel.innerHTML = "";
@@ -1369,6 +1377,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             okBtn.className = "btn btn-primary mb-3";
             okBtn.innerText = printess.gl("ui.buttonCrop");
             okBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                const spinner = document.createElement("span");
+                spinner.className = "spinner-border spinner-border-sm me-3";
+                const spinnerText = document.createElement("span");
+                spinnerText.textContent = printess.gl("ui.cropping");
+                okBtn.textContent = "";
+                okBtn.appendChild(spinner);
+                okBtn.appendChild(spinnerText);
+                okBtn.classList.add("disabled");
                 printess.cropImage(p.id, ui.getCropBox());
                 if (forMobile) {
                     hideModal("CROPMODAL");
@@ -1466,7 +1482,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         progressDiv.appendChild(progressBar);
         const inp = document.createElement("input");
         inp.type = "file";
-        inp.id = "inp_" + id;
+        inp.id = "inp_" + id.replace("#", "-HASH-");
         inp.className = "form-control";
         inp.accept = "image/png,image/jpg,image/jpeg";
         inp.multiple = true;
@@ -1504,7 +1520,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const uploadLabel = document.createElement("label");
         uploadLabel.className = "form-label";
         uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
-        uploadLabel.setAttribute("for", "inp_" + id);
+        uploadLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
         fileUpload.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage"));
         container.appendChild(progressDiv);
         container.appendChild(fileUpload);
@@ -1949,30 +1965,32 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 };
                 miniBar.appendChild(btnBack);
-                const btnUndo = document.createElement("button");
-                btnUndo.className = "btn btn-sm undo-button";
-                if (printess.undoCount() === 0) {
-                    btnUndo.disabled = true;
+                if (printess.showUndoRedo()) {
+                    const btnUndo = document.createElement("button");
+                    btnUndo.className = "btn btn-sm undo-button";
+                    if (printess.undoCount() === 0) {
+                        btnUndo.disabled = true;
+                    }
+                    const icoUndo = printess.getIcon("undo-arrow");
+                    icoUndo.classList.add("icon");
+                    btnUndo.onclick = () => {
+                        printess.undo();
+                    };
+                    btnUndo.appendChild(icoUndo);
+                    miniBar.appendChild(btnUndo);
+                    const btnRedo = document.createElement("button");
+                    btnRedo.className = "btn btn-sm me-2 redo-button";
+                    const iconRedo = printess.getIcon("redo-arrow");
+                    iconRedo.classList.add("icon");
+                    if (printess.redoCount() === 0) {
+                        btnRedo.disabled = true;
+                    }
+                    btnRedo.onclick = () => {
+                        printess.redo();
+                    };
+                    btnRedo.appendChild(iconRedo);
+                    miniBar.appendChild(btnRedo);
                 }
-                const icoUndo = printess.getIcon("undo-arrow");
-                icoUndo.classList.add("icon");
-                btnUndo.onclick = () => {
-                    printess.undo();
-                };
-                btnUndo.appendChild(icoUndo);
-                miniBar.appendChild(btnUndo);
-                const btnRedo = document.createElement("button");
-                btnRedo.className = "btn btn-sm me-2 redo-button";
-                const iconRedo = printess.getIcon("redo-arrow");
-                iconRedo.classList.add("icon");
-                if (printess.redoCount() === 0) {
-                    btnRedo.disabled = true;
-                }
-                btnRedo.onclick = () => {
-                    printess.redo();
-                };
-                btnRedo.appendChild(iconRedo);
-                miniBar.appendChild(btnRedo);
                 miniBar.className = "undo-redo-bar";
                 pages.appendChild(miniBar);
             }
@@ -2046,7 +2064,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         container.innerHTML = "";
         const imageList = document.createElement("div");
         imageList.classList.add("image-list");
-        images = images || printess.getAllImages();
+        images = images || printess.getImages(p === null || p === void 0 ? void 0 : p.id);
         const dragDropHint = document.createElement("p");
         dragDropHint.style.marginTop = "10px";
         dragDropHint.textContent = printess.gl("ui.dragDropHint");
@@ -2124,7 +2142,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             imageList.appendChild(thumb);
         }
         container.appendChild(imageList);
-        if (!forMobile && images.length > 0)
+        if (!forMobile && images.length > 0 && (p === null || p === void 0 ? void 0 : p.kind) !== "image-id")
             container.appendChild(dragDropHint);
         return container;
     }
@@ -2152,7 +2170,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         ok.onclick = () => __awaiter(this, void 0, void 0, function* () {
             hideModal(id);
             yield printess.distributeImages();
-            renderMyImagesTab(printess, forMobile, p, printess.getAllImages(), container);
+            renderMyImagesTab(printess, forMobile, p, printess.getImages(p === null || p === void 0 ? void 0 : p.id), container);
         });
         footer.appendChild(close);
         footer.appendChild(ok);
@@ -3080,6 +3098,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         let autoSelect = false;
         let autoSelectHasMeta = false;
+        let firstButton = null;
         if (buttons.length === 1) {
             const ep = buttons[0].newState.externalProperty;
             if (ep) {
@@ -3108,6 +3127,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + ":" + ((_e = b.newState.metaProperty) !== null && _e !== void 0 ? _e : "");
                 }
                 buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
+                if (!firstButton) {
+                    firstButton = buttonDiv;
+                }
                 buttonDiv.onclick = () => {
                     mobileUiButtonClick(printess, b, buttonDiv, container);
                 };
@@ -3150,21 +3172,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const scrollRight = document.createElement("div");
         scrollRight.className = "scroll-right-indicator";
-        scrollRight.appendChild(printess.getIcon("carret-right-solid"));
         scrollContainer.appendChild(buttonContainer);
         container.appendChild(scrollContainer);
         container.appendChild(scrollRight);
         window.setTimeout(() => {
-            if (buttonContainer.offsetWidth > container.offsetWidth) {
-                container.classList.add("scroll-right");
-                scrollContainer.onscroll = () => {
-                    if (scrollContainer.scrollLeft > buttonContainer.offsetWidth - (container.offsetWidth * 1.45)) {
-                        container.classList.remove("scroll-right");
-                    }
-                    else {
-                        container.classList.add("scroll-right");
-                    }
-                };
+            if (firstButton) {
+                const containerWidth = container.offsetWidth;
+                const buttonsWidth = buttonContainer.offsetWidth + 15 - (containerWidth * 1.45);
+                if (buttonsWidth > containerWidth) {
+                    firstButton.style.marginLeft = "15px";
+                    container.classList.add("scroll-right");
+                    scrollContainer.onscroll = () => {
+                        if (scrollContainer.scrollLeft > buttonContainer.offsetWidth - (container.offsetWidth * 1.45)) {
+                            container.classList.remove("scroll-right");
+                        }
+                        else {
+                            container.classList.add("scroll-right");
+                        }
+                    };
+                }
+                else {
+                    const space = (containerWidth - buttonsWidth) / 2;
+                    firstButton.style.marginLeft = space + "px";
+                }
             }
         }, 50);
         return container;
