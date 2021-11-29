@@ -79,7 +79,13 @@
     "buttonCrop": "Crop Image",
     "imageTabSelect": "Select Image",
     "redo": "Redo",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cropping": "Cropping ...",
+    "addDesign": "Add Design",
+    "addDesignHint": "Click the plus button below to add a new design.",
+    "changeLayout": "Change Layout",
+    "changeLayoutHint": "Choose a different layout for photos & text.",
+    "selectImageFirst": "Please select an image first."
   },
   "errors": {
     "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
