@@ -125,7 +125,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function refreshPagination(printess) {
         const spreads = printess.getAllSpreads();
         const info = printess.pageInfoSync();
-        if (uih_currentRender === "mobile") {
+        if (uih_currentRender === "mobile" && printess.showPageNavigation()) {
             renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
         }
         else {
@@ -1999,7 +1999,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (large) {
                 ul.classList.add("pagination-lg");
             }
-            if (spreads.length > 1) {
+            if (spreads.length > 1 && printess.showPageNavigation()) {
                 const prev = getPaginationItem(printess, "previous");
                 if (info && info.isFirst) {
                     prev.classList.add("disabled");
@@ -2091,7 +2091,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const thumb = document.createElement("div");
             thumb.className = "big";
             thumb.draggable = true;
-            thumb.ondragstart = (ev) => { var _a; return (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${im.id}`); };
+            thumb.ondragstart = (ev) => {
+                var _a;
+                if ((p === null || p === void 0 ? void 0 : p.kind) === "image-id") {
+                    ev.preventDefault();
+                }
+                (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${im.id}`);
+            };
             thumb.style.backgroundImage = im.thumbCssUrl;
             thumb.style.position = "relative";
             thumb.style.width = "91px";
@@ -2579,7 +2585,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (desktopProperties) {
             desktopProperties.innerHTML = "";
         }
-        if (printess.spreadCount() > 1) {
+        if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
             document.body.classList.add("has-mobile-page-bar");
         }
         else {
@@ -3091,7 +3097,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             buttons.unshift(...printess.getMobileUiBackgroundButton());
         }
         const hasButtons = buttons.length > 0;
-        if (printess.spreadCount() > 1) {
+        if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
             const spreads = printess.getAllSpreads();
             const info = printess.pageInfoSync();
             renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
@@ -3200,7 +3206,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return container;
     }
     function mobileUiButtonClick(printess, b, buttonDiv, container) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
             printess.selectBackground();
         }
@@ -3246,6 +3252,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (backButton) {
                     (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
                 }
+                const mobilePlusButton = document.querySelector(".mobile-property-plus-button");
+                if (mobilePlusButton) {
+                    (_d = mobilePlusButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(mobilePlusButton);
+                }
                 getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "details"));
             }
         }
@@ -3258,7 +3268,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             centerMobileButton(buttonDiv);
             const backButton = document.querySelector(".mobile-property-back-button");
             if (backButton) {
-                (_d = backButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(backButton);
+                (_e = backButton.parentElement) === null || _e === void 0 ? void 0 : _e.removeChild(backButton);
             }
             if (printess.isCurrentStepActive() || uih_currentState === "details") {
                 getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "details"));

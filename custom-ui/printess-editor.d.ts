@@ -29,30 +29,7 @@ export interface printessAttachParameters {
   /**
    * Optional parameter to merge any number of templates during load
    */
-  mergeTemplates?: [{
-    /**
-     * Name of the template to load an merge into the currently loaded template 
-     */
-    templateName: string;
-    /**
-     * Name of the document you want to merge. If none is specified the primary document of the template will be taken.
-     */
-    documentName?: string;
-    /**
-     * At what spread index the incoming template will be merged
-     */
-    spreadIndex?: number;
-    /**
-     * Force Printess to merge in a particular layout-snippet mode. 
-     * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
-     */
-    mergeMode?: MergeMode;
-
-    /**
-     * Define which resources you want to merge from the template additionally. 
-     */
-    mergeResources?: MergeResource[];
-  }];
+  mergeTemplates?: [iMergeTemplate];
 
   /**
    * Activated by default. Deactivating `allowZoomAndPan` freezes the visible Area of the current document. 
@@ -218,8 +195,9 @@ export interface iPrintessApi {
   /**
    * Load a template to the Printess editor.
    * @param templateNameOrToken can be either the name of a template (case sensitive) or the save-token received as a result of a user design save. 
+   * @param mergeTemplates optional parameter to pass other templates to merge 
    */
-  loadTemplate(templateNameOrToken: string): Promise<void>;
+  loadTemplate(templateNameOrToken: string, mergeTemplates?: [iMergeTemplate]): Promise<void>
 
   /**
    * @deprecated 
@@ -656,6 +634,17 @@ export interface iPrintessApi {
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
   /**
+   * Saves and publishes the template.
+   * @param name The name you want to save the template under.
+   */
+  saveAndPublish(name: string): Promise<void>;
+
+  /**
+   * Returns if buyer ui should display the page navigation
+   */
+  showPageNavigation(): boolean;
+
+  /**
    * Returns if buyer ui should display undo and redo buttons
    */
   showUndoRedo(): boolean
@@ -1076,6 +1065,30 @@ export interface iExternalError {
 export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
 export type MergeResource = "snippets" | "fonts" | "colors" | "images";
 
+export interface iMergeTemplate {
+  /**
+   * Name of the template to load an merge into the currently loaded template 
+   */
+  templateName: string;
+  /**
+   * Name of the document you want to merge. If none is specified the primary document of the template will be taken.
+   */
+  documentName?: string;
+  /**
+   * At what spread index the incoming template will be merged
+   */
+  spreadIndex?: number;
+  /**
+   * Force Printess to merge in a particular layout-snippet mode. 
+   * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
+   */
+  mergeMode?: MergeMode;
+  /**
+   * Define which resources you want to merge from the template additionally. 
+   */
+  mergeResources?: MergeResource[];
+}
+
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
@@ -1182,7 +1195,7 @@ export interface TemplateEditables {
   primaryDocument: DocumentContentEditables;
   formFields: FormFieldItem[];
 }
-
+ 
 export type iconName =
   "image"
   | "portrait"
@@ -1386,4 +1399,5 @@ export type iconName =
   | "angle-double-left"
   | "arrow-to-right"
   | "arrow-to-left"
-  | "distribute-image";
+  | "distribute-image"
+  | "minus-square";

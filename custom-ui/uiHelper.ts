@@ -139,7 +139,7 @@ declare const bootstrap: any;
   function refreshPagination(printess: iPrintessApi) {
     const spreads = printess.getAllSpreads();
     const info = printess.pageInfoSync();
-    if (uih_currentRender === "mobile") {
+    if (uih_currentRender === "mobile" && printess.showPageNavigation()) {
       renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
     } else {
       renderPageNavigation(printess, spreads, info);
@@ -2391,7 +2391,7 @@ declare const bootstrap: any;
         ul.classList.add("pagination-lg");
       }
 
-      if (spreads.length > 1) {
+      if (spreads.length > 1 && printess.showPageNavigation()) {
 
 
         const prev = getPaginationItem(printess, "previous");
@@ -2510,7 +2510,12 @@ declare const bootstrap: any;
       const thumb = document.createElement("div");
       thumb.className = "big";
       thumb.draggable = true;
-      thumb.ondragstart = (ev: DragEvent) => ev.dataTransfer?.setData('text/plain', `${im.id}`);
+      thumb.ondragstart = (ev: DragEvent) => {
+        if (p?.kind === "image-id") {
+          ev.preventDefault();
+        }
+        ev.dataTransfer?.setData('text/plain', `${im.id}`)
+      };
       thumb.style.backgroundImage = im.thumbCssUrl;
       thumb.style.position = "relative";
       thumb.style.width = "91px";
@@ -2600,7 +2605,7 @@ declare const bootstrap: any;
     ok.onclick = async () => {
       hideModal(id);
       await printess.distributeImages();
-      renderMyImagesTab(printess, forMobile, p, printess.getImages(p?.id ), container);
+      renderMyImagesTab(printess, forMobile, p, printess.getImages(p?.id), container);
     }
 
     footer.appendChild(close);
@@ -3074,7 +3079,7 @@ declare const bootstrap: any;
       desktopProperties.innerHTML = "";
     }
 
-    if (printess.spreadCount() > 1) {
+    if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
       document.body.classList.add("has-mobile-page-bar");
     } else {
       document.body.classList.remove("has-mobile-page-bar");
@@ -3738,7 +3743,7 @@ declare const bootstrap: any;
 
     const hasButtons = buttons.length > 0;
 
-    if (printess.spreadCount() > 1) {
+    if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
       const spreads = printess.getAllSpreads();
       const info = printess.pageInfoSync();
       renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
@@ -3848,7 +3853,7 @@ declare const bootstrap: any;
     window.setTimeout(() => {
       if (firstButton) {
         const containerWidth = container.offsetWidth;
-        const buttonsWidth = buttonContainer.offsetWidth  + 15 - (containerWidth * 1.45); // substract the animation way + right margin (0.45);
+        const buttonsWidth = buttonContainer.offsetWidth + 15 - (containerWidth * 1.45); // substract the animation way + right margin (0.45);
         if (buttonsWidth > containerWidth) {
           firstButton.style.marginLeft = "15px";
           container.classList.add("scroll-right");
@@ -3861,7 +3866,7 @@ declare const bootstrap: any;
           }
         } else {
           // center buttons;
-          const space  =( containerWidth - buttonsWidth) / 2;
+          const space = (containerWidth - buttonsWidth) / 2;
           firstButton.style.marginLeft = space + "px";
 
         }
@@ -3918,6 +3923,10 @@ declare const bootstrap: any;
         const backButton = document.querySelector(".mobile-property-back-button");
         if (backButton) {
           backButton.parentElement?.removeChild(backButton);
+        }
+        const mobilePlusButton = document.querySelector(".mobile-property-plus-button");
+        if (mobilePlusButton) {
+          mobilePlusButton.parentElement?.removeChild(mobilePlusButton);
         }
         getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "details")); // group-snippets are only used with  "add" state
       }
