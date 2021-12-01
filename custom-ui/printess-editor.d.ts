@@ -319,6 +319,12 @@ export interface iPrintessApi {
   spreadCount(): number
 
   /**
+   * On IOS returns if iphone has its keyboard expanded. 
+   * This can never be 100% accurate.
+   */
+  isSoftwareKeyBoardExpanded(): boolean
+
+  /**
   * Returns true is the user has made edits on a spread.
   * @param spreadIdOrIndex: ID or Index of Spread to check for - if empty it checks for current spread
   */
@@ -691,6 +697,12 @@ export interface iPrintessApi {
   isCurrentStepActive(): boolean;
 
   /**
+   * Returns step information
+   * @param index 
+   */
+  getStepByIndex(index: number): iBuyerStep | null
+
+  /**
    * Indicates if the current template has buyer-steps 
    */
   hasSteps(): boolean
@@ -794,7 +806,7 @@ export interface iPrintessApi {
   /**
    * Returns the template settings for display of steps header on desktop and mobile
    */
-  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list"
+  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list" | "tabs list"
 
   /**
    * Displays a grey overlay on printess editor
@@ -855,6 +867,11 @@ export interface iPrintessApi {
    * @param params String or number parameters that substitute $1, ..., $9 properties in a translation
    */
   gl(translationKey: string, ...params: Array<string | number>): string
+
+  /**
+   * Returns if LayoutSnippets are available
+   */
+  hasLayoutSnippets(): boolean
 }
 
 export interface iBuyerStep {
@@ -952,7 +969,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text"  | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
@@ -1098,10 +1115,12 @@ export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-para
 
 export interface iExternalImage {
   id: string;
+  originalImageUrl: string;
   thumbUrl: string;
   thumbCssUrl: string;
   width: number;
   height: number;
+  fileHash: string;
   inUse: boolean;
 }
 
@@ -1195,7 +1214,7 @@ export interface TemplateEditables {
   primaryDocument: DocumentContentEditables;
   formFields: FormFieldItem[];
 }
- 
+
 export type iconName =
   "image"
   | "portrait"
@@ -1400,4 +1419,8 @@ export type iconName =
   | "arrow-to-right"
   | "arrow-to-left"
   | "distribute-image"
-  | "minus-square";
+  | "minus-square"
+  | "arrow-square-right"
+  | "bullseye-pointer-solid"
+  | "hand-pointer-light"
+  | "eye-dropper";
