@@ -258,11 +258,17 @@ export interface iPrintessApi {
   selectFrames(propertyId: string): Promise<void>;
 
   /**
+   * Get frames available on spread.
+   * Return first editable frame.
+   */
+  getFrames(): Promise<iFrame>
+
+  /**
    * Select and zoom to the frame(s) mentioned in the error object.
    * @param err
    * @param zoomToSelection Overrides the default zoom behaviour of the item / template
    */
-  bringErrorIntoView(err: iExternalError, zoomToSelection?: boolean): Promise<void>
+  bringErrorIntoView(err: iExternalError): Promise<void>
 
   /**
    * Selects all frames which are marked as **background**
@@ -639,11 +645,19 @@ export interface iPrintessApi {
   insertLayoutSnippet(snippetUrl: string): Promise<void>;
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
+  getImageFilterSnippets(tags: Array<string> | ReadonlyArray<string>): Promise<Array<iExternalSnippet>>
+  applyImageFilterSnippet(filterSnippetUrl: string): Promise<void>
+
   /**
    * Saves and publishes the template.
    * @param name The name you want to save the template under.
    */
   saveAndPublish(name: string): Promise<void>;
+
+  /**
+   * returns an array of uiHints to be displayed on buyer side.
+   */
+  uiHintsDisplay(): Array<"layoutSnippets" | "groupSnippets" | "editableFrames">;
 
   /**
    * Returns if buyer ui should display the page navigation
@@ -688,6 +702,14 @@ export interface iPrintessApi {
   renderPageImages(fileNameSuffix: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string[]>;
 
   isMobile(): boolean;
+
+  // check if device is iPhone or iPod
+  isIPhone(): boolean;
+
+  /**
+   * Tells if printess has currently selected frames
+   */
+  hasSelection(): boolean
 
   getStep(): iBuyerStep | null;
   /**
@@ -753,6 +775,8 @@ export interface iPrintessApi {
 
   gotoNextPreviewDocument(): Promise<void>
 
+  setZoomMode(m: "spread" | "frame"): void
+  getZoomMode(): "spread" | "frame"
 
 
 
@@ -830,6 +854,8 @@ export interface iPrintessApi {
    * Also returns the calculated pixel-dimension of printess container on desktop
    */
   autoScaleDetails(): { enabled: boolean, width: number, height: number }
+
+  centerSelection(focusFormFieldId?: string): Promise<void>
 
   /**
    * 
@@ -969,11 +995,11 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text"  | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
-  "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-hueRotate" | "image-rotation" | "image-crop";
+  "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
 
 export interface iExternalProperty {
   id: string;
@@ -1063,6 +1089,7 @@ export interface iExternalimageMeta {
   */
   canScale: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate">;
+  filterTags: ReadonlyArray<string>;
 }
 export interface iExternalImageScaleHints {
   min: number;
@@ -1423,4 +1450,5 @@ export type iconName =
   | "arrow-square-right"
   | "bullseye-pointer-solid"
   | "hand-pointer-light"
-  | "eye-dropper";
+  | "eye-dropper"
+  | "cloud-upload-light";
