@@ -28,11 +28,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_currentProperties = [];
     let uih_currentState = "document";
     let uih_currentRender = "never";
+    let uih_lastMobileState = null;
+    let uih_autoSelectPending = false;
     let uih_lastPrintessHeight = 0;
     let uih_lastPrintessWidth = 0;
-    let uih_lastPrintessTop = "";
-    let uih_lastPrintessBottom = 0;
+    let uih_lastPrintessTop = null;
+    let uih_lastMobileUiHeight = 0;
+    let uih_lastZoomMode = "unset";
     let uih_lastFormFieldId = undefined;
+    let uih_stepTabOffset = 0;
+    let uih_stepTabsScrollPosition = 0;
     let uih_lastOverflowState = false;
     const uih_ignoredLowResolutionErrors = [];
     console.log("Printess ui-helper loaded");
@@ -125,8 +130,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function refreshPagination(printess) {
         const spreads = printess.getAllSpreads();
         const info = printess.pageInfoSync();
-        if (uih_currentRender === "mobile" && printess.showPageNavigation()) {
+        if (uih_currentRender === "mobile") {
             renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
+            renderMobileNavBar(printess);
         }
         else {
             renderPageNavigation(printess, spreads, info);
@@ -134,19 +140,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function _viewPortScroll(printess, _what) {
         if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
+            console.log("!!!! View-Port-" + _what + "-Event: top=" + window.visualViewport.offsetTop + "   Height=" + window.visualViewport.height, window.visualViewport);
             uih_viewportOffsetTop = window.visualViewport.offsetTop;
+            const keyboardExpanded = uih_viewportHeight - window.visualViewport.height > 250;
             uih_viewportHeight = window.visualViewport.height;
             uih_viewportWidth = window.visualViewport.width;
             const printessDiv = document.getElementById("desktop-printess-container");
             if (printessDiv) {
                 if (printess.isMobile()) {
                     printessDiv.style.height = "";
-                    if (window.visualViewport.offsetTop > 0) {
-                        resizeMobileUi(printess, true);
-                    }
-                    else {
-                        resizeMobileUi(printess, false);
-                    }
+                    resizeMobileUi(printess);
                 }
                 else {
                     const desktopGrid = document.getElementById("printess-desktop-grid");
@@ -180,12 +183,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         uih_viewportWidth = window.innerWidth;
         const printessDiv = document.getElementById("desktop-printess-container");
         if (printessDiv) {
-            if (vpOffsetTop > 0) {
-                resizeMobileUi(printess, true);
-            }
-            else {
-                resizeMobileUi(printess, false);
-            }
+            resizeMobileUi(printess);
         }
     }
     function renderDesktopUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
@@ -213,7 +211,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const printessDiv = document.getElementById("desktop-printess-container");
         const container = document.getElementById("desktop-properties");
         if (!container || !printessDiv) {
-            throw "#desktop-properties or #desktop-printess-container not found, please add to html.";
+            throw new Error("#desktop-properties or #desktop-printess-container not found, please add to html.");
+        }
+        if (printess.stepHeaderDisplay() === "tabs list") {
+            container.classList.add("tabs");
+        }
+        else {
+            container.classList.remove("tabs");
         }
         printessDiv.style.position = "relative";
         printessDiv.style.top = "";
@@ -228,11 +232,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const spreads = printess.getAllSpreads();
         const info = printess.pageInfoSync();
         renderPageNavigation(printess, spreads, info);
-        if (printess.hasSteps()) {
-            container.appendChild(getDesktopStepsUi(printess));
+        if (printess.stepHeaderDisplay() !== "tabs list") {
+            if (printess.hasSteps()) {
+                container.appendChild(getDesktopStepsUi(printess));
+            }
+            else {
+                container.appendChild(getDesktopTitle(printess));
+            }
         }
-        else {
-            container.appendChild(getDesktopTitle(printess));
+        renderUiButtonHints(printess, document.body, state, false);
+        if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
+            toggleChangeLayoutButtonHints();
         }
         if (state === "document") {
             const propsDiv = document.createElement("div");
@@ -253,11 +263,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (groupSnippets.length > 0) {
                     tabsPanel.push({ id: "group-snippets", title: printess.gl("ui.snippetsTab"), content: renderGroupSnippets(printess, groupSnippets, false) });
                 }
-                container.appendChild(getTabPanel(tabsPanel));
+                container.appendChild(getTabPanel(tabsPanel, ""));
             }
             else {
                 container.appendChild(propsDiv);
                 container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+            }
+            if (printess.hasSteps()) {
+                container.appendChild(getDoneButton(printess));
             }
             properties.forEach(p => validate(printess, p));
         }
@@ -289,13 +302,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return t;
     }
     function getPropertyControl(printess, p, metaProperty, forMobile = false) {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e, _f, _g;
         switch (p.kind) {
             case "single-line-text":
                 return getSingleLineTextBox(printess, p, forMobile);
+            case "font":
+                return getFontDropDown(printess, p, forMobile);
             case "text-area":
                 return getTextArea(printess, p, forMobile);
             case "multi-line-text":
+            case "selection-text-style":
                 if (forMobile) {
                     switch (metaProperty) {
                         case "text-style-color":
@@ -314,11 +330,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             return getMultiLineTextBox(printess, p, forMobile);
                     }
                 }
+                else if (p.kind === "selection-text-style") {
+                    return getTextStyleControl(printess, p);
+                }
                 else {
                     return getMultiLineTextBox(printess, p, forMobile);
                 }
-            case "selection-text-style":
-                return getTextStyleControl(printess, p);
             case "color":
                 return getColorDropDown(printess, p, undefined, forMobile);
             case "number":
@@ -347,7 +364,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
                         tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
                     }
-                    return getTabPanel(tabs);
+                    return getTabPanel(tabs, p.id);
                 }
             case "image": {
                 if (forMobile) {
@@ -368,6 +385,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 }
                             case "image-rotation":
                                 return getImageRotateControl(printess, p);
+                            case "image-filter":
+                                {
+                                    const tags = (_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.filterTags;
+                                    if (tags && tags.length > 0) {
+                                        return getImageFilterButtons(printess, p, tags);
+                                    }
+                                }
+                                break;
                         }
                         const d = document.createElement("div");
                         d.innerText = printess.gl("ui.missingControl");
@@ -378,17 +403,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
                 const tabs = [];
-                if ((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.canUpload) {
+                if ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canUpload) {
                     tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
                 }
                 else {
                     tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTabSelect"), content: getImageUploadControl(printess, p) });
                 }
-                if (((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canUpload) && p.value !== ((_f = p.validation) === null || _f === void 0 ? void 0 : _f.defaultValue)) {
+                if (((_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.canUpload) && p.value !== ((_g = p.validation) === null || _g === void 0 ? void 0 : _g.defaultValue)) {
                     tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
                     tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
                 }
-                return getTabPanel(tabs);
+                return getTabPanel(tabs, p.id);
             }
             case "select-list":
                 return getDropDown(printess, p, forMobile);
@@ -411,37 +436,80 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         };
         return ok;
     }
-    function getDoneButton(printess) {
+    function getDesktopNavButton(btn) {
         const ok = document.createElement("button");
         ok.className = "btn btn-primary";
+        ok.style.marginRight = "4px";
+        ok.style.alignSelf = "start";
+        ok.style.padding = "5px";
+        ok.textContent = btn.text;
+        ok.onclick = () => btn.task();
+        return ok;
+    }
+    function getDoneButton(printess) {
+        const buttons = {
+            previous: {
+                name: "previous",
+                text: printess.gl("ui.buttonPrevStep"),
+                task: () => {
+                    var _a;
+                    printess.previousStep();
+                    getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) - 1), true);
+                }
+            },
+            next: {
+                name: "next",
+                text: printess.gl("ui.buttonNext"),
+                task: () => {
+                    var _a;
+                    gotoNextStep(printess);
+                    getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
+                }
+            },
+            done: {
+                name: "done",
+                text: printess.gl("ui.buttonDone"),
+                task: () => {
+                    const errors = printess.validate("selection");
+                    const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+                    if (filteredErrors.length > 0) {
+                        getValidationOverlay(printess, filteredErrors);
+                        return;
+                    }
+                    printess.clearSelection();
+                }
+            },
+            basket: {
+                name: "basket",
+                text: printess.gl("ui.buttonBasket"),
+                task: () => addToBasket(printess)
+            }
+        };
+        const container = document.createElement("div");
         if (printess.isCurrentStepActive()) {
+            if (printess.hasPreviousStep()) {
+                container.appendChild(getDesktopNavButton(buttons.previous));
+            }
             if (printess.hasNextStep()) {
-                ok.innerText = printess.gl("ui.buttonNext");
+                container.appendChild(getDesktopNavButton(buttons.next));
             }
             else {
-                ok.innerText = printess.gl("ui.buttonBasket");
+                container.appendChild(getDesktopNavButton(buttons.basket));
+            }
+        }
+        else if (!printess.isCurrentStepActive() && printess.hasSteps()) {
+            container.appendChild(getDesktopNavButton(buttons.done));
+            if (printess.hasNextStep()) {
+                container.appendChild(getDesktopNavButton(buttons.next));
+            }
+            else {
+                container.appendChild(getDesktopNavButton(buttons.basket));
             }
         }
         else {
-            ok.innerText = printess.gl("ui.buttonDone");
+            container.appendChild(getDesktopNavButton(buttons.done));
         }
-        ok.style.alignSelf = "start";
-        ok.style.padding = "5px";
-        ok.onclick = () => {
-            if (printess.isCurrentStepActive()) {
-                gotoNextStep(printess);
-            }
-            else {
-                const errors = printess.validate("selection");
-                const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
-                if (filteredErrors.length > 0) {
-                    getValidationOverlay(printess, filteredErrors);
-                    return;
-                }
-                printess.clearSelection();
-            }
-        };
-        return ok;
+        return container;
     }
     function getTextStyleControl(printess, p) {
         const textPropertiesDiv = document.createElement("div");
@@ -513,12 +581,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         };
         inp.onfocus = () => {
+            const ffId = p.id.startsWith("FF_") ? p.id.substr(3) : undefined;
+            printess.setZoomMode("frame");
+            printess.resizePrintess(false, undefined, undefined, undefined, ffId);
             if (inp.value && p.validation && p.validation.clearOnFocus && inp.value === p.validation.defaultValue) {
                 inp.value = "";
             }
             else {
                 window.setTimeout(() => inp.select(), 0);
             }
+        };
+        inp.onblur = () => {
+            printess.setZoomMode("spread");
         };
         const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
         return r;
@@ -698,14 +772,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 h2.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
                 grid.appendChild(h2);
             }
-            else if (hd === "badge list") {
-                grid.classList.add("active-step-badge-list");
-                grid.appendChild(getStepsBadgeList(printess));
+            else if (hd === "badge list" || hd === "tabs list") {
+                grid.classList.add("active-step");
                 grid.appendChild(document.createElement("div"));
-                grid.appendChild(getStepsPutToBasketButton(printess));
-                container.appendChild(grid);
-                container.appendChild(hr);
-                return container;
+                const h2 = document.createElement("h2");
+                h2.style.flexGrow = "1";
+                h2.className = "mb-0";
+                h2.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
+                grid.appendChild(h2);
             }
             else {
                 grid.classList.add("active-step-only-badge");
@@ -782,6 +856,126 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return badge;
     }
+    function getCurrentTab(printess, value, forMobile = true) {
+        if ((printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list")) {
+            const tabsListScrollbar = document.getElementById("tabs-list-scrollbar");
+            const curStepTab = document.getElementById("tab-step-" + value);
+            setTabScrollPosition(tabsListScrollbar, curStepTab, forMobile);
+        }
+    }
+    function setTabScrollPosition(tabsListScrollbar, tab, forMobile) {
+        const stepTabs = document.getElementById("step-tab-list");
+        uih_stepTabsScrollPosition = tabsListScrollbar.scrollLeft;
+        if (stepTabs && tab && stepTabs.offsetWidth / tab.offsetLeft < 2) {
+            if (forMobile) {
+                uih_stepTabOffset = tab.offsetLeft - (stepTabs.offsetWidth / 2) + (tab.clientWidth / 2);
+            }
+            else {
+                uih_stepTabOffset = tab.offsetLeft - (stepTabs.offsetWidth / 2) + 40 + (tab.clientWidth / 2);
+            }
+        }
+        else {
+            uih_stepTabOffset = 0;
+        }
+    }
+    function getStepsTabsList(printess, _forMobile = false, displayType) {
+        var _a, _b, _c, _d;
+        const div = document.createElement("div");
+        div.className = "tabs-list";
+        div.id = "tabs-list-scrollbar";
+        const isDesktopTabs = (!_forMobile && displayType === "tabs list");
+        const ul = document.createElement("ul");
+        ul.className = "nav nav-tabs flex-nowrap " + (_forMobile ? "" : "step-tabs-desktop");
+        if (displayType === "badge list")
+            ul.style.borderBottomColor = "var(--bs-white)";
+        if (displayType === "badge list" && _forMobile) {
+            const prev = document.createElement("li");
+            prev.className = "nav-item tab-item badge-item";
+            const prevLink = document.createElement("a");
+            prevLink.className = "nav-link badge-link prev-badge";
+            if (!printess.hasPreviousStep())
+                prevLink.classList.add("disabled");
+            const icon = printess.getIcon("carret-left-solid");
+            icon.style.width = "25px";
+            icon.style.height = "25px";
+            icon.style.paddingRight = "2px";
+            prev.onclick = () => {
+                var _a;
+                const curStepTab = document.getElementById("tab-step-" + (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) - 1));
+                setTabScrollPosition(div, curStepTab, _forMobile);
+                printess.previousStep();
+            };
+            prevLink.appendChild(icon);
+            prev.appendChild(prevLink);
+            ul.appendChild(prev);
+        }
+        const cur = printess.getStep();
+        if (cur) {
+            for (let i = 0; i <= ((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0); i++) {
+                const tab = document.createElement("li");
+                tab.className = "nav-item " + (isDesktopTabs ? "" : "tab-item");
+                if (displayType === "badge list")
+                    tab.classList.add("badge-item");
+                tab.id = "tab-step-" + i;
+                const tabLink = document.createElement("a");
+                tabLink.className = "nav-link text-truncate ";
+                if (displayType === "badge list")
+                    tabLink.classList.add("badge-link");
+                if (cur.index === i) {
+                    if (isDesktopTabs) {
+                        tab.classList.add("active");
+                        tabLink.classList.add("active");
+                    }
+                    else {
+                        tab.classList.add("active-step-tab");
+                        tabLink.classList.add("active-step-tablink");
+                    }
+                }
+                else {
+                    if (isDesktopTabs) {
+                        tab.classList.remove("active");
+                        tabLink.classList.remove("active");
+                    }
+                    else {
+                        tab.classList.remove("active-step-tab");
+                        tabLink.classList.remove("active-step-tab");
+                    }
+                }
+                const stepTitle = (_d = (_c = printess.getStepByIndex(i)) === null || _c === void 0 ? void 0 : _c.title) !== null && _d !== void 0 ? _d : "";
+                tabLink.innerText = stepTitle.length === 0 || displayType === "badge list" ? (i + 1).toString() : stepTitle;
+                tab.appendChild(tabLink);
+                tab.onclick = () => {
+                    setTabScrollPosition(div, tab, _forMobile);
+                    gotoStep(printess, i);
+                };
+                ul.appendChild(tab);
+            }
+        }
+        if (displayType === "badge list" && _forMobile) {
+            const next = document.createElement("li");
+            next.className = "nav-item tab-item badge-item";
+            const nextLink = document.createElement("a");
+            nextLink.className = "nav-link badge-link next-badge";
+            if (!printess.hasNextStep())
+                nextLink.classList.add("disabled");
+            const icon = printess.getIcon("carret-right-solid");
+            icon.style.width = "25px";
+            icon.style.height = "25px";
+            icon.style.paddingLeft = "2px";
+            next.onclick = () => {
+                var _a;
+                const curStepTab = document.getElementById("tab-step-" + (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1));
+                setTabScrollPosition(div, curStepTab, _forMobile);
+                printess.nextStep();
+            };
+            nextLink.appendChild(icon);
+            next.appendChild(nextLink);
+            ul.appendChild(next);
+        }
+        scrollToLeft(div, uih_stepTabOffset, 300, uih_stepTabsScrollPosition);
+        div.appendChild(ul);
+        return div;
+    }
     function getStepsBadgeList(printess, _forMobile = false) {
         var _a, _b;
         const sm = "";
@@ -853,7 +1047,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 inp.value = "";
             }
             else {
-                window.setTimeout(() => inp.select(), 0);
+                window.setTimeout(() => !printess.isIPhone() && inp.select(), 0);
             }
         };
         if (forMobile) {
@@ -868,22 +1062,37 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function addLabel(printess, input, id, forMobile, kind, label) {
         input.classList.add("form-control");
         const container = document.createElement("div");
-        container.classList.add("mb-3");
+        !forMobile && container.classList.add("mb-3");
         container.id = "cnt_" + id;
         container.style.display = printess.isPropertyVisible(id) ? "block" : "none";
         if (label) {
             const htmlLabel = document.createElement("label");
             htmlLabel.className = "form-label";
             htmlLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
-            htmlLabel.innerText = (label && (printess.gl(label)) || printess.gl(label) || "");
+            htmlLabel.innerText = printess.gl(label) || "";
             htmlLabel.style.display = forMobile ? "none" : "inline-block";
-            if (kind === "image") {
+            if (kind === "image" && !forMobile) {
                 const button = document.createElement("button");
                 button.className = "btn btn-primary image-upload-btn";
                 button.id = "upload-btn-" + id;
                 htmlLabel.classList.add("image-upload-label");
                 button.appendChild(htmlLabel);
                 container.appendChild(button);
+            }
+            else if (kind === "image" && forMobile) {
+                const upload = document.createElement("button");
+                upload.className = "btn btn-outline-primary upload-image-btn";
+                upload.id = "upload-btn-" + id;
+                upload.textContent = printess.gl(label);
+                upload.style.position = "relative";
+                const uploadIcon = printess.getIcon("cloud-upload-light");
+                uploadIcon.style.height = "50px";
+                const uploadLabel = document.createElement("label");
+                uploadLabel.className = "image-upload-label-mobile";
+                uploadLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
+                upload.appendChild(uploadIcon);
+                upload.appendChild(uploadLabel);
+                container.appendChild(upload);
             }
             else {
                 container.appendChild(htmlLabel);
@@ -1049,6 +1258,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         ddContent.style.width = "240px";
         const colorList = document.createElement("div");
         colorList.className = "color-picker-drop-down";
+        if (forMobile) {
+            colorList.style.paddingRight = "30px";
+        }
         for (const f of colors) {
             const color = document.createElement("a");
             color.href = "#";
@@ -1059,7 +1271,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             color.onclick = () => __awaiter(this, void 0, void 0, function* () {
                 if (metaProperty === "color") {
                     printess.setTextStyleProperty(p.id, metaProperty, f.name);
-                    const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
+                    const mobileButtonDiv = document.getElementById(p.id + ":color") || document.getElementById(p.id + ":text-style-color");
                     if (mobileButtonDiv && p.textStyle) {
                         p.textStyle.color = f.color;
                         drawButtonContent(printess, mobileButtonDiv, [p]);
@@ -1126,11 +1338,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 a.href = "#";
                 a.classList.add("dropdown-item");
                 a.onclick = () => {
-                    printess.setProperty(p.id, entry.key).then(() => setPropertyVisibilities(printess));
-                    const mobileButtonDiv = document.getElementById(p.id + ":");
-                    if (mobileButtonDiv) {
-                        drawButtonContent(printess, mobileButtonDiv, [p]);
-                    }
+                    p.value = entry.key;
+                    printess.setProperty(p.id, entry.key).then(() => {
+                        setPropertyVisibilities(printess);
+                        const mobileButtonDiv = document.getElementById(p.id + ":");
+                        if (mobileButtonDiv) {
+                            drawButtonContent(printess, mobileButtonDiv, [p]);
+                        }
+                    });
                     if (p.listMeta) {
                         button.innerHTML = "";
                         button.appendChild(getDropdownItemContent(printess, p.listMeta, entry));
@@ -1178,8 +1393,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         div.appendChild(label);
         return div;
     }
-    function getTabPanel(tabs) {
+    function getTabPanel(tabs, id) {
         const panel = document.createElement("div");
+        panel.id = "tabs-panel-" + id;
         const ul = document.createElement("ul");
         ul.className = "nav nav-tabs";
         ul.setAttribute("role", "tablist");
@@ -1216,10 +1432,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         panel.appendChild(content);
         return panel;
     }
+    function getImageFilterButtons(printess, p, tags) {
+        const div = document.createElement("div");
+        printess.getImageFilterSnippets(tags).then((snippets) => {
+            const filters = document.createElement("div");
+            filters.className = "d-flex flex-wrap mb-3";
+            for (const sn of snippets) {
+                const img = document.createElement("div");
+                img.className = "image-filter-snippet m-1 position-relative border border-dark text-center";
+                img.style.backgroundImage = "url('" + sn.thumbUrl + "')";
+                img.onclick = () => {
+                    printess.applyImageFilterSnippet(sn.snippetUrl);
+                };
+                const title = document.createElement("div");
+                title.className = "image-filter-title";
+                title.innerText = sn.title;
+                img.appendChild(title);
+                filters.append(img);
+            }
+            div.appendChild(filters);
+        });
+        return div;
+    }
     function getImageFilterControl(printess, p, filterDiv) {
-        var _a;
+        var _a, _b;
         const container = filterDiv || document.createElement("div");
-        (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.allows.forEach(metaProperty => {
+        const tags = (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.filterTags;
+        if (tags && tags.length > 0) {
+            container.appendChild(getImageFilterButtons(printess, p, tags));
+        }
+        (_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.allows.forEach(metaProperty => {
             switch (metaProperty) {
                 case "brightness":
                     container.appendChild(getNumberSlider(printess, p, "image-brightness"));
@@ -1240,7 +1482,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         });
         const filterBtn = document.createElement("button");
         filterBtn.className = "btn btn-secondary mt-4 w-100";
-        filterBtn.textContent = "Reset Filter";
+        filterBtn.textContent = printess.gl("ui.buttonResetFilter");
         filterBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
             if (p.imageMeta) {
                 p.imageMeta.brightness = 0;
@@ -1257,8 +1499,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return container;
     }
     function getImageRotateControl(printess, p) {
+        var _a;
         const container = document.createElement("div");
-        if (p.imageMeta) {
+        if (p.imageMeta && p.value !== "fallback" && (p.value !== ((_a = p.validation) === null || _a === void 0 ? void 0 : _a.defaultValue))) {
             const imagePanel = document.createElement("div");
             imagePanel.className = "image-rotate-panel";
             for (let i = 1; i < 4; i++) {
@@ -1294,6 +1537,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 imagePanel.appendChild(thumbDiv);
             }
             container.appendChild(imagePanel);
+        }
+        else {
+            container.innerText = printess.gl("ui.selectImageFirst");
         }
         return container;
     }
@@ -1348,7 +1594,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (p.value) {
             const ui = printess.createCropUi(p.id);
             if (!ui) {
-                container.innerText = "Image not found!";
+                container.innerText = printess.gl("ui.selectImageFirst");
                 return container;
             }
             ui.container.classList.add("mb-3");
@@ -1414,7 +1660,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(scaleControl);
                 }
             }
-            imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
+            forMobile ? imagePanel.appendChild(renderImageControlButtons(printess, images, p)) : imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
             imagePanel.style.gridTemplateRows = "auto";
             imagePanel.style.gridTemplateColumns = "1fr";
             container.appendChild(imagePanel);
@@ -1439,14 +1685,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (im.id === p.value)
                     thumb.style.border = "2px solid red";
                 thumb.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                    var _c;
                     const scaleHints = yield printess.setProperty(p.id, im.id);
                     p.value = im.id;
                     if (scaleHints && p.imageMeta) {
                         p.imageMeta.scaleHints = scaleHints;
                         p.imageMeta.scale = scaleHints.scale;
                         p.imageMeta.thumbCssUrl = im.thumbCssUrl;
+                        p.imageMeta.thumbUrl = im.thumbUrl;
+                        p.imageMeta.canScale = p.value !== ((_c = p.validation) === null || _c === void 0 ? void 0 : _c.defaultValue);
                     }
                     getImageUploadControl(printess, p, container, forMobile);
+                    const propsDiv = document.getElementById("tabs-panel-" + p.id);
+                    if (propsDiv) {
+                        propsDiv.replaceWith(getPropertyControl(printess, p));
+                    }
                 });
                 imageList.appendChild(thumb);
             }
@@ -1467,12 +1720,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true, addBottomMargin = true) {
+    function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true) {
         const container = document.createElement("div");
-        const fileUpload = document.createElement("div");
-        if (addBottomMargin)
-            fileUpload.className = "mb-3";
-        fileUpload.id = "cnt_" + id;
         const progressDiv = document.createElement("div");
         progressDiv.className = "progress";
         const progressBar = document.createElement("div");
@@ -1501,6 +1750,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const distributeBtn = document.getElementById("distribute-button");
                 if (distributeBtn)
                     distributeBtn.style.display = "none";
+                const imageControl = document.getElementById("image-control-buttons");
+                if (imageControl && forMobile) {
+                    imageControl.innerHTML = "";
+                    imageControl.style.gridTemplateColumns = "1fr";
+                    imageControl.appendChild(progressDiv);
+                }
                 progressDiv.style.display = "flex";
                 const label = document.getElementById("upload-btn-" + id);
                 if (label) {
@@ -1509,6 +1764,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 yield printess.uploadImages(inp.files, (progress) => {
                     progressBar.style.width = (progress * 100) + "%";
                 }, assignToFrameOrNewFrame, id);
+                if (printess.getImages().length > 0 && printess.getImages().filter(im => !im.inUse).length > 0 && printess.allowImageDistribution() && inp.files.length > 1) {
+                    yield printess.distributeImages();
+                }
                 if (!assignToFrameOrNewFrame) {
                     const imageTabContainer = document.getElementById("tab-my-images");
                     imageTabContainer.innerHTML = "";
@@ -1521,9 +1779,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         uploadLabel.className = "form-label";
         uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
         uploadLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
-        fileUpload.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage"));
         container.appendChild(progressDiv);
-        container.appendChild(fileUpload);
+        container.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage"));
         return container;
     }
     function getImageScaleControl(printess, p, forMobile = false) {
@@ -1614,7 +1871,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             dropdown.classList.add("form-control");
         }
         dropdown.style.padding = "0";
-        const sizes = ["6pt", "7pt", "8pt", "10pt", "12pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt", "54pt", "60pt", "66pt", "72pt", "78pt"];
+        const sizes = ["6pt", "7pt", "8pt", "9pt", "10pt", "11pt", "12pt", "13pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt", "54pt", "60pt", "66pt", "72pt", "78pt"];
         const ddContent = document.createElement("ul");
         if (p.textStyle && sizes.length) {
             const selectedItem = (_a = sizes.filter(itm => { var _a, _b; return (_b = itm === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.size)) !== null && _b !== void 0 ? _b : "??pt"; })[0]) !== null && _a !== void 0 ? _a : null;
@@ -1681,7 +1938,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getFontDropDown(printess, p, asList, dropdown, fullWidth = true) {
-        var _a;
+        var _a, _b;
         if (!dropdown) {
             dropdown = document.createElement("div");
             dropdown.classList.add("btn-group");
@@ -1690,8 +1947,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         dropdown.style.padding = "0";
         const fonts = printess.getFonts(p.id);
         const ddContent = document.createElement("ul");
-        if (p.textStyle && fonts.length) {
-            const selectedItem = (_a = fonts.filter(itm => { var _a, _b; return (_b = itm.name === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font)) !== null && _b !== void 0 ? _b : ""; })[0]) !== null && _a !== void 0 ? _a : null;
+        let selectedItem = null;
+        if (fonts.length) {
+            if (p.textStyle) {
+                selectedItem = (_a = fonts.filter(itm => { var _a, _b; return (_b = itm.name === ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.font)) !== null && _b !== void 0 ? _b : ""; })[0]) !== null && _a !== void 0 ? _a : null;
+            }
+            else {
+                selectedItem = (_b = fonts.filter(itm => itm.name === p.value.toString())[0]) !== null && _b !== void 0 ? _b : null;
+            }
             const button = document.createElement("button");
             button.className = "btn btn-light dropdown-toggle";
             if (fullWidth) {
@@ -1724,9 +1987,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
                 li.onclick = () => {
-                    printess.setTextStyleProperty(p.id, "font", entry.name);
                     if (p.textStyle) {
+                        printess.setTextStyleProperty(p.id, "font", entry.name);
                         p.textStyle.font = entry.name;
+                    }
+                    else {
+                        printess.setProperty(p.id, entry.name);
+                        p.value = entry.name;
                     }
                     if (asList) {
                         ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
@@ -1942,7 +2209,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (!forMobile) {
                 const miniBar = document.createElement("div");
                 const btnBack = document.createElement("button");
-                btnBack.className = "btn btn-sm";
+                btnBack.className = "btn";
                 btnBack.classList.add("btn-outline-secondary");
                 btnBack.innerText = printess.gl("ui.buttonBack");
                 if (!printess.getBackButtonCallback()) {
@@ -1998,6 +2265,80 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             ul.className = "pagination justify-content-center";
             if (large) {
                 ul.classList.add("pagination-lg");
+            }
+            if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list") {
+                if (printess.stepHeaderDisplay() === "tabs list") {
+                    pages.classList.add("tabs");
+                }
+                else {
+                    pages.classList.remove("tabs");
+                }
+                const tabsContainer = document.createElement("div");
+                tabsContainer.className = "step-tabs-list";
+                tabsContainer.id = "step-tab-list";
+                tabsContainer.style.marginLeft = "10px";
+                if (!forMobile && printess.stepHeaderDisplay() === "badge list") {
+                    const prevTab = document.createElement("div");
+                    prevTab.className = "nav-item";
+                    const prevTabLink = document.createElement("a");
+                    prevTabLink.className = "prev-badge btn btn-primary";
+                    const icon = printess.getIcon("carret-left-solid");
+                    icon.classList.add("tabs-scroller");
+                    icon.style.paddingRight = "2px";
+                    prevTabLink.appendChild(icon);
+                    prevTab.appendChild(prevTabLink);
+                    tabsContainer.appendChild(prevTab);
+                    prevTab.onclick = () => {
+                        const tabListScrollbar = document.getElementById("tabs-list-scrollbar");
+                        if (tabListScrollbar && tabListScrollbar.scrollWidth > tabListScrollbar.clientWidth) {
+                            scrollToLeft(tabListScrollbar, tabListScrollbar.scrollLeft - 200, 300, tabListScrollbar.scrollLeft);
+                        }
+                        else if (tabListScrollbar.scrollWidth === tabListScrollbar.clientWidth && printess.hasPreviousStep()) {
+                            printess.previousStep();
+                        }
+                        else {
+                            prevTabLink.classList.add("disabled");
+                        }
+                    };
+                }
+                tabsContainer.appendChild(getStepsTabsList(printess, forMobile, printess.stepHeaderDisplay()));
+                if (!forMobile && printess.stepHeaderDisplay() !== "tabs list") {
+                    const nextTab = document.createElement("div");
+                    nextTab.className = "nav-item";
+                    nextTab.style.zIndex = "10";
+                    nextTab.style.marginLeft = "-1px";
+                    const nextTabLink = document.createElement("a");
+                    nextTabLink.className = "next-badge btn btn-primary";
+                    const icon = printess.getIcon("carret-right-solid");
+                    icon.classList.add("tabs-scroller");
+                    icon.style.paddingLeft = "2px";
+                    nextTabLink.appendChild(icon);
+                    nextTab.appendChild(nextTabLink);
+                    tabsContainer.appendChild(nextTab);
+                    nextTab.onclick = () => {
+                        const tabListScrollbar = document.getElementById("tabs-list-scrollbar");
+                        if (tabListScrollbar && tabListScrollbar.scrollWidth > tabListScrollbar.clientWidth) {
+                            scrollToLeft(tabListScrollbar, tabListScrollbar.scrollLeft + 200, 300, tabListScrollbar.scrollLeft);
+                        }
+                        else if (tabListScrollbar.scrollWidth === tabListScrollbar.clientWidth && printess.hasNextStep()) {
+                            printess.nextStep();
+                        }
+                        else {
+                            nextTabLink.classList.add("disabled");
+                        }
+                    };
+                }
+                pages.appendChild(tabsContainer);
+            }
+            if (printess.stepHeaderDisplay() === "tabs list") {
+                const button = document.createElement("button");
+                button.className = "btn btn-primary ms-2";
+                const icon = printess.getIcon("shopping-cart");
+                icon.style.width = "25px";
+                icon.style.height = "25px";
+                button.onclick = () => addToBasket(printess);
+                button.appendChild(icon);
+                pages.appendChild(button);
             }
             if (spreads.length > 1 && printess.showPageNavigation()) {
                 const prev = getPaginationItem(printess, "previous");
@@ -2061,6 +2402,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function renderMyImagesTab(printess, forMobile, p, images, imagesContainer) {
         var _a, _b, _c;
         const container = imagesContainer || document.createElement("div");
+        container.id = "image-tab-container";
         container.innerHTML = "";
         const imageList = document.createElement("div");
         imageList.classList.add("image-list");
@@ -2079,13 +2421,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const twoButtons = document.createElement("div");
             twoButtons.id = "two-buttons";
             twoButtons.style.display = "grid";
-            twoButtons.appendChild(getImageUploadButton(printess, (_b = p === null || p === void 0 ? void 0 : p.id) !== null && _b !== void 0 ? _b : "", false, p !== undefined, false));
-            if (images.length > 0 && images.filter(im => !im.inUse).length > 0 && printess.allowImageDistribution()) {
-                twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
-                twoButtons.appendChild(document.createElement("div"));
-                twoButtons.appendChild(distributeBtn);
-            }
-            container.appendChild(twoButtons);
+            twoButtons.appendChild(getImageUploadButton(printess, (_b = p === null || p === void 0 ? void 0 : p.id) !== null && _b !== void 0 ? _b : "", false, p !== undefined));
+            if (!forMobile)
+                container.appendChild(twoButtons);
         }
         for (const im of images) {
             const thumb = document.createElement("div");
@@ -2108,13 +2446,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 thumb.appendChild(chk);
             }
             else {
-                const cls = printess.getIcon("trash");
-                cls.classList.add("delete-btn");
-                cls.onclick = (e) => {
+                const cls = document.createElement("div");
+                cls.classList.add("delete-btn-container");
+                const icon = printess.getIcon("trash");
+                icon.classList.add("delete-btn");
+                icon.onclick = (e) => {
                     e.stopImmediatePropagation();
                     imageList.removeChild(thumb);
                     printess.deleteImages([im]);
                 };
+                cls.appendChild(icon);
                 if (forMobile)
                     cls.style.display = "block";
                 if (!p || ((_c = p === null || p === void 0 ? void 0 : p.imageMeta) === null || _c === void 0 ? void 0 : _c.canUpload))
@@ -2126,23 +2467,34 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     thumb.style.outline = "3px solid var(--bs-primary)";
                 }
                 thumb.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                    var _d;
                     const scaleHints = yield printess.setProperty(p.id, im.id);
                     p.value = im.id;
                     if (scaleHints && p.imageMeta) {
                         p.imageMeta.scaleHints = scaleHints;
                         p.imageMeta.scale = scaleHints.scale;
                         p.imageMeta.thumbCssUrl = im.thumbCssUrl;
+                        p.imageMeta.thumbUrl = im.thumbUrl;
+                        p.imageMeta.canScale = p.value !== ((_d = p.validation) === null || _d === void 0 ? void 0 : _d.defaultValue);
                     }
-                    const mobileButtonDiv = document.getElementById(p.id + ":");
-                    if (mobileButtonDiv) {
-                        drawButtonContent(printess, mobileButtonDiv, [p]);
+                    if (forMobile) {
+                        const mobileButtonsContainer = document.querySelector(".mobile-buttons-container");
+                        if (mobileButtonsContainer) {
+                            mobileButtonsContainer.innerHTML = "";
+                            getMobileButtons(printess, mobileButtonsContainer, p.id, true);
+                        }
+                        const newImages = printess.getImages(p === null || p === void 0 ? void 0 : p.id);
+                        renderMyImagesTab(printess, forMobile, p, newImages, container);
+                        const imageListFullscreen = document.querySelector(".image-list-fullscreen.show-image-list");
+                        imageListFullscreen === null || imageListFullscreen === void 0 ? void 0 : imageListFullscreen.classList.remove("show-image-list");
+                        imageListFullscreen === null || imageListFullscreen === void 0 ? void 0 : imageListFullscreen.classList.add("hide-image-list");
                     }
-                    const mobileButtonDivScale = document.getElementById(p.id + ":image-scale");
-                    if (mobileButtonDivScale) {
-                        drawButtonContent(printess, mobileButtonDivScale, [p]);
+                    else {
+                        const propsDiv = document.getElementById("tabs-panel-" + p.id);
+                        if (propsDiv) {
+                            propsDiv.replaceWith(getPropertyControl(printess, p));
+                        }
                     }
-                    const newImages = printess.getImages(p === null || p === void 0 ? void 0 : p.id);
-                    renderMyImagesTab(printess, forMobile, p, newImages, container);
                 });
             }
             imageList.appendChild(thumb);
@@ -2150,6 +2502,79 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         container.appendChild(imageList);
         if (!forMobile && images.length > 0 && (p === null || p === void 0 ? void 0 : p.kind) !== "image-id")
             container.appendChild(dragDropHint);
+        return container;
+    }
+    function renderImageControlButtons(printess, images, p) {
+        const container = document.createElement("div");
+        container.id = "image-control-buttons";
+        container.style.display = "grid";
+        container.style.gridTemplateColumns = images.length > 0 ? "1fr 1fr" : "1fr";
+        container.style.gridGap = "5px";
+        const uploadContainer = document.createElement("div");
+        uploadContainer.className = "image-list-fullscreen upload-list-preset";
+        const uploadHeader = document.createElement("div");
+        uploadHeader.className = "image-list-header bg-primary text-light";
+        uploadHeader.textContent = printess.gl("ui.changeImage");
+        const exitUpload = printess.getIcon("chevron-down-light");
+        exitUpload.style.width = "20px";
+        exitUpload.style.height = "30px";
+        exitUpload.onclick = () => {
+            uploadContainer.classList.remove("show-upload-list");
+            uploadContainer.classList.add("hide-upload-list");
+        };
+        uploadHeader.appendChild(exitUpload);
+        const uploadList = document.createElement("div");
+        uploadList.id = "upload-btn-" + (p === null || p === void 0 ? void 0 : p.id);
+        uploadList.style.padding = "5px";
+        uploadList.appendChild(getImageUploadButton(printess, (p === null || p === void 0 ? void 0 : p.id) || "images", true));
+        uploadContainer.appendChild(uploadHeader);
+        uploadContainer.appendChild(uploadList);
+        const upload = document.createElement("button");
+        upload.className = "btn btn-outline-primary upload-image-btn";
+        upload.textContent = printess.gl("ui.changeImage");
+        upload.onclick = () => {
+            uploadContainer.classList.remove("upload-list-preset");
+            uploadContainer.classList.remove("hide-upload-list");
+            uploadContainer.classList.add("show-upload-list");
+        };
+        const uploadIcon = printess.getIcon("cloud-upload-light");
+        uploadIcon.style.height = "50px";
+        upload.appendChild(uploadIcon);
+        const imageContainer = document.createElement("div");
+        imageContainer.className = "image-list-fullscreen image-list-preset";
+        const imageHeader = document.createElement("div");
+        imageHeader.className = "image-list-header bg-primary text-light";
+        imageHeader.textContent = printess.gl("ui.exchangeImage");
+        const exitImages = printess.getIcon("chevron-down-light");
+        exitImages.style.width = "20px";
+        exitImages.style.height = "30px";
+        exitImages.onclick = () => {
+            imageContainer.classList.remove("show-image-list");
+            imageContainer.classList.add("hide-image-list");
+        };
+        uploadHeader.appendChild(exitImages);
+        imageHeader.appendChild(exitImages);
+        const imageList = document.createElement("div");
+        imageList.style.padding = "5px";
+        imageList.style.height = "90%";
+        imageList.style.overflowY = "auto";
+        imageContainer.appendChild(imageHeader);
+        imageContainer.appendChild(imageList);
+        imageContainer.appendChild(renderMyImagesTab(printess, true, p, undefined, imageList));
+        container.appendChild(imageContainer);
+        const change = document.createElement("button");
+        change.className = "btn btn-outline-primary exchange-image-btn";
+        change.textContent = printess.gl("ui.exchangeImage");
+        change.onclick = () => {
+            imageContainer.classList.remove("image-list-preset");
+            imageContainer.classList.remove("hide-image-list");
+            imageContainer.classList.add("show-image-list");
+        };
+        const changeIcon = printess.getIcon("image");
+        changeIcon.style.height = "50px";
+        change.appendChild(changeIcon);
+        container.appendChild(getImageUploadButton(printess, (p === null || p === void 0 ? void 0 : p.id) || "images", true, true));
+        images.length > 0 ? container.appendChild(change) : "";
         return container;
     }
     function getDistributionOverlay(printess, forMobile, p, container) {
@@ -2278,6 +2703,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         tr.appendChild(th);
                     }
                 }
+                const th = document.createElement("th");
+                th.scope = "col";
+                tr.appendChild(th);
                 thead.appendChild(tr);
                 table.appendChild(thead);
                 const tbody = document.createElement("tbody");
@@ -2293,6 +2721,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 tr.appendChild(td);
                             }
                         }
+                        const td = document.createElement("td");
+                        td.style.width = "30px";
+                        const icon = printess.getIcon("pen");
+                        icon.style.padding = "0";
+                        icon.style.width = "25px";
+                        icon.style.height = "25px";
+                        icon.style.cursor = "pointer";
+                        td.appendChild(icon);
+                        tr.appendChild(td);
                         tr.onclick = (ele) => {
                             const rowIndex = parseInt(ele.currentTarget.dataset.rowNumber);
                             if (rowIndex >= 0) {
@@ -2574,16 +3011,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return mobileNav;
     }
-    function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets) {
+    function renderMobileUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets, skipAutoSelect = false) {
+        var _a, _b;
         uih_currentGroupSnippets = groupSnippets;
         uih_currentState = state;
         uih_currentProperties = properties;
         uih_currentRender = "mobile";
+        if (properties.length === 0) {
+            console.warn("renderMobileUi: No Properties");
+        }
+        console.log("***** STATE=" + state);
         const mobileUi = getMobileUiDiv();
         mobileUi.innerHTML = "";
         const desktopProperties = document.getElementById("desktop-properties");
         if (desktopProperties) {
             desktopProperties.innerHTML = "";
+        }
+        const desktopPagebar = document.getElementById("desktop-pagebar");
+        if (desktopPagebar) {
+            desktopPagebar.innerHTML = "";
+        }
+        const closeButton = mobileUi.querySelector(".close-control-host-button");
+        if (closeButton) {
+            mobileUi.removeChild(closeButton);
         }
         if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
             document.body.classList.add("has-mobile-page-bar");
@@ -2591,36 +3041,148 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             document.body.classList.remove("has-mobile-page-bar");
         }
+        let autoSelectButton = null;
         if (state !== "add") {
-            const buttonsOrPages = getMobileButtons(printess);
+            const buttons = getMobileButtons(printess, undefined, undefined, skipAutoSelect);
             mobileUi.innerHTML = "";
-            mobileUi.appendChild(buttonsOrPages);
+            mobileUi.appendChild(buttons.div);
+            autoSelectButton = buttons.autoSelectButton;
             setPropertyVisibilities(printess);
         }
         const controlHost = document.createElement("div");
         controlHost.className = "mobile-control-host";
         controlHost.id = "mobile-control-host";
         mobileUi.appendChild(controlHost);
-        if (printess.hasSteps())
-            mobileUi.appendChild(getMobileForwardButton(printess));
-        if (printess.hasPreviousStep())
-            mobileUi.appendChild(getMobileBackwardButton(printess, state));
+        mobileUi.appendChild(getMobilePropertyNavButtons(printess, state, autoSelectButton !== null));
         if (state === "add") {
             document.body.classList.add("no-mobile-button-bar");
             renderMobileControlHost(printess, { state: "add" });
+        }
+        renderUiButtonHints(printess, mobileUi, state, true);
+        if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
+            toggleChangeLayoutButtonHints();
         }
         if (groupSnippets.length > 0 && state !== "add") {
             mobileUi.appendChild(getMobilePlusButton(printess));
         }
         if (state !== "document") {
-            mobileUi.appendChild(getMobileBackwardButton(printess, state));
+            mobileUi.appendChild(getMobilePropertyNavButtons(printess, state, false));
         }
         else {
             if (uih_viewportOffsetTop) {
                 return;
             }
+            if (autoSelectButton) {
+                if (((_a = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "selection-text-style") {
+                    if (properties.length && properties[0].kind === "selection-text-style") {
+                        if (((_b = autoSelectButton.newState) === null || _b === void 0 ? void 0 : _b.metaProperty) && autoSelectButton.newState.metaProperty === (uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.metaProperty)) {
+                            return;
+                        }
+                    }
+                }
+            }
         }
-        resizeMobileUi(printess, false);
+        const inTextStyle = (properties.length && properties[0].kind === "selection-text-style");
+        printess.setZoomMode(inTextStyle ? "frame" : "spread");
+        resizeMobileUi(printess);
+    }
+    function toggleChangeLayoutButtonHints() {
+        const layoutsButton = document.querySelector(".show-layouts-button");
+        if (layoutsButton) {
+            layoutsButton.classList.add("layouts-button-pulse");
+            layoutsButton.onclick = () => {
+                var _a;
+                const uiHintAlert = document.getElementById("ui-hint-changeLayout");
+                (_a = uiHintAlert === null || uiHintAlert === void 0 ? void 0 : uiHintAlert.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(uiHintAlert);
+                layoutsButton.classList.remove("layouts-button-pulse");
+                sessionStorage.setItem("changeLayout", "hint closed");
+                layoutsButton.onclick = null;
+            };
+        }
+    }
+    function renderUiButtonHints(printess, container, state = uih_currentState, forMobile) {
+        var _a, _b;
+        const layoutSnippetsHint = document.getElementById("ui-hint-changeLayout");
+        (_a = layoutSnippetsHint === null || layoutSnippetsHint === void 0 ? void 0 : layoutSnippetsHint.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(layoutSnippetsHint);
+        const groupSnippetsHint = document.getElementById("ui-hint-addDesign");
+        (_b = groupSnippetsHint === null || groupSnippetsHint === void 0 ? void 0 : groupSnippetsHint.parentElement) === null || _b === void 0 ? void 0 : _b.removeChild(groupSnippetsHint);
+        const uiHints = [{
+                header: "addDesign",
+                msg: printess.gl("ui.addDesignHint"),
+                position: "absolute",
+                top: "-150px",
+                left: "30px",
+                color: "success",
+                show: printess.uiHintsDisplay().includes("groupSnippets") && state === "document" && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
+                task: () => renderMobileUi(printess, undefined, "add", undefined)
+            }, {
+                header: "changeLayout",
+                msg: printess.gl("ui.changeLayoutHint"),
+                position: "fixed",
+                top: "calc(50% - 150px)",
+                left: "55px",
+                color: "primary",
+                show: printess.uiHintsDisplay().includes("layoutSnippets") && state === "document" && !sessionStorage.getItem("changeLayout") && printess.hasLayoutSnippets(),
+                task: () => {
+                    const layoutBtn = document.querySelector(".show-layouts-button");
+                    if (layoutBtn) {
+                        layoutBtn.classList.remove("layouts-button-pulse");
+                    }
+                    const offCanvas = document.querySelector("div#layoutOffcanvas");
+                    if (offCanvas) {
+                        offCanvas.style.visibility = "visible";
+                        offCanvas.classList.add("show");
+                    }
+                }
+            }];
+        uiHints.filter(h => h.show).forEach(hint => {
+            const alert = document.createElement("div");
+            const color = hint.color;
+            alert.className = "alert alert-dismissible fade show ui-hint-alert";
+            alert.id = "ui-hint-" + hint.header;
+            alert.classList.add("alert-" + color);
+            alert.style.position = hint.position;
+            alert.style.left = hint.left;
+            alert.style.top = hint.top;
+            const title = document.createElement("strong");
+            title.style.paddingRight = "5px";
+            title.textContent = printess.gl("ui." + hint.header);
+            const text = document.createElement("div");
+            text.textContent = hint.msg;
+            const close = printess.getIcon("close");
+            close.classList.add("close-info-alert-icon");
+            close.onclick = () => {
+                var _a;
+                sessionStorage.setItem(hint.header, "hint closed");
+                (_a = alert.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(alert);
+                if (hint.header === "changeLayout") {
+                    const layoutsButton = document.querySelector(".show-layouts-button");
+                    if (layoutsButton) {
+                        layoutsButton.onclick = () => {
+                            layoutsButton.classList.remove("layouts-button-pulse");
+                            layoutsButton.onclick = null;
+                        };
+                    }
+                }
+            };
+            const flexWrapper = document.createElement("div");
+            flexWrapper.className = "d-flex w-100 justify-content-end mt-1";
+            const open = document.createElement("span");
+            open.className = "layout-hint-open";
+            open.textContent = "Show Me";
+            open.onclick = () => {
+                var _a;
+                sessionStorage.setItem(hint.header, "hint closed");
+                (_a = alert.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(alert);
+                hint.task();
+            };
+            flexWrapper.appendChild(open);
+            alert.appendChild(title);
+            alert.appendChild(text);
+            alert.appendChild(close);
+            alert.appendChild(flexWrapper);
+            container.appendChild(alert);
+        });
     }
     function getMobilePlusButton(printess) {
         const button = document.createElement("div");
@@ -2628,107 +3190,142 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const circle = document.createElement("div");
         circle.className = "mobile-property-circle";
         circle.onclick = () => {
+            sessionStorage.setItem("addDesign", "hint closed");
             renderMobileUi(printess, undefined, "add", undefined);
         };
+        if (!sessionStorage.getItem("addDesign")) {
+            circle.classList.add("mobile-property-plus-pulse");
+        }
+        else {
+            circle.classList.remove("mobile-property-plus-pulse");
+        }
         const icon = printess.getIcon("plus");
         circle.appendChild(icon);
         button.appendChild(circle);
         return button;
     }
-    function getMobileBackButton(printess, state) {
+    function getMobileNavButton(btn, circleWhiteBg) {
         const button = document.createElement("div");
-        button.className = "mobile-property-back-button";
-        const circle = document.createElement("div");
-        circle.className = "mobile-property-circle";
-        if (state === "details") {
-            circle.classList.add("back-to-frames");
-        }
-        circle.onclick = () => {
-            if (state === "details") {
-                renderMobileUi(printess, undefined, "frames");
-            }
-            else if (state === "frames") {
-                printess.clearSelection();
-            }
-            else if (state === "add" || state === "document") {
-                renderMobileUi(printess, undefined, "document");
-            }
-        };
-        const icon = printess.getIcon("arrow-left");
-        circle.appendChild(icon);
-        button.appendChild(circle);
-        return button;
-    }
-    function getMobileBackwardButton(printess, state) {
-        document.querySelectorAll(".mobile-property-back-button").forEach(ele => { var _a; return (_a = ele.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(ele); });
-        if (printess.hasSteps() && !printess.hasPreviousStep() && state === "frames") {
-            return document.createElement("div");
-        }
-        const button = document.createElement("div");
-        button.className = "mobile-property-back-button";
-        button.style.right = "60px";
-        button.style.left = "unset";
-        if (!printess.hasSteps()) {
-            button.style.right = "10px";
-        }
+        button.className = "mobile-property-nav-button";
         const circle = document.createElement("div");
         circle.className = "mobile-property-circle bg-primary text-white";
-        if ((printess.hasSteps() && state === "details" && (uih_currentProperties.length > 1 || !printess.isCurrentStepActive())) || (printess.hasSteps() && !printess.isCurrentStepActive() && state === "frames")) {
+        circle.onclick = () => btn.task();
+        if (circleWhiteBg) {
             circle.className = "mobile-property-circle bg-white text-primary border border-primary";
         }
-        circle.onclick = () => {
-            if (!printess.isCurrentStepActive() && state === "frames") {
-                printess.clearSelection();
-            }
-            else if ((printess.isCurrentStepActive() || !printess.hasSteps()) && state === "details" && uih_currentProperties.length > 1) {
-                renderMobileUi(printess, uih_currentProperties, "frames");
-            }
-            else if (printess.hasPreviousStep() && (state === "document" || state === "frames" || (state === "details" && uih_currentProperties.length === 1) && (state === "details" && printess.isCurrentStepActive()))) {
-                printess.previousStep();
-                renderMobileNavBar(printess);
-            }
-            else {
-                printess.clearSelection();
-            }
-        };
-        let icon = printess.getIcon("check");
-        if (!printess.isCurrentStepActive() && state === "frames") {
-            icon = printess.getIcon("check");
-        }
-        else if (printess.hasPreviousStep() && (state === "document" || state === "frames" || (state === "details" && uih_currentProperties.length === 1) && (state === "details" && printess.isCurrentStepActive()))) {
-            icon = printess.getIcon("arrow-left");
-        }
-        circle.appendChild(icon);
+        circle.appendChild(btn.icon);
         button.appendChild(circle);
         return button;
     }
-    function getMobileForwardButton(printess) {
-        document.querySelectorAll(".mobile-property-next-button").forEach(ele => { var _a; return (_a = ele.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(ele); });
-        if (!printess.hasSteps()) {
-            return document.createElement("div");
+    function getMobilePropertyNavButtons(printess, state, fromAutoSelect, hasControlHost = false) {
+        let container = document.getElementById("mobile-nav-buttons-container");
+        if (container) {
+            container.innerHTML = "";
         }
-        const button = document.createElement("div");
-        button.className = "mobile-property-next-button";
-        button.style.right = "10px";
-        button.style.left = "unset";
-        const circle = document.createElement("div");
-        circle.className = "mobile-property-circle bg-primary text-white";
-        circle.onclick = () => {
-            if (printess.hasNextStep()) {
-                gotoNextStep(printess);
-                renderMobileNavBar(printess);
-            }
-            else {
-                addToBasket(printess);
+        else {
+            container = document.createElement("div");
+            container.id = "mobile-nav-buttons-container";
+            container.className = "mobile-property-button-container";
+        }
+        const buttons = {
+            add: {
+                name: "closeNewSnippetList",
+                icon: printess.getIcon("carret-down-solid"),
+                task: () => { printess.clearSelection(); resizeMobileUi(printess); }
+            },
+            previous: {
+                name: "previous",
+                icon: printess.getIcon("arrow-left"),
+                task: () => {
+                    var _a;
+                    printess.previousStep();
+                    getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) - 1), true);
+                }
+            },
+            clear: {
+                name: "clear",
+                icon: printess.getIcon("check"),
+                task: () => { printess.clearSelection(); resizeMobileUi(printess); }
+            },
+            frame: {
+                name: "frame",
+                icon: printess.getIcon("check"),
+                task: () => { printess.setZoomMode("spread"); renderMobileUi(printess, uih_currentProperties, "frames", undefined, true); }
+            },
+            document: {
+                name: "document",
+                icon: printess.getIcon("check"),
+                task: () => renderMobileUi(printess, uih_currentProperties, "document", undefined, true)
+            },
+            next: {
+                name: "next",
+                icon: printess.getIcon("arrow-right"),
+                task: () => {
+                    var _a;
+                    gotoNextStep(printess);
+                    getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
+                }
+            },
+            basket: {
+                name: "basket",
+                icon: printess.getIcon("shopping-cart"),
+                task: () => addToBasket(printess)
             }
         };
-        let icon = printess.getIcon("shopping-cart");
-        if (printess.hasNextStep()) {
-            icon = printess.getIcon("arrow-right");
+        console.log(">>>>>getMobilePropertyNavButtons State=" + state);
+        console.log(">>>>>getMobilePropertyNavButtons hasControlHost=" + hasControlHost);
+        console.log(">>>>>getMobilePropertyNavButtons root-properties=" + uih_currentProperties.length);
+        if (state === "add") {
+            const add = getMobileNavButton(buttons.add, printess.hasSteps());
+            add.classList.add("close-designs-button");
+            container.appendChild(add);
         }
-        circle.appendChild(icon);
-        button.appendChild(circle);
-        return button;
+        else if (state === "details" || state === "frames") {
+            if (printess.isCurrentStepActive()) {
+                if (uih_currentProperties.length > 1 && state === "details") {
+                    container.appendChild(getMobileNavButton(buttons.frame, true));
+                }
+                else if (printess.hasPreviousStep()) {
+                    container.appendChild(getMobileNavButton(buttons.previous, false));
+                }
+            }
+            else {
+                if ((printess.buyerCanHaveEmptySelection() && printess.hasSelection()) || (printess.hasBackground() && printess.hasSelection())) {
+                    if (uih_currentProperties.length > 1 && state === "details") {
+                        container.appendChild(getMobileNavButton(buttons.frame, printess.hasSteps()));
+                    }
+                    else {
+                        container.appendChild(getMobileNavButton(buttons.clear, printess.hasSteps()));
+                    }
+                }
+                else if (printess.hasPreviousStep()) {
+                    container.appendChild(getMobileNavButton(buttons.previous, false));
+                }
+            }
+            if (printess.hasSteps()) {
+                if (printess.hasNextStep()) {
+                    container.appendChild(getMobileNavButton(buttons.next, false));
+                }
+                else {
+                    container.appendChild(getMobileNavButton(buttons.basket, false));
+                }
+            }
+        }
+        else if (state === "document") {
+            if (printess.hasSteps()) {
+                if (printess.hasPreviousStep()) {
+                    container.appendChild(getMobileNavButton(buttons.previous, false));
+                }
+                if (printess.hasNextStep()) {
+                    container.appendChild(getMobileNavButton(buttons.next, false));
+                }
+                else {
+                    container.appendChild(getMobileNavButton(buttons.basket, false));
+                }
+            }
+            return container;
+        }
+        return container;
     }
     function renderMobileNavBar(printess) {
         const navBar = getMobileNavbarDiv();
@@ -2741,6 +3338,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             btn.className = "btn btn-sm";
             btn.classList.add("me-2");
             btn.classList.add("main-button");
+            btn.style.minWidth = "40px";
             if (!printess.hasSteps() && !printess.showUndoRedo()) {
                 const callback = printess.getBackButtonCallback();
                 btn.className = "btn btn-sm text-white me-2 ms-2 border border-white";
@@ -2803,9 +3401,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     h6.style.maxWidth = "calc(100vw - 150px)";
                     step.appendChild(h6);
                 }
-                if (hd === "badge list") {
-                    step.classList.add("active-step-badge-list");
-                    step.appendChild(getStepsBadgeList(printess, true));
+                if (hd === "tabs list" || hd === "badge list") {
+                    if (hd === "badge list") {
+                        step.classList.add("badge-list-mobile");
+                    }
+                    step.classList.add("step-tabs-list");
+                    step.id = "step-tab-list";
+                    step.appendChild(getStepsTabsList(printess, true, hd));
+                    const scrollRight = document.createElement("div");
+                    scrollRight.className = "scroll-right-indicator";
+                    scrollRight.style.backgroundImage = "linear-gradient(to right, rgba(168,168,168,0), var(--bs-primary))";
+                    scrollRight.style.display = "inline-block";
+                    step.appendChild(scrollRight);
                 }
                 nav.appendChild(step);
             }
@@ -2855,6 +3462,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm ms-2 me-2 main-button";
+            if (printess.hasSteps() && !printess.hasNextStep()) {
+                btn.classList.add("main-button-pulse");
+            }
             if (basketBtnBehaviour === "go-to-preview") {
                 btn.classList.add("btn-outline-light");
                 btn.innerText = printess.gl("ui.buttonPreview");
@@ -2920,39 +3530,59 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 show: printess.showUndoRedo(),
                 disabled: printess.redoCount() === 0,
                 task: printess.redo
-            }, {
+            },
+            {
                 id: "previous",
                 title: "ui.buttonPrevStep",
                 icon: "arrow-left",
                 disabled: !printess.hasPreviousStep(),
                 show: printess.hasSteps(),
-                task: printess.previousStep
+                task: () => {
+                    var _a;
+                    printess.previousStep();
+                    if ((printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list")) {
+                        const tabsListScrollbar = document.getElementById("tabs-list-scrollbar");
+                        const curStepTab = document.getElementById("tab-step-" + (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) - 1));
+                        setTabScrollPosition(tabsListScrollbar, curStepTab, true);
+                    }
+                }
             }, {
                 id: "next",
                 title: "ui.buttonNext",
                 icon: "arrow-right",
                 disabled: !printess.hasNextStep(),
                 show: printess.hasSteps(),
-                task: printess.nextStep
-            }, {
+                task: () => {
+                    var _a;
+                    gotoNextStep(printess);
+                    getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
+                }
+            },
+            {
                 id: "firstStep",
                 title: "ui.buttonFirstStep",
                 icon: printess.previewStepsCount() > 0 ? "primary" : "angle-double-left",
                 disabled: !printess.hasSteps() || !printess.hasPreviousStep(),
                 show: printess.hasSteps(),
-                task: printess.gotoFirstStep
-            }, {
+                task: () => {
+                    printess.gotoFirstStep();
+                    getCurrentTab(printess, 0, true);
+                }
+            },
+            {
                 id: "lastStep",
                 title: printess.previewStepsCount() > 0 ? "ui.buttonPreview" : "Last Step",
                 icon: printess.previewStepsCount() > 0 ? "preview-doc" : "angle-double-right",
                 disabled: !printess.hasNextStep(),
                 show: printess.hasSteps(),
                 task: () => {
+                    var _a, _b;
                     if (printess.previewStepsCount() > 0) {
                         printess.gotoPreviewStep();
                     }
                     else {
                         printess.gotoLastStep();
+                        getCurrentTab(printess, (_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0, true);
                     }
                 }
             }
@@ -3012,7 +3642,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return pagebar;
     }
-    function resizeMobileUi(printess, focusSelection = false) {
+    function resizeMobileUi(printess) {
+        if (uih_autoSelectPending)
+            return;
         const mobileUi = getMobileUiDiv();
         const controlHost = document.getElementById("mobile-control-host");
         if (mobileUi && controlHost) {
@@ -3025,67 +3657,77 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     debugger;
                 }
             }
-            mobileUi.style.height = (mobileButtonBarHeight + controlHostHeight + 2) + "px";
             const printessDiv = document.getElementById("desktop-printess-container");
-            const viewPortHeight = uih_viewportHeight ? uih_viewportHeight : window.visualViewport ? window.visualViewport.height : window.innerHeight;
-            const viewPortWidth = uih_viewportWidth ? uih_viewportWidth : window.visualViewport ? window.visualViewport.width : window.innerWidth;
-            const viewPortTopOffset = uih_viewportOffsetTop;
-            let printessHeight = viewPortHeight - controlHostHeight - mobileButtonBarHeight;
             if (printessDiv) {
-                let printessTop;
-                if (viewPortTopOffset > 0) {
-                    printessTop = viewPortTopOffset + "px";
-                }
-                else if (controlHostHeight + mobileButtonBarHeight > 175 || viewPortTopOffset > 0) {
-                    printessTop = "0";
-                    window.setTimeout(() => {
-                        const toolBar = document.querySelector(".mobile-navbar");
-                        if (toolBar)
-                            toolBar.style.visibility = "hidden";
-                        const pageBar = document.querySelector(".mobile-pagebar");
-                        if (pageBar)
-                            pageBar.style.visibility = "hidden";
-                    }, 400);
+                const viewPortHeight = uih_viewportHeight ? uih_viewportHeight : window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                const viewPortWidth = uih_viewportWidth ? uih_viewportWidth : window.visualViewport ? window.visualViewport.width : window.innerWidth;
+                const viewPortTopOffset = uih_viewportOffsetTop;
+                const mobileUiHeight = (mobileButtonBarHeight + controlHostHeight + 2);
+                let printessHeight = viewPortHeight - mobileUiHeight;
+                console.warn("viewPortHeight=" + viewPortHeight + "  viewPortTopOffset=" + viewPortTopOffset + "   printessHeight=" + printessHeight + "   mobileUiHeight=" + mobileUiHeight);
+                let printessTop = viewPortTopOffset;
+                const isInEddiMode = printess.isSoftwareKeyBoardExpanded() || (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "selection-text-style");
+                let showToolBar = false;
+                let showPageBar = false;
+                const toolBar = document.querySelector(".mobile-navbar");
+                const pageBar = document.querySelector(".mobile-pagebar");
+                if (printessHeight < 450 || isInEddiMode || viewPortTopOffset > 0) {
                 }
                 else {
-                    let top = 0;
-                    printessTop = "";
-                    printessHeight -= mobilePageBarHeight;
-                    printessHeight -= mobileNavBarHeight;
-                    const toolBar = document.querySelector(".mobile-navbar");
-                    if (toolBar) {
-                        toolBar.style.visibility = "visible";
-                        top += mobileNavBarHeight;
+                    if (toolbar) {
+                        printessTop += mobileNavBarHeight;
+                        printessHeight -= mobileNavBarHeight;
+                        showToolBar = true;
                     }
-                    const pageBar = document.querySelector(".mobile-pagebar");
                     if (pageBar) {
-                        pageBar.style.visibility = "visible";
-                        top += mobilePageBarHeight;
+                        showPageBar = true;
+                        printessTop += mobilePageBarHeight;
+                        printessHeight -= mobilePageBarHeight;
                     }
-                    printessTop = top + "px";
                 }
-                const printessBottom = mobileButtonBarHeight + controlHostHeight;
+                console.warn("showToolBar=" + showToolBar + "  showPageBar=" + showPageBar + "   printessTop=" + printessTop);
                 const activeFFId = getActiveFormFieldId();
-                if ((focusSelection && activeFFId !== uih_lastFormFieldId) || printessBottom !== uih_lastPrintessBottom || printessTop !== uih_lastPrintessTop || printessHeight !== uih_lastPrintessHeight || viewPortWidth !== uih_lastPrintessWidth) {
-                    uih_lastPrintessBottom = printessBottom;
+                const focusSelection = printess.getZoomMode() === "frame";
+                if ((focusSelection && activeFFId !== uih_lastFormFieldId) || uih_lastZoomMode !== printess.getZoomMode() || uih_lastMobileUiHeight !== mobileUiHeight || printessTop !== uih_lastPrintessTop || printessHeight !== uih_lastPrintessHeight || viewPortWidth !== uih_lastPrintessWidth) {
+                    uih_lastMobileUiHeight = mobileUiHeight;
                     uih_lastPrintessTop = printessTop;
                     uih_lastPrintessHeight = printessHeight;
                     uih_lastPrintessWidth = viewPortWidth;
                     uih_lastFormFieldId = activeFFId;
+                    uih_lastZoomMode = printess.getZoomMode();
                     printessDiv.style.position = "fixed";
                     printessDiv.style.left = "0";
                     printessDiv.style.right = "0";
-                    printessDiv.style.bottom = (mobileButtonBarHeight + controlHostHeight) + "px";
-                    printessDiv.style.top = printessTop;
                     printessDiv.style.width = "";
-                    printessDiv.style.height = "";
+                    printessDiv.style.bottom = "";
+                    printessDiv.style.height = printessHeight + "px";
+                    printessDiv.style.top = printessTop + "px";
+                    mobileUi.style.bottom = "";
+                    mobileUi.style.top = (viewPortTopOffset + viewPortHeight - mobileUiHeight) + "px";
+                    mobileUi.style.height = mobileUiHeight + "px;";
+                    if (toolBar) {
+                        if (showToolBar) {
+                            toolBar.style.visibility = "visible";
+                        }
+                        else {
+                            toolBar.style.visibility = "hidden";
+                        }
+                    }
+                    if (pageBar) {
+                        if (showPageBar) {
+                            pageBar.style.visibility = "visible";
+                        }
+                        else {
+                            pageBar.style.visibility = "hidden";
+                        }
+                    }
                     printess.resizePrintess(true, focusSelection, undefined, printessHeight, focusSelection ? activeFFId : undefined);
                 }
             }
         }
     }
-    function getMobileButtons(printess, barContainer, propertyIdFilter) {
-        var _a, _b, _c, _d, _e, _f;
+    function getMobileButtons(printess, barContainer, propertyIdFilter, skipAutoSelect = false) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         const container = barContainer || document.createElement("div");
         container.className = "mobile-buttons-container";
         const scrollContainer = document.createElement("div");
@@ -3102,20 +3744,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const info = printess.pageInfoSync();
             renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
         }
-        let autoSelect = false;
+        let autoSelect = null;
         let autoSelectHasMeta = false;
         let firstButton = null;
-        if (buttons.length === 1) {
-            const ep = buttons[0].newState.externalProperty;
-            if (ep) {
-                if (ep.kind === "image") {
-                    autoSelect = true;
-                }
-                if (ep.kind === "single-line-text") {
-                    autoSelect = true;
-                }
-                autoSelectHasMeta = printess.hasMetaProperties(ep);
+        const ep = (_b = (_a = buttons[0]) === null || _a === void 0 ? void 0 : _a.newState) === null || _b === void 0 ? void 0 : _b.externalProperty;
+        if (ep && buttons.length === 1 && !skipAutoSelect) {
+            if (ep.kind === "image") {
+                autoSelect = buttons[0];
             }
+            if (ep.kind === "single-line-text") {
+                autoSelect = buttons[0];
+            }
+            autoSelectHasMeta = printess.hasMetaProperties(ep);
         }
         if (!hasButtons || (autoSelect && autoSelectHasMeta === false)) {
             document.body.classList.add("no-mobile-button-bar");
@@ -3123,23 +3763,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             document.body.classList.remove("no-mobile-button-bar");
         }
-        if (hasButtons && (autoSelect === false || autoSelectHasMeta === true)) {
+        if (hasButtons && (!autoSelect || autoSelectHasMeta === true)) {
             for (const b of buttons) {
                 const buttonDiv = document.createElement("div");
                 if (b.newState.tableRowIndex !== undefined) {
-                    buttonDiv.id = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + "$$$" + b.newState.tableRowIndex;
+                    buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + "$$$" + b.newState.tableRowIndex;
                 }
                 else {
-                    buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + ":" + ((_e = b.newState.metaProperty) !== null && _e !== void 0 ? _e : "");
+                    buttonDiv.id = ((_f = (_e = b.newState.externalProperty) === null || _e === void 0 ? void 0 : _e.id) !== null && _f !== void 0 ? _f : "") + ":" + ((_g = b.newState.metaProperty) !== null && _g !== void 0 ? _g : "");
                 }
                 buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
                 if (!firstButton) {
                     firstButton = buttonDiv;
                 }
                 buttonDiv.onclick = () => {
-                    mobileUiButtonClick(printess, b, buttonDiv, container);
+                    mobileUiButtonClick(printess, b, buttonDiv, container, false);
                 };
-                if (((_f = b.newState.externalProperty) === null || _f === void 0 ? void 0 : _f.kind) === "background-button") {
+                if (((_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.kind) === "background-button") {
                     drawButtonContent(printess, buttonDiv, [b.newState.externalProperty]);
                 }
                 else {
@@ -3148,10 +3788,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 buttonContainer.appendChild(buttonDiv);
             }
         }
+        if (((_j = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _j === void 0 ? void 0 : _j.kind) === "selection-text-style") {
+            const meta = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.metaProperty;
+            if (meta && !printess.isSoftwareKeyBoardExpanded()) {
+                for (const b of buttons) {
+                    if (meta === b.newState.metaProperty) {
+                        autoSelect = b;
+                    }
+                }
+            }
+        }
         if (autoSelect) {
+            uih_autoSelectPending = true;
             window.setTimeout(() => {
                 var _a, _b, _c, _d, _e, _f;
-                const b = buttons[0];
+                uih_autoSelectPending = false;
+                const b = autoSelect;
+                if (!b)
+                    return;
                 if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
                     printess.selectBackground();
                 }
@@ -3165,13 +3819,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                     const buttonDiv = (document.getElementById(bid));
                     if (buttonDiv) {
-                        mobileUiButtonClick(printess, b, buttonDiv, container);
+                        mobileUiButtonClick(printess, b, buttonDiv, container, true);
                     }
                     else {
                         console.error("Auto-Click Button not found: " + bid);
                     }
                 }
                 else {
+                    printess.setZoomMode("spread");
                     renderMobileControlHost(printess, b.newState);
                 }
             }, 50);
@@ -3181,6 +3836,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         scrollContainer.appendChild(buttonContainer);
         container.appendChild(scrollContainer);
         container.appendChild(scrollRight);
+        if (firstButton && (autoSelect || printess.isSoftwareKeyBoardExpanded())) {
+            firstButton.style.transition = "none";
+        }
         window.setTimeout(() => {
             if (firstButton) {
                 const containerWidth = container.offsetWidth;
@@ -3203,15 +3861,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
         }, 50);
-        return container;
+        return { div: container, autoSelectButton: autoSelect };
     }
-    function mobileUiButtonClick(printess, b, buttonDiv, container) {
-        var _a, _b, _c, _d, _e;
+    function mobileUiButtonClick(printess, b, buttonDiv, container, fromAutoSelect) {
+        var _a, _b, _c, _d, _e, _f, _g;
+        printess.setZoomMode("spread");
         if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
             printess.selectBackground();
         }
         else if (b.newState.state === "table-add") {
             const p = b.newState.externalProperty;
+            document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
             if (p === null || p === void 0 ? void 0 : p.tableMeta) {
                 tableEditRowIndex = -1;
                 tableEditRow = {};
@@ -3223,19 +3883,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     tableEditRow.event = "Birthday";
                 }
                 renderMobileControlHost(printess, b.newState);
-                getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "document"));
+                getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "document", fromAutoSelect));
             }
         }
         else if (b.newState.state === "table-edit") {
             const p = b.newState.externalProperty;
             const rowIndex = (_b = b.newState.tableRowIndex) !== null && _b !== void 0 ? _b : -1;
+            document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
+            buttonDiv.classList.toggle("selected");
+            centerMobileButton(buttonDiv);
             if ((p === null || p === void 0 ? void 0 : p.tableMeta) && (rowIndex !== null && rowIndex !== void 0 ? rowIndex : -1) >= 0) {
                 try {
                     const data = JSON.parse(p.value.toString());
                     tableEditRow = data[rowIndex];
                     tableEditRowIndex = rowIndex;
                     renderMobileControlHost(printess, b.newState);
-                    getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "document"));
+                    getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "document", fromAutoSelect, willHaveControlHost(b.newState)));
                 }
                 catch (error) {
                     console.error("property table has no array data:" + p.id);
@@ -3256,7 +3919,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (mobilePlusButton) {
                     (_d = mobilePlusButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(mobilePlusButton);
                 }
-                getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "details"));
+                getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "details", fromAutoSelect, willHaveControlHost(b.newState)));
+                if (!fromAutoSelect) {
+                    printess.setZoomMode("frame");
+                }
             }
         }
         else {
@@ -3266,27 +3932,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             buttonDiv.innerHTML = "";
             drawButtonContent(printess, buttonDiv, uih_currentProperties);
             centerMobileButton(buttonDiv);
+            const pId = (_f = (_e = b.newState.externalProperty) === null || _e === void 0 ? void 0 : _e.id) !== null && _f !== void 0 ? _f : "";
+            printess.setZoomMode("frame");
             const backButton = document.querySelector(".mobile-property-back-button");
             if (backButton) {
-                (_e = backButton.parentElement) === null || _e === void 0 ? void 0 : _e.removeChild(backButton);
+                (_g = backButton.parentElement) === null || _g === void 0 ? void 0 : _g.removeChild(backButton);
             }
-            if (printess.isCurrentStepActive() || uih_currentState === "details") {
-                getMobileUiDiv().appendChild(getMobileBackwardButton(printess, "details"));
-            }
-            else {
-                getMobileUiDiv().appendChild(getMobileBackwardButton(printess, uih_currentState));
-            }
+            getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, uih_currentState, fromAutoSelect, willHaveControlHost(b.newState)));
         }
         renderMobileControlHost(printess, b.newState);
     }
+    function willHaveControlHost(state) {
+        if (state.state === "add") {
+            return true;
+        }
+        else if (state.externalProperty) {
+            return true;
+        }
+        return false;
+    }
     function renderMobileControlHost(printess, state) {
+        collapseControlHost();
         const controlHost = document.getElementById("mobile-control-host");
+        uih_lastMobileState = state;
         if (controlHost) {
-            controlHost.classList.remove("mobile-control-sm");
-            controlHost.classList.remove("mobile-control-md");
-            controlHost.classList.remove("mobile-control-lg");
-            controlHost.classList.remove("mobile-control-xl");
-            controlHost.innerHTML = "";
             if (state.state === "add") {
                 controlHost.classList.add("mobile-control-xl");
                 const snippets = renderGroupSnippets(printess, uih_currentGroupSnippets || [], true);
@@ -3302,29 +3971,59 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
                 }
                 controlHost.appendChild(control);
-                resizeMobileUi(printess, true);
+                const close = getMobileNavButton({
+                    name: "closeHost",
+                    icon: printess.getIcon("carret-down-solid"),
+                    task: () => {
+                        printess.setZoomMode("spread");
+                        collapseControlHost();
+                        resizeMobileUi(printess);
+                        const mobileBtns = document.querySelector(".mobile-buttons");
+                        if (mobileBtns) {
+                            mobileBtns.childNodes.forEach(b => b.classList.remove("selected"));
+                        }
+                    }
+                }, true);
+                close.classList.add("close-control-host-button");
+                const mobileUi = document.querySelector(".mobile-ui");
+                if (mobileUi) {
+                    if (!document.body.classList.contains("no-mobile-button-bar")) {
+                        mobileUi.appendChild(close);
+                    }
+                }
+                resizeMobileUi(printess);
                 validate(printess, state.externalProperty);
             }
+        }
+    }
+    function collapseControlHost() {
+        const controlHost = document.getElementById("mobile-control-host");
+        const mobileUi = document.querySelector(".mobile-ui");
+        if (mobileUi) {
+            const closeButton = mobileUi.querySelector(".close-control-host-button");
+            if (closeButton) {
+                mobileUi.removeChild(closeButton);
+            }
+        }
+        if (controlHost) {
+            controlHost.classList.remove("mobile-control-sm");
+            controlHost.classList.remove("mobile-control-md");
+            controlHost.classList.remove("mobile-control-lg");
+            controlHost.classList.remove("mobile-control-xl");
+            controlHost.classList.remove("mobile-control-xxl");
+            controlHost.innerHTML = "";
         }
     }
     function getMobileControlHeightClass(printess, property, meta) {
         switch (property.kind) {
             case "image":
             case "image-id":
-                if (!meta) {
-                    if (printess.getUploadedImagesCount() <= 3) {
-                        return "mobile-control-lg";
-                    }
-                    else {
-                        return "mobile-control-overlay";
-                    }
-                }
-                else if (meta === "image-rotation") {
-                    return "mobile-control-lg";
-                }
+                return "mobile-control-md";
                 break;
+            case "selection-text-style":
+                return "mobile-control-xxl";
             case "multi-line-text":
-                if (!meta || meta === "text-style-color" || meta === "text-style-font" || meta === "text-style-size") {
+                if (!meta || meta === "text-style-color" || meta === "text-style-font" || meta === "text-style-size" || meta === "text-style-vAlign-hAlign") {
                     if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
                         return "mobile-control-xl";
                     }
@@ -3349,7 +4048,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 return "mobile-control-xl";
             case "single-line-text":
                 if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
-                    return "mobile-control-md";
+                    console.log(window.navigator.appVersion);
+                    return "mobile-control-sm";
                 }
                 else {
                     return "mobile-control-sm";
@@ -3477,8 +4177,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             scrollToLeft(scrollContainer, eX - vw / 2 + buttonDiv.offsetWidth / 2, 300);
         }
     }
-    function scrollToLeft(element, to, duration) {
-        const start = element.scrollLeft;
+    function scrollToLeft(element, to, duration, startPosition) {
+        const start = startPosition !== null && startPosition !== void 0 ? startPosition : element.scrollLeft;
         const change = to - start;
         let currentTime = 0;
         const increment = 10;
