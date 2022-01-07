@@ -140,7 +140,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function _viewPortScroll(printess, _what) {
         if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
-            console.log("!!!! View-Port-" + _what + "-Event: top=" + window.visualViewport.offsetTop + "   Height=" + window.visualViewport.height, window.visualViewport);
             uih_viewportOffsetTop = window.visualViewport.offsetTop;
             const keyboardExpanded = uih_viewportHeight - window.visualViewport.height > 250;
             uih_viewportHeight = window.visualViewport.height;
@@ -3017,10 +3016,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         uih_currentState = state;
         uih_currentProperties = properties;
         uih_currentRender = "mobile";
-        if (properties.length === 0) {
-            console.warn("renderMobileUi: No Properties");
-        }
-        console.log("***** STATE=" + state);
         const mobileUi = getMobileUiDiv();
         mobileUi.innerHTML = "";
         const desktopProperties = document.getElementById("desktop-properties");
@@ -3272,9 +3267,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 task: () => addToBasket(printess)
             }
         };
-        console.log(">>>>>getMobilePropertyNavButtons State=" + state);
-        console.log(">>>>>getMobilePropertyNavButtons hasControlHost=" + hasControlHost);
-        console.log(">>>>>getMobilePropertyNavButtons root-properties=" + uih_currentProperties.length);
         if (state === "add") {
             const add = getMobileNavButton(buttons.add, printess.hasSteps());
             add.classList.add("close-designs-button");
@@ -3664,7 +3656,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const viewPortTopOffset = uih_viewportOffsetTop;
                 const mobileUiHeight = (mobileButtonBarHeight + controlHostHeight + 2);
                 let printessHeight = viewPortHeight - mobileUiHeight;
-                console.warn("viewPortHeight=" + viewPortHeight + "  viewPortTopOffset=" + viewPortTopOffset + "   printessHeight=" + printessHeight + "   mobileUiHeight=" + mobileUiHeight);
                 let printessTop = viewPortTopOffset;
                 const isInEddiMode = printess.isSoftwareKeyBoardExpanded() || (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "selection-text-style");
                 let showToolBar = false;
@@ -3685,7 +3676,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         printessHeight -= mobilePageBarHeight;
                     }
                 }
-                console.warn("showToolBar=" + showToolBar + "  showPageBar=" + showPageBar + "   printessTop=" + printessTop);
                 const activeFFId = getActiveFormFieldId();
                 const focusSelection = printess.getZoomMode() === "frame";
                 if ((focusSelection && activeFFId !== uih_lastFormFieldId) || uih_lastZoomMode !== printess.getZoomMode() || uih_lastMobileUiHeight !== mobileUiHeight || printessTop !== uih_lastPrintessTop || printessHeight !== uih_lastPrintessHeight || viewPortWidth !== uih_lastPrintessWidth) {
@@ -4048,7 +4038,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 return "mobile-control-xl";
             case "single-line-text":
                 if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
-                    console.log(window.navigator.appVersion);
                     return "mobile-control-sm";
                 }
                 else {

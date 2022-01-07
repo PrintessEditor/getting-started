@@ -157,8 +157,6 @@ declare const bootstrap: any;
     // das funktioniert so auch nicht, wenn vom iFrame host durchgereicht. Ist immer anders als die lokal empfangene viewPort Height
     if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
 
-      console.log("!!!! View-Port-" + _what + "-Event: top=" + window.visualViewport.offsetTop + "   Height=" + window.visualViewport.height, window.visualViewport);
-
       uih_viewportOffsetTop = window.visualViewport.offsetTop;
       const keyboardExpanded = uih_viewportHeight - window.visualViewport.height > 250;
       uih_viewportHeight = window.visualViewport.height;
@@ -3643,11 +3641,6 @@ declare const bootstrap: any;
     uih_currentState = state;
     uih_currentProperties = properties;
     uih_currentRender = "mobile";
-    if (properties.length === 0) {
-      // uih_lastMobileState  = null;
-      console.warn("renderMobileUi: No Properties");
-    }
-    console.log("***** STATE=" + state);
 
     const mobileUi = getMobileUiDiv();
     mobileUi.innerHTML = "";
@@ -3945,10 +3938,6 @@ declare const bootstrap: any;
         task: () => addToBasket(printess)
       }
     }
-
-    console.log(">>>>>getMobilePropertyNavButtons State=" + state);
-    console.log(">>>>>getMobilePropertyNavButtons hasControlHost=" + hasControlHost);
-    console.log(">>>>>getMobilePropertyNavButtons root-properties=" + uih_currentProperties.length);
 
     if (state === "add") {
       // Close ControlHost Button
@@ -4511,8 +4500,6 @@ declare const bootstrap: any;
         const mobileUiHeight = (mobileButtonBarHeight + controlHostHeight + 2); // +2 = border-top
         let printessHeight = viewPortHeight - mobileUiHeight;
 
-        console.warn("viewPortHeight=" + viewPortHeight + "  viewPortTopOffset=" + viewPortTopOffset + "   printessHeight=" + printessHeight + "   mobileUiHeight=" + mobileUiHeight)
-
         let printessTop: number = viewPortTopOffset;
 
         const isInEddiMode = printess.isSoftwareKeyBoardExpanded() || (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "selection-text-style");
@@ -4546,9 +4533,6 @@ declare const bootstrap: any;
             printessHeight -= mobilePageBarHeight;
           }
         }
-
-        console.warn("showToolBar=" + showToolBar + "  showPageBar=" + showPageBar + "   printessTop=" + printessTop)
-
 
         const activeFFId = getActiveFormFieldId();
         const focusSelection: boolean = printess.getZoomMode() === "frame";
@@ -5017,7 +5001,6 @@ declare const bootstrap: any;
         return "mobile-control-xl"
       case "single-line-text":
         if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
-          console.log(window.navigator.appVersion);
           return "mobile-control-sm"
         } else {
           return "mobile-control-sm"
