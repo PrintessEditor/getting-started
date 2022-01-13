@@ -10,6 +10,7 @@
     "image-sepia": "Sepia",
     "image-hueRotate": "hue-Rotate",
     "invertImage": "Invert Image",
+    "revertImage": "Revert Image",
     "buttonChangeBackground": "Change Background",
     "buttonDone": "Done",
     "buttonBasket": "Add to Basket",
