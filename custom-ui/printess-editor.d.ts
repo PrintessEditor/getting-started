@@ -494,7 +494,7 @@ export interface iPrintessApi {
    * @param name 
    * @param value 
    */
-  setImageMetaProperty(propertyId: string, name: "scale" | "sepia" | "brightness" | "saturate" | "contrast" | "grayscale" | "vivid" | "hueRotate", value: string | number): Promise<void>;
+  setImageMetaProperty(propertyId: string, name: "scale" | "sepia" | "brightness" | "saturate" | "invert" | "contrast" | "grayscale" | "vivid" | "hueRotate", value: string | number): Promise<void>;
 
   /**
    * Resets all image filters (meta-values) of an image-property to default
@@ -506,9 +506,11 @@ export interface iPrintessApi {
     imageMeta?: {
       brightness?: number,
       sepia?: number,
+      invert?: number,
       hueRotate?: number,
       contrast?: number,
       vivid?: number,
+      invert?: number,
     }): Promise<void>;
 
   /**
@@ -585,6 +587,12 @@ export interface iPrintessApi {
    * Returns all buyer uploaded images including information if the image is in use
    */
   getAllImages(): Array<iExternalImage>
+
+  /**
+   * Returns all available image groups
+   * @param propertyId id of property which shows the image list
+   */
+  getImageGroups(propertyId?: string): Array<string>
 
   /**
    * Returns image-count in "Buyer Upload" folder.
@@ -665,6 +673,16 @@ export interface iPrintessApi {
   showPageNavigation(): boolean;
 
   /**
+   * Returns if buyer ui should display the search bar for searching through images
+   */
+  showSearchBar(): boolean
+
+  /**
+   * Returns if buyer ui should display option for custom colors in color dropdown
+   */
+  enabelCustomColors(): boolean
+
+  /**
    * Returns if buyer ui should display undo and redo buttons
    */
   showUndoRedo(): boolean
@@ -688,6 +706,39 @@ export interface iPrintessApi {
    * Returns number of available redo steps
    */
   redoCount(): number
+
+
+
+  /**
+   * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
+   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   */
+  canAddSpreads(): 0 | 1 | 2
+
+  /**
+   * Add new spreads / pages to the current document before the back cover 
+   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   */
+  addSpreads(): Promise<boolean>
+
+  /**
+   * Returns how many spreads would be removed before cover  `removeSpreads()`is called. 
+   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   */
+  canRemoveSpreads(): 0 | 1 | 2
+
+  /**
+ * Remove spreads / pages to the current document before the back cover 
+ * The amount depends on the settings in the template. Template needs to be marked as `book`
+ */
+  removeSpreads(): Promise<boolean>
+
+  /**
+   * Gets the state of the "lockCoverInside" user setting in "book" mode
+   * If set to true the cover extends to two spreads when adding or removing spreads
+   */
+  lockCoverInside(): boolean
+
 
   renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
 
@@ -830,7 +881,7 @@ export interface iPrintessApi {
   /**
    * Returns the template settings for display of steps header on desktop and mobile
    */
-  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list" | "tabs list"
+  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list" | "tabs list" | "big page bar"
 
   /**
    * Displays a grey overlay on printess editor
@@ -999,7 +1050,7 @@ export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" |
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
-  "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
+  "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
 
 export interface iExternalProperty {
   id: string;
@@ -1043,6 +1094,7 @@ export type iExternalFieldListEntry = {
 export interface iExternalTableMeta {
   columns: Array<iExternalTableColumn>;
   month?: number;
+  year?: number;
   tableType: "generic" | "calendar-events";
 }
 export interface iExternalTableColumn {
@@ -1081,6 +1133,7 @@ export interface iExternalimageMeta {
   contrast: number;
   vivid: number;
   hueRotate: number;
+  invert: number;
   thumbUrl: string;
   thumbCssUrl: string;
   canUpload: boolean;
@@ -1088,7 +1141,7 @@ export interface iExternalimageMeta {
   * Indicates if you can modify scaling on that image 
   */
   canScale: boolean;
-  allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate">;
+  allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate" | "invert">;
   filterTags: ReadonlyArray<string>;
 }
 export interface iExternalImageScaleHints {
@@ -1101,7 +1154,7 @@ export type iExternalErrors = Array<iExternalError>
 
 export interface iExternalError {
   boxIds: Array<string>,
-  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected",
+  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText",
   errorValue1: string | number,
   errorValue2?: string | number,
 }
@@ -1149,6 +1202,7 @@ export interface iExternalImage {
   height: number;
   fileHash: string;
   inUse: boolean;
+  group: string;
 }
 
 export interface iExternalButton {
@@ -1165,7 +1219,8 @@ export interface iMobileUIButton {
   ffCircleCaption?: string,
   caption: string,
   hasCollapsedMetaProperties: boolean,
-  newState: iMobileUiState
+  newState: iMobileUiState,
+  hide?: boolean
 }
 
 export interface iMobileUiState {
@@ -1451,4 +1506,11 @@ export type iconName =
   | "bullseye-pointer-solid"
   | "hand-pointer-light"
   | "eye-dropper"
-  | "cloud-upload-light";
+  | "eye-dropper-light"
+  | "cloud-upload-light"
+  | "shopping-basket"
+  | "shopping-basket-light"
+  | "home-solid"
+  | "home-light"
+  | "smile"
+  | "code-curly";
