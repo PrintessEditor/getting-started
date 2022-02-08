@@ -42,6 +42,7 @@ declare const bootstrap: any;
   let uih_stepTabsScrollPosition = 0;
 
   let uih_lastOverflowState = false;
+  let uih_activeImageAccordion = "Buyer Upload";
 
   const uih_ignoredLowResolutionErrors: Array<string> = [];
 
@@ -58,9 +59,21 @@ declare const bootstrap: any;
     return true;
   }
 
+  function handleBackButtonCallback(printess: iPrintessApi, callback: CallableFunction) {
+    if (printess.isInDesignerMode()) {
+      // do not save in designer mode.
+      callback("");
+    } else {
+      printess.save().then((token) => {
+        callback(token);
+      }).catch(reason => { // bkr: ALWAYS callback... otherwise you are stuck in the designer... asd
+        console.error(reason);
+        callback("");
+      });
+    }
+  }
+
   async function addToBasket(printess: iPrintessApi) {
-
-
     if (validateAllInputs(printess) === false) {
       return;
     }
@@ -156,6 +169,8 @@ declare const bootstrap: any;
     //console.log("!!!! View-Port-" + what + "-Event: top=" + window.visualViewport.offsetTop, window.visualViewport);
     // das funktioniert so auch nicht, wenn vom iFrame host durchgereicht. Ist immer anders als die lokal empfangene viewPort Height
     if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
+
+      //console.log("!!!! View-Port-" + _what + "-Event: top=" + window.visualViewport.offsetTop + "   Height=" + window.visualViewport.height, window.visualViewport);
 
       uih_viewportOffsetTop = window.visualViewport.offsetTop;
       const keyboardExpanded = uih_viewportHeight - window.visualViewport.height > 250;
@@ -256,7 +271,7 @@ declare const bootstrap: any;
       throw new Error("#desktop-properties or #desktop-printess-container not found, please add to html.")
     }
 
-    if (printess.stepHeaderDisplay() === "tabs list") {
+    if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "big page bar") {
       container.classList.add("tabs");
     } else {
       container.classList.remove("tabs");
@@ -278,7 +293,7 @@ declare const bootstrap: any;
     const info = printess.pageInfoSync();
     renderPageNavigation(printess, spreads, info);
 
-    if (printess.stepHeaderDisplay() !== "tabs list") {
+    if (printess.stepHeaderDisplay() !== "tabs list" && printess.stepHeaderDisplay() !== "big page bar") {
       if (printess.hasSteps()) {
         // if document has steps, display current step:
         container.appendChild(getDesktopStepsUi(printess));
@@ -307,8 +322,22 @@ declare const bootstrap: any;
       }
     } */
 
+    // add editable frames hint to session storage if frame has been selected
+    if (printess.hasSelection()) {
+      sessionStorage.setItem("editableFrames", "hint closed");
+      const framePulse = document.getElementById("frame-pulse");
+      if (framePulse) framePulse.parentElement?.removeChild(framePulse);
+    }
+
+    // translate change Layout button text
+    const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
+    if (layoutsButton) {
+      layoutsButton.textContent = printess.gl("ui.changeLayout");
+    }
+
     // render desktop ui hints
     renderUiButtonHints(printess, document.body, state, false);
+    renderEditableFramesHint(printess);
 
     // attach/remove shadow pulse animation to/from "change layout" button
     if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
@@ -470,12 +499,27 @@ declare const bootstrap: any;
         if (forMobile) {
           if (metaProperty) {
             switch (metaProperty) {
+              case "image-contrast":
+                /* if (p.imageMeta && p.imageMeta.allows.indexOf("invert") >= 0) {
+                   // render contrast & invert together 
+                   const d = document.createElement("div");
+                   d.style.display = "grid";
+                   d.style.gridTemplateColumns = "1fr auto";
+                   d.appendChild(getNumberSlider(printess, p, metaProperty, true));
+                   d.appendChild(getInvertImageChecker(printess, p, "image-invert", forMobile));
+                   return d;
+                 }*/
+                return getNumberSlider(printess, p, metaProperty, true);
               case "image-sepia":
               case "image-brightness":
-              case "image-contrast":
               case "image-hueRotate":
               case "image-vivid":
                 return getNumberSlider(printess, p, metaProperty, true);
+              case "image-invert":
+                // if (!p.imageMeta || p.imageMeta.allows.indexOf("invert") === -1) {
+                return getInvertImageChecker(printess, p, "image-invert", forMobile);
+                //  }
+                return document.createElement("div");
               case "image-scale":
                 {
                   const s = getImageScaleControl(printess, p, true);
@@ -513,7 +557,9 @@ declare const bootstrap: any;
         }
         if (p.imageMeta?.canUpload && p.value !== p.validation?.defaultValue) {
           //filter and rotate 
-          tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
+          if (p.imageMeta?.allows.length > 2) {
+            tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
+          }
           tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
         }
 
@@ -795,8 +841,19 @@ declare const bootstrap: any;
       }
       inner.appendChild(basketBtn);
     } else {
+      const caption = printess.gl("ui.buttonBasket");
       basketBtn.className = "btn btn-primary";
-      basketBtn.innerText = printess.gl("ui.buttonBasket");
+      basketBtn.innerText = caption;
+
+      const icon = <iconName>printess.gl("ui.buttonBasketIcon");
+      if (icon) {
+        const svg = printess.getIcon(icon);
+        svg.style.height = "24px";
+        svg.style.float = "left";
+        svg.style.marginRight = caption ? "10px" : "0px";
+        basketBtn.appendChild(svg);
+      }
+
       basketBtn.onclick = () => addToBasket(printess);
       inner.appendChild(basketBtn);
     }
@@ -1164,6 +1221,21 @@ declare const bootstrap: any;
         tab.onclick = () => {
           setTabScrollPosition(div, tab, _forMobile);
           gotoStep(printess, i);
+          if (isDesktopTabs) {
+            const activeTab = document.querySelectorAll("li.nav-item.active");
+            activeTab.forEach(e => e.classList.remove("active"));
+            const activeLink = document.querySelectorAll("a.nav-link.active");
+            activeLink.forEach(e => e.classList.remove("active"));
+            tab.classList.add("active");
+            tabLink.classList.add("active");
+          } else {
+            const activeTab = document.querySelectorAll(".active-step-tab");
+            activeTab.forEach(e => e.classList.remove("active-step-tab"));
+            const activeLink = document.querySelectorAll(".active-step-tablink");
+            activeLink.forEach(e => e.classList.remove("active-step-tablink"));
+            tab.classList.add("active-step-tab");
+            tabLink.classList.add("active-step-tablink");
+          }
         }
         ul.appendChild(tab);
       }
@@ -1540,27 +1612,15 @@ declare const bootstrap: any;
       color.dataset.color = f.name;
       color.title = f.name;
       color.onclick = async () => {
-        if (metaProperty === "color") {
-          printess.setTextStyleProperty(p.id, metaProperty, f.name);
-          const mobileButtonDiv = document.getElementById(p.id + ":color") || document.getElementById(p.id + ":text-style-color");
-          if (mobileButtonDiv && p.textStyle) {
-            p.textStyle.color = f.color;
-            drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
-          }
-        } else {
-          await printess.setProperty(p.id, f.name).then(() => setPropertyVisibilities(printess));
-          p.value = f.color;
-
-          const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
-          if (mobileButtonDiv) {
-            drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
-          }
-        }
+        setColor(printess, p, f.color, f.name, metaProperty);
         if (!forMobile) button.style.backgroundColor = f.color;
       }
       colorList.appendChild(color);
     }
 
+    if (printess.enableCustomColors()) {
+      colorList.appendChild(getCustomColorPicker(printess, p, forMobile, button, metaProperty));
+    }
 
     if (forMobile) {
       return colorList;
@@ -1569,6 +1629,77 @@ declare const bootstrap: any;
       dropdown.appendChild(ddContent);
       return dropdown;
     }
+  }
+
+  async function setColor(printess: iPrintessApi, p: iExternalProperty, color: string, name: string, metaProperty?: "color"): Promise<void> {
+    if (metaProperty === "color") {
+      printess.setTextStyleProperty(p.id, metaProperty, name);
+      const mobileButtonDiv = document.getElementById(p.id + ":color") || document.getElementById(p.id + ":text-style-color");
+      if (mobileButtonDiv && p.textStyle) {
+        p.textStyle.color = color;
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+      }
+    } else {
+      await printess.setProperty(p.id, name).then(() => setPropertyVisibilities(printess));
+      p.value = color;
+
+      const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
+      if (mobileButtonDiv) {
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+      }
+    }
+  }
+
+  function getCustomColorPicker(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean, button: HTMLButtonElement, metaProperty?: "color"): HTMLElement {
+    const hexGroup = document.createElement("div");
+    hexGroup.className = "input-group input-group-sm mt-3 mb-2";
+    hexGroup.style.width = "90%";
+    const hexPicker = document.createElement("span");
+    hexPicker.className = "input-group-text";
+    hexPicker.style.cursor = "pointer";
+    const hexIcon = printess.getIcon("eye-dropper-light");
+    hexIcon.style.height = "20px";
+    const hexInput = document.createElement("input");
+    hexInput.className = "form-control";
+    hexInput.id = "hex-color-input"
+    hexInput.type = "text";
+    hexInput.placeholder = "#000000";
+    const submitHex = document.createElement("button");
+    submitHex.className = "btn btn-secondary";
+    const checkHex = printess.getIcon("check");
+    checkHex.style.height = "20px";
+
+    submitHex.onclick = async () => {
+      const colorInput = <HTMLInputElement>document.getElementById("hex-color-input");
+      const color = colorInput?.value;
+      setColor(printess, p, color, color, metaProperty)
+      if (!forMobile) button.style.backgroundColor = color;
+    }
+
+    hexPicker.onclick = async () => {
+      const colorInput = <HTMLInputElement>document.getElementById("hex-color-input");
+      try {
+        //@ts-ignore
+        const eyeDropper = new EyeDropper();
+        const { sRGBHex: color } = await eyeDropper.open();
+        //const c = Color.parseRgbColor(sRGBHex); ???
+        if (color) {
+          colorInput.value = color;
+          setColor(printess, p, color, color, metaProperty);
+          if (!forMobile) button.style.backgroundColor = color;
+        }
+      } catch (error) {
+        alert("Sorry, eye-dropper tool is only available in Chrome.");
+      }
+    }
+
+    hexPicker.appendChild(hexIcon);
+    submitHex.appendChild(checkHex);
+    hexGroup.appendChild(hexPicker);
+    hexGroup.appendChild(hexInput);
+    hexGroup.appendChild(submitHex);
+
+    return hexGroup;
   }
 
   function getDropDown(printess: iPrintessApi, p: iExternalProperty, asList: boolean, fullWidth: boolean = true): HTMLElement {
@@ -1750,7 +1881,7 @@ declare const bootstrap: any;
     return div;
   }
 
-  function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty, filterDiv?: HTMLDivElement): HTMLElement {
+  function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty, filterDiv?: HTMLDivElement, hasReset: boolean = true): HTMLElement {
     const container = filterDiv || document.createElement("div");
 
     const tags = p.imageMeta?.filterTags;
@@ -1762,29 +1893,49 @@ declare const bootstrap: any;
     p.imageMeta?.allows.forEach(metaProperty => {
       switch (metaProperty) {
         case "brightness": container.appendChild(getNumberSlider(printess, p, "image-brightness")); break;
-        case "contrast": container.appendChild(getNumberSlider(printess, p, "image-contrast")); break;
+        case "contrast":
+          if (p.imageMeta && p.imageMeta.allows.indexOf("invert") >= 0) {
+            // render contrast & invert together 
+            const d = document.createElement("div");
+            d.style.display = "grid";
+            d.style.gridTemplateColumns = "1fr auto";
+            d.appendChild(getNumberSlider(printess, p, "image-contrast", true));
+            d.appendChild(getInvertImageChecker(printess, p, "image-invert", false));
+            container.appendChild(d);
+          } else {
+            container.appendChild(getNumberSlider(printess, p, "image-contrast"));
+          }
+          break;
         case "vivid": container.appendChild(getNumberSlider(printess, p, "image-vivid")); break;
         case "sepia": container.appendChild(getNumberSlider(printess, p, "image-sepia")); break;
         case "hueRotate": container.appendChild(getNumberSlider(printess, p, "image-hueRotate")); break;
+        case "invert":
+          if (!p.imageMeta || p.imageMeta.allows.indexOf("contrast") === -1) {
+            container.appendChild(getInvertImageChecker(printess, p, "image-invert"));
+          }
+          break;
       }
     })
 
-    const filterBtn = document.createElement("button");
-    filterBtn.className = "btn btn-secondary mt-4 w-100";
-    filterBtn.textContent = printess.gl("ui.buttonResetFilter");
-    filterBtn.onclick = async () => {
-      if (p.imageMeta) {
-        p.imageMeta.brightness = 0;
-        p.imageMeta.sepia = 0;
-        p.imageMeta.hueRotate = 0;
-        p.imageMeta.contrast = 0;
-        p.imageMeta.vivid = 0;
-        await printess.resetImageFilters(p.id, p.imageMeta);
+    if (hasReset) {
+      const filterBtn = document.createElement("button");
+      filterBtn.className = "btn btn-secondary mt-4 w-100";
+      filterBtn.textContent = printess.gl("ui.buttonResetFilter");
+      filterBtn.onclick = async () => {
+        if (p.imageMeta) {
+          p.imageMeta.brightness = 0;
+          p.imageMeta.sepia = 0;
+          p.imageMeta.hueRotate = 0;
+          p.imageMeta.contrast = 0;
+          p.imageMeta.vivid = 0;
+          p.imageMeta.invert = 0;
+          await printess.resetImageFilters(p.id, p.imageMeta);
+        }
+        container.innerHTML = "";
+        getImageFilterControl(printess, p, container);
       }
-      container.innerHTML = "";
-      getImageFilterControl(printess, p, container);
+      container.appendChild(filterBtn);
     }
-    container.appendChild(filterBtn);
 
     return container;
   }
@@ -1986,10 +2137,17 @@ declare const bootstrap: any;
     const images = printess.getImages(p.id);
     const imageList = document.createElement("div");
 
-    if (forMobile || uih_currentProperties.length === 1) {
+    if (forMobile || (uih_currentProperties.length < 5 && uih_currentProperties.filter(p => p.kind === "image" || p.kind === "image-id").length <= 1)) {
 
       /*** SCALE ***/
       if (!forMobile) {
+
+        if (p.imageMeta && p.imageMeta.allows.length <= 2) {
+          const filtersControl = getImageFilterControl(printess, p, undefined, false);
+          filtersControl.classList.add("mb-3");
+          container.appendChild(filtersControl);
+        }
+
         const scaleControl: HTMLElement | null = getImageScaleControl(printess, p);
         if (scaleControl) {
           scaleControl.classList.add("mb-3");
@@ -2147,6 +2305,9 @@ declare const bootstrap: any;
           imageTabContainer.innerHTML = "";
           if (imageTabContainer) imageTabContainer.appendChild(renderMyImagesTab(printess, forMobile));
         }
+
+        // set current image group to Buyer Uploads to open respective category
+        uih_activeImageAccordion = "Buyer Upload";
       }
     }
 
@@ -2211,6 +2372,81 @@ declare const bootstrap: any;
     }
 
     return rangeLabel;
+  }
+
+  function getInvertImageChecker(printess: iPrintessApi, p: iExternalProperty, metaProperty: "image-invert", forMobile: boolean = false): HTMLElement {
+
+    if (forMobile) {
+      return getInvertImageCheckerMobile(printess, p, metaProperty, forMobile);
+    }
+    const button = document.createElement("button");
+    button.className = "btn-primary";
+    if (forMobile) {
+      button.classList.add("form-switch")
+    }
+
+    const svg = printess.getIcon(p.imageMeta?.invert !== 0 ? "image-solid" : "image-regular");
+    svg.style.width = "32px";
+    svg.style.height = "32px";
+    svg.style.cursor = "pointer";
+    svg.style.margin = "5px";
+
+    button.onclick = () => {
+      const newValue = p.imageMeta?.invert === 0 ? 100 : 0;
+      printess.setNumberUiProperty(p, "image-invert", newValue);
+      if (metaProperty && p.imageMeta) {
+        p.imageMeta["invert"] = newValue; // update our model
+      }
+      const svg = printess.getIcon(p.imageMeta?.invert !== 0 ? "image-solid" : "image-regular");
+      svg.style.width = "42px";
+      svg.style.height = "42px";
+      svg.style.cursor = "pointer";
+      button.innerHTML = "";
+      button.appendChild(svg);
+    }
+
+    button.appendChild(svg);
+
+    return button;
+
+  }
+
+  function getInvertImageCheckerMobile(printess: iPrintessApi, p: iExternalProperty, metaProperty: "image-invert", forMobile: boolean = false): HTMLElement {
+    const container = document.createElement("div");
+    container.className = "form-check mt-3";
+    if (forMobile) {
+      container.classList.add("form-switch")
+    }
+
+    const id = "invert-image-checker";
+
+    const input = document.createElement("input");
+    input.className = "form-check-input";
+    input.id = id;
+    input.type = "checkbox";
+    input.checked = printess.getNumberUi(p, metaProperty)?.value === 0 ? false : true;
+
+    const label = document.createElement("label");
+    label.className = "form-check-label";
+    label.setAttribute("for", id);
+    if (forMobile) label.style.color = input.checked ? "var(--bs-light)" : "var(--bs-primary)";
+    label.textContent = input.checked && forMobile ? printess.gl("ui.revertImage") : printess.gl("ui.invertImage");
+
+    input.onchange = () => {
+      const newValue = input.checked ? 100 : 0;
+      printess.setNumberUiProperty(p, "image-invert", newValue);
+
+      if (metaProperty && p.imageMeta) {
+        p.imageMeta["invert"] = newValue; // update our model
+      }
+
+      if (forMobile) label.style.color = input.checked ? "var(--bs-light)" : "var(--bs-primary)";
+      label.textContent = input.checked && forMobile ? printess.gl("ui.revertImage") : printess.gl("ui.invertImage");
+    }
+
+    container.appendChild(input);
+    container.appendChild(label);
+    return container;
   }
 
   function getNumberSlider(printess: iPrintessApi, p: iExternalProperty, metaProperty: "image-hueRotate" | "image-brightness" | "image-contrast" | "image-vivid" | "image-sepia" | null = null, forMobile: boolean = false): HTMLElement {
@@ -2583,10 +2819,14 @@ declare const bootstrap: any;
    */
 
 
-  function getPaginationItem(printess: iPrintessApi, content: number | "previous" | "next" | "ellipsis", spread?: iExternalSpreadInfo, page?: "left-page" | "right-page", isActive?: boolean): HTMLLIElement {
+  function getPaginationItem(printess: iPrintessApi, content: number | "previous" | "next" | "ellipsis", spread?: iExternalSpreadInfo, page?: "left-page" | "right-page", isActive?: boolean, bigSpaceBetween: boolean = false, disabled: boolean = false): HTMLLIElement {
     const li = document.createElement("li");
     li.className = "page-item";
 
+    if (disabled) {
+      li.style.opacity = "0.5";
+      li.classList.add("disabled");
+    }
     const a = document.createElement("div");
     a.className = "page-link";
 
@@ -2619,7 +2859,11 @@ declare const bootstrap: any;
         ((page === "left-page" && spread.pages === 1) || (page === "right-page" && spread.pages === 2))
       )
     ) {
-      li.classList.add("me-2");
+      if (bigSpaceBetween) {
+        li.classList.add("me-3");
+      } else {
+        li.classList.add("me-2");
+      }
     }
     li.onclick = () => {
       if (content === "previous") {
@@ -2669,23 +2913,27 @@ declare const bootstrap: any;
         const miniBar = document.createElement("div");
         const btnBack = document.createElement("button");
 
+        const caption = printess.gl("ui.buttonBack");
         btnBack.className = "btn";
         btnBack.classList.add("btn-outline-secondary")
-        btnBack.innerText = printess.gl("ui.buttonBack");
+        btnBack.innerText = caption;
+
+        const icon = <iconName>printess.gl("ui.buttonBackIcon");
+        if (icon) {
+          const svg = printess.getIcon(icon);
+          svg.style.height = "24px";
+          svg.style.float = "left";
+          svg.style.marginRight = caption ? "10px" : "0px";
+          btnBack.appendChild(svg);
+        }
+
         if (!printess.getBackButtonCallback()) {
           btnBack.classList.add("disabled");
         }
         btnBack.onclick = () => {
           const callback = printess.getBackButtonCallback();
           if (callback) {
-            if (printess.isInDesignerMode()) {
-              // do not save in designer mode.
-              callback("");
-            } else {
-              printess.save().then((token) => {
-                callback(token);
-              });
-            }
+            handleBackButtonCallback(printess, callback);
           } else {
             // button was disabled, so this is never reached 
             alert(printess.gl("ui.backButtonCallback"));
@@ -2727,18 +2975,23 @@ declare const bootstrap: any;
       }
 
       const ul = document.createElement("ul");
-      ul.className = "pagination justify-content-center";
+      ul.className = "pagination";
       if (large) {
         ul.classList.add("pagination-lg");
       }
 
+      if (printess.stepHeaderDisplay() === "big page bar" || printess.stepHeaderDisplay() === "tabs list") {
+        pages.classList.add("tabs");
+        ul.style.overflowX = "auto";
+      } else {
+        pages.classList.remove("tabs");
+        ul.classList.add("justify-content-center");
+      }
+
+
       if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list") {
 
-        if (printess.stepHeaderDisplay() === "tabs list") {
-          pages.classList.add("tabs");
-        } else {
-          pages.classList.remove("tabs");
-        }
+
         const tabsContainer = document.createElement("div");
         tabsContainer.className = "step-tabs-list";
         tabsContainer.id = "step-tab-list";
@@ -2799,26 +3052,16 @@ declare const bootstrap: any;
         pages.appendChild(tabsContainer);
       }
 
-      if (printess.stepHeaderDisplay() === "tabs list") {
-        const button = document.createElement("button");
-        button.className = "btn btn-primary ms-2";
-        const icon = printess.getIcon("shopping-cart");
-        icon.style.width = "25px";
-        icon.style.height = "25px";
-
-        button.onclick = () => addToBasket(printess);
-
-        button.appendChild(icon);
-        pages.appendChild(button);
-      }
 
       if (spreads.length > 1 && printess.showPageNavigation()) {
 
-        const prev = getPaginationItem(printess, "previous");
-        if (info && info.isFirst) {
-          prev.classList.add("disabled");
+        if (printess.stepHeaderDisplay() !== "big page bar") {
+          const prev = getPaginationItem(printess, "previous");
+          if (info && info.isFirst) {
+            prev.classList.add("disabled");
+          }
+          ul.appendChild(prev);
         }
-        ul.appendChild(prev);
 
 
         const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
@@ -2862,26 +3105,48 @@ declare const bootstrap: any;
               }
             }
 
-            if (pos === "skip") {
+            if (pos === "skip" && printess.stepHeaderDisplay() !== "big page bar") {
               if (lastPos !== "skip") {
                 ul.appendChild(getPaginationItem(printess, "ellipsis"));
               }
             } else {
-              ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive));
+              let disable = false;
+              if (printess.lockCoverInside()) {
+                if (pageNo === 2 || pageNo === spreads.length * 2 - 3) {
+                  disable = true
+                }
+              }
+              ul.appendChild(getPaginationItem(printess, pageNo, spread, page, isActive, true, disable));
             }
 
             lastPos = pos;
           }
         }
 
-        const next = getPaginationItem(printess, "next");
-        if (info && info.isLast) {
-          next.classList.add("disabled");
+        if (printess.stepHeaderDisplay() !== "big page bar") {
+          const next = getPaginationItem(printess, "next");
+          if (info && info.isLast) {
+            next.classList.add("disabled");
+          }
+          ul.appendChild(next);
         }
-        ul.appendChild(next);
       }
 
+
       pages.appendChild(ul);
+
+      if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "big page bar") {
+        const button = document.createElement("button");
+        button.className = "btn btn-primary ms-2";
+        const icon = printess.getIcon("shopping-cart");
+        icon.style.width = "25px";
+        icon.style.height = "25px";
+
+        button.onclick = () => addToBasket(printess);
+
+        button.appendChild(icon);
+        pages.appendChild(button);
+      }
     }
   }
 
@@ -2889,7 +3154,7 @@ declare const bootstrap: any;
    * My Images List
    */
 
-  function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExternalProperty, images?: Array<iExternalImage>, imagesContainer?: HTMLDivElement): HTMLElement {
+  function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExternalProperty, images?: Array<iExternalImage>, imagesContainer?: HTMLDivElement, showSearchIcon: boolean = true): HTMLElement {
     const container = imagesContainer || document.createElement("div");
     container.id = "image-tab-container";
     container.innerHTML = "";
@@ -2927,101 +3192,239 @@ declare const bootstrap: any;
       if (!forMobile) container.appendChild(twoButtons);
     }
 
-    for (const im of images) {
-      const thumb = document.createElement("div");
-      thumb.className = "big";
-      thumb.draggable = true;
-      thumb.ondragstart = (ev: DragEvent) => {
-        if (p?.kind === "image-id") {
-          ev.preventDefault();
-        }
-        ev.dataTransfer?.setData('text/plain', `${im.id}`)
-      };
-      thumb.style.backgroundImage = im.thumbCssUrl;
-      thumb.style.position = "relative";
-      thumb.style.width = "91px";
-      thumb.style.height = "91px";
-      if (im.inUse) {
-        const chk = printess.getIcon("check-square");
-        chk.classList.add("image-inuse-checker");
-        thumb.appendChild(chk);
-      } else {
-        const cls = document.createElement("div");
-        cls.classList.add("delete-btn-container");
-        const icon = printess.getIcon("trash");
-        icon.classList.add("delete-btn");
-        icon.onclick = (e) => {
-          e.stopImmediatePropagation();
-          imageList.removeChild(thumb);
-          printess.deleteImages([im]);
-        }
-        cls.appendChild(icon);
-        if (forMobile) cls.style.display = "block";
-        if (!p || p?.imageMeta?.canUpload) thumb.appendChild(cls);
-      }
-      //  thumb.style.opacity = im.inUse ? "0.5" : "1.0";
-
-      if (p) {
-        if (im.id === p.value) {
-          thumb.style.border = "2px solid var(--bs-primary)";
-          thumb.style.outline = "3px solid var(--bs-primary)";
-        }
-        thumb.onclick = async () => {
-          const scaleHints = await printess.setProperty(p.id, im.id);
-          p.value = im.id;
-          if (scaleHints && p.imageMeta) {
-            p.imageMeta.scaleHints = scaleHints;
-            p.imageMeta.scale = scaleHints.scale;
-            p.imageMeta.thumbCssUrl = im.thumbCssUrl;
-            p.imageMeta.thumbUrl = im.thumbUrl;
-            p.imageMeta.canScale = p.value !== p.validation?.defaultValue;
-          }
-          if (forMobile) {
-
-            const mobileButtonsContainer = document.querySelector(".mobile-buttons-container");
-            if (mobileButtonsContainer) {
-              mobileButtonsContainer.innerHTML = "";
-              getMobileButtons(printess, <HTMLDivElement>mobileButtonsContainer, p.id, true);
-            }
-
-            /* const mobileButtonDiv = document.getElementById(p.id + ":");
-            if (mobileButtonDiv) {
-              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
-            }
-            const mobileButtonDivScale = document.getElementById(p.id + ":image-scale");
-            if (mobileButtonDivScale) {
-              drawButtonContent(printess, <HTMLDivElement>mobileButtonDivScale, [p]);
-            } */
-
-            const newImages = printess.getImages(p?.id);
-            renderMyImagesTab(printess, forMobile, p, newImages, container);
-
-            const imageListFullscreen = document.querySelector(".image-list-fullscreen.show-image-list");
-            imageListFullscreen?.classList.remove("show-image-list");
-            imageListFullscreen?.classList.add("hide-image-list");
-
-          } else {
-            const propsDiv = document.getElementById("tabs-panel-" + p.id);
-            if (propsDiv) {
-              propsDiv.replaceWith(getPropertyControl(printess, p));
-            }
-          }
-
-          // validate(printess, p);
-        }
-      }
-
-      imageList.appendChild(thumb);
+    if (printess.showSearchBar()) {
+      container.appendChild(getSearchBar(printess, p, container, forMobile, showSearchIcon));
     }
 
-    container.appendChild(imageList);
+    const imageGroups = printess.getImageGroups(p?.id);
+
+    if (imageGroups.length > 1) {
+      const accordion = document.createElement("div");
+      accordion.className = "accordion mb-3";
+      accordion.id = "accordion_" + p?.id;
+
+      imageGroups.forEach(group => {
+        if (images?.filter(i => i.group === group).length) {
+          const card = document.createElement("div");
+          card.className = "accordion-item";
+
+          const title = document.createElement("h2");
+          title.className = "accordion-header";
+          title.id = "heading-" + group.replace(" ", "");
+          const button = document.createElement("button");
+          button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
+          button.setAttribute("data-bs-toggle", "collapse");
+          button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
+          button.setAttribute("aria-expanded", "true");
+          button.setAttribute("aria-controls", "collapse-" + group.replace(" ", ""))
+          button.textContent = group === "Buyer Upload" ? printess.gl("ui.imagesTab") : printess.gl(group);
+          button.onclick = () => uih_activeImageAccordion = group;
+
+          const collapse = document.createElement("div");
+          collapse.className = `accordion-collapse collapse ${group === uih_activeImageAccordion ? "show" : ""}`;
+          collapse.setAttribute("aria-labelledby", "heading-" + group.replace(" ", ""));
+          collapse.setAttribute("data-bs-parent", "#accordion_" + p?.id);
+          collapse.id = "collapse-" + group.replace(" ", "");
+          const body = document.createElement("div");
+          body.className = "accordion-body";
+          const groupList = document.createElement("div");
+          groupList.classList.add("image-list");
+
+          for (const im of images?.filter(i => i.group === group)) {
+            groupList.appendChild(getImageThumb(printess, p, im, container, groupList, forMobile));
+          }
+
+          title.appendChild(button);
+          body.appendChild(groupList);
+          collapse.appendChild(body);
+          card.appendChild(title);
+          card.appendChild(collapse);
+          accordion.appendChild(card);
+        }
+      });
+
+      container.appendChild(accordion);
+
+    } else {
+
+      for (const im of images) {
+        imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
+      }
+
+      container.appendChild(imageList);
+    }
+
     if (!forMobile && images.length > 0 && p?.kind !== "image-id") container.appendChild(dragDropHint);
 
     return container;
   }
 
+  // get image thumb for image preview
+  function getImageThumb(printess: iPrintessApi, p: iExternalProperty | undefined, im: iExternalImage, container: HTMLDivElement, imageList: HTMLDivElement, forMobile: boolean): HTMLElement {
+    const thumb = document.createElement("div");
+    thumb.className = "big";
+    thumb.draggable = true;
+    thumb.ondragstart = (ev: DragEvent) => {
+      if (p?.kind === "image-id") {
+        ev.preventDefault();
+      }
+      ev.dataTransfer?.setData('text/plain', `${im.id}`)
+    };
+    thumb.style.backgroundImage = im.thumbCssUrl;
+    thumb.style.position = "relative";
+    thumb.style.width = "91px";
+    thumb.style.height = "91px";
+    if (im.inUse) {
+      const chk = printess.getIcon("check-square");
+      chk.classList.add("image-inuse-checker");
+      thumb.appendChild(chk);
+    } else {
+      const cls = document.createElement("div");
+      cls.classList.add("delete-btn-container");
+      const icon = printess.getIcon("trash");
+      icon.classList.add("delete-btn");
+      icon.onclick = (e) => {
+        e.stopImmediatePropagation();
+        imageList.removeChild(thumb);
+        printess.deleteImages([im]);
+      }
+      cls.appendChild(icon);
+      if (forMobile) cls.style.display = "block";
+      if (!p || p?.imageMeta?.canUpload) thumb.appendChild(cls);
+    }
+    //  thumb.style.opacity = im.inUse ? "0.5" : "1.0";
+
+    if (p) {
+      if (im.id === p.value) {
+        thumb.style.border = "2px solid var(--bs-primary)";
+        thumb.style.outline = "3px solid var(--bs-primary)";
+      }
+      thumb.onclick = async () => {
+        const scaleHints = await printess.setProperty(p.id, im.id);
+        p.value = im.id;
+        if (scaleHints && p.imageMeta) {
+          p.imageMeta.scaleHints = scaleHints;
+          p.imageMeta.scale = scaleHints.scale;
+          p.imageMeta.thumbCssUrl = im.thumbCssUrl;
+          p.imageMeta.thumbUrl = im.thumbUrl;
+          p.imageMeta.canScale = p.value !== p.validation?.defaultValue;
+        }
+        if (forMobile) {
+
+          const mobileButtonsContainer = document.querySelector(".mobile-buttons-container");
+          if (mobileButtonsContainer) {
+            mobileButtonsContainer.innerHTML = "";
+            getMobileButtons(printess, <HTMLDivElement>mobileButtonsContainer, p.id, true);
+          }
+
+          /* const mobileButtonDiv = document.getElementById(p.id + ":");
+          if (mobileButtonDiv) {
+            drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+          }
+          const mobileButtonDivScale = document.getElementById(p.id + ":image-scale");
+          if (mobileButtonDivScale) {
+            drawButtonContent(printess, <HTMLDivElement>mobileButtonDivScale, [p]);
+          } */
+
+          const newImages = printess.getImages(p?.id);
+          renderMyImagesTab(printess, forMobile, p, newImages, container);
+
+          const imageListFullscreen = document.querySelector(".image-list-fullscreen.show-image-list");
+          imageListFullscreen?.classList.remove("show-image-list");
+          imageListFullscreen?.classList.add("hide-image-list");
+
+        } else {
+          const propsDiv = document.getElementById("tabs-panel-" + p.id);
+          if (propsDiv) {
+            propsDiv.replaceWith(getPropertyControl(printess, p));
+          }
+        }
+
+        // validate(printess, p);
+      }
+    }
+    return thumb;
+  }
+
+  // get Search Bar for images
+  function getSearchBar(printess: iPrintessApi, p: iExternalProperty | undefined, container: HTMLDivElement, forMobile: boolean, showSearchIcon: boolean): HTMLElement {
+    const searchWrapper = document.createElement("div");
+    searchWrapper.className = "d-flex mb-3 position-relative";
+    const searchInput = document.createElement("input");
+    searchInput.type = "search";
+    searchInput.className = "form-control";
+    searchInput.id = "search-input";
+    searchInput.placeholder = printess.gl("ui.search");
+    const searchBtn = document.createElement("button");
+    searchBtn.className = showSearchIcon ? "btn btn-primary" : "btn btn-secondary";
+    searchBtn.id = "search-btn";
+    let searchIcon = showSearchIcon ? printess.getIcon("search-light") : printess.getIcon("close");
+    searchIcon.style.height = "20px";
+
+    // show list of matching values
+    searchInput.oninput = () => {
+      // set close icon to search icon when typing
+      searchBtn.className = "btn btn-primary";
+      searchBtn.innerHTML = "";
+      searchIcon = printess.getIcon("search-light");
+      searchIcon.style.height = "20px";
+      searchBtn.appendChild(searchIcon);
+
+      const searchValue = <HTMLInputElement>document.getElementById("search-input");
+      const list = document.getElementById("search-list") || document.createElement("ul");
+      list.className = "list-group position-absolute";
+      list.id = "search-list";
+      list.style.top = "38px";
+      list.style.left = "0";
+      list.style.width = "100%";
+      list.style.zIndex = "10";
+      list.style.boxShadow = "0 2px 5px 0 rgba(0,0,0,.2),0 2px 10px 0 rgba(0,0,0,.1)";
+      list.innerHTML = "";
+
+      printess.getImageGroups(p?.id).filter(g => g !== "Buyer Upload" && g.toLowerCase().includes(searchValue.value.toLowerCase())).forEach(group => {
+        const images = printess.getImages(p?.id);
+        if (images?.filter(i => i.group === group).length) {
+          const listItem = document.createElement("li");
+          listItem.className = "list-group-item search-list-item";
+          listItem.textContent = group;
+          listItem.onclick = () => {
+            const images = printess.getImages(p?.id);
+            const newImages = images?.filter(i => i.group === group);
+            renderMyImagesTab(printess, forMobile, p, newImages, container, false);
+          }
+          list.appendChild(listItem);
+        }
+      })
+
+      if (searchValue.value.trim() === "") {
+        list.innerHTML = "";
+      }
+
+      searchWrapper.appendChild(list);
+    }
+
+    // filter groups according to search string
+    searchBtn.onclick = () => {
+      const images = printess.getImages(p?.id);
+      const searchValue = <HTMLInputElement>document.getElementById("search-input");
+      const newImages = images?.filter(i => i.group.toLowerCase().includes(searchValue.value.toLocaleLowerCase()));
+
+      if (searchValue.value.trim() === "") {
+        renderMyImagesTab(printess, forMobile, p, newImages, container, true);
+      } else {
+        renderMyImagesTab(printess, forMobile, p, newImages, container, false);
+      }
+    }
+
+    searchBtn.appendChild(searchIcon);
+    searchWrapper.appendChild(searchInput);
+    searchWrapper.appendChild(searchBtn);
+
+    return searchWrapper;
+  }
+
   // Images on Mobile
-  function renderImageControlButtons(printess: iPrintessApi, images: iExternalImage[], p?: iExternalProperty,): HTMLElement {
+  function renderImageControlButtons(printess: iPrintessApi, images: iExternalImage[], p?: iExternalProperty): HTMLElement {
     const container = document.createElement("div");
     container.id = "image-control-buttons";
     container.style.display = "grid";
@@ -3402,8 +3805,24 @@ declare const bootstrap: any;
     }
     submitButton.onclick = () => {
       if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
-        alert(printess.gl("ui.eventText"));
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }])
+        //alert(printess.gl("ui.eventText"));
         return
+      }
+      if (p.tableMeta?.tableType === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
+        if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }])
+          return
+        } else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }])
+          return
+        } else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }])
+          return
+        } else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }])
+          return
+        }
       }
       const data = JSON.parse(p.value.toString()) || [];
       if (tableEditRowIndex === -1) {
@@ -3693,8 +4112,22 @@ declare const bootstrap: any;
       renderMobileControlHost(printess, { state: "add" })
     }
 
+    // translate change Layout button text
+    const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
+    if (layoutsButton) {
+      layoutsButton.textContent = printess.gl("ui.changeLayout");
+    }
+
+    // add editable frames hint to session storage if frame has been selected
+    if (printess.hasSelection()) {
+      sessionStorage.setItem("editableFrames", "hint closed");
+      const framePulse = document.getElementById("frame-pulse");
+      if (framePulse) framePulse.parentElement?.removeChild(framePulse);
+    }
+
     // render mobile ui hints
     renderUiButtonHints(printess, mobileUi, state, true);
+    renderEditableFramesHint(printess);
 
     // attach/remove shadow pulse animation to/from "change layout" button
     if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
@@ -3747,6 +4180,32 @@ declare const bootstrap: any;
         sessionStorage.setItem("changeLayout", "hint closed");
         layoutsButton.onclick = null;
       }
+    }
+  }
+
+  // render ui hint for editable frames
+  function renderEditableFramesHint(printess: iPrintessApi): void {
+
+    if (printess.uiHintsDisplay().includes("editableFrames") && !sessionStorage.getItem("editableFrames")) {
+      window.setTimeout(() => {
+        printess.getFrames().then((frame) => {
+          console.log(frame);
+          const framePulse = document.getElementById("frame-pulse");
+          if (framePulse) framePulse.parentElement?.removeChild(framePulse);
+          const pulseDiv = document.createElement("div") //printess.getIcon("bullseye-pointer-solid");
+          pulseDiv.classList.add("frame-hint-pulse");
+          pulseDiv.id = "frame-pulse";
+          pulseDiv.style.position = "fixed";
+          pulseDiv.style.left = (frame.left + (frame.width / 2)).toFixed(0) + "px";
+          pulseDiv.style.top = (frame.top + (frame.height / 2) + uih_lastPrintessTop).toFixed(0) + "px";
+
+          const pointer = printess.getIcon("hand-pointer-light");
+          pointer.classList.add("frame-hint-pointer");
+
+          pulseDiv.appendChild(pointer);
+          document.body.appendChild(pulseDiv);
+        })
+      }, 2000);
     }
   }
 
@@ -4085,14 +4544,7 @@ declare const bootstrap: any;
 
         btn.onclick = () => {
           if (callback) {
-            if (printess.isInDesignerMode()) {
-              // do not save in designer mode.
-              callback("");
-            } else {
-              printess.save().then((token) => {
-                callback(token);
-              })
-            }
+            handleBackButtonCallback(printess, callback);
           }
         }
 
@@ -4310,14 +4762,7 @@ declare const bootstrap: any;
         task: function () {
           const callback = printess.getBackButtonCallback();
           if (callback) {
-            if (printess.isInDesignerMode()) {
-              // do not save in designer mode.
-              callback("");
-            } else {
-              printess.save().then((token) => {
-                callback(token);
-              })
-            }
+            handleBackButtonCallback(printess, callback);
           }
         }
       }, {
@@ -4500,6 +4945,8 @@ declare const bootstrap: any;
         const mobileUiHeight = (mobileButtonBarHeight + controlHostHeight + 2); // +2 = border-top
         let printessHeight = viewPortHeight - mobileUiHeight;
 
+        //console.warn("viewPortHeight=" + viewPortHeight + "  viewPortTopOffset=" + viewPortTopOffset + "   printessHeight=" + printessHeight + "   mobileUiHeight=" + mobileUiHeight)
+
         let printessTop: number = viewPortTopOffset;
 
         const isInEddiMode = printess.isSoftwareKeyBoardExpanded() || (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "selection-text-style");
@@ -4533,6 +4980,8 @@ declare const bootstrap: any;
             printessHeight -= mobilePageBarHeight;
           }
         }
+
+        //console.warn("showToolBar=" + showToolBar + "  showPageBar=" + showPageBar + "   printessTop=" + printessTop)
 
         const activeFFId = getActiveFormFieldId();
         const focusSelection: boolean = printess.getZoomMode() === "frame";
@@ -4658,7 +5107,7 @@ declare const bootstrap: any;
 
     if (hasButtons && (!autoSelect || autoSelectHasMeta === true)) {
 
-      for (const b of buttons) {
+      for (const b of buttons.filter(b => !b.hide)) {
         const buttonDiv = document.createElement("div");
         if (b.newState.tableRowIndex !== undefined) {
           buttonDiv.id = (b.newState.externalProperty?.id ?? "") + "$$$" + b.newState.tableRowIndex;
@@ -4805,7 +5254,7 @@ declare const bootstrap: any;
       centerMobileButton(buttonDiv);
       if (p?.tableMeta && (rowIndex ?? -1) >= 0) {
         try {
-          const data: Array<Record<string, any>> = JSON.parse(p.value.toString());
+          const data: Array<Record<string, any>> = JSON.parse(p.value.toString())
           tableEditRow = data[rowIndex];
           tableEditRowIndex = rowIndex;
 
@@ -5001,6 +5450,7 @@ declare const bootstrap: any;
         return "mobile-control-xl"
       case "single-line-text":
         if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
+          //console.log(window.navigator.appVersion);
           return "mobile-control-sm"
         } else {
           return "mobile-control-sm"

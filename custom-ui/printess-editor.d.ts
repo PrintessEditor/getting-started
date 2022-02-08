@@ -680,7 +680,7 @@ export interface iPrintessApi {
   /**
    * Returns if buyer ui should display option for custom colors in color dropdown
    */
-  enabelCustomColors(): boolean
+  enableCustomColors(): boolean
 
   /**
    * Returns if buyer ui should display undo and redo buttons
@@ -1299,6 +1299,8 @@ export interface TemplateEditables {
 
 export type iconName =
   "image"
+  | "image-solid"
+  | "image-regular"
   | "portrait"
   | "bezier"
   | "text"
