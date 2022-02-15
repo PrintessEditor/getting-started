@@ -75,7 +75,7 @@ export interface printessAttachParameters {
   /**
    * Enables offensive word check for all editable text frames 
    */
-  offensiveCheckAll?: false,
+  offensiveCheckAll?: boolean,
 
   /**
   * Disables thumbnail-creation when pressing the add to basket button.
@@ -83,7 +83,7 @@ export interface printessAttachParameters {
   * Thumbnails can independendtly created with:
   * `const url = await printess.renderFirstPageImage("thumbnail.png");`
   */
-  noBasketThumbnail?: false,
+  noBasketThumbnail?: boolean,
 
   /**
    * Optional: set frame warnings via api (can be set in template-presets as well) 
@@ -163,6 +163,11 @@ export interface printessAttachParameters {
    * Is called when the page navigation has changed (and needs redraw) but selection has stayed the same.
    */
   refreshPaginationCallback?: refreshPaginationCallback;
+
+  /**
+   * Is called when the page thumbnail has been updated to allow buyer-ui to refresh a particular thumbnail only
+   */
+  updatePageThumbnailCallback?: updatePageThumbnailCallback;
 
   /**
    * Provide a callback function which is called when the buyer presses the [Add to Basket] button
@@ -288,6 +293,14 @@ export interface iPrintessApi {
   selectSpread(spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
 
   /**
+   * Selects a document and a spread and brings it into view. spread-index is zero based and even a facing page counts as a single spread. You can pass the focus area in the `part`parameter.
+   * @param docId ID of document to select  
+   * @param spreadIndex zero-based 
+   * @param part  "entire" | "left-page" | "right-page"
+   */
+  selectDocumentAndSpread(docId: string, spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
+
+  /**
    * Moves Printess focus to next page if available. Focus on single pages not spreads.
    */
   nextPage(): Promise<void>;
@@ -315,9 +328,14 @@ export interface iPrintessApi {
   pageInfoSync(): { current: number, max: number, isFirst: boolean, isLast: boolean, spreadId: string }
 
   /**
-   * Returns information about all spreads of the displayed document as an Array of `iExternalSpreadInfo` 
+   * Returns information about all spreads of the displayed document  
    */
   getAllSpreads(): Array<iExternalSpreadInfo>;
+
+  /**
+   * Returns information about all spreads of ALL buyer-editable documents
+   */
+  getAllDocsAndSpreads(): Array<iExternalDocAndSpreadInfo>;
 
   /**
    * Returns total number of spreads (not pages)
@@ -509,8 +527,7 @@ export interface iPrintessApi {
       invert?: number,
       hueRotate?: number,
       contrast?: number,
-      vivid?: number,
-      invert?: number,
+      vivid?: number
     }): Promise<void>;
 
   /**
@@ -668,9 +685,15 @@ export interface iPrintessApi {
   uiHintsDisplay(): Array<"layoutSnippets" | "groupSnippets" | "editableFrames">;
 
   /**
+   * @deprecated
    * Returns if buyer ui should display the page navigation
    */
   showPageNavigation(): boolean;
+
+  /**
+   * Returns if buyer ui should display the page navigation as icons for all docs or just numbers for current doc
+   */
+  pageNavigationDisplay(): "hide" | "numbers" | "icons";
 
   /**
    * Returns if buyer ui should display the search bar for searching through images
@@ -881,7 +904,7 @@ export interface iPrintessApi {
   /**
    * Returns the template settings for display of steps header on desktop and mobile
    */
-  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list" | "tabs list" | "big page bar"
+  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list" | "tabs list"  
 
   /**
    * Displays a grey overlay on printess editor
@@ -1019,7 +1042,33 @@ export interface iExternalSpreadInfo {
   * Number of pages in this spread. Will be 1 or 2.
   */
   pages: number;
+  /**
+   * Array of page thumbnails. Url might be empty if not available 
+   */
+  thumbnails: Array<{ url: string, bgColor: string, pageId: string }>
 }
+
+
+export interface iExternalDocAndSpreadInfo {
+  /**
+   * The ID of the document
+   */
+  docId: string,
+  /**
+   * Information about all spreads of this document
+   */
+  spreads: Array<iExternalSpreadInfo>,
+  /**
+   * The amount of spreads (not pages!) in this document
+   */
+  spreadCount: number,
+  /**
+   * Information if the document has facing pages. If `true` first and last spread has 1 page all other spreads have 2 pages.
+   */
+  facingPages: boolean
+}
+
+
 export interface iExternalSpread {
   groupSnippets: ReadonlyArray<iExternalSnippet>;
   layoutSnippets: ReadonlyArray<iExternalSnippet>;
@@ -1142,7 +1191,7 @@ export interface iExternalimageMeta {
   */
   canScale: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate" | "invert">;
-  filterTags: ReadonlyArray<string>;
+  filterTags: ReadonlyArray<string> | Array<string>;
 }
 export interface iExternalImageScaleHints {
   min: number;
@@ -1191,6 +1240,7 @@ export declare type externalSelectionChangeCallback = (properties: Array<iExtern
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind }>) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
+export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
 
 export interface iExternalImage {

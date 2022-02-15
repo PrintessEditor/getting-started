@@ -30,8 +30,8 @@
       "eventDay": "Please enter a valid number for the event",
       "birthday": "Birthday",
       "buttonAdd": "Add",
-      "buttonBack": "Exit",
-      "buttonBackIcon": "",
+      "buttonBack": "",
+      "buttonBackIcon": "close",
       "buttonOk": "OK",
       "buttonYes": "Yes",
       "buttonNo": "No",
@@ -109,7 +109,9 @@
       "mirrorY":    "Mirror Vertically",
       "group":      "Group Frames",
       "ungroup":    "Ungroup Frames",
-      "delete":     "Delete"
+      "delete":     "Delete",
+
+      "pages": "Pages"
 
 
    
@@ -182,8 +184,8 @@
       "eventDay": "Bitte geben Sie eine gültige Zahl für das Ereignis ein",
       "birthday": "Geburtstag",
       "buttonAdd": "Hinzufügen",
-      "buttonBack": "Beenden",
-      "buttonBackIcon": "",
+      "buttonBack": "",
+      "buttonBackIcon": "close",
       "buttonOk": "OK",
       "buttonYes": "Ja",
       "buttonNo": "Nein",
@@ -261,7 +263,9 @@
       "mirrorY": "Vertikal spiegeln",
       "group": " Rahmen gruppieren",
       "ungroup": "Gruppierung der Rahmen aufheben",
-      "delete": "Löschen"
+      "delete": "Löschen",
+
+      "pages": "Seiten"
 
     },
     "errors": {
@@ -331,8 +335,8 @@
       "eventDay": "Por favor, introduzca un número válido para el evento",
       "birthday": "Cumpleaños",
       "buttonAdd": "Añadir",
-      "buttonBack": "Salir",
-      "buttonBackIcon": "",
+      "buttonBack": "",
+      "buttonBackIcon": "close",
       "buttonOk": "ACEPTAR",
       "buttonYes": "Sí",
       "buttonNo": "No",
@@ -410,7 +414,9 @@
       "mirrorY":    "Reflejar verticalmente",
       "group":      "Agrupar marcos",
       "ungroup":    "Desagrupar cuadros",
-      "delete":     "Borrar"
+      "delete":     "Borrar",
+
+      "pages": "Páginas"
     },
     "errors": {
       "imageResolutionLowTitle": "Vaya!\nParece que tu foto es demasiado pequeña ...",
@@ -479,8 +485,8 @@
       "eventDay": "Kirjoita tapahtuman kelvollinen numero",
       "birthday": "Syntymäpäivä",
       "buttonAdd": "Lisää",
-      "buttonBack": "Poistu",
-      "buttonBackIcon": "",
+      "buttonBack": "",
+      "buttonBackIcon": "close",
       "buttonOk": "OK",
       "buttonYes": "Kyllä",
       "buttonNo": "Ei",
@@ -558,7 +564,9 @@
       "mirrorY":    "Peilaa pystysuoraan",
       "group":      "Ryhmäkehykset",
       "ungroup":    "Ryhmittämättömät kehykset",
-      "delete":     "Poista"
+      "delete":     "Poista",
+
+      "pages": "Sivut"
     },
     "errors": {
       "imageResolutionLowTitle": "Hups!\nKuvasi näyttää olevan liian pieni...",
@@ -627,8 +635,8 @@
       "eventDay": "Veuillez entrer un numéro valide pour l'événement",
       "birthday": "Anniversaire",
       "buttonAdd": "Ajouter",
-      "buttonBack": "Quitter",
-      "buttonBackIcon": "",
+      "buttonBack": "",
+      "buttonBackIcon": "close",
       "buttonOk": "OK",
       "buttonYes": "Oui",
       "buttonNo": "Non",
@@ -706,7 +714,9 @@
       "mirrorY":    "Miroir vertical",
       "group":      "Grouper les images",
       "ungroup":    "Dégrouper les cadres",
-      "delete":     "Supprimer"
+      "delete":     "Supprimer",
+
+      "pages": "Pages"
     },
     "errors": {
       "imageResolutionLowTitle": "Oups!\nOn dirait que votre image est trop petite...",
@@ -775,8 +785,8 @@
       "eventDay": "Пожалуйста, введите действительный номер для события",
       "birthday": "День рождения",
       "buttonAdd": "Добавить",
-      "buttonBack": "Выход",
-      "buttonBackIcon": "",
+      "buttonBack": "",
+      "buttonBackIcon": "close",
       "buttonOk": "OK",
       "buttonYes": "Да",
       "buttonNo": "Нет",
@@ -854,7 +864,9 @@
       "mirrorY":    "Зеркально по вертикали",
       "group":      "Группировать кадры",
       "ungroup":    "Разгруппировать кадры",
-      "delete":     "Удалить"
+      "delete":     "Удалить",
+
+      "pages": "Страницы"
     },
     "errors": {
       "imageResolutionLowTitle": "Упс!\nПохоже, что ваше изображение слишком маленькое...",
@@ -923,8 +935,8 @@
       "eventDay": "Ange ett giltigt nummer för evenemanget",
       "birthday": "Födelsedag",
       "buttonAdd": "Lägg till",
-      "buttonBack": "Avsluta",
-      "buttonBackIcon": "",
+      "buttonBack": "",
+      "buttonBackIcon": "close",
       "buttonOk": "OK",
       "buttonYes": "Ja",
       "buttonNo": "Nej",
@@ -1002,7 +1014,9 @@
       "mirrorY":    "Spegla vertikalt",
       "group":      "Gruppera ramar",
       "ungroup":    "Avlägsna gruppering av ramar",
-      "delete":     "Ta bort"
+      "delete":     "Ta bort",
+
+      "pages": "Sidor"
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nDet verkar som om bilden är för liten...",

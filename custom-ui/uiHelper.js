@@ -16,6 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         renderDesktopUi: renderDesktopUi,
         refreshUndoRedoState: refreshUndoRedoState,
         refreshPagination: refreshPagination,
+        updatePageThumbnail: updatePageThumbnail,
         viewPortScroll: viewPortScroll,
         viewPortResize: viewPortResize,
         viewPortScrollInIFrame: viewPortScrollInIFrame,
@@ -142,20 +143,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function refreshPagination(printess) {
-        const spreads = printess.getAllSpreads();
-        const info = printess.pageInfoSync();
         if (uih_currentRender === "mobile") {
-            renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
+            renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
             renderMobileNavBar(printess);
         }
         else {
-            renderPageNavigation(printess, spreads, info);
+            renderPageNavigation(printess);
         }
     }
     function _viewPortScroll(printess, _what) {
         if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
             uih_viewportOffsetTop = window.visualViewport.offsetTop;
-            const keyboardExpanded = uih_viewportHeight - window.visualViewport.height > 250;
             uih_viewportHeight = window.visualViewport.height;
             uih_viewportWidth = window.visualViewport.width;
             const printessDiv = document.getElementById("desktop-printess-container");
@@ -174,7 +172,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         }
                         else {
                             const height = desktopGrid.offsetHeight || window.innerHeight;
-                            const calcHeight = "calc(" + height + "px - 50px - var(--editor-margin-top) - var(--editor-margin-bottom))";
+                            const calcHeight = "calc(" + height + "px - var(--editor-pagebar-height) - var(--editor-margin-top) - var(--editor-margin-bottom))";
                             printessDiv.style.height = calcHeight;
                             printess.resizePrintess();
                         }
@@ -226,11 +224,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (!container || !printessDiv) {
             throw new Error("#desktop-properties or #desktop-printess-container not found, please add to html.");
         }
-        if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "big page bar") {
-            container.classList.add("tabs");
+        if (printess.stepHeaderDisplay() === "tabs list" || printess.pageNavigationDisplay() === "icons") {
+            container.classList.add("move-down");
         }
         else {
-            container.classList.remove("tabs");
+            container.classList.remove("move-down");
         }
         printessDiv.style.position = "relative";
         printessDiv.style.top = "";
@@ -242,10 +240,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const nav = getMobileNavbarDiv();
         if (nav)
             (_a = nav.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(nav);
-        const spreads = printess.getAllSpreads();
-        const info = printess.pageInfoSync();
-        renderPageNavigation(printess, spreads, info);
-        if (printess.stepHeaderDisplay() !== "tabs list" && printess.stepHeaderDisplay() !== "big page bar") {
+        renderPageNavigation(printess);
+        if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons") {
             if (printess.hasSteps()) {
                 container.appendChild(getDesktopStepsUi(printess));
             }
@@ -629,13 +625,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getDesktopTitle(printess) {
         const container = document.createElement("div");
-        const hr = document.createElement("hr");
-        container.appendChild(hr);
+        const forCornerTools = printess.pageNavigationDisplay() === "icons";
         const inner = document.createElement("div");
         inner.className = "desktop-title-bar mb-2";
-        const h2 = document.createElement("h2");
-        h2.innerText = printess.gl(printess.getTemplateTitle());
-        inner.appendChild(h2);
+        if (!forCornerTools) {
+            const h2 = document.createElement("h2");
+            h2.innerText = printess.gl(printess.getTemplateTitle());
+            inner.appendChild(h2);
+        }
         if (printess.hasPreviewBackButton()) {
             const btn = document.createElement("button");
             btn.className = "btn btn-outline-primary me-1";
@@ -677,7 +674,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             inner.appendChild(basketBtn);
         }
         container.appendChild(inner);
-        container.appendChild(hr);
+        if (!forCornerTools) {
+            const hr = document.createElement("hr");
+            container.appendChild(hr);
+        }
         return container;
     }
     function getValidationOverlay(printess, errors) {
@@ -2390,6 +2390,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         };
         return li;
     }
+    function updatePageThumbnail(spreadId, pageId, url) {
+        const thumb = document.getElementById("thumb_" + spreadId + "_" + pageId);
+        if (thumb) {
+            thumb.style.backgroundImage = 'url("' + url + '")';
+        }
+    }
     function refreshUndoRedoState(printess) {
         const btnUndo = document.querySelector(".undo-button");
         if (btnUndo) {
@@ -2410,80 +2416,112 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function renderPageNavigation(printess, spreads, info, container, large = false, forMobile = false) {
+    function getBackUndoMiniBar(printess) {
+        const miniBar = document.createElement("div");
+        const btnBack = document.createElement("button");
+        const cornerTools = printess.pageNavigationDisplay() === "icons";
+        const caption = printess.gl("ui.buttonBack");
+        btnBack.className = "btn";
+        btnBack.classList.add("btn-outline-secondary");
+        if (cornerTools) {
+            btnBack.classList.add("btn-sm");
+        }
+        else {
+            btnBack.innerText = caption;
+        }
+        const icon = cornerTools ? "close" : printess.gl("ui.buttonBackIcon");
+        if (icon) {
+            const svg = printess.getIcon(icon);
+            if (!cornerTools) {
+                svg.style.height = "24px";
+                svg.style.float = "left";
+                svg.style.marginRight = caption ? "10px" : "0px";
+            }
+            btnBack.appendChild(svg);
+        }
+        if (!printess.getBackButtonCallback()) {
+            btnBack.classList.add("disabled");
+        }
+        btnBack.onclick = () => {
+            const callback = printess.getBackButtonCallback();
+            if (callback) {
+                handleBackButtonCallback(printess, callback);
+            }
+            else {
+                alert(printess.gl("ui.backButtonCallback"));
+            }
+        };
+        if (!cornerTools)
+            miniBar.appendChild(btnBack);
+        if (printess.showUndoRedo() || cornerTools) {
+            const btnUndo = document.createElement("button");
+            btnUndo.className = "btn btn-sm btn-outline-secondary undo-button";
+            if (printess.undoCount() === 0) {
+                btnUndo.disabled = true;
+            }
+            const icoUndo = printess.getIcon("undo-arrow");
+            icoUndo.classList.add("icon");
+            btnUndo.onclick = () => {
+                printess.undo();
+            };
+            btnUndo.appendChild(icoUndo);
+            miniBar.appendChild(btnUndo);
+            const btnRedo = document.createElement("button");
+            btnRedo.className = "btn btn-sm btn-outline-secondary me-2 redo-button";
+            const iconRedo = printess.getIcon("redo-arrow");
+            iconRedo.classList.add("icon");
+            if (printess.redoCount() === 0) {
+                btnRedo.disabled = true;
+            }
+            btnRedo.onclick = () => {
+                printess.redo();
+            };
+            btnRedo.appendChild(iconRedo);
+            miniBar.appendChild(btnRedo);
+        }
+        miniBar.className = "undo-redo-bar";
+        if (cornerTools) {
+            miniBar.appendChild(document.createElement("div"));
+            miniBar.appendChild(btnBack);
+        }
+        return miniBar;
+    }
+    function renderPageNavigation(printess, container, large = false, forMobile = false) {
+        var _a, _b, _c, _d;
+        const spreads = printess.getAllSpreads();
+        const info = printess.pageInfoSync();
+        let lastScrollLeftPos = 0;
         const pages = container || document.querySelector("#desktop-pagebar");
         if (pages) {
-            let pageNo = 0;
+            const scrollContainer = pages.querySelector(".pagination");
+            if (scrollContainer && printess.pageNavigationDisplay() === "icons") {
+                lastScrollLeftPos = scrollContainer.scrollLeft;
+            }
             pages.innerHTML = "";
-            if (!forMobile) {
-                const miniBar = document.createElement("div");
-                const btnBack = document.createElement("button");
-                const caption = printess.gl("ui.buttonBack");
-                btnBack.className = "btn";
-                btnBack.classList.add("btn-outline-secondary");
-                btnBack.innerText = caption;
-                const icon = printess.gl("ui.buttonBackIcon");
-                if (icon) {
-                    const svg = printess.getIcon(icon);
-                    svg.style.height = "24px";
-                    svg.style.float = "left";
-                    svg.style.marginRight = caption ? "10px" : "0px";
-                    btnBack.appendChild(svg);
-                }
-                if (!printess.getBackButtonCallback()) {
-                    btnBack.classList.add("disabled");
-                }
-                btnBack.onclick = () => {
-                    const callback = printess.getBackButtonCallback();
-                    if (callback) {
-                        handleBackButtonCallback(printess, callback);
-                    }
-                    else {
-                        alert(printess.gl("ui.backButtonCallback"));
-                    }
-                };
-                miniBar.appendChild(btnBack);
-                if (printess.showUndoRedo()) {
-                    const btnUndo = document.createElement("button");
-                    btnUndo.className = "btn btn-sm undo-button";
-                    if (printess.undoCount() === 0) {
-                        btnUndo.disabled = true;
-                    }
-                    const icoUndo = printess.getIcon("undo-arrow");
-                    icoUndo.classList.add("icon");
-                    btnUndo.onclick = () => {
-                        printess.undo();
-                    };
-                    btnUndo.appendChild(icoUndo);
-                    miniBar.appendChild(btnUndo);
-                    const btnRedo = document.createElement("button");
-                    btnRedo.className = "btn btn-sm me-2 redo-button";
-                    const iconRedo = printess.getIcon("redo-arrow");
-                    iconRedo.classList.add("icon");
-                    if (printess.redoCount() === 0) {
-                        btnRedo.disabled = true;
-                    }
-                    btnRedo.onclick = () => {
-                        printess.redo();
-                    };
-                    btnRedo.appendChild(iconRedo);
-                    miniBar.appendChild(btnRedo);
-                }
-                miniBar.className = "undo-redo-bar";
-                pages.appendChild(miniBar);
+            if (!forMobile && printess.pageNavigationDisplay() !== "icons") {
+                pages.appendChild(getBackUndoMiniBar(printess));
             }
             const ul = document.createElement("ul");
             ul.className = "pagination";
             if (large) {
                 ul.classList.add("pagination-lg");
             }
-            if (printess.stepHeaderDisplay() === "big page bar" || printess.stepHeaderDisplay() === "tabs list") {
+            if (printess.pageNavigationDisplay() === "icons") {
+                pages.classList.add("big");
+                ul.style.overflowX = "auto";
+                document.documentElement.style.setProperty("--editor-pagebar-height", "122px");
+                document.documentElement.style.setProperty("--editor-margin-top", "20px");
+            }
+            else if (printess.stepHeaderDisplay() === "tabs list") {
                 pages.classList.add("tabs");
                 ul.style.overflowX = "auto";
+                document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
             }
             else {
                 pages.classList.remove("tabs");
+                pages.classList.remove("big");
                 ul.classList.add("justify-content-center");
+                document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
             }
             if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list") {
                 const tabsContainer = document.createElement("div");
@@ -2543,16 +2581,87 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 pages.appendChild(tabsContainer);
             }
-            if (spreads.length > 1 && printess.showPageNavigation()) {
-                if (printess.stepHeaderDisplay() !== "big page bar") {
-                    const prev = getPaginationItem(printess, "previous");
-                    if (info && info.isFirst) {
-                        prev.classList.add("disabled");
+            if (printess.pageNavigationDisplay() === "icons") {
+                const docs = printess.getAllDocsAndSpreads();
+                const pagesContainer = document.createElement("ul");
+                pagesContainer.className = "pages-container";
+                for (const doc of docs) {
+                    const count = doc.spreads.reduce((prev, cur) => prev + cur.pages, 0);
+                    let pageNo = 0;
+                    for (const spread of doc.spreads) {
+                        for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
+                            pageNo++;
+                            const page = pageIndex === 0 ? "left-page" : "right-page";
+                            const isActive = info.spreadId === spread.spreadId && info.current === pageNo;
+                            const disabled = printess.lockCoverInside() && (pageNo === 2 || pageNo === count - 1);
+                            const li = document.createElement("li");
+                            li.className = "big-page-item" + (forMobile ? " mobile" : "");
+                            if (disabled) {
+                                li.style.opacity = "0.5";
+                                li.classList.add("disabled");
+                            }
+                            if (pageIndex === 0) {
+                                if (doc.spreads[doc.spreadCount - 1] === spread) {
+                                    li.classList.add("mr");
+                                }
+                                li.classList.add("ml");
+                            }
+                            if (isActive)
+                                li.classList.add("active");
+                            const p = spread.thumbnails ? (_a = spread.thumbnails[page === "right-page" ? 1 : 0]) !== null && _a !== void 0 ? _a : null : null;
+                            const url = (_b = p === null || p === void 0 ? void 0 : p.url) !== null && _b !== void 0 ? _b : "";
+                            const thumb = document.createElement("div");
+                            thumb.className = "big-page-thumb";
+                            thumb.id = "thumb_" + spread.spreadId + "_" + ((_c = p === null || p === void 0 ? void 0 : p.pageId) !== null && _c !== void 0 ? _c : "");
+                            if (url) {
+                                thumb.style.backgroundImage = "url(" + url + ")";
+                                thumb.style.backgroundColor = (_d = p === null || p === void 0 ? void 0 : p.bgColor) !== null && _d !== void 0 ? _d : "white";
+                            }
+                            if (spread.pages > 1) {
+                                const shadow = document.createElement("div");
+                                if (pageIndex === 0) {
+                                    shadow.classList.add("book-shadow-gradient-left");
+                                    thumb.style.borderRight = "none";
+                                }
+                                else {
+                                    shadow.classList.add("book-shadow-gradient-right");
+                                    thumb.style.borderLeft = "none";
+                                }
+                                thumb.appendChild(shadow);
+                            }
+                            thumb.style.width = (spread.width / spread.pages / spread.height * 72) + "px";
+                            thumb.style.backgroundSize = "cover";
+                            const caption = document.createElement("div");
+                            caption.className = "big-page-caption";
+                            caption.innerText = spread.name ? spread.name : pageNo.toString();
+                            if (forMobile) {
+                                li.appendChild(thumb);
+                                li.appendChild(caption);
+                            }
+                            else {
+                                li.appendChild(caption);
+                                li.appendChild(thumb);
+                            }
+                            li.onclick = () => {
+                                printess.selectDocumentAndSpread(doc.docId, spread.index, page);
+                                document.querySelectorAll(".big-page-item").forEach(pi => pi.classList.remove("active"));
+                                li.classList.add("active");
+                            };
+                            pagesContainer.appendChild(li);
+                        }
                     }
-                    ul.appendChild(prev);
                 }
+                ul.appendChild(pagesContainer);
+            }
+            else if (spreads.length > 1 && printess.pageNavigationDisplay() === "numbers") {
+                const prev = getPaginationItem(printess, "previous");
+                if (info.isFirst) {
+                    prev.classList.add("disabled");
+                }
+                ul.appendChild(prev);
                 const count = spreads.reduce((prev, cur) => prev + cur.pages, 0);
-                const current = (info === null || info === void 0 ? void 0 : info.current) || 1;
+                const current = info.current;
+                let pageNo = 0;
                 let lastPos = "start";
                 for (const spread of spreads) {
                     for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
@@ -2584,7 +2693,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 pos = "current";
                             }
                         }
-                        if (pos === "skip" && printess.stepHeaderDisplay() !== "big page bar") {
+                        if (pos === "skip") {
                             if (lastPos !== "skip") {
                                 ul.appendChild(getPaginationItem(printess, "ellipsis"));
                             }
@@ -2592,7 +2701,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         else {
                             let disable = false;
                             if (printess.lockCoverInside()) {
-                                if (pageNo === 2 || pageNo === spreads.length * 2 - 3) {
+                                if (pageNo === 2 || pageNo === count - 2) {
                                     disable = true;
                                 }
                             }
@@ -2601,16 +2710,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         lastPos = pos;
                     }
                 }
-                if (printess.stepHeaderDisplay() !== "big page bar") {
-                    const next = getPaginationItem(printess, "next");
-                    if (info && info.isLast) {
-                        next.classList.add("disabled");
-                    }
-                    ul.appendChild(next);
+                const next = getPaginationItem(printess, "next");
+                if (info.isLast) {
+                    next.classList.add("disabled");
                 }
+                ul.appendChild(next);
             }
             pages.appendChild(ul);
-            if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "big page bar") {
+            if (printess.pageNavigationDisplay() === "icons") {
+                if (lastScrollLeftPos) {
+                    ul.scrollTo(lastScrollLeftPos, 0);
+                }
+                const active = ul.querySelector(".active");
+                if (active) {
+                    const d = 170;
+                    if (active.offsetLeft - ul.scrollLeft > ul.offsetWidth - d) {
+                        ul.scrollTo(active.offsetLeft - ul.offsetWidth + d, 0);
+                    }
+                    else if (active.offsetLeft - ul.scrollLeft < d) {
+                        ul.scrollTo(active.offsetLeft - d, 0);
+                    }
+                }
+            }
+            if (printess.stepHeaderDisplay() === "tabs list") {
                 const button = document.createElement("button");
                 button.className = "btn btn-primary ms-2";
                 const icon = printess.getIcon("shopping-cart");
@@ -2619,6 +2741,45 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 button.onclick = () => addToBasket(printess);
                 button.appendChild(icon);
                 pages.appendChild(button);
+            }
+            else if (printess.pageNavigationDisplay() === "icons" && !forMobile) {
+                const cornerTools = document.createElement("div");
+                cornerTools.className = "corner-tools";
+                cornerTools.appendChild(getBackUndoMiniBar(printess));
+                const addSpreads = printess.canAddSpreads();
+                const removeSpreads = printess.canRemoveSpreads();
+                if (addSpreads > 0 || removeSpreads > 0) {
+                    const pageButtons = document.createElement("div");
+                    pageButtons.className = "modify-page-buttons";
+                    if (addSpreads > 0) {
+                        const btnAdd = document.createElement("div");
+                        btnAdd.className = "btn btn-sm btn-secondary";
+                        btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
+                        btnAdd.onclick = () => printess.addSpreads();
+                        pageButtons.appendChild(btnAdd);
+                    }
+                    if (removeSpreads > 0) {
+                        const btnRemove = document.createElement("div");
+                        btnRemove.className = "btn btn-sm btn-secondary";
+                        btnRemove.innerText = "-" + (addSpreads * 2) + " " + printess.gl("ui.pages");
+                        btnRemove.onclick = () => printess.removeSpreads();
+                        pageButtons.appendChild(btnRemove);
+                    }
+                    cornerTools.appendChild(pageButtons);
+                }
+                else {
+                    const h2 = document.createElement("h2");
+                    h2.innerText = printess.gl(printess.getTemplateTitle());
+                    cornerTools.appendChild(h2);
+                }
+                cornerTools.appendChild(getDesktopTitle(printess));
+                pages.appendChild(cornerTools);
+                const gradient = document.createElement("div");
+                gradient.className = "big-gradient";
+                pages.appendChild(gradient);
+                const gradient2 = document.createElement("div");
+                gradient2.className = "big-gradient2";
+                pages.appendChild(gradient2);
             }
         }
     }
@@ -4019,8 +4180,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (mobileUi && controlHost) {
             const controlHostHeight = controlHost.offsetHeight;
             const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
-            const mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+            let mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
             const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
+            if (printess.pageNavigationDisplay() === "icons") {
+                mobilePageBarHeight = 100;
+            }
             if (mobileButtonBarHeight > 15) {
                 if (document.body.classList.contains("no-mobile-button-bar")) {
                     debugger;
@@ -4039,6 +4203,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 let showPageBar = false;
                 const toolBar = document.querySelector(".mobile-navbar");
                 const pageBar = document.querySelector(".mobile-pagebar");
+                if (pageBar && printess.pageNavigationDisplay() === "icons") {
+                    pageBar.style.height = mobilePageBarHeight + "px";
+                }
                 if (printessHeight < 450 || isInEddiMode || viewPortTopOffset > 0) {
                 }
                 else {
@@ -4107,9 +4274,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const hasButtons = buttons.length > 0;
         if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
-            const spreads = printess.getAllSpreads();
-            const info = printess.pageInfoSync();
-            renderPageNavigation(printess, spreads, info, getMobilePageBarDiv(), false, true);
+            renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
         }
         let autoSelect = null;
         let autoSelectHasMeta = false;
