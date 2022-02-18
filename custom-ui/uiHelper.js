@@ -2506,6 +2506,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (large) {
                 ul.classList.add("pagination-lg");
             }
+            pages.classList.remove("tabs");
+            pages.classList.remove("big");
             if (printess.pageNavigationDisplay() === "icons") {
                 pages.classList.add("big");
                 ul.style.overflowX = "auto";
@@ -2518,8 +2520,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
             }
             else {
-                pages.classList.remove("tabs");
-                pages.classList.remove("big");
                 ul.classList.add("justify-content-center");
                 document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
             }
@@ -2580,6 +2580,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     };
                 }
                 pages.appendChild(tabsContainer);
+                const button = document.createElement("button");
+                button.className = "btn btn-primary ms-2";
+                const icon = printess.getIcon("shopping-cart-add");
+                icon.style.width = "25px";
+                icon.style.height = "25px";
+                button.onclick = () => addToBasket(printess);
+                button.appendChild(icon);
+                pages.appendChild(button);
+                return;
             }
             if (printess.pageNavigationDisplay() === "icons") {
                 const docs = printess.getAllDocsAndSpreads();
@@ -2732,17 +2741,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
             }
-            if (printess.stepHeaderDisplay() === "tabs list") {
-                const button = document.createElement("button");
-                button.className = "btn btn-primary ms-2";
-                const icon = printess.getIcon("shopping-cart");
-                icon.style.width = "25px";
-                icon.style.height = "25px";
-                button.onclick = () => addToBasket(printess);
-                button.appendChild(icon);
-                pages.appendChild(button);
-            }
-            else if (printess.pageNavigationDisplay() === "icons" && !forMobile) {
+            if (printess.pageNavigationDisplay() === "icons" && !forMobile) {
                 const cornerTools = document.createElement("div");
                 cornerTools.className = "corner-tools";
                 cornerTools.appendChild(getBackUndoMiniBar(printess));
@@ -3815,7 +3814,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             },
             basket: {
                 name: "basket",
-                icon: printess.getIcon("shopping-cart"),
+                icon: printess.getIcon("shopping-cart-add"),
                 task: () => addToBasket(printess)
             }
         };
@@ -3877,16 +3876,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const nav = document.createElement("div");
         nav.className = "navbar navbar-dark";
         nav.style.flexWrap = "nowrap";
+        const basketBtnBehaviour = printess.getBasketButtonBehaviour();
+        const showTitle = printess.hasSteps();
+        const showUndoRedo = printess.showUndoRedo() && !printess.hasSteps() && !printess.hasPreviewBackButton();
         {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm";
             btn.classList.add("me-2");
             btn.classList.add("main-button");
             btn.style.minWidth = "40px";
-            if (!printess.hasSteps() && !printess.showUndoRedo()) {
+            if (!printess.hasSteps() && (!printess.showUndoRedo() || !showTitle)) {
                 const callback = printess.getBackButtonCallback();
-                btn.className = "btn btn-sm text-white me-2 ms-2 border border-white";
+                btn.className = "btn btn-sm text-white me-2 ms-2";
                 btn.textContent = printess.gl("ui.buttonBack");
+                const caption = printess.gl("ui.buttonBack");
+                const icon = printess.gl("ui.buttonBackIcon");
+                if (icon) {
+                    const svg = printess.getIcon(icon);
+                    svg.style.height = "24px";
+                    if (caption) {
+                        svg.style.float = "left";
+                        svg.style.marginRight = "10px";
+                    }
+                    btn.appendChild(svg);
+                }
                 if (!callback)
                     btn.classList.add("disabled");
                 btn.onclick = () => {
@@ -3911,9 +3924,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             nav.appendChild(btn);
         }
-        const basketBtnBehaviour = printess.getBasketButtonBehaviour();
-        const showTitle = printess.hasSteps();
-        const showUndoRedo = printess.showUndoRedo() && !printess.hasSteps() && !printess.hasPreviewBackButton();
         if (showTitle) {
             const s = printess.getStep();
             const hd = printess.stepHeaderDisplay();
@@ -4013,8 +4023,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 wrapper.appendChild(btn);
             }
             else {
-                const ico = printess.getIcon("shopping-cart");
-                ico.classList.add("icon");
+                const ico = printess.getIcon("shopping-cart-add");
+                ico.classList.add("big-icon");
                 btn.appendChild(ico);
                 btn.onclick = () => addToBasket(printess);
                 wrapper.appendChild(btn);

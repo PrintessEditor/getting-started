@@ -248,6 +248,19 @@ body {
 
 
 
+#desktop-pagebar .undo-button {
+  margin-right: 5px;
+  margin-left: 5px;
+}
+#desktop-pagebar.big  .undo-button {
+  margin-left: 0;
+}
+
+#desktop-pagebar .undo-button, #desktop-pagebar .redo-button {
+  padding: .0rem .5rem .25rem .5rem;
+
+}
+
 #desktop-pagebar .icon {
   width:20px;
   height:20px;
@@ -344,14 +357,14 @@ body {
   position: absolute;
   right: 0px;
   height: 100%;
-  width: 20px; 
+  width: 10px; 
   background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.15) 95%,  rgba(0,0,0,0.2) 100%);
 }
 .book-shadow-gradient-right {
   position: absolute;
   left: 0px;
   height: 100%;
-  width: 20px; 
+  width: 10px; 
   background: linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 95%,  rgba(0,0,0,0.4) 100%);
 }
 
@@ -1823,6 +1836,14 @@ input#invert-image-checker {
 .mobile-navbar .icon {
   width:24px;
   height:24px;
+  color:white;
+}
+
+.mobile-navbar .big-icon {
+  width:30px;
+  height:30px;
+  margin-bottom: -5px;
+  margin-top: -4px;
   color:white;
 }
 .mobile-navbar .main-button {

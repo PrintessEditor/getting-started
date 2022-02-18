@@ -186,6 +186,12 @@ export interface printessAttachParameters {
    * Use it, to redraw your buyer-image list if you have one.
    */
   imageListChangeCallback?: () => void,
+
+  /**
+   * The public key which is used to verify the used JWT. 
+   * Do not touch this parameter when using the Printess public API.
+   */
+  siginingPublicKey?: string
 }
 
 
@@ -1229,10 +1235,17 @@ export interface iMergeTemplate {
    * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
    */
   mergeMode?: MergeMode;
+  
   /**
    * Define which resources you want to merge from the template additionally. 
    */
   mergeResources?: MergeResource[];
+
+  /**
+   * Use the template name of this merge template to overwrite the master template name.
+   * When producing this template, you'll see this merge template name instead of the master template name.
+   */
+   useAsTemplateName?: boolean;
 }
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;

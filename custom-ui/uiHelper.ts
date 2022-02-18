@@ -3020,18 +3020,21 @@ declare const bootstrap: any;
         ul.classList.add("pagination-lg");
       }
 
+      pages.classList.remove("tabs");
+      pages.classList.remove("big");
+
       if (printess.pageNavigationDisplay() === "icons") {
         pages.classList.add("big");
         ul.style.overflowX = "auto";
         document.documentElement.style.setProperty("--editor-pagebar-height", "122px");
         document.documentElement.style.setProperty("--editor-margin-top", "20px");
+
       } else if (printess.stepHeaderDisplay() === "tabs list") {
         pages.classList.add("tabs");
         ul.style.overflowX = "auto";
         document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
+
       } else {
-        pages.classList.remove("tabs");
-        pages.classList.remove("big");
         ul.classList.add("justify-content-center");
         document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
       }
@@ -3098,6 +3101,20 @@ declare const bootstrap: any;
         }
 
         pages.appendChild(tabsContainer);
+
+        // Mini-Cart Button
+        const button = document.createElement("button");
+        button.className = "btn btn-primary ms-2";
+        const icon = printess.getIcon("shopping-cart-add");
+        icon.style.width = "25px";
+        icon.style.height = "25px";
+
+        button.onclick = () => addToBasket(printess);
+
+        button.appendChild(icon);
+        pages.appendChild(button);
+
+        return;
       }
 
       if (printess.pageNavigationDisplay() === "icons") {
@@ -3147,7 +3164,7 @@ declare const bootstrap: any;
               }
               if (spread.pages > 1) {
                 const shadow = document.createElement("div");
-                if (pageIndex === 0 ) {
+                if (pageIndex === 0) {
                   shadow.classList.add("book-shadow-gradient-left");
                   thumb.style.borderRight = "none";
                 } else {
@@ -3274,6 +3291,7 @@ declare const bootstrap: any;
 
 
       pages.appendChild(ul);
+
       if (printess.pageNavigationDisplay() === "icons") {
         if (lastScrollLeftPos) {
           ul.scrollTo(lastScrollLeftPos, 0);
@@ -3292,19 +3310,7 @@ declare const bootstrap: any;
 
       }
 
-      if (printess.stepHeaderDisplay() === "tabs list") {
-        const button = document.createElement("button");
-        button.className = "btn btn-primary ms-2";
-        const icon = printess.getIcon("shopping-cart");
-        icon.style.width = "25px";
-        icon.style.height = "25px";
-
-        button.onclick = () => addToBasket(printess);
-
-        button.appendChild(icon);
-        pages.appendChild(button);
-
-      } else if (printess.pageNavigationDisplay() === "icons" && !forMobile) {
+      if (printess.pageNavigationDisplay() === "icons" && !forMobile) {
         /******************************************************
             Append special mini-tool bar für further options 
          ****************************************************** */
@@ -4600,7 +4606,7 @@ declare const bootstrap: any;
       },
       basket: {
         name: "basket",
-        icon: printess.getIcon("shopping-cart"),
+        icon: printess.getIcon("shopping-cart-add"),
         task: () => addToBasket(printess)
       }
     }
@@ -4733,6 +4739,13 @@ declare const bootstrap: any;
     nav.className = "navbar navbar-dark";
     nav.style.flexWrap = "nowrap";
 
+
+    const basketBtnBehaviour = printess.getBasketButtonBehaviour();
+
+    const showTitle = printess.hasSteps();
+    const showUndoRedo = printess.showUndoRedo() && !printess.hasSteps() && !printess.hasPreviewBackButton();
+
+
     // Back Button 
     {
       const btn = document.createElement("button");
@@ -4741,11 +4754,25 @@ declare const bootstrap: any;
       btn.classList.add("main-button");
       btn.style.minWidth = "40px";
 
-      if (!printess.hasSteps() && !printess.showUndoRedo()) {
+      if (!printess.hasSteps() && (!printess.showUndoRedo() || !showTitle)) {
         const callback = printess.getBackButtonCallback();
 
-        btn.className = "btn btn-sm text-white me-2 ms-2 border border-white";
+        btn.className = "btn btn-sm text-white me-2 ms-2"; // border border-white";
         btn.textContent = printess.gl("ui.buttonBack");
+
+        const caption = printess.gl("ui.buttonBack");
+        const icon = <iconName>printess.gl("ui.buttonBackIcon");
+        if (icon) {
+          const svg = printess.getIcon(icon);
+
+          svg.style.height = "24px";
+          if (caption) {
+            svg.style.float = "left";
+            svg.style.marginRight = "10px"  ;
+          }
+  
+          btn.appendChild(svg);
+        }
 
         if (!callback) btn.classList.add("disabled");
 
@@ -4773,11 +4800,6 @@ declare const bootstrap: any;
 
       nav.appendChild(btn);
     }
-
-    const basketBtnBehaviour = printess.getBasketButtonBehaviour();
-
-    const showTitle = printess.hasSteps();
-    const showUndoRedo = printess.showUndoRedo() && !printess.hasSteps() && !printess.hasPreviewBackButton();
 
     if (showTitle) {
 
@@ -4896,8 +4918,8 @@ declare const bootstrap: any;
         }
         wrapper.appendChild(btn);
       } else {
-        const ico = printess.getIcon("shopping-cart");
-        ico.classList.add("icon");
+        const ico = printess.getIcon("shopping-cart-add");
+        ico.classList.add("big-icon");
         btn.appendChild(ico);
         btn.onclick = () => addToBasket(printess);
         wrapper.appendChild(btn);
