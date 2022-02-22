@@ -1,4 +1,3 @@
-
 /** 
  * Main call to attach the Printess to div-element of your choice. 
  * In ```printessAttachParameters``` you can pass authorization, template-name and other parameters.
@@ -1192,6 +1191,7 @@ export interface iExternalimageMeta {
   thumbUrl: string;
   thumbCssUrl: string;
   canUpload: boolean;
+  hasFFCropEditor: boolean;
   /**
   * Indicates if you can modify scaling on that image 
   */

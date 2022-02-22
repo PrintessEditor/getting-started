@@ -322,7 +322,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return t;
     }
     function getPropertyControl(printess, p, metaProperty, forMobile = false) {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         switch (p.kind) {
             case "single-line-text":
                 return getSingleLineTextBox(printess, p, forMobile);
@@ -382,7 +382,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                     if (((_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.canUpload) && p.value !== ((_c = p.validation) === null || _c === void 0 ? void 0 : _c.defaultValue)) {
                         tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
-                        tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
+                        if ((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.hasFFCropEditor) {
+                            tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
+                        }
                     }
                     return getTabPanel(tabs, p.id);
                 }
@@ -399,7 +401,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 return getNumberSlider(printess, p, metaProperty, true);
                             case "image-invert":
                                 return getInvertImageChecker(printess, p, "image-invert", forMobile);
-                                return document.createElement("div");
                             case "image-scale":
                                 {
                                     const s = getImageScaleControl(printess, p, true);
@@ -411,7 +412,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 return getImageRotateControl(printess, p);
                             case "image-filter":
                                 {
-                                    const tags = (_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.filterTags;
+                                    const tags = (_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.filterTags;
                                     if (tags && tags.length > 0) {
                                         return getImageFilterButtons(printess, p, tags);
                                     }
@@ -427,14 +428,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
                 const tabs = [];
-                if ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canUpload) {
+                if ((_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.canUpload) {
                     tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
                 }
                 else {
                     tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTabSelect"), content: getImageUploadControl(printess, p) });
                 }
-                if (((_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.canUpload) && p.value !== ((_g = p.validation) === null || _g === void 0 ? void 0 : _g.defaultValue)) {
-                    if (((_h = p.imageMeta) === null || _h === void 0 ? void 0 : _h.allows.length) > 2) {
+                if (((_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.canUpload) && p.value !== ((_h = p.validation) === null || _h === void 0 ? void 0 : _h.defaultValue)) {
+                    if (((_j = p.imageMeta) === null || _j === void 0 ? void 0 : _j.allows.length) > 2) {
                         tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
                     }
                     tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
@@ -1323,11 +1324,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             color.style.backgroundColor = f.color;
             color.dataset.color = f.name;
             color.title = f.name;
-            color.onclick = () => __awaiter(this, void 0, void 0, function* () {
+            color.onclick = () => {
                 setColor(printess, p, f.color, f.name, metaProperty);
                 if (!forMobile)
                     button.style.backgroundColor = f.color;
-            });
+            };
             colorList.appendChild(color);
         }
         if (printess.enableCustomColors()) {
@@ -1380,13 +1381,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         submitHex.className = "btn btn-secondary";
         const checkHex = printess.getIcon("check");
         checkHex.style.height = "20px";
-        submitHex.onclick = () => __awaiter(this, void 0, void 0, function* () {
+        submitHex.onclick = () => {
             const colorInput = document.getElementById("hex-color-input");
             const color = colorInput === null || colorInput === void 0 ? void 0 : colorInput.value;
             setColor(printess, p, color, color, metaProperty);
             if (!forMobile)
                 button.style.backgroundColor = color;
-        });
+        };
         hexPicker.onclick = () => __awaiter(this, void 0, void 0, function* () {
             const colorInput = document.getElementById("hex-color-input");
             try {
@@ -1751,7 +1752,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             okBtn.id = "distribute-button";
             okBtn.className = "btn btn-primary mb-3";
             okBtn.innerText = printess.gl("ui.buttonCrop");
-            okBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+            okBtn.onclick = () => {
                 const spinner = document.createElement("span");
                 spinner.className = "spinner-border spinner-border-sm me-3";
                 const spinnerText = document.createElement("span");
@@ -1764,7 +1765,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (forMobile) {
                     hideModal("CROPMODAL");
                 }
-            });
+            };
             container.appendChild(rangeLabel);
             container.appendChild(ui.container);
             container.appendChild(okBtn);
@@ -3162,6 +3163,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
                     thumbDiv.className = "snippet-thumb big";
+                    thumbDiv.setAttribute("aria-label", "Close");
+                    thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
                     const thumb = document.createElement("img");
                     thumb.src = snippet.thumbUrl;
                     thumbDiv.appendChild(thumb);
@@ -3659,7 +3662,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 top: "-150px",
                 left: "30px",
                 color: "success",
-                show: printess.uiHintsDisplay().includes("groupSnippets") && state === "document" && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
+                show: printess.uiHintsDisplay().includes("groupSnippets") && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
                 task: () => renderMobileUi(printess, undefined, "add", undefined)
             }, {
                 header: "changeLayout",
@@ -3668,7 +3671,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 top: "calc(50% - 150px)",
                 left: "55px",
                 color: "primary",
-                show: printess.uiHintsDisplay().includes("layoutSnippets") && state === "document" && !sessionStorage.getItem("changeLayout") && printess.hasLayoutSnippets(),
+                show: printess.uiHintsDisplay().includes("layoutSnippets") && !sessionStorage.getItem("changeLayout") && printess.hasLayoutSnippets(),
                 task: () => {
                     const layoutBtn = document.querySelector(".show-layouts-button");
                     if (layoutBtn) {
@@ -3678,6 +3681,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (offCanvas) {
                         offCanvas.style.visibility = "visible";
                         offCanvas.classList.add("show");
+                    }
+                    const offCanvasButton = document.querySelector("button#closeLayoutOffCanvas");
+                    if (offCanvasButton && offCanvas) {
+                        offCanvasButton.onclick = () => offCanvas.classList.remove("show");
                     }
                 }
             }];
@@ -4561,7 +4568,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             case "image":
             case "image-id":
                 return "mobile-control-md";
-                break;
             case "selection-text-style":
                 return "mobile-control-xxl";
             case "multi-line-text":

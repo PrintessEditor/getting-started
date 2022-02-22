@@ -488,7 +488,9 @@ declare const bootstrap: any;
           if (p.imageMeta?.canUpload && p.value !== p.validation?.defaultValue) {
             // rotate and crop
             tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
-            tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
+            if (p.imageMeta?.hasFFCropEditor) {
+              tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
+            }
           }
           return getTabPanel(tabs, p.id);
         }
@@ -516,8 +518,8 @@ declare const bootstrap: any;
               case "image-invert":
                 // if (!p.imageMeta || p.imageMeta.allows.indexOf("invert") === -1) {
                 return getInvertImageChecker(printess, p, "image-invert", forMobile);
-                //  }
-                return document.createElement("div");
+              //  }
+              //return document.createElement("div");
               case "image-scale":
                 {
                   const s = getImageScaleControl(printess, p, true);
@@ -1616,7 +1618,7 @@ declare const bootstrap: any;
       color.style.backgroundColor = f.color;
       color.dataset.color = f.name;
       color.title = f.name;
-      color.onclick = async () => {
+      color.onclick = () => {
         setColor(printess, p, f.color, f.name, metaProperty);
         if (!forMobile) button.style.backgroundColor = f.color;
       }
@@ -1674,7 +1676,7 @@ declare const bootstrap: any;
     const checkHex = printess.getIcon("check");
     checkHex.style.height = "20px";
 
-    submitHex.onclick = async () => {
+    submitHex.onclick = () => {
       const colorInput = <HTMLInputElement>document.getElementById("hex-color-input");
       const color = colorInput?.value;
       setColor(printess, p, color, color, metaProperty)
@@ -2093,7 +2095,7 @@ declare const bootstrap: any;
       okBtn.id = "distribute-button";
       okBtn.className = "btn btn-primary mb-3"; // my-3 w-100";
       okBtn.innerText = printess.gl("ui.buttonCrop");
-      okBtn.onclick = async () => {
+      okBtn.onclick = () => {
         const spinner = document.createElement("span");
         spinner.className = "spinner-border spinner-border-sm me-3";
 
@@ -3843,6 +3845,8 @@ declare const bootstrap: any;
         for (const snippet of cluster.snippets) {
           const thumbDiv = document.createElement("div");
           thumbDiv.className = "snippet-thumb big";
+          thumbDiv.setAttribute("aria-label", "Close");
+          thumbDiv.setAttribute("data-bs-dismiss", "offcanvas")
           const thumb = document.createElement("img");
           thumb.src = snippet.thumbUrl;
           thumbDiv.appendChild(thumb);
@@ -4436,7 +4440,7 @@ declare const bootstrap: any;
       top: "-150px",
       left: "30px",
       color: "success",
-      show: printess.uiHintsDisplay().includes("groupSnippets") && state === "document" && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
+      show: printess.uiHintsDisplay().includes("groupSnippets") && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
       task: () => renderMobileUi(printess, undefined, "add", undefined)
     }, {
       header: "changeLayout",
@@ -4445,7 +4449,7 @@ declare const bootstrap: any;
       top: "calc(50% - 150px)",
       left: "55px",
       color: "primary",
-      show: printess.uiHintsDisplay().includes("layoutSnippets") && state === "document" && !sessionStorage.getItem("changeLayout") && printess.hasLayoutSnippets(),
+      show: printess.uiHintsDisplay().includes("layoutSnippets") && !sessionStorage.getItem("changeLayout") && printess.hasLayoutSnippets(),
       task: () => {
         const layoutBtn: HTMLButtonElement | null = document.querySelector(".show-layouts-button");
         if (layoutBtn) {
@@ -4455,6 +4459,10 @@ declare const bootstrap: any;
         if (offCanvas) {
           offCanvas.style.visibility = "visible";
           offCanvas.classList.add("show");
+        }
+        const offCanvasButton: HTMLButtonElement | null = document.querySelector("button#closeLayoutOffCanvas");
+        if (offCanvasButton && offCanvas) {
+          offCanvasButton.onclick = () => offCanvas.classList.remove("show");
         }
       }
     }];
@@ -4768,9 +4776,9 @@ declare const bootstrap: any;
           svg.style.height = "24px";
           if (caption) {
             svg.style.float = "left";
-            svg.style.marginRight = "10px"  ;
+            svg.style.marginRight = "10px";
           }
-  
+
           btn.appendChild(svg);
         }
 
@@ -5652,7 +5660,6 @@ declare const bootstrap: any;
         //   return "mobile-control-lg";
         // }
         return "mobile-control-md";
-        break;
       case "selection-text-style":
         // for rich text editing
         // always larger, because keyboard is large 
