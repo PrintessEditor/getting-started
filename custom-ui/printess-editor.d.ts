@@ -909,7 +909,7 @@ export interface iPrintessApi {
   /**
    * Returns the template settings for display of steps header on desktop and mobile
    */
-  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list" | "tabs list"  
+  stepHeaderDisplay(): "never" | "only title" | "only badge" | "title and badge" | "badge list" | "tabs list"
 
   /**
    * Displays a grey overlay on printess editor
@@ -1026,6 +1026,13 @@ export interface iExternalFormFieldInfo {
   values: Array<string>;
 }
 export interface iExternalSpreadInfo {
+  /**
+   * ID of the spreads document
+   */
+  docId: string;
+  /**
+   * ID of the spread
+   */
   spreadId: string;
   /**
    * Zero based spread index (not page nr)
@@ -1075,8 +1082,8 @@ export interface iExternalDocAndSpreadInfo {
 
 
 export interface iExternalSpread {
-  groupSnippets: ReadonlyArray<iExternalSnippet>;
-  layoutSnippets: ReadonlyArray<iExternalSnippet>;
+  groupSnippets: ReadonlyArray<iExternalSnippet> | Array<iExternalSnippet>;
+  layoutSnippets: ReadonlyArray<iExternalSnippet> | Array<iExternalSnippet>;
   spreadId: string;
 }
 export interface iExternalSnippetCluster {
@@ -1235,7 +1242,7 @@ export interface iMergeTemplate {
    * Frames which are merged as "layout-snippets" or "repeat-snippets" will be removed once the user places a new layout-snippet of the same type.
    */
   mergeMode?: MergeMode;
-  
+
   /**
    * Define which resources you want to merge from the template additionally. 
    */
@@ -1245,12 +1252,12 @@ export interface iMergeTemplate {
    * Use the template name of this merge template to overwrite the master template name.
    * When producing this template, you'll see this merge template name instead of the master template name.
    */
-   useAsTemplateName?: boolean;
+  useAsTemplateName?: boolean;
 }
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
-export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster>) => void;
+export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind }>) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
