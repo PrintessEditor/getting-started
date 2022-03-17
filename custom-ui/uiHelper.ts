@@ -54,7 +54,7 @@ declare const bootstrap: any;
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
-      getValidationOverlay(printess, filteredErrors);
+      getValidationOverlay(printess, filteredErrors, "validateAll");
       return false;
     }
     return true;
@@ -100,7 +100,7 @@ declare const bootstrap: any;
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
-      getValidationOverlay(printess, filteredErrors);
+      getValidationOverlay(printess, filteredErrors, "next");
       return;
     }
     if (printess.hasNextStep()) {
@@ -114,7 +114,7 @@ declare const bootstrap: any;
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
-      getValidationOverlay(printess, filteredErrors);
+      getValidationOverlay(printess, filteredErrors, "next", stepIndex);
       return;
     }
     printess.setStep(stepIndex);
@@ -396,10 +396,11 @@ declare const bootstrap: any;
       if (properties.length === 0) {
         // render Group Snippets in case there is no property associated with the current selection
         container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
+      } else {
+        const hr = document.createElement("hr");
+        container.appendChild(hr);
+        container.appendChild(getDoneButton(printess));
       }
-      const hr = document.createElement("hr");
-      container.appendChild(hr);
-      container.appendChild(getDoneButton(printess));
     }
     return t;
   }
@@ -637,7 +638,7 @@ declare const bootstrap: any;
           const errors = printess.validate("selection");
           const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
           if (filteredErrors.length > 0) {
-            getValidationOverlay(printess, filteredErrors);
+            getValidationOverlay(printess, filteredErrors, "done");
             return;
           }
           printess.clearSelection();
@@ -805,8 +806,8 @@ declare const bootstrap: any;
   function getDesktopTitle(printess: iPrintessApi): HTMLElement {
     const container = document.createElement("div");
 
-
     const forCornerTools = printess.pageNavigationDisplay() === "icons";
+    const basketBtnBehaviour = printess.getBasketButtonBehaviour();
 
     const inner = document.createElement("div");
     inner.className = "desktop-title-bar mb-2";
@@ -826,39 +827,37 @@ declare const bootstrap: any;
       btn.appendChild(svg);
       btn.onclick = () => printess.gotoPreviousPreviewDocument();
       inner.appendChild(btn);
-    } else {
-      inner.appendChild(document.createElement("div"));
-    }
-
-    const basketBtnBehaviour = printess.getBasketButtonBehaviour();
-    const basketBtn = document.createElement("button");
-    if (basketBtnBehaviour === "go-to-preview") {
-      basketBtn.className = "btn btn-outline-primary";
-      basketBtn.innerText = printess.gl("ui.buttonPreview");
-
-      basketBtn.onclick = () => {
+    } else if (basketBtnBehaviour === "go-to-preview") {
+      const previewBtn = document.createElement("button");
+      previewBtn.className = "btn btn-outline-primary me-1";
+      previewBtn.innerText = printess.gl("ui.buttonPreview");
+      previewBtn.onclick = () => {
         if (validateAllInputs(printess) === true) {
           printess.gotoNextPreviewDocument();
         }
       }
-      inner.appendChild(basketBtn);
+      inner.appendChild(previewBtn);
     } else {
-      const caption = printess.gl("ui.buttonBasket");
-      basketBtn.className = "btn btn-primary";
-      basketBtn.innerText = caption;
-
-      const icon = <iconName>printess.gl("ui.buttonBasketIcon");
-      if (icon) {
-        const svg = printess.getIcon(icon);
-        svg.style.height = "24px";
-        svg.style.float = "left";
-        svg.style.marginRight = caption ? "10px" : "0px";
-        basketBtn.appendChild(svg);
-      }
-
-      basketBtn.onclick = () => addToBasket(printess);
-      inner.appendChild(basketBtn);
+      inner.appendChild(document.createElement("div"));
     }
+
+    const basketBtn = document.createElement("button");
+    const caption = printess.gl("ui.buttonBasket");
+    basketBtn.className = "btn btn-primary";
+    basketBtn.innerText = caption;
+
+    const icon = <iconName>printess.gl("ui.buttonBasketIcon");
+    if (icon) {
+      const svg = printess.getIcon(icon);
+      svg.style.height = "24px";
+      svg.style.float = "left";
+      svg.style.marginRight = caption ? "10px" : "0px";
+      basketBtn.appendChild(svg);
+    }
+
+    basketBtn.onclick = () => addToBasket(printess);
+    inner.appendChild(basketBtn);
+
 
     container.appendChild(inner);
 
@@ -871,7 +870,7 @@ declare const bootstrap: any;
   }
 
   // get validation modal that displays external property errors
-  function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>): void {
+  function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>, buttonType: "done" | "next" | "validateAll", stepIndex?: number): void {
     const error = errors[0];
     const modal = document.createElement("div");
     modal.id = "validation-modal";
@@ -909,14 +908,18 @@ declare const bootstrap: any;
       uih_ignoredLowResolutionErrors.push(error.boxIds[0]);
       const el = document.getElementById("validation-modal");
       el?.remove();
+
       errors.shift();
-      if (printess.isCurrentStepActive()) {
+      if (errors.length > 0) {
+        getValidationOverlay(printess, errors, buttonType, stepIndex);
+        return;
+      }
+
+      if (stepIndex && buttonType === "next") {
+        gotoStep(printess, stepIndex);
+      } else if (printess.hasNextStep() && buttonType === "next") {
         gotoNextStep(printess);
       } else {
-        if (errors.length > 0) {
-          getValidationOverlay(printess, errors);
-          return;
-        }
         printess.clearSelection();
       }
     }
@@ -1391,7 +1394,7 @@ declare const bootstrap: any;
         const button = document.createElement("button");
         button.className = "btn btn-primary image-upload-btn";
         button.id = "upload-btn-" + id;
-        htmlLabel.classList.add("image-upload-label");
+        htmlLabel.className = "image-upload-label";
         button.appendChild(htmlLabel);
         container.appendChild(button);
       } else if (kind === "image" && forMobile) {
@@ -2511,7 +2514,8 @@ declare const bootstrap: any;
     }
     dropdown.style.padding = "0";
 
-    const sizes = ["6pt", "7pt", "8pt", "9pt", "10pt", "11pt", "12pt", "13pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt", "54pt", "60pt", "66pt", "72pt", "78pt"];
+    const sizes = printess.getFontSizesInPt().map(f => f + "pt");
+    // ["6pt", "7pt", "8pt", "9pt", "10pt", "11pt", "12pt", "13pt", "14pt", "16pt", "20pt", "24pt", "28pt", "32pt", "36pt", "42pt", "48pt", "54pt", "60pt", "66pt", "72pt", "78pt"];
     const ddContent = document.createElement("ul");
     if (p.textStyle && sizes.length) {
       const selectedItem = sizes.filter(itm => itm === p.textStyle?.size ?? "??pt")[0] ?? null;
@@ -2711,10 +2715,10 @@ declare const bootstrap: any;
     }
 
     for (const v of ["top", "center", "bottom"]) {
-      let icon: iconName = "align-top";
+      let icon: iconName = "text-top";
       switch (v) {
-        case "center": icon = "align-middle"; break;
-        case "bottom": icon = "align-bottom"; break;
+        case "center": icon = "text-center"; break;
+        case "bottom": icon = "text-bottom"; break;
       }
 
       const id = p.id + "btnVAlignRadio" + v;
@@ -2841,8 +2845,12 @@ declare const bootstrap: any;
       li.classList.add("active");
     }
 
+    let pageIndex = 0;
+    if (page === "right-page") {
+      pageIndex = 1;
+    }
     if (typeof content === "number" && spread) {
-      a.innerText = spread.name ? spread.name : content.toString();
+      a.innerText = spread.names[pageIndex] ? spread.names[pageIndex] : content.toString();
 
     } else if (content === "previous") {
       const svg = printess.getIcon("carret-left-solid");
@@ -3114,7 +3122,7 @@ declare const bootstrap: any;
         button.onclick = () => addToBasket(printess);
 
         button.appendChild(icon);
-        pages.appendChild(button);
+        if (printess.stepHeaderDisplay() === "tabs list") pages.appendChild(button);
 
         return;
       }
@@ -3181,7 +3189,8 @@ declare const bootstrap: any;
 
               const caption = document.createElement("div");
               caption.className = "big-page-caption";
-              caption.innerText = spread.name ? spread.name : pageNo.toString(); //printess.gl("ui.page") + " " + pageNo.toString();
+
+              caption.innerText = spread.names[pageIndex] ? spread.names[pageIndex] : pageNo.toString(); //printess.gl("ui.page") + " " + pageNo.toString();
 
               if (forMobile) {
                 li.appendChild(thumb);
@@ -3783,19 +3792,48 @@ declare const bootstrap: any;
   function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExternalSnippetCluster>, forMobile: boolean): HTMLElement {
 
     const div = document.createElement("div");
-    div.className = "group-snippets";
+    div.className = forMobile ? "group-snippets" : "accordion";
+    div.id = "group-snippets";
 
     if (groupSnippets.length > 0) {
       // no selection, show add-able snippets instead
       for (const cluster of groupSnippets) {
 
-        const headline = document.createElement("h5");
-        headline.className = "snippet-cluster-name";
-        headline.textContent = cluster.name;
-        div.appendChild(headline)
-        const hr = document.createElement("hr");
-        hr.style.width = "100%";
-        div.appendChild(hr);
+        if (forMobile) {
+          const headline = document.createElement("h5");
+          headline.className = "snippet-cluster-name";
+          headline.textContent = cluster.name;
+          div.appendChild(headline)
+          const hr = document.createElement("hr");
+          hr.style.width = "100%";
+          div.appendChild(hr);
+        }
+
+        const accordionItem = document.createElement("div");
+        accordionItem.className = "accordion-item";
+
+        const headerId = cluster.name.split(" ").join("") + "_PanelHeader";
+        const bodyId = cluster.name.split(" ").join("") + "_PanelBody";
+        const header = document.createElement("h2");
+        header.className = "accordion-header";
+        header.id = headerId;
+        accordionItem.appendChild(header);
+
+        const accordionBtn = document.createElement("button");
+        accordionBtn.className = "accordion-button";
+        accordionBtn.setAttribute("data-bs-toggle", "collapse");
+        accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
+        accordionBtn.textContent = cluster.name;
+        header.appendChild(accordionBtn);
+
+        const bodyContainer = document.createElement("div");
+        bodyContainer.className = "accordion-collapse collapse show";
+        bodyContainer.id = bodyId;
+        accordionItem.appendChild(bodyContainer);
+
+        const body = document.createElement("div");
+        body.className = "accordion-body d-flex flex-wrap px-2 py-3";
+        bodyContainer.appendChild(body);
 
         for (const snippet of cluster.snippets) {
           const thumbDiv = document.createElement("div");
@@ -3812,8 +3850,10 @@ declare const bootstrap: any;
             printess.insertGroupSnippet(snippet.snippetUrl);
           }
 
-          div.appendChild(thumbDiv);
+          forMobile ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
         }
+
+        !forMobile && div.appendChild(accordionItem);
       }
     }
     if (forMobile) {
@@ -3846,9 +3886,11 @@ declare const bootstrap: any;
           const thumbDiv = document.createElement("div");
           thumbDiv.className = "snippet-thumb big";
           thumbDiv.setAttribute("aria-label", "Close");
-          thumbDiv.setAttribute("data-bs-dismiss", "offcanvas")
+          thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
+
           const thumb = document.createElement("img");
           thumb.src = snippet.thumbUrl;
+          thumb.style.backgroundColor = snippet.bgColor;
           thumbDiv.appendChild(thumb);
 
           thumbDiv.onclick = () => {
@@ -4022,22 +4064,22 @@ declare const bootstrap: any;
     }
     submitButton.onclick = () => {
       if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }])
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done")
         //alert(printess.gl("ui.eventText"));
         return
       }
       if (p.tableMeta?.tableType === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
         if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }])
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done")
           return
         } else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }])
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done")
           return
         } else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }])
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done")
           return
         } else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }])
+          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done")
           return
         }
       }
@@ -4377,8 +4419,9 @@ declare const bootstrap: any;
       }
 
     }
-    const inTextStyle = (properties.length && properties[0].kind === "selection-text-style");
-    printess.setZoomMode(inTextStyle ? "frame" : "spread");
+    // const inTextStyle = (properties.length && properties[0].kind === "selection-text-style");
+
+    printess.setZoomMode(printess.isTextEditorOpen() ? "frame" : "spread");
     resizeMobileUi(printess);
   }
 
@@ -4406,23 +4449,23 @@ declare const bootstrap: any;
     if (printess.uiHintsDisplay().includes("editableFrames") && !sessionStorage.getItem("editableFrames")) {
       window.setTimeout(() => {
         printess.getFrames().then((frame) => {
-          console.log(frame);
+          const spread = document.querySelector("div.printess-content");
           const framePulse = document.getElementById("frame-pulse");
           if (framePulse) framePulse.parentElement?.removeChild(framePulse);
           const pulseDiv = document.createElement("div") //printess.getIcon("bullseye-pointer-solid");
           pulseDiv.classList.add("frame-hint-pulse");
           pulseDiv.id = "frame-pulse";
-          pulseDiv.style.position = "fixed";
-          pulseDiv.style.left = (frame.left + (frame.width / 2)).toFixed(0) + "px";
-          pulseDiv.style.top = (frame.top + (frame.height / 2) + uih_lastPrintessTop).toFixed(0) + "px";
+          pulseDiv.style.position = "absolute";
+          pulseDiv.style.left = frame.left;
+          pulseDiv.style.top = frame.top;
 
           const pointer = printess.getIcon("hand-pointer-light");
           pointer.classList.add("frame-hint-pointer");
 
           pulseDiv.appendChild(pointer);
-          document.body.appendChild(pulseDiv);
+          spread?.appendChild(pulseDiv);
         })
-      }, 2000);
+      }, 1000);
     }
   }
 
@@ -4906,6 +4949,18 @@ declare const bootstrap: any;
       btn.appendChild(ico);
       btn.onclick = () => printess.gotoPreviousPreviewDocument();
       wrapper.appendChild(btn);
+    } else if (basketBtnBehaviour === "go-to-preview") {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-sm ms-2 main-button";
+      btn.classList.add("btn-outline-light");
+      btn.innerText = printess.gl("ui.buttonPreview");
+
+      btn.onclick = () => {
+        if (validateAllInputs(printess) === true) {
+          printess.gotoNextPreviewDocument();
+        }
+      }
+      wrapper.appendChild(btn);
     }
 
     // NEXT BUTON
@@ -4915,23 +4970,13 @@ declare const bootstrap: any;
       if (printess.hasSteps() && !printess.hasNextStep()) {
         btn.classList.add("main-button-pulse");
       }
-      if (basketBtnBehaviour === "go-to-preview") {
-        btn.classList.add("btn-outline-light");
-        btn.innerText = printess.gl("ui.buttonPreview");
 
-        btn.onclick = () => {
-          if (validateAllInputs(printess) === true) {
-            printess.gotoNextPreviewDocument();
-          }
-        }
-        wrapper.appendChild(btn);
-      } else {
-        const ico = printess.getIcon("shopping-cart-add");
-        ico.classList.add("big-icon");
-        btn.appendChild(ico);
-        btn.onclick = () => addToBasket(printess);
-        wrapper.appendChild(btn);
-      }
+      const icon = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+      const ico = printess.getIcon(icon);
+      ico.classList.add("big-icon");
+      btn.appendChild(ico);
+      btn.onclick = () => addToBasket(printess);
+      wrapper.appendChild(btn);
     }
 
     nav.appendChild(wrapper);
@@ -5464,6 +5509,8 @@ declare const bootstrap: any;
 
     printess.setZoomMode("spread");
 
+    let hadSelectedButtons: boolean = false;
+
     if (b.newState.externalProperty?.kind === "background-button") {
       printess.selectBackground();
 
@@ -5528,7 +5575,9 @@ declare const bootstrap: any;
         }
       }
     } else {
-      document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
+      const sels = document.querySelectorAll(".mobile-property-button.selected");
+      hadSelectedButtons = sels.length > 0;
+      sels.forEach((ele) => ele.classList.remove("selected"));
       document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
       buttonDiv.classList.toggle("selected");
       buttonDiv.innerHTML = "";
@@ -5536,12 +5585,17 @@ declare const bootstrap: any;
       centerMobileButton(buttonDiv);
 
       // center frame 
-      const pId = b.newState.externalProperty?.id ?? "";
+      // const pId = b.newState.externalProperty?.id ?? "";
 
       /* if (pId.startsWith("FF_")) {
          ffId = pId.substr(3);
        }*/
-      printess.setZoomMode("frame");
+      if (b.newState.externalProperty?.kind === "image" && printess.canMoveSelectedFrames()) {
+        // for images its not good to zoom if they are moveable. Quite impossible to catch the handles 
+        printess.setZoomMode("spread");
+      } else {
+        printess.setZoomMode("frame");
+      }
 
 
       // if a form field on doc level was selectected, we might not have a back button, so add one just in case 
@@ -5552,9 +5606,20 @@ declare const bootstrap: any;
 
       getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, uih_currentState, fromAutoSelect, willHaveControlHost(b.newState)));
 
+      if (b.newState.externalProperty?.kind === "selection-text-style" && !hadSelectedButtons) {
+        // rich text editing
+        // add some delay, to give the browser time to draw-in keyboard
+        window.setTimeout(() => {
+          renderMobileControlHost(printess, b.newState);
+        }, 500);
+        return;
+      }
+
+
     }
     // render control 
     renderMobileControlHost(printess, b.newState);
+
 
 
   }
@@ -5664,7 +5729,7 @@ declare const bootstrap: any;
         // for rich text editing
         // always larger, because keyboard is large 
         // damit wenn man vom keyboard zur farbe wechselt der zoom nicht so hin- und her wackelt
-        return "mobile-control-xxl";
+        return "mobile-control-lg";
       case "multi-line-text":
         if (!meta || meta === "text-style-color" || meta === "text-style-font" || meta === "text-style-size" || meta === "text-style-vAlign-hAlign") {
           if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {

@@ -97,24 +97,24 @@
       "selectImageFirst": "Please select an image first.",
       "search": "Search",
 
-      "align":      "Align",
-      "left":       "Left",
-      "center":     "Center",
-      "right":      "Right",
-      "top":        "Top",
-      "middle":     "Middle",
-      "bottom":     "Bottom",
-      "duplicate":  "Duplicate",
-      "mirrorX":    "Mirror Horizontically",
-      "mirrorY":    "Mirror Vertically",
-      "group":      "Group Frames",
-      "ungroup":    "Ungroup Frames",
-      "delete":     "Delete",
+      "align": "Align",
+      "left": "Left",
+      "center": "Center",
+      "right": "Right",
+      "top": "Top",
+      "middle": "Middle",
+      "bottom": "Bottom",
+      "duplicate": "Duplicate",
+      "mirrorX": "Mirror Horizontically",
+      "mirrorY": "Mirror Vertically",
+      "group": "Group Frames",
+      "ungroup": "Ungroup Frames",
+      "delete": "Delete",
 
       "pages": "Pages"
 
 
-   
+
 
     },
     "errors": {
@@ -150,9 +150,13 @@
       "invalidNumber": "Please enter a valid number from 1 to $1 for this event.",
       "enterText": "Please enter some text here",
       "oneMoreProblem": "$1 More Problem",
-      "moreProblems": "$1 More Problems"
+      "moreProblems": "$1 More Problems",
+      "pasteSafari": "To paste from clipboard, please click on the small black [PASTE] button",
+      "pasteBrowser": "Your browser doesn't allow us to read from clipboard."
     }
   },
+
+
   "de": {
     "ui": {
       "saveProgress": "Design wird gespeichert ...",
@@ -301,7 +305,9 @@
       "invalidNumber": "Bitte geben Sie eine gültige Zahl von 1 bis $1 für dieses Ereignis ein.",
       "enterText": "Bitte geben Sie hier einen Text ein",
       "oneMoreProblem": "$1 Weiteres Problem",
-      "moreProblems": "$1 Weitere Probleme"
+      "moreProblems": "$1 Weitere Probleme",
+      "pasteSafari": "Zum Einfügen aus der Zwischenablage klicken Sie bitte auf die kleine schwarze Schaltfläche [EINFÜGEN]",
+      "pasteBrowser": "Ihr Browser erlaubt es uns nicht, aus der Zwischenablage zu lesen."
     }
   },
   "es": {
@@ -402,19 +408,19 @@
       "selectImageFirst": "Seleccione primero una imagen.",
       "search": "Busque en",
 
-      "align":      "Alinear",
-      "left":       "Izquierda",
-      "center":     "Centro",
-      "right":      "Derecha",
-      "top":        "Arriba",
-      "middle":     "Medio",
-      "bottom":     "inferior",
-      "duplicate":  "Duplicar",
-      "mirrorX":    "Reflejar horizontalmente",
-      "mirrorY":    "Reflejar verticalmente",
-      "group":      "Agrupar marcos",
-      "ungroup":    "Desagrupar cuadros",
-      "delete":     "Borrar",
+      "align": "Alinear",
+      "left": "Izquierda",
+      "center": "Centro",
+      "right": "Derecha",
+      "top": "Arriba",
+      "middle": "Medio",
+      "bottom": "inferior",
+      "duplicate": "Duplicar",
+      "mirrorX": "Reflejar horizontalmente",
+      "mirrorY": "Reflejar verticalmente",
+      "group": "Agrupar marcos",
+      "ungroup": "Desagrupar cuadros",
+      "delete": "Borrar",
 
       "pages": "Páginas"
     },
@@ -451,7 +457,9 @@
       "invalidNumber": "Por favor, introduzca un número válido del 1 al $1 para este evento.",
       "enterText": "Por favor, introduzca algún texto aquí",
       "oneMoreProblem": "$1 Problema Más",
-      "moreProblems": "$1 Problemas Más"
+      "moreProblems": "$1 Problemas Más",
+      "pasteSafari": "Para pegar desde el portapapeles, haga clic en el pequeño botón negro [PEGAR].",
+      "pasteBrowser": "Su navegador no nos permite leer del portapapeles."
     }
   },
   "fi": {
@@ -552,19 +560,19 @@
       "selectImageFirst": "Valitse ensin kuva.",
       "search": "Etsi",
 
-      "align":      "Kohdista",
-      "left":       "Vasen",
-      "center":     "Keskusta",
-      "right":      "Keskusta",
-      "top":        "Top",
-      "middle":     "Keskellä",
-      "bottom":     "Pohja",
-      "duplicate":  "Duplikaatti",
-      "mirrorX":    "Peilaa vaakasuoraan",
-      "mirrorY":    "Peilaa pystysuoraan",
-      "group":      "Ryhmäkehykset",
-      "ungroup":    "Ryhmittämättömät kehykset",
-      "delete":     "Poista",
+      "align": "Kohdista",
+      "left": "Vasen",
+      "center": "Keskusta",
+      "right": "Keskusta",
+      "top": "Top",
+      "middle": "Keskellä",
+      "bottom": "Pohja",
+      "duplicate": "Duplikaatti",
+      "mirrorX": "Peilaa vaakasuoraan",
+      "mirrorY": "Peilaa pystysuoraan",
+      "group": "Ryhmäkehykset",
+      "ungroup": "Ryhmittämättömät kehykset",
+      "delete": "Poista",
 
       "pages": "Sivut"
     },
@@ -601,7 +609,9 @@
       "invalidNumber": "Kirjoita kelvollinen numero väliltä 1-$1 tälle tapahtumalle.",
       "enterText": "Kirjoita tekstiä tähän",
       "oneMoreProblem": "$1 Ongelma Lisää",
-      "moreProblems": "$1 Ongelmaa Lisää"
+      "moreProblems": "$1 Ongelmaa Lisää",
+      "pasteSafari": "Voit liittää leikepöydältä napsauttamalla pientä mustaa [PASTE]-painiketta.",
+      "pasteBrowser": "Selaimesi ei salli meidän lukea leikepöydältä."
     }
   },
   "fr": {
@@ -702,19 +712,19 @@
       "selectImageFirst": "Veuillez d'abord sélectionner une image.",
       "search": "Recherche",
 
-      "align":      "Aligner",
-      "left":       "Gauche",
-      "center":     "Centre",
-      "right":      "Droite",
-      "top":        "Haut",
-      "middle":     "Moyen",
-      "bottom":     "Fond",
-      "duplicate":  "Dupliquer",
-      "mirrorX":    "Miroir Horizontal",
-      "mirrorY":    "Miroir vertical",
-      "group":      "Grouper les images",
-      "ungroup":    "Dégrouper les cadres",
-      "delete":     "Supprimer",
+      "align": "Aligner",
+      "left": "Gauche",
+      "center": "Centre",
+      "right": "Droite",
+      "top": "Haut",
+      "middle": "Moyen",
+      "bottom": "Fond",
+      "duplicate": "Dupliquer",
+      "mirrorX": "Miroir Horizontal",
+      "mirrorY": "Miroir vertical",
+      "group": "Grouper les images",
+      "ungroup": "Dégrouper les cadres",
+      "delete": "Supprimer",
 
       "pages": "Pages"
     },
@@ -751,7 +761,9 @@
       "invalidNumber": "Veuillez entrer un numéro valide de 1 à $1 pour cet événement.",
       "enterText": "Veuillez entrer du texte ici",
       "oneMoreProblem": "$1 Problème de Plus",
-      "moreProblems": "$1 Problèmes de Plus"
+      "moreProblems": "$1 Problèmes de Plus",
+      "pasteSafari": "Pour coller à partir du presse-papiers, veuillez cliquer sur le petit bouton noir [PASTE]",
+      "pasteBrowser": "Votre navigateur ne nous permet pas de lire le presse-papiers."
     }
   },
   "ru": {
@@ -852,19 +864,19 @@
       "selectImageFirst": "Сначала выберите изображение.",
       "search": "Поиск",
 
-      "align":      "Выравнивание",
-      "left":       "Слева",
-      "center":     "Центр",
-      "right":      "Справа",
-      "top":        "Верх",
-      "middle":     "Средний",
-      "bottom":     "Нижний",
-      "duplicate":  "Дублировать",
-      "mirrorX":    "Зеркально по горизонтали",
-      "mirrorY":    "Зеркально по вертикали",
-      "group":      "Группировать кадры",
-      "ungroup":    "Разгруппировать кадры",
-      "delete":     "Удалить",
+      "align": "Выравнивание",
+      "left": "Слева",
+      "center": "Центр",
+      "right": "Справа",
+      "top": "Верх",
+      "middle": "Средний",
+      "bottom": "Нижний",
+      "duplicate": "Дублировать",
+      "mirrorX": "Зеркально по горизонтали",
+      "mirrorY": "Зеркально по вертикали",
+      "group": "Группировать кадры",
+      "ungroup": "Разгруппировать кадры",
+      "delete": "Удалить",
 
       "pages": "Страницы"
     },
@@ -901,7 +913,9 @@
       "invalidNumber": "Пожалуйста, введите действительный номер от 1 до $1 для этого события.",
       "enterText": "Пожалуйста, введите текст здесь",
       "oneMoreProblem": "Еще $1 Проблема",
-      "moreProblems": "Еще $1 Проблемы"
+      "moreProblems": "Еще $1 Проблемы",
+      "pasteSafari": "Для вставки из буфера обмена нажмите на маленькую черную кнопку [PASTE]",
+      "pasteBrowser": "Ваш браузер не позволяет нам читать из буфера обмена."
     }
   },
   "se": {
@@ -1002,19 +1016,19 @@
       "selectImageFirst": "Välj först en bild.",
       "search": "Sök på",
 
-      "align":      "Anpassa",
-      "left":       "Vänster",
-      "center":     "Centrum",
-      "right":      "Höger",
-      "top":        "Överst",
-      "middle":     "Mitt",
-      "bottom":     "Nedre",
-      "duplicate":  "Duplikat",
-      "mirrorX":    "Spegla horisontellt",
-      "mirrorY":    "Spegla vertikalt",
-      "group":      "Gruppera ramar",
-      "ungroup":    "Avlägsna gruppering av ramar",
-      "delete":     "Ta bort",
+      "align": "Anpassa",
+      "left": "Vänster",
+      "center": "Centrum",
+      "right": "Höger",
+      "top": "Överst",
+      "middle": "Mitt",
+      "bottom": "Nedre",
+      "duplicate": "Duplikat",
+      "mirrorX": "Spegla horisontellt",
+      "mirrorY": "Spegla vertikalt",
+      "group": "Gruppera ramar",
+      "ungroup": "Avlägsna gruppering av ramar",
+      "delete": "Ta bort",
 
       "pages": "Sidor"
     },
@@ -1051,7 +1065,9 @@
       "invalidNumber": "Ange ett giltigt nummer mellan 1 och $1 för denna händelse.",
       "enterText": "Skriv in en text här",
       "oneMoreProblem": "Ytterligare $1 Problem",
-      "moreProblems": "Ytterligare $1 Problem"
+      "moreProblems": "Ytterligare $1 Problem",
+      "pasteSafari": "För att klistra in från urklipp klickar du på den lilla svarta knappen [PASTE]",
+      "pasteBrowser": "Din webbläsare tillåter inte att vi läser från klippbordet."
     }
   }
 }

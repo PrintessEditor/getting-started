@@ -143,6 +143,8 @@ export interface printessAttachParameters {
 
   /**
    * Here is the place to draw your properties ui.
+   * It gets passed all the current properties and the current scope
+   * for the scope "document" means no selected frame and "frames" are selected frames
    */
   selectionChangeCallback?: externalSelectionChangeCallback;
 
@@ -271,7 +273,7 @@ export interface iPrintessApi {
    * Get frames available on spread.
    * Return first editable frame.
    */
-  getFrames(): Promise<iFrame>
+  getFrames(): Promise<iExternalFrame>
 
   /**
    * Select and zoom to the frame(s) mentioned in the error object.
@@ -542,7 +544,7 @@ export interface iPrintessApi {
    * @param assignToFrameOrNewFrame Auto assigns the first image to the current slection or a specific frame
    * @param propertyId Auto assigns the first image to a specific frame identified via property Id.
    */
-  uploadImages(files: FileList | null, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage[]>;
+  uploadImages(files: FileList | null, progressCallback?: (percent: number, state?: "upload" | "optimization") => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage[]>;
 
   /**
    * Uploads a single image to Printess and can auto assign this image
@@ -551,7 +553,7 @@ export interface iPrintessApi {
    * @param assignToFrameOrNewFrame 
    * @param propertyId 
    */
-  uploadImage(file: File, progressCallback?: (percent: number) => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage | null>;
+  uploadImage(file: File, progressCallback?: (percent: number, state?: "upload" | "optimization") => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage | null>;
 
   /**
    * Rotates an image by 90deg and saves the result as new image and assigns rotated image to frame automatically.
@@ -633,6 +635,15 @@ export interface iPrintessApi {
    */
   isImageInUse(imageId: string): boolean
 
+  /**
+   * Retrieves a list of available font-sizes in point 
+   */
+  getFontSizesInPt(): Array<number>
+
+  /**
+   * Returns a list of available fonts for a certain selected property (frame).
+   * @param propertyId Id of property to filter available fonts per frame
+   */
   getFonts(propertyId: string): Array<{
     name: string;
     thumbUrl: string;
@@ -642,6 +653,10 @@ export interface iPrintessApi {
     isItalic: boolean;
   }>;
 
+  /**
+   * Returns a list of available colors for a certain selected property (frame).
+   * @param propertyId Id of property to filter available color per frame
+   */
   getColors(propertyId: string): Array<{
     name: string;
     color: string;
@@ -836,7 +851,8 @@ export interface iPrintessApi {
   isNextStepPreview(): boolean;
 
   /**
-   * Return true if buyer can deselect an item on the current spread. 
+   * Return true if buyer can deselect an item on the current spread.
+   * Which means that either there are non-step frames to select or the spread can add new group-snippets 
    * Important to keep buyer in the step-logic
    */
   buyerCanHaveEmptySelection(): boolean;
@@ -848,16 +864,45 @@ export interface iPrintessApi {
    */
   getBasketButtonBehaviour(): "add-to-basket" | "go-to-preview"
 
+  /**
+   * Tells the ui if it should a `Back-Button`from preview to edit.
+   * Its true if the current displayed document is a `preview` document 
+   */
   hasPreviewBackButton(): boolean
 
+
+  /**
+   * Jumps to the previous available preview document if there is one.
+   */
   gotoPreviousPreviewDocument(): Promise<void>
 
+  /**
+   * Jumps to the next available preview document if there is one.
+   */
   gotoNextPreviewDocument(): Promise<void>
 
+  /**
+   * Tells printess the zoom mode to use for the next resize operation
+   * `spread` zooms to the entire page
+   * `frame`zooms to the selected frame(s)
+   */
   setZoomMode(m: "spread" | "frame"): void
+
+  /**
+   * Retrieves the current zoomMode (see `setZoomMode()`)
+   */
   getZoomMode(): "spread" | "frame"
 
 
+  /**
+   * Tells if the current selection can be moved around by the user 
+   */
+  canMoveSelectedFrames(): boolean
+
+  /**
+   * Returns `true` if either rich- or simple-text-editor is currently active
+   */
+  isTextEditorOpen(): boolean
 
   /**
    * Goes to the next available step (if any)
@@ -1043,6 +1088,13 @@ export interface iExternalSpreadInfo {
   */
   name: string;
   /**
+  * For multiple pages on a spread: name per page or empty string
+  * Array always has `pages`amount of entries.
+  * User can enter spread-name array members devided by pipe symbol:
+  * `name="left|right"` will be exposed as `names=["left", "right"]`
+  */
+  names: Array<string>
+  /**
   * Spread width in pixel
   */
   width: number;
@@ -1050,7 +1102,7 @@ export interface iExternalSpreadInfo {
   * Spread height in pixel
   */
   height: number;
-  /**
+  /*
   * Number of pages in this spread. Will be 1 or 2.
   */
   pages: number;
@@ -1219,6 +1271,11 @@ export interface iExternalError {
   errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText",
   errorValue1: string | number,
   errorValue2?: string | number,
+}
+
+export interface iExternalFrame {
+  top: string,
+  left: string
 }
 
 export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
@@ -1585,4 +1642,7 @@ export type iconName =
   | "home-solid"
   | "home-light"
   | "smile"
-  | "code-curly";
+  | "code-curly"
+  | "text-bottom"
+  | "text-center"
+  | "text-top";
