@@ -714,7 +714,7 @@ export interface iPrintessApi {
    * but if the template/document is a snippet the placement-settings will be used
    * @param mode: Optional, default is "layout" setting to "group" will insert template/document as sticker (group-snippet) 
    */
-  insertTemplateAsLayoutSnippet(templateName: string, templateversion: "draft" | "published", documentName: string, mode: "layout" | "group"): Promise<void>
+  insertTemplateAsLayoutSnippet(templateName: string, templateVersion: "draft" | "published", documentName: string, mode: "layout" | "group"): Promise<void>
 
 
   /**
