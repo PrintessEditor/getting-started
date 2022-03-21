@@ -28,7 +28,7 @@ export interface printessAttachParameters {
   /**
    * Optional parameter to merge any number of templates during load
    */
-  mergeTemplates?: [iMergeTemplate];
+  mergeTemplates?: iMergeTemplate[];
 
   /**
    * Activated by default. Deactivating `allowZoomAndPan` freezes the visible Area of the current document. 
@@ -150,7 +150,7 @@ export interface printessAttachParameters {
 
   /**
    * Fired whenever the user has selected a new page/spread and passes snippet-lists and spread-info.
-   * Now it's time to redraw **Layout-Snippets** and **Group-Snippets**
+   * Now it's time to redraw **Layout-Snippets** and **Group-Snippets/Stickers**
    */
   spreadChangeCallback?: externalSpreadChangeCallback;
 
@@ -193,6 +193,11 @@ export interface printessAttachParameters {
    * Do not touch this parameter when using the Printess public API.
    */
   siginingPublicKey?: string
+
+  /**
+   * Activates Printess-Debug-Outputs
+   */
+  debug?: boolean;
 }
 
 
@@ -467,6 +472,12 @@ export interface iPrintessApi {
   setDocumentSize(documentName: string, widthInDocUnit: number, heightInDocUnit: number): Promise<void>
 
   /**
+   * removes image for rich-text-frames which have a handwriting image set
+   * Sets back to text
+   */
+  removeHandwritingImage(): Promise<boolean>;
+
+  /**
    * Returns the current form field value and its possible list values if available
    * @param fieldName Name of the Form-Field or Form-Field Property-ID
    */
@@ -690,8 +701,21 @@ export interface iPrintessApi {
   insertLayoutSnippet(snippetUrl: string): Promise<void>;
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
+  /**
+   * Get a list of all image-filter-snippets having any of the provided tags
+   */
   getImageFilterSnippets(tags: Array<string> | ReadonlyArray<string>): Promise<Array<iExternalSnippet>>
   applyImageFilterSnippet(filterSnippetUrl: string): Promise<void>
+
+  /**
+   * Insert a docuement from any template like a layout-snippet or group-snippet (sticker) to the current document/spread
+   * This method comes in handy if you have your own snippet-management in place.
+   * Any template can be inserted (Does not have to be published as snippet), 
+   * but if the template/document is a snippet the placement-settings will be used
+   * @param mode: Optional, default is "layout" setting to "group" will insert template/document as sticker (group-snippet) 
+   */
+  insertTemplateAsLayoutSnippet(templateName: string, templateversion: "draft" | "published", documentName: string, mode: "layout" | "group"): Promise<void>
+
 
   /**
    * Saves and publishes the template.
@@ -852,7 +876,7 @@ export interface iPrintessApi {
 
   /**
    * Return true if buyer can deselect an item on the current spread.
-   * Which means that either there are non-step frames to select or the spread can add new group-snippets 
+   * Which means that either there are non-step frames to select or the spread can add new group-snippets/stickers 
    * Important to keep buyer in the step-logic
    */
   buyerCanHaveEmptySelection(): boolean;
@@ -1162,7 +1186,7 @@ export interface iExternalFrameBounds {
 export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
-  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" |
+  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "handwriting-image" |
   "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
 
 export interface iExternalProperty {
@@ -1182,7 +1206,7 @@ export interface iExternalTextStyle {
   font: string;
   hAlign: "bullet" | "left" | "center" | "right" | "justifyLeft" | "justifyCenter" | "justifyRight" | "justifyJustify";
   vAlign: "top" | "center" | "bottom";
-  allows: Array<"content" | "mandatory" | "color" | "stroke" | "font" | "size" | "lineHeight" | "tracking" | "baselineShift" | "horizontalAlignment" | "verticalAlignment" | "padding" | "styles" | "bullet" | "indent" | "paragraphSpacing" | "baselineGrid">;
+  allows: Array<"content" | "mandatory" | "color" | "stroke" | "font" | "size" | "lineHeight" | "tracking" | "baselineShift" | "horizontalAlignment" | "verticalAlignment" | "padding" | "styles" | "bullet" | "indent" | "paragraphSpacing" | "baselineGrid" | "handWriting">;
 }
 export interface iExternalValidation {
   maxChars: number;
@@ -1257,6 +1281,7 @@ export interface iExternalimageMeta {
   canScale: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate" | "invert">;
   filterTags: ReadonlyArray<string> | Array<string>;
+  isHandwriting: boolean
 }
 export interface iExternalImageScaleHints {
   min: number;
@@ -1315,7 +1340,7 @@ export interface iMergeTemplate {
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>) => void;
-export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind }>) => HTMLDivElement;
+export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean }>) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";

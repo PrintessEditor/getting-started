@@ -440,6 +440,9 @@ declare const bootstrap: any;
               return getVAlignControl(printess, p, true);
             case "text-style-vAlign-hAlign":
               return getVAlignAndHAlignControl(printess, p, true);
+            case "handwriting-image":
+              return getImageUploadControl(printess, p, undefined, forMobile);
+
             default:
               return getMultiLineTextBox(printess, p, forMobile)
           }
@@ -500,6 +503,8 @@ declare const bootstrap: any;
         if (forMobile) {
           if (metaProperty) {
             switch (metaProperty) {
+              /*   case "handwriting-image": 
+                   return getColorDropDown(printess, p,, forMobile);*/
               case "image-contrast":
                 /* if (p.imageMeta && p.imageMeta.allows.indexOf("invert") >= 0) {
                    // render contrast & invert together 
@@ -554,7 +559,8 @@ declare const bootstrap: any;
           tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
         } else {
           // only select image
-          tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTabSelect"), content: getImageUploadControl(printess, p) });
+          const title = p.imageMeta?.isHandwriting ? printess.gl("ui.imageTabHandwriting") : printess.gl("ui.imageTabSelect");
+          tabs.push({ id: "upload-" + p.id, title: title, content: getImageUploadControl(printess, p) });
         }
         if (p.imageMeta?.canUpload && p.value !== p.validation?.defaultValue) {
           //filter and rotate 
@@ -743,6 +749,11 @@ declare const bootstrap: any;
       group2.appendChild(getVAlignControl(printess, p, false));
     }
     textPropertiesDiv.appendChild(group2);
+
+    if (p.textStyle.allows.indexOf("handWriting") >= 0) {
+      const upload = getImageUploadButton(printess, p.id, false, true, "ui.uploadHandwriting");
+      textPropertiesDiv.appendChild(upload);
+    }
 
     return textPropertiesDiv;
   }
@@ -2164,7 +2175,21 @@ declare const bootstrap: any;
           container.appendChild(scaleControl);
         }
       }
-      forMobile ? imagePanel.appendChild(renderImageControlButtons(printess, images, p)) : imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
+      if (p.imageMeta?.isHandwriting === true) {
+        const b = document.createElement("button");
+        b.className = "btn btn-primary";
+        b.innerText = "Back to text editing"
+        b.onclick = () => {
+          printess.removeHandwritingImage();
+        }
+        imagePanel.appendChild(b);
+      } else {
+        if (forMobile) {
+          imagePanel.appendChild(renderImageControlButtons(printess, images, p))
+        } else {
+          imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
+        }
+      }
       imagePanel.style.gridTemplateRows = "auto";
       imagePanel.style.gridTemplateColumns = "1fr";
       container.appendChild(imagePanel);
@@ -2237,7 +2262,7 @@ declare const bootstrap: any;
     }
   }
 
-  function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boolean = false, assignToFrameOrNewFrame: boolean = true): HTMLDivElement {
+  function getImageUploadButton(printess: iPrintessApi, id: string, forMobile: boolean = false, assignToFrameOrNewFrame: boolean = true, label: string = ""): HTMLDivElement {
     const container = document.createElement("div");
 
     /***+ IMAGE UPLOAD ****/
@@ -2321,17 +2346,8 @@ declare const bootstrap: any;
       }
     }
 
-    /* optinally add label before upload */
-    const uploadLabel = document.createElement("label");
-    uploadLabel.className = "form-label";
-    uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
-    uploadLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
-    // remove comments below to  add label
-    // fileUpload.appendChild(uploadLabel);
-
-    //fileUpload.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage")); // to add error-message display 
     container.appendChild(progressDiv);
-    container.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage"));
+    container.appendChild(addLabel(printess, inp, id, forMobile, "image", label || "ui.changeImage"));
 
     return container;
   }
@@ -3156,7 +3172,11 @@ declare const bootstrap: any;
               }
               if (pageIndex === 0) {
                 if (doc.spreads[doc.spreadCount - 1] === spread) {
-                  li.classList.add("mr");
+                  if (forMobile) {
+                    li.classList.add("mobile-mr");
+                  } else {
+                    li.classList.add("mr");
+                  }
                 }
                 li.classList.add("ml");
               }
@@ -3422,62 +3442,63 @@ declare const bootstrap: any;
 
     const imageGroups = printess.getImageGroups(p?.id);
 
-    if (imageGroups.length > 1) {
-      const accordion = document.createElement("div");
-      accordion.className = "accordion mb-3";
-      accordion.id = "accordion_" + p?.id;
+    if ((!p || p.kind !== "selection-text-style")) {
+      if (imageGroups.length > 1) {
+        const accordion = document.createElement("div");
+        accordion.className = "accordion mb-3";
+        accordion.id = "accordion_" + p?.id;
 
-      imageGroups.forEach(group => {
-        if (images?.filter(i => i.group === group).length) {
-          const card = document.createElement("div");
-          card.className = "accordion-item";
+        imageGroups.forEach(group => {
+          if (images?.filter(i => i.group === group).length) {
+            const card = document.createElement("div");
+            card.className = "accordion-item";
 
-          const title = document.createElement("h2");
-          title.className = "accordion-header";
-          title.id = "heading-" + group.replace(" ", "");
-          const button = document.createElement("button");
-          button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
-          button.setAttribute("data-bs-toggle", "collapse");
-          button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
-          button.setAttribute("aria-expanded", "true");
-          button.setAttribute("aria-controls", "collapse-" + group.replace(" ", ""))
-          button.textContent = group === "Buyer Upload" ? printess.gl("ui.imagesTab") : printess.gl(group);
-          button.onclick = () => uih_activeImageAccordion = group;
+            const title = document.createElement("h2");
+            title.className = "accordion-header";
+            title.id = "heading-" + group.replace(" ", "");
+            const button = document.createElement("button");
+            button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
+            button.setAttribute("data-bs-toggle", "collapse");
+            button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
+            button.setAttribute("aria-expanded", "true");
+            button.setAttribute("aria-controls", "collapse-" + group.replace(" ", ""))
+            button.textContent = group === "Buyer Upload" ? printess.gl("ui.imagesTab") : printess.gl(group);
+            button.onclick = () => uih_activeImageAccordion = group;
 
-          const collapse = document.createElement("div");
-          collapse.className = `accordion-collapse collapse ${group === uih_activeImageAccordion ? "show" : ""}`;
-          collapse.setAttribute("aria-labelledby", "heading-" + group.replace(" ", ""));
-          collapse.setAttribute("data-bs-parent", "#accordion_" + p?.id);
-          collapse.id = "collapse-" + group.replace(" ", "");
-          const body = document.createElement("div");
-          body.className = "accordion-body";
-          const groupList = document.createElement("div");
-          groupList.classList.add("image-list");
+            const collapse = document.createElement("div");
+            collapse.className = `accordion-collapse collapse ${group === uih_activeImageAccordion ? "show" : ""}`;
+            collapse.setAttribute("aria-labelledby", "heading-" + group.replace(" ", ""));
+            collapse.setAttribute("data-bs-parent", "#accordion_" + p?.id);
+            collapse.id = "collapse-" + group.replace(" ", "");
+            const body = document.createElement("div");
+            body.className = "accordion-body";
+            const groupList = document.createElement("div");
+            groupList.classList.add("image-list");
 
-          for (const im of images?.filter(i => i.group === group)) {
-            groupList.appendChild(getImageThumb(printess, p, im, container, groupList, forMobile));
+            for (const im of images?.filter(i => i.group === group)) {
+              groupList.appendChild(getImageThumb(printess, p, im, container, groupList, forMobile));
+            }
+
+            title.appendChild(button);
+            body.appendChild(groupList);
+            collapse.appendChild(body);
+            card.appendChild(title);
+            card.appendChild(collapse);
+            accordion.appendChild(card);
           }
+        });
 
-          title.appendChild(button);
-          body.appendChild(groupList);
-          collapse.appendChild(body);
-          card.appendChild(title);
-          card.appendChild(collapse);
-          accordion.appendChild(card);
+        container.appendChild(accordion);
+
+      } else {
+
+        for (const im of images) {
+          imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
         }
-      });
 
-      container.appendChild(accordion);
-
-    } else {
-
-      for (const im of images) {
-        imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
+        container.appendChild(imageList);
       }
-
-      container.appendChild(imageList);
     }
-
     if (!forMobile && images.length > 0 && p?.kind !== "image-id") container.appendChild(dragDropHint);
 
     return container;
@@ -3649,10 +3670,13 @@ declare const bootstrap: any;
 
   // Images on Mobile
   function renderImageControlButtons(printess: iPrintessApi, images: iExternalImage[], p?: iExternalProperty): HTMLElement {
+
+    const forHandwriting =  p?.kind === "selection-text-style";
+
     const container = document.createElement("div");
     container.id = "image-control-buttons";
     container.style.display = "grid";
-    container.style.gridTemplateColumns = images.length > 0 ? "1fr 1fr" : "1fr";
+    container.style.gridTemplateColumns = (images.length > 0 && !forHandwriting) ? "1fr 1fr" : "1fr";
     container.style.gridGap = "5px";
 
     // Upload Options
@@ -3662,7 +3686,6 @@ declare const bootstrap: any;
     const uploadHeader = document.createElement("div");
     uploadHeader.className = "image-list-header bg-primary text-light";
     uploadHeader.textContent = printess.gl("ui.changeImage");
-
     const exitUpload = printess.getIcon("chevron-down-light");
     exitUpload.style.width = "20px";
     exitUpload.style.height = "30px";
@@ -3675,7 +3698,10 @@ declare const bootstrap: any;
     const uploadList = document.createElement("div");
     uploadList.id = "upload-btn-" + p?.id;
     uploadList.style.padding = "5px";
-    uploadList.appendChild(getImageUploadButton(printess, p?.id || "images", true));
+
+    const handwritingCaption: string = forHandwriting ? printess.gl("ui.uploadHandwriting") : "";
+
+    uploadList.appendChild(getImageUploadButton(printess, p?.id || "images", true, undefined, handwritingCaption));
 
     uploadContainer.appendChild(uploadHeader);
     uploadContainer.appendChild(uploadList);
@@ -3740,8 +3766,10 @@ declare const bootstrap: any;
     change.appendChild(changeIcon);
 
     // add upload button and change button to container in controlhost
-    container.appendChild(getImageUploadButton(printess, p?.id || "images", true, true));
-    images.length > 0 ? container.appendChild(change) : "";
+    container.appendChild(getImageUploadButton(printess, p?.id || "images", true, true, handwritingCaption));
+    if (images.length > 0 && !forHandwriting) {
+      container.appendChild(change);
+    }
     return container;
   }
 
@@ -3786,6 +3814,87 @@ declare const bootstrap: any;
   }
 
   /*
+   * Accordion Items
+   */
+
+  function renderAccordionItem(title: string, body: HTMLDivElement): HTMLElement {
+    const accordionItem = document.createElement("div");
+    accordionItem.className = "accordion-item";
+
+    const headerId = title.split(" ").join("") + "_PanelHeader";
+    const bodyId = title.split(" ").join("") + "_PanelBody";
+    const header = document.createElement("h2");
+    header.className = "accordion-header";
+    header.id = headerId;
+    accordionItem.appendChild(header);
+
+    const accordionBtn = document.createElement("button");
+    accordionBtn.className = "accordion-button";
+    accordionBtn.setAttribute("data-bs-toggle", "collapse");
+    accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
+    accordionBtn.textContent = title;
+    accordionBtn.onclick = () => {
+      const collapseButtons = document.querySelectorAll("button.accordion-collapse-btn.disabled");
+      collapseButtons.forEach(b => b.classList.remove("disabled"));
+    }
+    header.appendChild(accordionBtn);
+
+    const bodyContainer = document.createElement("div");
+    bodyContainer.className = "accordion-collapse collapse show";
+    bodyContainer.id = bodyId;
+    accordionItem.appendChild(bodyContainer);
+
+    const accordionBody = document.createElement("div");
+    accordionBody.className = "accordion-body";
+    accordionBody.appendChild(body);
+    bodyContainer.appendChild(accordionBody);
+
+    return accordionItem;
+  }
+
+  /*
+   * Collapse & Expand All Buttons for Accordion
+   */
+
+  function renderCollapseButtons(printess: iPrintessApi): HTMLElement {
+    const buttonWrapper = document.createElement("div");
+    buttonWrapper.className = "d-flex flex-row";
+
+    const collapseAllButton = document.createElement("button");
+    collapseAllButton.className = "btn btn-outline-primary accordion-collapse-btn me-1 mb-3 w-100";
+    collapseAllButton.textContent = printess.gl("ui.collapseAll");
+    collapseAllButton.onclick = () => {
+      const accordionButtons = document.querySelectorAll("button.accordion-button");
+      accordionButtons.forEach(b => {
+        b.classList.add("collapsed");
+      });
+      const accordionBodys = document.querySelectorAll("div.accordion-collapse.collapse.show");
+      accordionBodys.forEach(b => b.classList.remove("show"));
+      collapseAllButton.classList.add("disabled");
+      expandAllButton.classList.remove("disabled");
+    }
+
+    const expandAllButton = document.createElement("button");
+    expandAllButton.className = "btn btn-outline-primary accordion-collapse-btn mb-3 w-100 disabled";
+    expandAllButton.textContent = printess.gl("ui.expandAll");
+    expandAllButton.onclick = () => {
+      const accordionButtons = document.querySelectorAll("button.accordion-button");
+      accordionButtons.forEach(b => {
+        b.classList.remove("collapsed");
+      });
+      const accordionBodys = document.querySelectorAll("div.accordion-collapse.collapse");
+      accordionBodys.forEach(b => b.classList.add("show"));
+      expandAllButton.classList.add("disabled");
+      collapseAllButton.classList.remove("disabled");
+    }
+
+    buttonWrapper.appendChild(collapseAllButton);
+    buttonWrapper.appendChild(expandAllButton);
+
+    return buttonWrapper;
+  }
+
+  /*
    * Snippets Lists
    */
 
@@ -3809,31 +3918,8 @@ declare const bootstrap: any;
           div.appendChild(hr);
         }
 
-        const accordionItem = document.createElement("div");
-        accordionItem.className = "accordion-item";
-
-        const headerId = cluster.name.split(" ").join("") + "_PanelHeader";
-        const bodyId = cluster.name.split(" ").join("") + "_PanelBody";
-        const header = document.createElement("h2");
-        header.className = "accordion-header";
-        header.id = headerId;
-        accordionItem.appendChild(header);
-
-        const accordionBtn = document.createElement("button");
-        accordionBtn.className = "accordion-button";
-        accordionBtn.setAttribute("data-bs-toggle", "collapse");
-        accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
-        accordionBtn.textContent = cluster.name;
-        header.appendChild(accordionBtn);
-
-        const bodyContainer = document.createElement("div");
-        bodyContainer.className = "accordion-collapse collapse show";
-        bodyContainer.id = bodyId;
-        accordionItem.appendChild(bodyContainer);
-
         const body = document.createElement("div");
-        body.className = "accordion-body d-flex flex-wrap px-2 py-3";
-        bodyContainer.appendChild(body);
+        body.className = "d-flex flex-wrap";
 
         for (const snippet of cluster.snippets) {
           const thumbDiv = document.createElement("div");
@@ -3853,7 +3939,7 @@ declare const bootstrap: any;
           forMobile ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
         }
 
-        !forMobile && div.appendChild(accordionItem);
+        if (!forMobile) div.appendChild(renderAccordionItem(cluster.name, body));
       }
     }
     if (forMobile) {
@@ -3863,7 +3949,14 @@ declare const bootstrap: any;
       mobile.appendChild(div);
       return mobile;
     } else {
-      return div;
+      if (groupSnippets.length > 0) {
+        const desktop = document.createElement("div");
+        desktop.appendChild(renderCollapseButtons(printess));
+        desktop.appendChild(div);
+        return desktop;
+      } else {
+        return div;
+      }
     }
   }
 
@@ -5340,7 +5433,7 @@ declare const bootstrap: any;
 
     const hasButtons = buttons.length > 0;
 
-    if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
+    if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
       renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
     }
 
@@ -5513,6 +5606,10 @@ declare const bootstrap: any;
 
     if (b.newState.externalProperty?.kind === "background-button") {
       printess.selectBackground();
+
+    } else if (b.newState.externalProperty?.kind === "image" && b.newState.metaProperty === "handwriting-image") {
+      printess.removeHandwritingImage();
+      return;
 
     } else if (b.newState.state === "table-add") {
       const p = b.newState.externalProperty;

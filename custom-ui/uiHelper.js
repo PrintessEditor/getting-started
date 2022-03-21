@@ -324,7 +324,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return t;
     }
     function getPropertyControl(printess, p, metaProperty, forMobile = false) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
         switch (p.kind) {
             case "single-line-text":
                 return getSingleLineTextBox(printess, p, forMobile);
@@ -348,6 +348,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             return getVAlignControl(printess, p, true);
                         case "text-style-vAlign-hAlign":
                             return getVAlignAndHAlignControl(printess, p, true);
+                        case "handwriting-image":
+                            return getImageUploadControl(printess, p, undefined, forMobile);
                         default:
                             return getMultiLineTextBox(printess, p, forMobile);
                     }
@@ -434,10 +436,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
                 }
                 else {
-                    tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTabSelect"), content: getImageUploadControl(printess, p) });
+                    const title = ((_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.isHandwriting) ? printess.gl("ui.imageTabHandwriting") : printess.gl("ui.imageTabSelect");
+                    tabs.push({ id: "upload-" + p.id, title: title, content: getImageUploadControl(printess, p) });
                 }
-                if (((_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.canUpload) && p.value !== ((_h = p.validation) === null || _h === void 0 ? void 0 : _h.defaultValue)) {
-                    if (((_j = p.imageMeta) === null || _j === void 0 ? void 0 : _j.allows.length) > 2) {
+                if (((_h = p.imageMeta) === null || _h === void 0 ? void 0 : _h.canUpload) && p.value !== ((_j = p.validation) === null || _j === void 0 ? void 0 : _j.defaultValue)) {
+                    if (((_k = p.imageMeta) === null || _k === void 0 ? void 0 : _k.allows.length) > 2) {
                         tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
                     }
                     tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p) });
@@ -579,6 +582,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             group2.appendChild(getVAlignControl(printess, p, false));
         }
         textPropertiesDiv.appendChild(group2);
+        if (p.textStyle.allows.indexOf("handWriting") >= 0) {
+            const upload = getImageUploadButton(printess, p.id, false, true, "ui.uploadHandwriting");
+            textPropertiesDiv.appendChild(upload);
+        }
         return textPropertiesDiv;
     }
     function getMultiLineTextBox(printess, p, forMobile) {
@@ -1778,7 +1785,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return container;
     }
     function getImageUploadControl(printess, p, container, forMobile = false) {
-        var _a, _b;
+        var _a, _b, _c;
         container = container || document.createElement("div");
         container.innerHTML = "";
         const imagePanel = document.createElement("div");
@@ -1799,21 +1806,37 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(scaleControl);
                 }
             }
-            forMobile ? imagePanel.appendChild(renderImageControlButtons(printess, images, p)) : imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
+            if (((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.isHandwriting) === true) {
+                const b = document.createElement("button");
+                b.className = "btn btn-primary";
+                b.innerText = "Back to text editing";
+                b.onclick = () => {
+                    printess.removeHandwritingImage();
+                };
+                imagePanel.appendChild(b);
+            }
+            else {
+                if (forMobile) {
+                    imagePanel.appendChild(renderImageControlButtons(printess, images, p));
+                }
+                else {
+                    imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
+                }
+            }
             imagePanel.style.gridTemplateRows = "auto";
             imagePanel.style.gridTemplateColumns = "1fr";
             container.appendChild(imagePanel);
             return container;
         }
         else {
-            if ((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.canUpload) {
+            if ((_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.canUpload) {
                 container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
             }
             const imageListWrapper = document.createElement("div");
             imageListWrapper.classList.add("image-list-wrapper");
             imageList.classList.add("image-list");
             const mainThumb = document.createElement("div");
-            if ((_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.thumbCssUrl) {
+            if ((_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.thumbCssUrl) {
                 mainThumb.className = "main";
                 mainThumb.style.backgroundImage = p.imageMeta.thumbCssUrl;
                 imagePanel.appendChild(mainThumb);
@@ -1824,7 +1847,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (im.id === p.value)
                     thumb.style.border = "2px solid red";
                 thumb.onclick = () => __awaiter(this, void 0, void 0, function* () {
-                    var _c;
+                    var _d;
                     const scaleHints = yield printess.setProperty(p.id, im.id);
                     p.value = im.id;
                     if (scaleHints && p.imageMeta) {
@@ -1832,7 +1855,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         p.imageMeta.scale = scaleHints.scale;
                         p.imageMeta.thumbCssUrl = im.thumbCssUrl;
                         p.imageMeta.thumbUrl = im.thumbUrl;
-                        p.imageMeta.canScale = p.value !== ((_c = p.validation) === null || _c === void 0 ? void 0 : _c.defaultValue);
+                        p.imageMeta.canScale = p.value !== ((_d = p.validation) === null || _d === void 0 ? void 0 : _d.defaultValue);
                     }
                     getImageUploadControl(printess, p, container, forMobile);
                     const propsDiv = document.getElementById("tabs-panel-" + p.id);
@@ -1859,7 +1882,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true) {
+    function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true, label = "") {
         const container = document.createElement("div");
         const progressDiv = document.createElement("div");
         progressDiv.className = "progress";
@@ -1915,12 +1938,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 uih_activeImageAccordion = "Buyer Upload";
             }
         });
-        const uploadLabel = document.createElement("label");
-        uploadLabel.className = "form-label";
-        uploadLabel.innerText = printess.gl("ui.uploadImageLabel");
-        uploadLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
         container.appendChild(progressDiv);
-        container.appendChild(addLabel(printess, inp, id, forMobile, "image", "ui.changeImage"));
+        container.appendChild(addLabel(printess, inp, id, forMobile, "image", label || "ui.changeImage"));
         return container;
     }
     function getImageScaleControl(printess, p, forMobile = false) {
@@ -2621,7 +2640,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             }
                             if (pageIndex === 0) {
                                 if (doc.spreads[doc.spreadCount - 1] === spread) {
-                                    li.classList.add("mr");
+                                    if (forMobile) {
+                                        li.classList.add("mobile-mr");
+                                    }
+                                    else {
+                                        li.classList.add("mr");
+                                    }
                                 }
                                 li.classList.add("ml");
                             }
@@ -2822,52 +2846,54 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.appendChild(getSearchBar(printess, p, container, forMobile, showSearchIcon));
         }
         const imageGroups = printess.getImageGroups(p === null || p === void 0 ? void 0 : p.id);
-        if (imageGroups.length > 1) {
-            const accordion = document.createElement("div");
-            accordion.className = "accordion mb-3";
-            accordion.id = "accordion_" + (p === null || p === void 0 ? void 0 : p.id);
-            imageGroups.forEach(group => {
-                if (images === null || images === void 0 ? void 0 : images.filter(i => i.group === group).length) {
-                    const card = document.createElement("div");
-                    card.className = "accordion-item";
-                    const title = document.createElement("h2");
-                    title.className = "accordion-header";
-                    title.id = "heading-" + group.replace(" ", "");
-                    const button = document.createElement("button");
-                    button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
-                    button.setAttribute("data-bs-toggle", "collapse");
-                    button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
-                    button.setAttribute("aria-expanded", "true");
-                    button.setAttribute("aria-controls", "collapse-" + group.replace(" ", ""));
-                    button.textContent = group === "Buyer Upload" ? printess.gl("ui.imagesTab") : printess.gl(group);
-                    button.onclick = () => uih_activeImageAccordion = group;
-                    const collapse = document.createElement("div");
-                    collapse.className = `accordion-collapse collapse ${group === uih_activeImageAccordion ? "show" : ""}`;
-                    collapse.setAttribute("aria-labelledby", "heading-" + group.replace(" ", ""));
-                    collapse.setAttribute("data-bs-parent", "#accordion_" + (p === null || p === void 0 ? void 0 : p.id));
-                    collapse.id = "collapse-" + group.replace(" ", "");
-                    const body = document.createElement("div");
-                    body.className = "accordion-body";
-                    const groupList = document.createElement("div");
-                    groupList.classList.add("image-list");
-                    for (const im of images === null || images === void 0 ? void 0 : images.filter(i => i.group === group)) {
-                        groupList.appendChild(getImageThumb(printess, p, im, container, groupList, forMobile));
+        if ((!p || p.kind !== "selection-text-style")) {
+            if (imageGroups.length > 1) {
+                const accordion = document.createElement("div");
+                accordion.className = "accordion mb-3";
+                accordion.id = "accordion_" + (p === null || p === void 0 ? void 0 : p.id);
+                imageGroups.forEach(group => {
+                    if (images === null || images === void 0 ? void 0 : images.filter(i => i.group === group).length) {
+                        const card = document.createElement("div");
+                        card.className = "accordion-item";
+                        const title = document.createElement("h2");
+                        title.className = "accordion-header";
+                        title.id = "heading-" + group.replace(" ", "");
+                        const button = document.createElement("button");
+                        button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
+                        button.setAttribute("data-bs-toggle", "collapse");
+                        button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
+                        button.setAttribute("aria-expanded", "true");
+                        button.setAttribute("aria-controls", "collapse-" + group.replace(" ", ""));
+                        button.textContent = group === "Buyer Upload" ? printess.gl("ui.imagesTab") : printess.gl(group);
+                        button.onclick = () => uih_activeImageAccordion = group;
+                        const collapse = document.createElement("div");
+                        collapse.className = `accordion-collapse collapse ${group === uih_activeImageAccordion ? "show" : ""}`;
+                        collapse.setAttribute("aria-labelledby", "heading-" + group.replace(" ", ""));
+                        collapse.setAttribute("data-bs-parent", "#accordion_" + (p === null || p === void 0 ? void 0 : p.id));
+                        collapse.id = "collapse-" + group.replace(" ", "");
+                        const body = document.createElement("div");
+                        body.className = "accordion-body";
+                        const groupList = document.createElement("div");
+                        groupList.classList.add("image-list");
+                        for (const im of images === null || images === void 0 ? void 0 : images.filter(i => i.group === group)) {
+                            groupList.appendChild(getImageThumb(printess, p, im, container, groupList, forMobile));
+                        }
+                        title.appendChild(button);
+                        body.appendChild(groupList);
+                        collapse.appendChild(body);
+                        card.appendChild(title);
+                        card.appendChild(collapse);
+                        accordion.appendChild(card);
                     }
-                    title.appendChild(button);
-                    body.appendChild(groupList);
-                    collapse.appendChild(body);
-                    card.appendChild(title);
-                    card.appendChild(collapse);
-                    accordion.appendChild(card);
-                }
-            });
-            container.appendChild(accordion);
-        }
-        else {
-            for (const im of images) {
-                imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
+                });
+                container.appendChild(accordion);
             }
-            container.appendChild(imageList);
+            else {
+                for (const im of images) {
+                    imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
+                }
+                container.appendChild(imageList);
+            }
         }
         if (!forMobile && images.length > 0 && (p === null || p === void 0 ? void 0 : p.kind) !== "image-id")
             container.appendChild(dragDropHint);
@@ -3013,10 +3039,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return searchWrapper;
     }
     function renderImageControlButtons(printess, images, p) {
+        const forHandwriting = (p === null || p === void 0 ? void 0 : p.kind) === "selection-text-style";
         const container = document.createElement("div");
         container.id = "image-control-buttons";
         container.style.display = "grid";
-        container.style.gridTemplateColumns = images.length > 0 ? "1fr 1fr" : "1fr";
+        container.style.gridTemplateColumns = (images.length > 0 && !forHandwriting) ? "1fr 1fr" : "1fr";
         container.style.gridGap = "5px";
         const uploadContainer = document.createElement("div");
         uploadContainer.className = "image-list-fullscreen upload-list-preset";
@@ -3034,7 +3061,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const uploadList = document.createElement("div");
         uploadList.id = "upload-btn-" + (p === null || p === void 0 ? void 0 : p.id);
         uploadList.style.padding = "5px";
-        uploadList.appendChild(getImageUploadButton(printess, (p === null || p === void 0 ? void 0 : p.id) || "images", true));
+        const handwritingCaption = forHandwriting ? printess.gl("ui.uploadHandwriting") : "";
+        uploadList.appendChild(getImageUploadButton(printess, (p === null || p === void 0 ? void 0 : p.id) || "images", true, undefined, handwritingCaption));
         uploadContainer.appendChild(uploadHeader);
         uploadContainer.appendChild(uploadList);
         const upload = document.createElement("button");
@@ -3081,8 +3109,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const changeIcon = printess.getIcon("image");
         changeIcon.style.height = "50px";
         change.appendChild(changeIcon);
-        container.appendChild(getImageUploadButton(printess, (p === null || p === void 0 ? void 0 : p.id) || "images", true, true));
-        images.length > 0 ? container.appendChild(change) : "";
+        container.appendChild(getImageUploadButton(printess, (p === null || p === void 0 ? void 0 : p.id) || "images", true, true, handwritingCaption));
+        if (images.length > 0 && !forHandwriting) {
+            container.appendChild(change);
+        }
         return container;
     }
     function getDistributionOverlay(printess, forMobile, p, container) {
@@ -3115,6 +3145,68 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         footer.appendChild(ok);
         showModal(printess, id, content, printess.gl("ui.distributionDialogTitle"), footer);
     }
+    function renderAccordionItem(title, body) {
+        const accordionItem = document.createElement("div");
+        accordionItem.className = "accordion-item";
+        const headerId = title.split(" ").join("") + "_PanelHeader";
+        const bodyId = title.split(" ").join("") + "_PanelBody";
+        const header = document.createElement("h2");
+        header.className = "accordion-header";
+        header.id = headerId;
+        accordionItem.appendChild(header);
+        const accordionBtn = document.createElement("button");
+        accordionBtn.className = "accordion-button";
+        accordionBtn.setAttribute("data-bs-toggle", "collapse");
+        accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
+        accordionBtn.textContent = title;
+        accordionBtn.onclick = () => {
+            const collapseButtons = document.querySelectorAll("button.accordion-collapse-btn.disabled");
+            collapseButtons.forEach(b => b.classList.remove("disabled"));
+        };
+        header.appendChild(accordionBtn);
+        const bodyContainer = document.createElement("div");
+        bodyContainer.className = "accordion-collapse collapse show";
+        bodyContainer.id = bodyId;
+        accordionItem.appendChild(bodyContainer);
+        const accordionBody = document.createElement("div");
+        accordionBody.className = "accordion-body";
+        accordionBody.appendChild(body);
+        bodyContainer.appendChild(accordionBody);
+        return accordionItem;
+    }
+    function renderCollapseButtons(printess) {
+        const buttonWrapper = document.createElement("div");
+        buttonWrapper.className = "d-flex flex-row";
+        const collapseAllButton = document.createElement("button");
+        collapseAllButton.className = "btn btn-outline-primary accordion-collapse-btn me-1 mb-3 w-100";
+        collapseAllButton.textContent = printess.gl("ui.collapseAll");
+        collapseAllButton.onclick = () => {
+            const accordionButtons = document.querySelectorAll("button.accordion-button");
+            accordionButtons.forEach(b => {
+                b.classList.add("collapsed");
+            });
+            const accordionBodys = document.querySelectorAll("div.accordion-collapse.collapse.show");
+            accordionBodys.forEach(b => b.classList.remove("show"));
+            collapseAllButton.classList.add("disabled");
+            expandAllButton.classList.remove("disabled");
+        };
+        const expandAllButton = document.createElement("button");
+        expandAllButton.className = "btn btn-outline-primary accordion-collapse-btn mb-3 w-100 disabled";
+        expandAllButton.textContent = printess.gl("ui.expandAll");
+        expandAllButton.onclick = () => {
+            const accordionButtons = document.querySelectorAll("button.accordion-button");
+            accordionButtons.forEach(b => {
+                b.classList.remove("collapsed");
+            });
+            const accordionBodys = document.querySelectorAll("div.accordion-collapse.collapse");
+            accordionBodys.forEach(b => b.classList.add("show"));
+            expandAllButton.classList.add("disabled");
+            collapseAllButton.classList.remove("disabled");
+        };
+        buttonWrapper.appendChild(collapseAllButton);
+        buttonWrapper.appendChild(expandAllButton);
+        return buttonWrapper;
+    }
     function renderGroupSnippets(printess, groupSnippets, forMobile) {
         const div = document.createElement("div");
         div.className = forMobile ? "group-snippets" : "accordion";
@@ -3130,27 +3222,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     hr.style.width = "100%";
                     div.appendChild(hr);
                 }
-                const accordionItem = document.createElement("div");
-                accordionItem.className = "accordion-item";
-                const headerId = cluster.name.split(" ").join("") + "_PanelHeader";
-                const bodyId = cluster.name.split(" ").join("") + "_PanelBody";
-                const header = document.createElement("h2");
-                header.className = "accordion-header";
-                header.id = headerId;
-                accordionItem.appendChild(header);
-                const accordionBtn = document.createElement("button");
-                accordionBtn.className = "accordion-button";
-                accordionBtn.setAttribute("data-bs-toggle", "collapse");
-                accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
-                accordionBtn.textContent = cluster.name;
-                header.appendChild(accordionBtn);
-                const bodyContainer = document.createElement("div");
-                bodyContainer.className = "accordion-collapse collapse show";
-                bodyContainer.id = bodyId;
-                accordionItem.appendChild(bodyContainer);
                 const body = document.createElement("div");
-                body.className = "accordion-body d-flex flex-wrap px-2 py-3";
-                bodyContainer.appendChild(body);
+                body.className = "d-flex flex-wrap";
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
                     thumbDiv.className = "snippet-thumb";
@@ -3166,7 +3239,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     };
                     forMobile ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
                 }
-                !forMobile && div.appendChild(accordionItem);
+                if (!forMobile)
+                    div.appendChild(renderAccordionItem(cluster.name, body));
             }
         }
         if (forMobile) {
@@ -3177,7 +3251,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return mobile;
         }
         else {
-            return div;
+            if (groupSnippets.length > 0) {
+                const desktop = document.createElement("div");
+                desktop.appendChild(renderCollapseButtons(printess));
+                desktop.appendChild(div);
+                return desktop;
+            }
+            else {
+                return div;
+            }
         }
     }
     function renderLayoutSnippets(printess, layoutSnippets) {
@@ -4325,7 +4407,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             buttons.unshift(...printess.getMobileUiBackgroundButton());
         }
         const hasButtons = buttons.length > 0;
-        if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
+        if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
             renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
         }
         let autoSelect = null;
@@ -4448,11 +4530,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return { div: container, autoSelectButton: autoSelect };
     }
     function mobileUiButtonClick(printess, b, buttonDiv, container, fromAutoSelect) {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d, _e, _f, _g, _h;
         printess.setZoomMode("spread");
         let hadSelectedButtons = false;
         if (((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "background-button") {
             printess.selectBackground();
+        }
+        else if (((_b = b.newState.externalProperty) === null || _b === void 0 ? void 0 : _b.kind) === "image" && b.newState.metaProperty === "handwriting-image") {
+            printess.removeHandwritingImage();
+            return;
         }
         else if (b.newState.state === "table-add") {
             const p = b.newState.externalProperty;
@@ -4473,7 +4559,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else if (b.newState.state === "table-edit") {
             const p = b.newState.externalProperty;
-            const rowIndex = (_b = b.newState.tableRowIndex) !== null && _b !== void 0 ? _b : -1;
+            const rowIndex = (_c = b.newState.tableRowIndex) !== null && _c !== void 0 ? _c : -1;
             document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
             buttonDiv.classList.toggle("selected");
             centerMobileButton(buttonDiv);
@@ -4498,11 +4584,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 getMobileButtons(printess, container, b.newState.externalProperty.id);
                 const backButton = document.querySelector(".mobile-property-back-button");
                 if (backButton) {
-                    (_c = backButton.parentElement) === null || _c === void 0 ? void 0 : _c.removeChild(backButton);
+                    (_d = backButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(backButton);
                 }
                 const mobilePlusButton = document.querySelector(".mobile-property-plus-button");
                 if (mobilePlusButton) {
-                    (_d = mobilePlusButton.parentElement) === null || _d === void 0 ? void 0 : _d.removeChild(mobilePlusButton);
+                    (_e = mobilePlusButton.parentElement) === null || _e === void 0 ? void 0 : _e.removeChild(mobilePlusButton);
                 }
                 getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "details", fromAutoSelect, willHaveControlHost(b.newState)));
                 if (!fromAutoSelect) {
@@ -4519,7 +4605,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             buttonDiv.innerHTML = "";
             drawButtonContent(printess, buttonDiv, uih_currentProperties);
             centerMobileButton(buttonDiv);
-            if (((_e = b.newState.externalProperty) === null || _e === void 0 ? void 0 : _e.kind) === "image" && printess.canMoveSelectedFrames()) {
+            if (((_f = b.newState.externalProperty) === null || _f === void 0 ? void 0 : _f.kind) === "image" && printess.canMoveSelectedFrames()) {
                 printess.setZoomMode("spread");
             }
             else {
@@ -4527,10 +4613,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             const backButton = document.querySelector(".mobile-property-back-button");
             if (backButton) {
-                (_f = backButton.parentElement) === null || _f === void 0 ? void 0 : _f.removeChild(backButton);
+                (_g = backButton.parentElement) === null || _g === void 0 ? void 0 : _g.removeChild(backButton);
             }
             getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, uih_currentState, fromAutoSelect, willHaveControlHost(b.newState)));
-            if (((_g = b.newState.externalProperty) === null || _g === void 0 ? void 0 : _g.kind) === "selection-text-style" && !hadSelectedButtons) {
+            if (((_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.kind) === "selection-text-style" && !hadSelectedButtons) {
                 window.setTimeout(() => {
                     renderMobileControlHost(printess, b.newState);
                 }, 500);
