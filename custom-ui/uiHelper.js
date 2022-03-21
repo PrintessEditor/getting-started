@@ -1267,7 +1267,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             imageList.classList.add("image-select-list");
             for (const entry of p.listMeta.list) {
                 const thumb = document.createElement("div");
-                thumb.className = "image" + cssId;
+                thumb.className = "no-selection image" + cssId;
                 if (p.kind === "color-list") {
                     thumb.style.backgroundColor = entry.key;
                 }
@@ -3251,7 +3251,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return mobile;
         }
         else {
-            if (groupSnippets.length > 0) {
+            if (groupSnippets.length > 3) {
                 const desktop = document.createElement("div");
                 desktop.appendChild(renderCollapseButtons(printess));
                 desktop.appendChild(div);
@@ -4432,13 +4432,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (hasButtons && (!autoSelect || autoSelectHasMeta === true)) {
             for (const b of buttons.filter(b => !b.hide)) {
                 const buttonDiv = document.createElement("div");
+                buttonDiv.className = "no-selection";
                 if (b.newState.tableRowIndex !== undefined) {
                     buttonDiv.id = ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.id) !== null && _d !== void 0 ? _d : "") + "$$$" + b.newState.tableRowIndex;
                 }
                 else {
                     buttonDiv.id = ((_f = (_e = b.newState.externalProperty) === null || _e === void 0 ? void 0 : _e.id) !== null && _f !== void 0 ? _f : "") + ":" + ((_g = b.newState.metaProperty) !== null && _g !== void 0 ? _g : "");
                 }
-                buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
+                if (printess.isTextButton(b)) {
+                    buttonDiv.classList.add("mobile-property-text");
+                }
+                else {
+                    buttonDiv.classList.add("mobile-property-button");
+                }
                 if (!firstButton) {
                     firstButton = buttonDiv;
                 }
@@ -4787,7 +4793,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             const buttonCircle = getButtonCircle(printess, b, isSelected);
             const buttonText = document.createElement("div");
-            buttonText.className = "mobile-property-caption";
+            buttonText.className = "mobile-property-caption no-selection";
             buttonText.innerText = printess.gl(b.caption);
             buttonDiv.appendChild(buttonCircle);
             buttonDiv.appendChild(buttonText);

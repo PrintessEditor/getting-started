@@ -991,6 +991,12 @@ export interface iPrintessApi {
    */
   hideOverlay(): void;
 
+
+  /**
+   * Returns status of config-flag `neverHideMobileToolbar`, default is false.
+   */
+  neverHideMobileToolbar(): boolean
+
   /**
    * @deprecated
    * Returns true if `autoScale` was set in `attachPrintess` call

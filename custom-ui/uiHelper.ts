@@ -1552,7 +1552,7 @@ declare const bootstrap: any;
 
       for (const entry of p.listMeta.list) {
         const thumb = document.createElement("div");
-        thumb.className = "image" + cssId;
+        thumb.className = "no-selection image" + cssId;
         if (p.kind === "color-list") {
           thumb.style.backgroundColor = entry.key;
         } else {
@@ -3949,7 +3949,7 @@ declare const bootstrap: any;
       mobile.appendChild(div);
       return mobile;
     } else {
-      if (groupSnippets.length > 0) {
+      if (groupSnippets.length > 3) {
         const desktop = document.createElement("div");
         desktop.appendChild(renderCollapseButtons(printess));
         desktop.appendChild(div);
@@ -5487,13 +5487,20 @@ declare const bootstrap: any;
 
       for (const b of buttons.filter(b => !b.hide)) {
         const buttonDiv = document.createElement("div");
+        buttonDiv.className = "no-selection";
+
         if (b.newState.tableRowIndex !== undefined) {
           buttonDiv.id = (b.newState.externalProperty?.id ?? "") + "$$$" + b.newState.tableRowIndex;
         } else {
           buttonDiv.id = (b.newState.externalProperty?.id ?? "") + ":" + (b.newState.metaProperty ?? "");
         }
 
-        buttonDiv.className = printess.isTextButton(b) ? "mobile-property-text" : "mobile-property-button";
+        if (printess.isTextButton(b)) {
+          buttonDiv.classList.add("mobile-property-text");
+        } else {
+          buttonDiv.classList.add("mobile-property-button");
+        }
+
         if (!firstButton) {
           firstButton = buttonDiv;
         }
@@ -5919,7 +5926,7 @@ declare const bootstrap: any;
       const buttonCircle = getButtonCircle(printess, b, isSelected);
 
       const buttonText = document.createElement("div");
-      buttonText.className = "mobile-property-caption";
+      buttonText.className = "mobile-property-caption no-selection";
       buttonText.innerText = printess.gl(b.caption);
 
       buttonDiv.appendChild(buttonCircle);
