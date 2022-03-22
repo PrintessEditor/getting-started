@@ -355,13 +355,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
                 else if (p.kind === "selection-text-style") {
-                    return getTextStyleControl(printess, p);
+                    return getInlineTextStyleControl(printess, p);
                 }
                 else {
                     return getMultiLineTextBox(printess, p, forMobile);
                 }
             case "color":
-                return getColorDropDown(printess, p, undefined, forMobile);
+                if (forMobile === false && uih_currentProperties.length <= 3 && uih_currentProperties.filter(p => p.kind === "color").length <= 1) {
+                    return getTextPropertyScrollContainer(getColorDropDown(printess, p, undefined, true));
+                }
+                else {
+                    return getColorDropDown(printess, p, undefined, forMobile);
+                }
             case "number":
                 return getNumberSlider(printess, p);
             case "image-id":
@@ -543,7 +548,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return container;
     }
-    function getTextStyleControl(printess, p) {
+    function getFormTextStyleControl(printess, p) {
         const textPropertiesDiv = document.createElement("div");
         textPropertiesDiv.classList.add("mb-3");
         if (!p.textStyle) {
@@ -564,29 +569,61 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             getFontDropDown(printess, p, false, group1, false);
         }
         textPropertiesDiv.appendChild(group1);
-        const group2 = document.createElement("div");
-        group2.className = "input-group mb-3";
-        group2.style.padding = "1px";
-        group2.style.marginLeft = "0px";
-        const pre2 = document.createElement("div");
-        pre2.className = "input-group-prepend";
-        if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
-            group2.appendChild(getHAlignControl(printess, p, false));
+        textPropertiesDiv.appendChild(getTextAlignmentControl(printess, p));
+        return textPropertiesDiv;
+    }
+    function getInlineTextStyleControl(printess, p) {
+        const textPropertiesDiv = document.createElement("div");
+        textPropertiesDiv.classList.add("mb-3");
+        if (!p.textStyle) {
+            return textPropertiesDiv;
         }
-        const spacer = document.createElement("div");
-        spacer.style.width = "10px";
-        if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0 && p.textStyle.allows.indexOf("verticalAlignment")) {
-            group2.appendChild(spacer);
+        if (p.textStyle.allows.indexOf("font") >= 0) {
+            const group1 = document.createElement("div");
+            group1.className = "input-group mb-3";
+            group1.appendChild(getFontDropDown(printess, p, false, undefined, true));
+            textPropertiesDiv.appendChild(group1);
         }
-        if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
-            group2.appendChild(getVAlignControl(printess, p, false));
+        if (p.textStyle.allows.indexOf("color") >= 0) {
+            textPropertiesDiv.appendChild(getTextPropertyScrollContainer(getColorDropDown(printess, p, "color", true)));
         }
-        textPropertiesDiv.appendChild(group2);
-        if (p.textStyle.allows.indexOf("handWriting") >= 0) {
+        if (p.textStyle.allows.indexOf("size") >= 0) {
+            textPropertiesDiv.appendChild(getTextPropertyScrollContainer(getFontSizeDropDown(printess, p, true, undefined, true)));
+        }
+        textPropertiesDiv.appendChild(getTextAlignmentControl(printess, p));
+        if (p.kind === "selection-text-style" && p.textStyle.allows.indexOf("handWriting") >= 0) {
             const upload = getImageUploadButton(printess, p.id, false, true, "ui.uploadHandwriting");
             textPropertiesDiv.appendChild(upload);
         }
         return textPropertiesDiv;
+    }
+    function getTextPropertyScrollContainer(child) {
+        const d = document.createElement("div");
+        d.className = "mb-3 text-large-properties";
+        d.appendChild(child);
+        return d;
+    }
+    function getTextAlignmentControl(printess, p) {
+        const group2 = document.createElement("div");
+        if (p.textStyle && (p.textStyle.allows.indexOf("horizontalAlignment") >= 0 || p.textStyle.allows.indexOf("verticalAlignment"))) {
+            group2.className = "input-group mb-3";
+            group2.style.padding = "1px";
+            group2.style.marginLeft = "0px";
+            const pre2 = document.createElement("div");
+            pre2.className = "input-group-prepend";
+            if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0) {
+                group2.appendChild(getHAlignControl(printess, p, false));
+            }
+            const spacer = document.createElement("div");
+            spacer.style.width = "10px";
+            if (p.textStyle.allows.indexOf("horizontalAlignment") >= 0 && p.textStyle.allows.indexOf("verticalAlignment")) {
+                group2.appendChild(spacer);
+            }
+            if (p.textStyle.allows.indexOf("verticalAlignment") >= 0) {
+                group2.appendChild(getVAlignControl(printess, p, false));
+            }
+        }
+        return group2;
     }
     function getMultiLineTextBox(printess, p, forMobile) {
         const ta = getTextArea(printess, p, forMobile);
@@ -595,7 +632,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else {
             const container = document.createElement("div");
-            container.appendChild(getTextStyleControl(printess, p));
+            container.appendChild(getFormTextStyleControl(printess, p));
             container.appendChild(ta);
             return container;
         }
@@ -1299,6 +1336,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return addLabel(printess, container, p.id, forMobile, p.kind, p.label);
         }
     }
+    function hexToRgb(hexColor) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hexColor);
+        return result ? `rgb(${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)})` : hexColor;
+    }
     function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
         if (!dropdown) {
             dropdown = document.createElement("div");
@@ -1306,17 +1347,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const colors = printess.getColors(p.id);
         const button = document.createElement("button");
+        const curColor = (metaProperty === "color" && p.textStyle) ? p.textStyle.color : p.value.toString();
+        const curColorRgb = hexToRgb(curColor);
         if (!forMobile) {
             button.className = "btn btn-light dropdown-toggle btn-color-select";
             button.dataset.bsToggle = "dropdown";
             button.dataset.bsAutoClose = "true";
             button.setAttribute("aria-expanded", "false");
-            if (metaProperty === "color" && p.textStyle) {
-                button.style.backgroundColor = p.textStyle.color;
-            }
-            else {
-                button.style.backgroundColor = p.value.toString();
-            }
+            button.style.backgroundColor = curColor;
             dropdown.appendChild(button);
         }
         const ddContent = document.createElement("div");
@@ -1335,8 +1373,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             color.style.backgroundColor = f.color;
             color.dataset.color = f.name;
             color.title = f.name;
+            if (f.color === curColorRgb) {
+                color.classList.add("selected");
+            }
             color.onclick = () => {
                 setColor(printess, p, f.color, f.name, metaProperty);
+                colorList.querySelectorAll(".selected").forEach(c => c.classList.remove("selected"));
+                color.classList.add("selected");
                 if (!forMobile)
                     button.style.backgroundColor = f.color;
             };
@@ -2206,6 +2249,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 li.classList.add("dropdown-item");
                 if (asList) {
                     li.classList.add("list-group-item");
+                    li.classList.add("font");
                     if (entry === selectedItem) {
                         li.classList.add("active");
                     }
@@ -4340,19 +4384,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (pageBar && printess.pageNavigationDisplay() === "icons") {
                     pageBar.style.height = mobilePageBarHeight + "px";
                 }
-                if (printessHeight < 450 || isInEddiMode || viewPortTopOffset > 0) {
+                const hidePageAndToolbar = printessHeight < 450 || isInEddiMode || viewPortTopOffset > 0;
+                showToolBar = !hidePageAndToolbar || printess.neverHideMobileToolbar();
+                showPageBar = !hidePageAndToolbar;
+                if (toolbar && showToolBar) {
+                    printessTop += mobileNavBarHeight;
+                    printessHeight -= mobileNavBarHeight;
                 }
-                else {
-                    if (toolbar) {
-                        printessTop += mobileNavBarHeight;
-                        printessHeight -= mobileNavBarHeight;
-                        showToolBar = true;
-                    }
-                    if (pageBar) {
-                        showPageBar = true;
-                        printessTop += mobilePageBarHeight;
-                        printessHeight -= mobilePageBarHeight;
-                    }
+                if (pageBar && showPageBar) {
+                    printessTop += mobilePageBarHeight;
+                    printessHeight -= mobilePageBarHeight;
                 }
                 const activeFFId = getActiveFormFieldId();
                 const focusSelection = printess.getZoomMode() === "frame";
@@ -4724,6 +4765,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             case "select-list":
             case "image-list":
             case "color-list":
+            case "font":
                 return "mobile-control-lg";
             case "text-area":
                 if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {

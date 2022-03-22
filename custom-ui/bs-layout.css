@@ -1024,6 +1024,30 @@ input#invert-image-checker {
 }
 
 
+.text-large-properties   {
+  overflow-y: auto;
+  max-height: 200px;
+}
+.text-large-properties .color-picker-color  {
+  width: 25px !important;
+  height: 25px !important;
+}
+.text-large-properties .color-picker-drop-down  {
+  margin-left: -2px;
+  justify-content: left;
+}
+.text-large-properties .list-group-grid-style  {
+  margin-left: -4px;
+  justify-content: left;
+}
+.text-large-properties .list-group-grid-style > li {
+  padding: 0.2rem 0.5rem;
+}
+.text-large-properties .font.list-group-item {
+  padding: 0.2rem 1rem;
+}
+
+
 .step-badge {
   align-self: center;
 
@@ -1205,6 +1229,9 @@ input#invert-image-checker {
   margin-left: 2px;
   margin-top: 2px;
   padding: 0;
+}
+.color-picker-color.selected {
+  border: black 2px solid;
 }
 #custom-color-picker {
   width: 35px;
