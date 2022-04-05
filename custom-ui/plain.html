@@ -61,6 +61,8 @@
 
     let printess;
     let currentGroupSnippets = [];
+    let currentLayoutSnippets = [];
+    let currentTabs = [];
 
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
@@ -76,16 +78,13 @@
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets, tabs) => {
 
+      //console.warn("Spread Change!");
+
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets;
       currentLayoutSnippets = layoutSnippets;
       currentTabs = tabs;
 
-
-      //console.warn("Spread Change!");
-
-      // remember groupSnippets for showing as add-able items
-      currentGroupSnippets = groupSnippets;
 
       const layoutSnippetsDiv = document.getElementById("layoutSnippets");
       layoutSnippetsDiv.innerHTML = "";

@@ -241,6 +241,8 @@
 
     let printess;
     let currentGroupSnippets = [];
+    let currentLayoutSnippets = [];
+    let currentTabs = [];
 
     window.WebComponents = window.WebComponents || {
       waitFor(cb) {
@@ -253,12 +255,14 @@
       // remove your progress overlay here
     }
 
-    const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
+    const spreadChangeCallback = (groupSnippets, layoutSnippets, tabs) => {
 
       //console.warn("Spread Change!");
 
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets;
+      currentLayoutSnippets = layoutSnippets;
+      currentTabs = tabs;
 
       const layoutSnippetsDiv = document.getElementById("layoutSnippets");
       layoutSnippetsDiv.innerHTML = "";
@@ -274,12 +278,12 @@
 
       if (printess.isMobile()) {
         // **** add mobile-ui *****
-        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
+        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets, currentLayoutSnippets, currentTabs);
         uiHelper.renderMobileNavBar(printess);
 
       } else {
         // ***** add desktop-ui *****
-        const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets);
+        const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets, currentLayoutSnippets, currentTabs);
         uiHelper.refreshUndoRedoState(printess);
 
         // print json for debug purposes

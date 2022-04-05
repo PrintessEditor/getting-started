@@ -246,6 +246,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (mobileUi) {
             mobileUi.innerHTML = "";
         }
+        removeMobileFullscreenContainer();
         const printessDiv = document.getElementById("desktop-printess-container");
         const container = document.getElementById("desktop-properties");
         if (!container || !printessDiv) {
@@ -579,6 +580,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             tabItem.style.maxHeight = forMobile ? "unset" : tabsContainer.clientHeight / tabs.length + "px";
             tabItem.onclick = () => {
+                if (forMobile && t.id === uih_currentTabId) {
+                    closeMobileFullscreenContainer();
+                }
                 selectTab(printess, t.id);
                 if (t.id === "#BACKGROUND") {
                     printess.selectBackground();
@@ -3266,7 +3270,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (!forMobile || showMobileImagesUploadBtn)
                 container.appendChild(twoButtons);
         }
-        if (printess.showSearchBar() && images.length > 5) {
+        if (printess.showSearchBar()) {
             container.appendChild(getSearchBar(printess, p, container, forMobile, showSearchIcon));
         }
         const imageGroups = printess.getImageGroups(p === null || p === void 0 ? void 0 : p.id);
@@ -3483,17 +3487,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return caption;
     }
-    function renderMobilePropertiesFullscreen(printess, id) {
-        let container = document.querySelector(".fullscreen-with-toolbar");
+    function renderMobilePropertiesFullscreen(printess, id, state) {
+        let container = document.querySelector(".fullscreen-add-properties");
         if (!container) {
             container = document.createElement("div");
-            container.className = "fullscreen-with-toolbar image-list-preset";
-            const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
-            const propsContainer = document.createElement("div");
-            renderTabNavigationProperties(printess, propsContainer, true);
-            getMobileFullscreenContent(printess, id, container, caption, propsContainer, true);
+            container.className = "fullscreen-add-properties image-list-preset";
+            if (state === "open")
+                container.className = "fullscreen-add-properties show-image-list";
+            if (printess.showTabNavigation()) {
+                container.classList.add("mobile-tabs");
+                const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
+                const propsContainer = document.createElement("div");
+                renderTabNavigationProperties(printess, propsContainer, true);
+                getMobileFullscreenContent(printess, id, container, caption, propsContainer, true);
+            }
+            else {
+                const groupSnippets = renderGroupSnippets(printess, uih_currentGroupSnippets, true);
+                getMobileFullscreenContent(printess, "add-design", container, "ui.addDesign", groupSnippets, false);
+            }
         }
-        return container;
+        openMobileFullscreenContainer("add-properties");
+        document.body.appendChild(container);
     }
     function renderMobileImageListFullscreen(printess, id, title, tabContent, p) {
         let container = document.querySelector(".image-list-fullscreen");
@@ -3503,6 +3517,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else {
             container.innerHTML = "";
+            container.className = "image-list-fullscreen image-list-preset";
         }
         getMobileFullscreenContent(printess, id, container, title, tabContent, false, p);
         return container;
@@ -3533,7 +3548,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.appendChild(tabsContainer);
     }
     function updateMobilePropertiesFullscreen(printess) {
-        const imageListHeader = document.querySelector(".image-list-header");
+        const imageListHeader = document.querySelector(".fullscreen-add-properties .image-list-header");
         if (imageListHeader) {
             const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
             imageListHeader.textContent = caption;
@@ -3545,16 +3560,38 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             };
             imageListHeader.appendChild(exitBtn);
         }
-        const propsContainer = document.querySelector(".mobile-fullscreen-content");
+        const propsContainer = document.querySelector(".fullscreen-add-properties .mobile-fullscreen-content");
         if (propsContainer) {
             propsContainer.innerHTML = "";
             renderTabNavigationProperties(printess, propsContainer, true);
         }
     }
+    function openMobileFullscreenContainer(type) {
+        let fullscreenContainer;
+        if (type === "add-properties") {
+            fullscreenContainer = document.querySelector(".fullscreen-add-properties");
+        }
+        else {
+            fullscreenContainer = document.querySelector(".image-list-fullscreen");
+        }
+        if (fullscreenContainer) {
+            fullscreenContainer.classList.remove("image-list-preset");
+            fullscreenContainer.classList.remove("hide-image-list");
+            fullscreenContainer.classList.add("show-image-list");
+        }
+    }
     function closeMobileFullscreenContainer() {
-        const fullscreenContainer = document.querySelector(".fullscreen-with-toolbar.show-image-list") || document.querySelector(".image-list-fullscreen.show-image-list");
+        const fullscreenContainer = document.querySelector(".fullscreen-add-properties.show-image-list") || document.querySelector(".image-list-fullscreen.show-image-list");
         fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.remove("show-image-list");
         fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.add("hide-image-list");
+    }
+    function removeMobileFullscreenContainer() {
+        const fullscreenContainer = document.querySelector(".fullscreen-add-properties");
+        const imageListContainer = document.querySelector(".image-list-fullscreen");
+        if (fullscreenContainer)
+            fullscreenContainer.remove();
+        if (imageListContainer)
+            imageListContainer.remove();
     }
     function renderImageControlButtons(printess, images, p) {
         const forHandwriting = (p === null || p === void 0 ? void 0 : p.kind) === "selection-text-style";
@@ -3564,15 +3601,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         container.style.gridTemplateColumns = (images.length > 0 && !forHandwriting) ? "1fr 1fr" : "1fr";
         container.style.gridGap = "5px";
         const tabContent = renderMyImagesTab(printess, true, p, undefined);
-        const fullscreen = renderMobileImageListFullscreen(printess, "images-list", "ui.exchangeImage", tabContent, p);
-        container.appendChild(fullscreen);
+        const fullscreenContainer = renderMobileImageListFullscreen(printess, "images-list", "ui.exchangeImage", tabContent, p);
+        document.body.appendChild(fullscreenContainer);
         const change = document.createElement("button");
         change.className = "btn btn-outline-primary exchange-image-btn";
         change.textContent = printess.gl("ui.exchangeImage");
         change.onclick = () => {
-            fullscreen.classList.remove("image-list-preset");
-            fullscreen.classList.remove("hide-image-list");
-            fullscreen.classList.add("show-image-list");
+            openMobileFullscreenContainer("image-list");
         };
         const changeIcon = printess.getIcon("image");
         changeIcon.style.height = "50px";
@@ -4350,18 +4385,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         circle.className = "mobile-property-circle";
         circle.onclick = () => {
             sessionStorage.setItem("addDesign", "hint closed");
-            let fullscreenContainer;
-            const groupSnippets = renderGroupSnippets(printess, uih_currentGroupSnippets, true);
-            if (printess.showTabNavigation()) {
-                fullscreenContainer = renderMobilePropertiesFullscreen(printess, "add-design");
-            }
-            else {
-                fullscreenContainer = renderMobileImageListFullscreen(printess, "add-design", "ui.addDesign", groupSnippets);
-            }
-            document.body.appendChild(fullscreenContainer);
-            fullscreenContainer.classList.remove("image-list-preset");
-            fullscreenContainer.classList.remove("hide-image-list");
-            fullscreenContainer.classList.add("show-image-list");
+            renderMobilePropertiesFullscreen(printess, "add-design", "open");
         };
         if (!sessionStorage.getItem("addDesign")) {
             circle.classList.add("mobile-property-plus-pulse");
