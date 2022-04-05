@@ -278,7 +278,7 @@ export interface iPrintessApi {
    * Get frames available on spread.
    * Return first editable frame.
    */
-  getFrames(): Promise<iExternalFrame>
+  getFrameUiHintPosition(): Promise<iExternalFrame>
 
   /**
    * Select and zoom to the frame(s) mentioned in the error object.
@@ -296,6 +296,11 @@ export interface iPrintessApi {
    * Indicates if the current spread has editable background frames
    */
   hasBackground(): boolean
+
+  /**
+   * Indicates if background frames are selected
+   */
+  isBackgroundSelected(): boolean
 
   /**
    * Selects a spread and brings it into view. spread-index is zero based and even a facing page counts as a single spread. You can pass the focus area in the `part`parameter.
@@ -364,7 +369,7 @@ export interface iPrintessApi {
   * Returns true is the user has made edits on a spread.
   * @param spreadIdOrIndex: ID or Index of Spread to check for - if empty it checks for current spread
   */
-  hasBuyerContentEdits(spreadIdOrIndex?: string | number): boolean
+  hasBuyerContentEdits(spreadIdOrIndex?: string | number, documentName: string = ""): boolean
 
   /**
    * Returns only false if property refers to a formfield which is not visible, because it doesn' match a specific condition.
@@ -478,6 +483,17 @@ export interface iPrintessApi {
   removeHandwritingImage(): Promise<boolean>;
 
   /**
+   * Indicates if form fields are available
+   */
+  hasFormFields(): boolean
+
+  /**
+   * Get the id if the tab to display on start-up
+   * default is `#PHOTOS`
+   */
+  getInitialTabId(): string 
+
+  /**
    * Returns the current form field value and its possible list values if available
    * @param fieldName Name of the Form-Field or Form-Field Property-ID
    */
@@ -567,6 +583,12 @@ export interface iPrintessApi {
   uploadImage(file: File, progressCallback?: (percent: number, state?: "upload" | "optimization") => void, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage | null>;
 
   /**
+   * If no selection is present this call finds the first unassigned image and assigns it
+   * If all images are already assigned it takes the first image and re-assigns it
+   */
+  assignImageToNextPossibleFrame(imgId: string): Promise<boolean>
+
+  /**
    * Rotates an image by 90deg and saves the result as new image and assigns rotated image to frame automatically.
    * @param propertyId 
    * @param angle 
@@ -586,12 +608,7 @@ export interface iPrintessApi {
   /**
    * Returns Buyer-Side Flag if ui should show a dedicated image tab
    */
-  showImageTab(): boolean;
-
-  /**
-   * Retrieve the caption for the document-form-field-tab 
-   */
-  formFieldTabCaption(): string
+  showTabNavigation(): boolean;
 
   /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
@@ -903,7 +920,7 @@ export interface iPrintessApi {
   /**
    * Jumps to the next available preview document if there is one.
    */
-  gotoNextPreviewDocument(): Promise<void>
+  gotoNextPreviewDocument(zoomDuration?: number ): Promise<void>
 
   /**
    * Tells printess the zoom mode to use for the next resize operation
@@ -1051,7 +1068,10 @@ export interface iPrintessApi {
   /**
    * Returns if LayoutSnippets are available
    */
-  hasLayoutSnippets(): boolean
+  hasLayoutSnippets(): boolean,
+
+  /** only for internal use, to transfer visual-viewport to iOs in iframe-mode */
+  setIFrameViewPort(v: { offsetTop: number, height: number }): void
 }
 
 export interface iBuyerStep {
@@ -1163,12 +1183,14 @@ export interface iExternalDocAndSpreadInfo {
 }
 
 
-export interface iExternalSpread {
-  groupSnippets: ReadonlyArray<iExternalSnippet> | Array<iExternalSnippet>;
-  layoutSnippets: ReadonlyArray<iExternalSnippet> | Array<iExternalSnippet>;
-  spreadId: string;
+
+export interface iExternalTab {
+  id: string,
+  caption: string,
+  icon: iconName
 }
 export interface iExternalSnippetCluster {
+  tabId: string,
   name: string;
   snippets: Array<iExternalSnippet>;
 }
@@ -1345,8 +1367,8 @@ export interface iMergeTemplate {
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
-export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>) => void;
-export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean }>) => HTMLDivElement;
+export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
+export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
@@ -1389,7 +1411,7 @@ export interface iMobileUiState {
 }
 
 
-export type MobileUiState = "document" | "frames" | "add" | "details";
+export type MobileUiState = "document" | "frames" | "add" | "details" | "text";
 
 export interface MobileUiMenuItems {
   id: "back" | "undo" | "redo" | "previous" | "next" | "firstStep" | "lastStep",
@@ -1676,4 +1698,5 @@ export type iconName =
   | "code-curly"
   | "text-bottom"
   | "text-center"
-  | "text-top";
+  | "text-top"
+  | "handwriting";

@@ -26,7 +26,7 @@
     data-bs-target="#layoutOffcanvas" aria-controls="layoutOffcanvas">
     Change Layout
   </button>
-  
+
   <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="layoutOffcanvas"
     aria-labelledby="offcanvasLabel">
     <div class="offcanvas-header">
@@ -74,7 +74,13 @@
       // remove your progress overlay here
     }
 
-    const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
+    const spreadChangeCallback = (groupSnippets, layoutSnippets, tabs) => {
+
+      // remember groupSnippets for showing as add-able items
+      currentGroupSnippets = groupSnippets;
+      currentLayoutSnippets = layoutSnippets;
+      currentTabs = tabs;
+
 
       //console.warn("Spread Change!");
 
@@ -95,11 +101,11 @@
 
       if (printess.isMobile()) {
         // **** add mobile-ui *****
-        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets);
+        uiHelper.renderMobileUi(printess, properties, state, currentGroupSnippets, currentLayoutSnippets, currentTabs);
         uiHelper.renderMobileNavBar(printess);
       } else {
         // ***** add desktop-ui *****
-        const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets);
+        const t = uiHelper.renderDesktopUi(printess, properties, state, currentGroupSnippets, currentLayoutSnippets, currentTabs);
         uiHelper.refreshUndoRedoState(printess);
       }
 
@@ -108,7 +114,7 @@
     const getOverlayCallback = (properties) => {
       return uiHelper.getOverlay(printess, properties);
     }
-  
+
 
     window.WebComponents.waitFor(async () => {
       const printessLoader = await import('https://editor.printess.com/v/nightly/printess-editor/printess-editor.js');
