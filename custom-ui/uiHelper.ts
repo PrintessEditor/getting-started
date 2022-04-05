@@ -419,7 +419,7 @@ declare const bootstrap: any;
           if (uih_currentTabId === "#FORMFIELDS") {
             container.appendChild(propsDiv);
           } else {
-            renderDesktopTabProperties(printess, container);
+            renderTabNavigationProperties(printess, container, false);
           }
         } else {
           container.appendChild(propsDiv);
@@ -462,7 +462,7 @@ declare const bootstrap: any;
 
       if (renderPhotoTabForEmptyImage) {
         container.appendChild(getPropertiesTitle(printess));
-        renderDesktopTabProperties(printess, container);
+        renderTabNavigationProperties(printess, container, false);
       } else {
         if (printess.showTabNavigation()) {
           container.appendChild(getPropertiesTitle(printess));
@@ -697,7 +697,7 @@ declare const bootstrap: any;
     const selected = getSelectedTab();
 
     const tabsToolbar = document.createElement("ul");
-    tabsToolbar.className = "nav flex-column";
+    tabsToolbar.className = "nav";
 
     if (!forMobile && tabsContainer.clientHeight - (120 * tabs.length) < 100) {
       tabsToolbar.style.height = "100%";
@@ -705,6 +705,7 @@ declare const bootstrap: any;
     }
 
     for (const t of tabs) {
+      if (forMobile && (t.id === "#BACKGROUND" || t.id === "#FORMFIELDS")) continue;
       const tabItem = document.createElement("li");
       tabItem.className = "nav-item";
       tabItem.dataset.tabid = t.id;
@@ -747,28 +748,28 @@ declare const bootstrap: any;
     tabsContainer.appendChild(tabsToolbar);
   }
 
-  // Render desktop properties depending on selected tab
-  function renderDesktopTabProperties(printess: iPrintessApi, container: HTMLElement): void {
+  // Show properties depending on selected tab
+  function renderTabNavigationProperties(printess: iPrintessApi, container: HTMLElement, forMobile: boolean): void {
 
 
     switch (uih_currentTabId) {
 
       case "#PHOTOS": {
-        const tabs = [{ title: printess.gl("ui.selectImage"), id: "select-images", content: renderMyImagesTab(printess, false) }];
+        const tabs = [{ title: printess.gl("ui.selectImage"), id: "select-images", content: renderMyImagesTab(printess, forMobile, undefined, undefined, undefined, printess.showSearchBar(), true) }];
         const groupSnippets = uih_currentGroupSnippets.filter(gs => gs.tabId === "#PHOTOS");
 
         // render tab panel if photo groupSnippets are available, else render only myImagesTab
         if (groupSnippets.length) {
-          tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, false) });
+          tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, forMobile) });
           container.appendChild(getTabPanel(tabs, "photo-frames"));
         } else {
-          container.appendChild(renderMyImagesTab(printess, false));
+          container.appendChild(renderMyImagesTab(printess, forMobile, undefined, undefined, undefined, printess.showSearchBar(), true));
         }
 
         break;
       }
       case "#LAYOUTS": {
-        const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets);
+        const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
         container.appendChild(layoutsDiv);
         break;
       }
@@ -782,7 +783,7 @@ declare const bootstrap: any;
       default: {
         const groupSnippets = uih_currentGroupSnippets.filter(gs => gs.tabId === uih_currentTabId);
         if (groupSnippets.length) {
-          const snippetsDiv = renderGroupSnippets(printess, groupSnippets, false);
+          const snippetsDiv = renderGroupSnippets(printess, groupSnippets, forMobile);
           container.appendChild(snippetsDiv);
         }
         break;
@@ -2702,6 +2703,8 @@ declare const bootstrap: any;
             propsDiv.replaceWith(getPropertyControl(printess, p));
           }
 
+          if (forMobile) closeMobileFullscreenContainer();
+
           // validate(printess, p);
         }
         imageList.appendChild(thumb);
@@ -3914,7 +3917,7 @@ declare const bootstrap: any;
    * My Images List
    */
 
-  function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExternalProperty, images?: Array<iExternalImage>, imagesContainer?: HTMLDivElement, showSearchIcon: boolean = true): HTMLElement {
+  function renderMyImagesTab(printess: iPrintessApi, forMobile: boolean, p?: iExternalProperty, images?: Array<iExternalImage>, imagesContainer?: HTMLDivElement, showSearchIcon: boolean = true, showMobileImagesUploadBtn: boolean = false): HTMLElement {
     const container = imagesContainer || document.createElement("div");
     container.id = "image-tab-container";
     container.innerHTML = "";
@@ -3950,7 +3953,7 @@ declare const bootstrap: any;
         twoButtons.appendChild(distributeBtn);
       } */
 
-      if (!forMobile) container.appendChild(twoButtons);
+      if (!forMobile || showMobileImagesUploadBtn) container.appendChild(twoButtons);
     }
 
     if (printess.showSearchBar() && images.length > 5) {
@@ -4095,9 +4098,7 @@ declare const bootstrap: any;
           const newImages = printess.getImages(p?.id);
           renderMyImagesTab(printess, forMobile, p, newImages, container);
 
-          const imageListFullscreen = document.querySelector(".image-list-fullscreen.show-image-list");
-          imageListFullscreen?.classList.remove("show-image-list");
-          imageListFullscreen?.classList.add("hide-image-list");
+          closeMobileFullscreenContainer();
 
         } else {
           const propsDiv = document.getElementById("tabs-panel-" + p.id);
@@ -4112,6 +4113,9 @@ declare const bootstrap: any;
       // MyImages-Tab mode, no property is selected 
       thumb.onclick = async () => {
         printess.assignImageToNextPossibleFrame(im.id);
+        if (forMobile) {
+          closeMobileFullscreenContainer();
+        }
       }
     }
     return thumb;
@@ -4194,17 +4198,60 @@ declare const bootstrap: any;
     return searchWrapper;
   }
 
-  // Fullscreen View on Mobile
-  function renderMobileFullscreen(printess: iPrintessApi, id: string, title: string, tabContent: HTMLElement, p?: iExternalProperty): HTMLElement {
-    const container = document.createElement("div");
-    container.className = "image-list-fullscreen image-list-preset";
+  // Mobile Properties Caption
+  function getMobilePropertiesCaption(printess: iPrintessApi, tabs: Array<iExternalTab> = uih_currentTabs): string {
+    if (uih_currentTabId === "LOADING") {
+      uih_currentTabId = printess.getInitialTabId();
+    }
 
+    let caption = "";
+    const currentTab = tabs.filter(t => t.id === uih_currentTabId)[0] || "";
+    if (currentTab) {
+      caption = currentTab.caption;
+    }
+
+    return caption
+  }
+
+  // Fullscreen Properties View with Tabs Navigation
+  function renderMobilePropertiesFullscreen(printess: iPrintessApi, id: string): HTMLElement {
+    let container: HTMLDivElement | null = document.querySelector(".fullscreen-with-toolbar");
+
+    if (!container) {
+      container = document.createElement("div");
+      container.className = "fullscreen-with-toolbar image-list-preset";
+
+      const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
+      const propsContainer = document.createElement("div");
+      renderTabNavigationProperties(printess, propsContainer, true);
+      getMobileFullscreenContent(printess, id, container, caption, propsContainer, true);
+    }
+
+    return container;
+  }
+
+  // Fullscreen Image List on Mobile
+  function renderMobileImageListFullscreen(printess: iPrintessApi, id: string, title: string, tabContent: HTMLElement, p?: iExternalProperty): HTMLElement {
+    let container: HTMLDivElement | null = document.querySelector(".image-list-fullscreen");
+    if (!container) {
+      container = document.createElement("div");
+      container.className = "image-list-fullscreen image-list-preset";
+    } else {
+      container.innerHTML = "";
+    }
+
+    getMobileFullscreenContent(printess, id, container, title, tabContent, false, p);
+
+    return container;
+  }
+
+  function getMobileFullscreenContent(printess: iPrintessApi, id: string, container: HTMLElement, title: string, tabContent: HTMLElement, addTabsNavigation: boolean, p?: iExternalProperty): void {
     const header = document.createElement("div");
     header.className = "image-list-header bg-primary text-light";
     header.textContent = printess.gl(title);
-    const exitBtn = printess.getIcon("chevron-down-light");
+    const exitBtn = printess.getIcon("close");
     exitBtn.style.width = "20px";
-    exitBtn.style.height = "30px";
+    exitBtn.style.height = "24px";
     exitBtn.onclick = () => {
       container?.classList.remove("show-image-list");
       container?.classList.add("hide-image-list");
@@ -4213,13 +4260,42 @@ declare const bootstrap: any;
 
     const content = document.createElement("div");
     content.className = "mobile-fullscreen-content";
-    content.id = id + "_" + p?.id || "";
+    content.id = id + "_" + p?.id ?? "";
     content.appendChild(tabContent);
+
+    const tabsContainer = document.createElement("div");
+    tabsContainer.className = "tabs-navigation";
+    renderTabsNavigation(printess, tabsContainer, true);
 
     container.appendChild(header);
     container.appendChild(content);
+    if (addTabsNavigation) container.appendChild(tabsContainer);
+  }
 
-    return container;
+  function updateMobilePropertiesFullscreen(printess: iPrintessApi): void {
+    const imageListHeader = <HTMLElement>document.querySelector(".image-list-header");
+    if (imageListHeader) {
+      const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
+      imageListHeader.textContent = caption; const exitBtn = printess.getIcon("close");
+      exitBtn.style.width = "20px";
+      exitBtn.style.height = "24px";
+      exitBtn.onclick = () => {
+        closeMobileFullscreenContainer();
+      }
+      imageListHeader.appendChild(exitBtn);
+    }
+    const propsContainer = <HTMLElement>document.querySelector(".mobile-fullscreen-content");
+    if (propsContainer) {
+      propsContainer.innerHTML = "";
+      renderTabNavigationProperties(printess, propsContainer, true);
+    }
+  }
+
+  function closeMobileFullscreenContainer(): void {
+    const fullscreenContainer = document.querySelector(".fullscreen-with-toolbar.show-image-list") || document.querySelector(".image-list-fullscreen.show-image-list");
+
+    fullscreenContainer?.classList.remove("show-image-list");
+    fullscreenContainer?.classList.add("hide-image-list");
   }
 
   // Images on Mobile
@@ -4235,7 +4311,7 @@ declare const bootstrap: any;
 
     // render Fullscreen Images List
     const tabContent = renderMyImagesTab(printess, true, p, undefined);
-    const fullscreen = renderMobileFullscreen(printess, "images-list", "ui.exchangeImage", tabContent, p)
+    const fullscreen = renderMobileImageListFullscreen(printess, "images-list", "ui.exchangeImage", tabContent, p)
     container.appendChild(fullscreen);
 
     // Change Image button
@@ -4426,9 +4502,7 @@ declare const bootstrap: any;
 
           thumbDiv.onclick = () => {
             if (forMobile) {
-              const groupSnippetsFullscreen = document.querySelector(".image-list-fullscreen.show-image-list");
-              groupSnippetsFullscreen?.classList.remove("show-image-list");
-              groupSnippetsFullscreen?.classList.add("hide-image-list");
+              closeMobileFullscreenContainer();
               div.innerHTML === "";
             }
             printess.insertGroupSnippet(snippet.snippetUrl);
@@ -4460,7 +4534,7 @@ declare const bootstrap: any;
     }
   }
 
-  function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExternalSnippetCluster>): HTMLDivElement {
+  function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExternalSnippetCluster>, forMobile?: boolean): HTMLDivElement {
     const container = document.createElement("div");
     container.className = "layout-snippet-list";
     if (layoutSnippets) {
@@ -4494,6 +4568,10 @@ declare const bootstrap: any;
 
             const offCanvas = document.getElementById("layoutOffcanvas");
             if (offCanvas) offCanvas.style.visibility = "hidden";
+
+            if (forMobile && printess.showTabNavigation()) {
+              closeMobileFullscreenContainer();
+            }
           }
           clusterDiv.appendChild(thumbDiv);
         }
@@ -4965,10 +5043,15 @@ declare const bootstrap: any;
 
     mobileUi.appendChild(getMobilePropertyNavButtons(printess, state, autoSelectButton !== null));
 
+    // update content for mobile properties (fullscreen)
+    if (printess.showTabNavigation()) {
+      updateMobilePropertiesFullscreen(printess);
+    }
+
     if (state === "add") {
       // render list of group snippets
       document.body.classList.add("no-mobile-button-bar");
-      renderMobileControlHost(printess, { state: "add" })
+      renderMobileControlHost(printess, { state: "add" });
     }
 
     // translate change Layout button text
@@ -5173,17 +5256,23 @@ declare const bootstrap: any;
     const button = document.createElement("div");
     button.className = "mobile-property-plus-button";
 
-    const groupSnippetsFullscreen = renderMobileFullscreen(printess, "add-design", "ui.addDesign", renderGroupSnippets(printess, uih_currentGroupSnippets, true));
-    document.body.appendChild(groupSnippetsFullscreen);
-
     const circle = document.createElement("div");
     circle.className = "mobile-property-circle";
     circle.onclick = () => {
       sessionStorage.setItem("addDesign", "hint closed");
       //renderMobileUi(printess, undefined, "add", undefined);
-      groupSnippetsFullscreen.classList.remove("image-list-preset");
-      groupSnippetsFullscreen.classList.remove("hide-image-list");
-      groupSnippetsFullscreen.classList.add("show-image-list");
+      let fullscreenContainer: HTMLElement;
+      const groupSnippets = renderGroupSnippets(printess, uih_currentGroupSnippets, true);
+      if (printess.showTabNavigation()) {
+        fullscreenContainer = renderMobilePropertiesFullscreen(printess, "add-design");
+      } else {
+        fullscreenContainer = renderMobileImageListFullscreen(printess, "add-design", "ui.addDesign", groupSnippets);
+      }
+      document.body.appendChild(fullscreenContainer);
+
+      fullscreenContainer.classList.remove("image-list-preset");
+      fullscreenContainer.classList.remove("hide-image-list");
+      fullscreenContainer.classList.add("show-image-list");
     }
 
     if (!sessionStorage.getItem("addDesign")) {

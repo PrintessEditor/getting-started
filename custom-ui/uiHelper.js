@@ -331,7 +331,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         container.appendChild(propsDiv);
                     }
                     else {
-                        renderDesktopTabProperties(printess, container);
+                        renderTabNavigationProperties(printess, container, false);
                     }
                 }
                 else {
@@ -358,7 +358,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             if (renderPhotoTabForEmptyImage) {
                 container.appendChild(getPropertiesTitle(printess));
-                renderDesktopTabProperties(printess, container);
+                renderTabNavigationProperties(printess, container, false);
             }
             else {
                 if (printess.showTabNavigation()) {
@@ -563,12 +563,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         tabsContainer.innerHTML = "";
         const selected = getSelectedTab();
         const tabsToolbar = document.createElement("ul");
-        tabsToolbar.className = "nav flex-column";
+        tabsToolbar.className = "nav";
         if (!forMobile && tabsContainer.clientHeight - (120 * tabs.length) < 100) {
             tabsToolbar.style.height = "100%";
             tabsToolbar.style.justifyContent = "space-between";
         }
         for (const t of tabs) {
+            if (forMobile && (t.id === "#BACKGROUND" || t.id === "#FORMFIELDS"))
+                continue;
             const tabItem = document.createElement("li");
             tabItem.className = "nav-item";
             tabItem.dataset.tabid = t.id;
@@ -604,22 +606,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         tabsContainer.appendChild(tabsToolbar);
     }
-    function renderDesktopTabProperties(printess, container) {
+    function renderTabNavigationProperties(printess, container, forMobile) {
         switch (uih_currentTabId) {
             case "#PHOTOS": {
-                const tabs = [{ title: printess.gl("ui.selectImage"), id: "select-images", content: renderMyImagesTab(printess, false) }];
+                const tabs = [{ title: printess.gl("ui.selectImage"), id: "select-images", content: renderMyImagesTab(printess, forMobile, undefined, undefined, undefined, printess.showSearchBar(), true) }];
                 const groupSnippets = uih_currentGroupSnippets.filter(gs => gs.tabId === "#PHOTOS");
                 if (groupSnippets.length) {
-                    tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, false) });
+                    tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, forMobile) });
                     container.appendChild(getTabPanel(tabs, "photo-frames"));
                 }
                 else {
-                    container.appendChild(renderMyImagesTab(printess, false));
+                    container.appendChild(renderMyImagesTab(printess, forMobile, undefined, undefined, undefined, printess.showSearchBar(), true));
                 }
                 break;
             }
             case "#LAYOUTS": {
-                const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets);
+                const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
                 container.appendChild(layoutsDiv);
                 break;
             }
@@ -632,7 +634,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             default: {
                 const groupSnippets = uih_currentGroupSnippets.filter(gs => gs.tabId === uih_currentTabId);
                 if (groupSnippets.length) {
-                    const snippetsDiv = renderGroupSnippets(printess, groupSnippets, false);
+                    const snippetsDiv = renderGroupSnippets(printess, groupSnippets, forMobile);
                     container.appendChild(snippetsDiv);
                 }
                 break;
@@ -2238,6 +2240,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (propsDiv) {
                         propsDiv.replaceWith(getPropertyControl(printess, p));
                     }
+                    if (forMobile)
+                        closeMobileFullscreenContainer();
                 });
                 imageList.appendChild(thumb);
             }
@@ -3235,7 +3239,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function renderMyImagesTab(printess, forMobile, p, images, imagesContainer, showSearchIcon = true) {
+    function renderMyImagesTab(printess, forMobile, p, images, imagesContainer, showSearchIcon = true, showMobileImagesUploadBtn = false) {
         var _a, _b;
         const container = imagesContainer || document.createElement("div");
         container.id = "image-tab-container";
@@ -3259,7 +3263,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             twoButtons.id = "two-buttons";
             twoButtons.style.display = "grid";
             twoButtons.appendChild(getImageUploadButton(printess, (_b = p === null || p === void 0 ? void 0 : p.id) !== null && _b !== void 0 ? _b : "", false, p !== undefined));
-            if (!forMobile)
+            if (!forMobile || showMobileImagesUploadBtn)
                 container.appendChild(twoButtons);
         }
         if (printess.showSearchBar() && images.length > 5) {
@@ -3384,9 +3388,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                     const newImages = printess.getImages(p === null || p === void 0 ? void 0 : p.id);
                     renderMyImagesTab(printess, forMobile, p, newImages, container);
-                    const imageListFullscreen = document.querySelector(".image-list-fullscreen.show-image-list");
-                    imageListFullscreen === null || imageListFullscreen === void 0 ? void 0 : imageListFullscreen.classList.remove("show-image-list");
-                    imageListFullscreen === null || imageListFullscreen === void 0 ? void 0 : imageListFullscreen.classList.add("hide-image-list");
+                    closeMobileFullscreenContainer();
                 }
                 else {
                     const propsDiv = document.getElementById("tabs-panel-" + p.id);
@@ -3399,6 +3401,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             thumb.onclick = () => __awaiter(this, void 0, void 0, function* () {
                 printess.assignImageToNextPossibleFrame(im.id);
+                if (forMobile) {
+                    closeMobileFullscreenContainer();
+                }
             });
         }
         return thumb;
@@ -3467,15 +3472,49 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         searchWrapper.appendChild(searchBtn);
         return searchWrapper;
     }
-    function renderMobileFullscreen(printess, id, title, tabContent, p) {
-        const container = document.createElement("div");
-        container.className = "image-list-fullscreen image-list-preset";
+    function getMobilePropertiesCaption(printess, tabs = uih_currentTabs) {
+        if (uih_currentTabId === "LOADING") {
+            uih_currentTabId = printess.getInitialTabId();
+        }
+        let caption = "";
+        const currentTab = tabs.filter(t => t.id === uih_currentTabId)[0] || "";
+        if (currentTab) {
+            caption = currentTab.caption;
+        }
+        return caption;
+    }
+    function renderMobilePropertiesFullscreen(printess, id) {
+        let container = document.querySelector(".fullscreen-with-toolbar");
+        if (!container) {
+            container = document.createElement("div");
+            container.className = "fullscreen-with-toolbar image-list-preset";
+            const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
+            const propsContainer = document.createElement("div");
+            renderTabNavigationProperties(printess, propsContainer, true);
+            getMobileFullscreenContent(printess, id, container, caption, propsContainer, true);
+        }
+        return container;
+    }
+    function renderMobileImageListFullscreen(printess, id, title, tabContent, p) {
+        let container = document.querySelector(".image-list-fullscreen");
+        if (!container) {
+            container = document.createElement("div");
+            container.className = "image-list-fullscreen image-list-preset";
+        }
+        else {
+            container.innerHTML = "";
+        }
+        getMobileFullscreenContent(printess, id, container, title, tabContent, false, p);
+        return container;
+    }
+    function getMobileFullscreenContent(printess, id, container, title, tabContent, addTabsNavigation, p) {
+        var _a;
         const header = document.createElement("div");
         header.className = "image-list-header bg-primary text-light";
         header.textContent = printess.gl(title);
-        const exitBtn = printess.getIcon("chevron-down-light");
+        const exitBtn = printess.getIcon("close");
         exitBtn.style.width = "20px";
-        exitBtn.style.height = "30px";
+        exitBtn.style.height = "24px";
         exitBtn.onclick = () => {
             container === null || container === void 0 ? void 0 : container.classList.remove("show-image-list");
             container === null || container === void 0 ? void 0 : container.classList.add("hide-image-list");
@@ -3483,11 +3522,39 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         header.appendChild(exitBtn);
         const content = document.createElement("div");
         content.className = "mobile-fullscreen-content";
-        content.id = id + "_" + (p === null || p === void 0 ? void 0 : p.id) || "";
+        content.id = (_a = id + "_" + (p === null || p === void 0 ? void 0 : p.id)) !== null && _a !== void 0 ? _a : "";
         content.appendChild(tabContent);
+        const tabsContainer = document.createElement("div");
+        tabsContainer.className = "tabs-navigation";
+        renderTabsNavigation(printess, tabsContainer, true);
         container.appendChild(header);
         container.appendChild(content);
-        return container;
+        if (addTabsNavigation)
+            container.appendChild(tabsContainer);
+    }
+    function updateMobilePropertiesFullscreen(printess) {
+        const imageListHeader = document.querySelector(".image-list-header");
+        if (imageListHeader) {
+            const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
+            imageListHeader.textContent = caption;
+            const exitBtn = printess.getIcon("close");
+            exitBtn.style.width = "20px";
+            exitBtn.style.height = "24px";
+            exitBtn.onclick = () => {
+                closeMobileFullscreenContainer();
+            };
+            imageListHeader.appendChild(exitBtn);
+        }
+        const propsContainer = document.querySelector(".mobile-fullscreen-content");
+        if (propsContainer) {
+            propsContainer.innerHTML = "";
+            renderTabNavigationProperties(printess, propsContainer, true);
+        }
+    }
+    function closeMobileFullscreenContainer() {
+        const fullscreenContainer = document.querySelector(".fullscreen-with-toolbar.show-image-list") || document.querySelector(".image-list-fullscreen.show-image-list");
+        fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.remove("show-image-list");
+        fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.add("hide-image-list");
     }
     function renderImageControlButtons(printess, images, p) {
         const forHandwriting = (p === null || p === void 0 ? void 0 : p.kind) === "selection-text-style";
@@ -3497,7 +3564,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         container.style.gridTemplateColumns = (images.length > 0 && !forHandwriting) ? "1fr 1fr" : "1fr";
         container.style.gridGap = "5px";
         const tabContent = renderMyImagesTab(printess, true, p, undefined);
-        const fullscreen = renderMobileFullscreen(printess, "images-list", "ui.exchangeImage", tabContent, p);
+        const fullscreen = renderMobileImageListFullscreen(printess, "images-list", "ui.exchangeImage", tabContent, p);
         container.appendChild(fullscreen);
         const change = document.createElement("button");
         change.className = "btn btn-outline-primary exchange-image-btn";
@@ -3642,9 +3709,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     };
                     thumbDiv.onclick = () => {
                         if (forMobile) {
-                            const groupSnippetsFullscreen = document.querySelector(".image-list-fullscreen.show-image-list");
-                            groupSnippetsFullscreen === null || groupSnippetsFullscreen === void 0 ? void 0 : groupSnippetsFullscreen.classList.remove("show-image-list");
-                            groupSnippetsFullscreen === null || groupSnippetsFullscreen === void 0 ? void 0 : groupSnippetsFullscreen.classList.add("hide-image-list");
+                            closeMobileFullscreenContainer();
                             div.innerHTML === "";
                         }
                         printess.insertGroupSnippet(snippet.snippetUrl);
@@ -3675,7 +3740,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function renderLayoutSnippets(printess, layoutSnippets) {
+    function renderLayoutSnippets(printess, layoutSnippets, forMobile) {
         const container = document.createElement("div");
         container.className = "layout-snippet-list";
         if (layoutSnippets) {
@@ -3706,6 +3771,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         const offCanvas = document.getElementById("layoutOffcanvas");
                         if (offCanvas)
                             offCanvas.style.visibility = "hidden";
+                        if (forMobile && printess.showTabNavigation()) {
+                            closeMobileFullscreenContainer();
+                        }
                     };
                     clusterDiv.appendChild(thumbDiv);
                 }
@@ -4102,6 +4170,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         controlHost.id = "mobile-control-host";
         mobileUi.appendChild(controlHost);
         mobileUi.appendChild(getMobilePropertyNavButtons(printess, state, autoSelectButton !== null));
+        if (printess.showTabNavigation()) {
+            updateMobilePropertiesFullscreen(printess);
+        }
         if (state === "add") {
             document.body.classList.add("no-mobile-button-bar");
             renderMobileControlHost(printess, { state: "add" });
@@ -4275,15 +4346,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getMobilePlusButton(printess) {
         const button = document.createElement("div");
         button.className = "mobile-property-plus-button";
-        const groupSnippetsFullscreen = renderMobileFullscreen(printess, "add-design", "ui.addDesign", renderGroupSnippets(printess, uih_currentGroupSnippets, true));
-        document.body.appendChild(groupSnippetsFullscreen);
         const circle = document.createElement("div");
         circle.className = "mobile-property-circle";
         circle.onclick = () => {
             sessionStorage.setItem("addDesign", "hint closed");
-            groupSnippetsFullscreen.classList.remove("image-list-preset");
-            groupSnippetsFullscreen.classList.remove("hide-image-list");
-            groupSnippetsFullscreen.classList.add("show-image-list");
+            let fullscreenContainer;
+            const groupSnippets = renderGroupSnippets(printess, uih_currentGroupSnippets, true);
+            if (printess.showTabNavigation()) {
+                fullscreenContainer = renderMobilePropertiesFullscreen(printess, "add-design");
+            }
+            else {
+                fullscreenContainer = renderMobileImageListFullscreen(printess, "add-design", "ui.addDesign", groupSnippets);
+            }
+            document.body.appendChild(fullscreenContainer);
+            fullscreenContainer.classList.remove("image-list-preset");
+            fullscreenContainer.classList.remove("hide-image-list");
+            fullscreenContainer.classList.add("show-image-list");
         };
         if (!sessionStorage.getItem("addDesign")) {
             circle.classList.add("mobile-property-plus-pulse");
@@ -4846,7 +4924,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         let autoSelectHasMeta = false;
         let firstButton = null;
         const ep = (_b = (_a = buttons[0]) === null || _a === void 0 ? void 0 : _a.newState) === null || _b === void 0 ? void 0 : _b.externalProperty;
-        if (ep && buttons.length === 1 && !skipAutoSelect) {
+        if (ep && buttons.length === 1 && skipAutoSelect !== true) {
             if (ep.kind === "image") {
                 autoSelect = buttons[0];
             }
