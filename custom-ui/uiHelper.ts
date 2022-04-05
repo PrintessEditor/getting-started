@@ -5991,7 +5991,7 @@ declare const bootstrap: any;
     let autoSelectHasMeta = false;
     let firstButton: HTMLDivElement | null = null;
     const ep = buttons[0]?.newState?.externalProperty;
-    if (ep && buttons.length === 1 && !skipAutoSelect) {
+    if (ep && buttons.length === 1 && skipAutoSelect !== true) {
 
       /*  if (ep.id.startsWith("FF_")) {
           // only auto show simple text-form fields not complex once - creates bad user experience
