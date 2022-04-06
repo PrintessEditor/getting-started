@@ -41,8 +41,10 @@
       "buttonRemove": "Remove",
       "tabImages": "Images",
       "tabPhotos": "Photos",
-      "tabLayouts": "Layouts",
-      "tabText": "Text",
+      "tabLayouts": "Layouts", 
+      "tabLayoutsHeadline": "Change Layout", // new!
+      "tabText": "Text", 
+      "tabTextHeadline": "Add Text Frame", // new!
       "tabElements": "Elements",
       "tabStickers": "Sticker",
       "tabBackground": "Background",
@@ -216,7 +218,7 @@
       "tabImages": "Bilder",
       "tabPhotos": "Fotos",
       "tabLayouts": "Layouts",
-      "tabText": "Text",
+      "tabText": "Text hinzufügen",
       "tabElements": "Elemente",
       "tabStickers": "Sticker",
       "tabBackground": "Hintergrund",

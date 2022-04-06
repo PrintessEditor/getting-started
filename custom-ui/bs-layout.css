@@ -258,6 +258,9 @@ body {
   grid-template-columns: auto auto 1fr auto;
   grid-column-gap: 5px;
 }
+.corner-tools.expert-mode .undo-redo-bar {
+  grid-template-columns: auto auto auto 1fr auto;
+}
 
 .corner-tools .modify-page-buttons {
   display: grid;
@@ -860,6 +863,31 @@ input[type="radio"]:checked+label > svg {
   box-shadow: 0 0 0 0 var(--bs-primary);
   animation: pulse-blue 1s cubic-bezier(0.4, 0, 1, 1) infinite;
 }
+
+
+.button-with-caption {
+  padding-top: 2px;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+}
+.button-with-caption > div {
+  font-size: 10px;
+}
+.button-with-caption > svg {
+  width: 15px;
+  height: 15px;
+}
+.corner-tools > .undo-redo-bar > button-with-caption > svg {
+  width: 13px;
+  height: 13px;
+}
+.corner-tools > .undo-redo-bar {
+  grid-column-gap: 0px;
+}
+
 
 @keyframes pulse-blue {
   0% {

@@ -1072,6 +1072,25 @@ export interface iPrintessApi {
 
   /** only for internal use, to transfer visual-viewport to iOs in iframe-mode */
   setIFrameViewPort(v: { offsetTop: number, height: number }): void
+
+  /**
+   * Enter the buyer Expert-Mode to allow position, remove and rotation for every frame which is not locked
+   */
+  enterExpertMode(): void 
+
+  /**
+   * Leave the buyer Expert-Mode to allow position, remove and rotation for every frame which is not locked
+   */
+  leaveExpertMode(): void
+  
+  /**
+   * Returns if Expert-Mode is active
+   */ 
+  isInExpertMode(): boolean
+  /**
+   * Returns if UI should show a button to enter Expert-Mode
+   */
+  hasExpertButton(): boolean
 }
 
 export interface iBuyerStep {
@@ -1187,6 +1206,7 @@ export interface iExternalDocAndSpreadInfo {
 export interface iExternalTab {
   id: string,
   caption: string,
+  head?: string,
   icon: iconName
 }
 export interface iExternalSnippetCluster {
@@ -1699,4 +1719,5 @@ export type iconName =
   | "text-bottom"
   | "text-center"
   | "text-top"
+  | "pen-swirl"
   | "handwriting";

@@ -679,7 +679,7 @@ declare const bootstrap: any;
 
     let caption = "";
     if (currentTab) {
-      caption = currentTab.caption;
+      caption = currentTab.head || currentTab.caption;
     } else if (uih_currentState === "frames") {
       caption = getBuyerOverlayType(uih_currentProperties);
     } else if (uih_currentState === "text") {
@@ -1328,6 +1328,33 @@ declare const bootstrap: any;
     svg.style.verticalAlign = "sub";
     btn.appendChild(svg);
     btn.onclick = () => printess.gotoPreviousPreviewDocument();
+
+    return btn;
+  }
+  function getExpertModeButton(printess: iPrintessApi): HTMLElement {
+    const btn = document.createElement("button");
+    btn.className = "btn me-1 button-with-caption";
+    if (printess.isInExpertMode()) {
+      btn.classList.add("btn-primary")
+    } else {
+      btn.classList.add("btn-outline-primary")
+    }
+    const svg = printess.getIcon("pen");
+    btn.appendChild(svg);
+    const txt = document.createElement("div");
+    txt.textContent = "EXPERT";
+    btn.appendChild(txt);
+    btn.onclick = () => {
+      if (printess.isInExpertMode()) {
+        printess.leaveExpertMode();
+        btn.classList.remove("btn-primary");
+        btn.classList.add("btn-outline-primary");
+      } else {
+        printess.enterExpertMode();
+        btn.classList.add("btn-primary");
+        btn.classList.remove("btn-outline-primary");
+      }
+    }
 
     return btn;
   }
@@ -3531,6 +3558,10 @@ declare const bootstrap: any;
       miniBar.appendChild(btnRedo);
     }
 
+    if (printess.hasExpertButton()) {
+      miniBar.appendChild(getExpertModeButton(printess));
+    }
+
     miniBar.className = "undo-redo-bar";
 
     if (cornerTools) {
@@ -3870,6 +3901,9 @@ declare const bootstrap: any;
          ****************************************************** */
         const cornerTools = document.createElement("div");
         cornerTools.className = "corner-tools";
+        if (printess.hasExpertButton()) {
+          cornerTools.classList.add("expert-mode");
+        }
 
         cornerTools.appendChild(getBackUndoMiniBar(printess));
 
@@ -4211,7 +4245,7 @@ declare const bootstrap: any;
     let caption = "";
     const currentTab = tabs.filter(t => t.id === uih_currentTabId)[0] || "";
     if (currentTab) {
-      caption = currentTab.caption;
+      caption = currentTab.head  || currentTab.caption;
     }
 
     return caption
