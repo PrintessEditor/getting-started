@@ -1339,7 +1339,7 @@ declare const bootstrap: any;
     } else {
       btn.classList.add("btn-outline-primary")
     }
-    const svg = printess.getIcon("pen");
+    const svg = printess.getIcon("pen-swirl");
     btn.appendChild(svg);
     const txt = document.createElement("div");
     txt.textContent = "EXPERT";
@@ -2816,7 +2816,7 @@ declare const bootstrap: any;
         }
 
         // can upload multiple files at once
-        await printess.uploadImages(inp.files, (progress) => {
+       const newImg =  await printess.uploadImages(inp.files, (progress) => {
           progressBar.style.width = (progress * 100) + "%"
         }
           , assignToFrameOrNewFrame, id); // true auto assigns image and triggers selection change which redraws this control.
@@ -2826,6 +2826,9 @@ declare const bootstrap: any;
           //const imagesContainer = <HTMLDivElement>document.getElementById("image-tab-container");
           //getDistributionOverlay(printess, forMobile, uih_currentProperties[0], imagesContainer);
           await printess.distributeImages()
+        } else if (!assignToFrameOrNewFrame && newImg && newImg.length >0 ) {
+          // assign to next available frame 
+          printess.assignImageToNextPossibleFrame(newImg[0].id)
         }
 
 

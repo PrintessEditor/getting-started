@@ -822,8 +822,9 @@ input[type="radio"]:checked+label > svg {
 }
 .snippet-thumb.big {
   width: 140px; 
-  height: 140px;
- 
+  height: unset;
+  max-height: 140px;
+  margin-bottom: 6px;
 }
 .snippet-thumb.big > img {
   border: 1px solid var(--mobile-button-border);
@@ -866,7 +867,7 @@ input[type="radio"]:checked+label > svg {
 
 
 .button-with-caption {
-  padding-top: 2px;
+  padding-top: 0px;
   padding-bottom: 0;
   display: flex;
   flex-direction: column;
@@ -875,14 +876,14 @@ input[type="radio"]:checked+label > svg {
 }
 .button-with-caption > div {
   font-size: 10px;
+  line-height: 10px;  
+  margin-top: -4px;
 }
 .button-with-caption > svg {
-  width: 15px;
-  height: 15px;
+  height: 18px;
 }
-.corner-tools > .undo-redo-bar > button-with-caption > svg {
-  width: 13px;
-  height: 13px;
+.corner-tools > .undo-redo-bar > .button-with-caption > svg {
+  height: 15px;
 }
 .corner-tools > .undo-redo-bar {
   grid-column-gap: 0px;

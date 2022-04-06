@@ -42,14 +42,13 @@
       "tabImages": "Images",
       "tabPhotos": "Photos",
       "tabLayouts": "Layouts", 
-      "tabLayoutsHeadline": "Change Layout", // new!
       "tabText": "Text", 
-      "tabTextHeadline": "Add Text Frame", // new!
       "tabElements": "Elements",
       "tabStickers": "Sticker",
       "tabBackground": "Background",
       "tabFormField": "Customization",
       "addPhotoFrame": "Add Photo Frame",
+      "addTextFrame": "Add Text Frame",
       "selectImage": "My Photos",
       "uploadImageLabel": "Upload images from your device",
       "backButtonCallback": "Please add your callback in attachPrintess. [backButtonCallback]",
@@ -129,7 +128,9 @@
       "ungroup": "Ungroup Frames",
       "delete": "Delete",
 
-      "pages": "Pages"
+      "pages": "Pages",
+
+    
 
 
 
@@ -137,7 +138,7 @@
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
-      "imageResolutionLowShort": "Low image quality ($1)",
+      "imageResolutionLowShort": "Low image quality ($1dpi)",
       "imageResolutionLow": "Please add a photo with a higher resolution!",
       "invalidCharacterTitle": "Oops!\nLooks like some characters could not be printed ...",
       "invalidCharacterShort": "Missing character in font",
@@ -224,6 +225,7 @@
       "tabBackground": "Hintergrund",
       "tabFormField": "Einstellungen",
       "addPhotoFrame": "Fotorahmen hinzufügen",
+      "addTextFrame": "Textrahmem hinzufügen",
       "selectImage": "Meine Fotos",
       "uploadImageLabel": "Bilder von Ihrem Gerät hochladen",
       "backButtonCallback": "Bitte fügen Sie Ihre Rückruffunktion in attachPrintess hinzu. [backButtonCallback]",
@@ -308,7 +310,7 @@
     },
     "errors": {
       "imageResolutionLowTitle": "Uups!\nSieht so aus, als ob Ihr Bild zu klein ist...",
-      "imageResolutionLowShort": "Niedrige Bildauflösung ($1)",
+      "imageResolutionLowShort": "Niedrige Bildauflösung ($1dpi))",
       "imageResolutionLow": "Bitte fügen Sie ein Foto mit einer höheren Auflösung hinzu!",
       "invalidCharacterTitle": "Uups!\nSieht so aus, als ob einige Zeichen nicht gedruckt werden konnten ...",
       "invalidCharacterShort": "Ungültige Zeichen",
@@ -393,6 +395,7 @@
       "tabBackground": "Fondo",
       "tabFormField": "Personalización",
       "addPhotoFrame": "Añadir marco de fotos",
+      "addTextFrame": "Añadir marco de texto",
       "selectImage": "Mis fotos",
       "uploadImageLabel": "Subir imágenes desde su dispositivo",
       "backButtonCallback": "Por favor, añada su callback en attachPrintess. [backButtonCallback]",
@@ -561,6 +564,7 @@
       "tabBackground": "Tausta",
       "tabFormField": "Kustomointi",
       "addPhotoFrame": "Lisää valokuvakehys",
+      "addTextFrame": "Lisää tekstikehys",
       "selectImage": "Minun Valokuvani",
       "uploadImageLabel": "Lataa kuvia laitteestasi",
       "backButtonCallback": "Lisää takaisinsoitto kohtaan attachPrintess. [backButtonCallback]",
@@ -644,7 +648,7 @@
     },
     "errors": {
       "imageResolutionLowTitle": "Hups!\nKuvasi näyttää olevan liian pieni...",
-      "imageResolutionLowShort": "Alhainen kuvanlaatu ($1)",
+      "imageResolutionLowShort": "Alhainen kuvanlaatu ($1dpi))",
       "imageResolutionLow": "Ole hyvä ja lisää kuva korkeammalla resoluutiolla!",
       "invalidCharacterTitle": "Hups!\nJoitakin merkkejä ei voitu tulostaa ...",
       "invalidCharacterShort": "Kirjasimesta puuttuu merkki",
@@ -729,6 +733,7 @@
       "tabBackground": "Arrière-plan",
       "tabFormField": "Personnalisation",
       "addPhotoFrame": "Ajouter un cadre photo",
+      "addTextFrame": "Ajouter un cadre de texte",
       "selectImage": "Me Photos",
       "uploadImageLabel": "Téléchargez des images depuis votre appareil",
       "backButtonCallback": "Veuillez ajouter votre callback dans attachPrintess. [backButtonCallback]",
@@ -897,6 +902,7 @@
       "tabBackground": "Фон",
       "tabFormField": "Персонализация",
       "addPhotoFrame": "Добавить фоторамку",
+      "addTextFrame": "Добавить текстовую рамку",
       "selectImage": "Мои Фото",
       "uploadImageLabel": "Загрузите изображения с вашего устройства",
       "backButtonCallback": "Пожалуйста, добавьте обратный вызов в attachPrintess. [backButtonCallback]",
@@ -980,7 +986,7 @@
     },
     "errors": {
       "imageResolutionLowTitle": "Упс!\nПохоже, что ваше изображение слишком маленькое...",
-      "imageResolutionLowShort": "Низкое качество изображения ($1)",
+      "imageResolutionLowShort": "Низкое качество изображения ($1dpi))",
       "imageResolutionLow": "Пожалуйста, добавьте фотографию с более высоким разрешением!",
       "invalidCharacterTitle": "Упс!\nПохоже, что некоторые символы не могут быть напечатаны...",
       "invalidCharacterShort": "Не хватает символа в шрифте",
@@ -1065,6 +1071,7 @@
       "tabBackground": "Bakgrund",
       "tabFormField": "Anpassning",
       "addPhotoFrame": "Lägg till fotoram",
+      "addTextFrame": "Lägg till en textram",
       "selectImage": "Mina Bilder",
       "uploadImageLabel": "Ladda upp bilder från din enhet",
       "backButtonCallback": "Lägg till din callback i attachPrintess. [backButtonCallback]",
@@ -1148,7 +1155,7 @@
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nDet verkar som om bilden är för liten...",
-      "imageResolutionLowShort": "Låg bildkvalitet ($1)",
+      "imageResolutionLowShort": "Låg bildkvalitet ($1dpi)",
       "imageResolutionLow": "Lägg till en bild med högre upplösning!",
       "invalidCharacterTitle": "Oops!\nDet ser ut som om vissa tecken inte kunde skrivas ut ...",
       "invalidCharacterShort": "Ett tecken saknas i teckensnittet",

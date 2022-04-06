@@ -1069,7 +1069,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             btn.classList.add("btn-outline-primary");
         }
-        const svg = printess.getIcon("pen");
+        const svg = printess.getIcon("pen-swirl");
         btn.appendChild(svg);
         const txt = document.createElement("div");
         txt.textContent = "EXPERT";
@@ -2335,11 +2335,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (label) {
                     label.style.display = "none";
                 }
-                yield printess.uploadImages(inp.files, (progress) => {
+                const newImg = yield printess.uploadImages(inp.files, (progress) => {
                     progressBar.style.width = (progress * 100) + "%";
                 }, assignToFrameOrNewFrame, id);
                 if (printess.getImages().length > 0 && printess.getImages().filter(im => !im.inUse).length > 0 && printess.allowImageDistribution() && inp.files.length > 1) {
                     yield printess.distributeImages();
+                }
+                else if (!assignToFrameOrNewFrame && newImg && newImg.length > 0) {
+                    printess.assignImageToNextPossibleFrame(newImg[0].id);
                 }
                 if (!assignToFrameOrNewFrame) {
                     const imageTabContainer = document.getElementById("tab-my-images");
