@@ -4332,7 +4332,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         let autoSelectHasMeta = false;
         let firstButton = null;
         const ep = (_b = (_a = buttons[0]) === null || _a === void 0 ? void 0 : _a.newState) === null || _b === void 0 ? void 0 : _b.externalProperty;
-        if (ep && buttons.length === 1 && !skipAutoSelect) {
+        if (ep && buttons.length === 1 && skipAutoSelect !== true) {
             if (ep.kind === "image") {
                 autoSelect = buttons[0];
             }
