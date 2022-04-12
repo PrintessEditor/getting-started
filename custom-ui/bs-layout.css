@@ -272,7 +272,7 @@ body {
 
 #desktop-pagebar .undo-button {
   margin-right: 5px;
-  margin-left: 5px;
+  /* margin-left: 5px; */
 }
 #desktop-pagebar.big  .undo-button {
   margin-left: 0;
@@ -427,7 +427,7 @@ body {
   align-items: center;
   padding: 30px 0 20px 0;
   cursor: pointer;
-  font-size: 10pt;;
+  font-size: 9pt;
 }
 
 .tabs-navigation li.nav-item.selected {
@@ -508,7 +508,7 @@ body {
 }
 
 .desktop-title-or-steps .desktop-title-bar {
-  grid-gap: 10px;
+  grid-gap: 5px;
 }
 
 .book-shadow-gradient-left {
@@ -754,7 +754,7 @@ body {
 .error-list {
   max-height: calc(100vh - 500px);
   border: 1px solid #ccc;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
  
 .token-warning {
@@ -821,10 +821,11 @@ input[type="radio"]:checked+label > svg {
   justify-content: center;
 }
 .snippet-thumb.big {
-  width: 140px; 
+  max-width: 250px;
   height: unset;
-  max-height: 140px;
+  max-height: 250px;
   margin-bottom: 6px;
+  min-width: 150px;
 }
 .snippet-thumb.big > img {
   border: 1px solid var(--mobile-button-border);
@@ -839,9 +840,17 @@ input[type="radio"]:checked+label > svg {
   border: 1px solid var(--mobile-button-border-selected);
 }
 .snippet-thumb > img {
+  width: fit-content;
   max-width: 100%; 
   max-height: 100%;
   background-color: white;
+}
+.snippet-thumb.big > img {
+  width: 100%;
+}
+.snippet-thumb.large {
+  width: 200px;
+  height: 200px;
 }
 
 .snippet-cluster-name {
@@ -876,7 +885,7 @@ input[type="radio"]:checked+label > svg {
 }
 .button-with-caption > div {
   font-size: 10px;
-  line-height: 10px;  
+  line-height: 10px;
   margin-top: -4px;
 }
 .button-with-caption > svg {
@@ -887,6 +896,22 @@ input[type="radio"]:checked+label > svg {
 }
 .corner-tools > .undo-redo-bar {
   grid-column-gap: 0px;
+}
+
+.button-mobile-with-caption {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: .25rem .5rem;
+}
+.button-mobile-with-caption > div {
+  font-size: .7rem;
+  line-height: 10px;
+}
+.button-mobile-with-caption svg {
+  margin-right: 5px;
+  height: 20px;
 }
 
 
@@ -921,9 +946,15 @@ label {
   font-family: var(--font-family);
 }
 
-label>span {
+label > span {
   display: inline-block;
   min-width: 100px;
+}
+
+svg.scale-warning {
+  min-width: 40px;
+  height: 40px;
+  margin-right: 20px;
 }
 
 input[type='text'] {
@@ -1563,7 +1594,7 @@ input#invert-image-checker {
 }*/
 
 .ui-hint-alert {
- max-width: 80vw;
+ max-width: 420px;
  z-index: 4;
  padding-right: 16px;
 }
@@ -2277,6 +2308,9 @@ input#invert-image-checker {
   }
   .error-list {
     max-height: calc(100vh - 300px);
+  }
+  .ui-hint-alert {
+    max-width: 80vw;
   }
   
 }

@@ -491,7 +491,7 @@ export interface iPrintessApi {
    * Get the id if the tab to display on start-up
    * default is `#PHOTOS`
    */
-  getInitialTabId(): string 
+  getInitialTabId(): string
 
   /**
    * Returns the current form field value and its possible list values if available
@@ -609,6 +609,11 @@ export interface iPrintessApi {
    * Returns Buyer-Side Flag if ui should show a dedicated image tab
    */
   showTabNavigation(): boolean;
+
+  /**
+   * Indicates if a Layouts Dialog should be displayed when initially opening the Buyer Side to choose a Layout Snippet
+   */
+  showLayoutsDialog(): boolean;
 
   /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
@@ -743,7 +748,7 @@ export interface iPrintessApi {
   /**
    * returns an array of uiHints to be displayed on buyer side.
    */
-  uiHintsDisplay(): Array<"layoutSnippets" | "groupSnippets" | "editableFrames">;
+  uiHintsDisplay(): Array<"layoutSnippets" | "groupSnippets" | "editableFrames" | "expertMode">;
 
   /**
    * @deprecated
@@ -920,7 +925,7 @@ export interface iPrintessApi {
   /**
    * Jumps to the next available preview document if there is one.
    */
-  gotoNextPreviewDocument(zoomDuration?: number ): Promise<void>
+  gotoNextPreviewDocument(zoomDuration?: number): Promise<void>
 
   /**
    * Tells printess the zoom mode to use for the next resize operation
@@ -1076,16 +1081,16 @@ export interface iPrintessApi {
   /**
    * Enter the buyer Expert-Mode to allow position, remove and rotation for every frame which is not locked
    */
-  enterExpertMode(): void 
+  enterExpertMode(): void
 
   /**
    * Leave the buyer Expert-Mode to allow position, remove and rotation for every frame which is not locked
    */
   leaveExpertMode(): void
-  
+
   /**
    * Returns if Expert-Mode is active
-   */ 
+   */
   isInExpertMode(): boolean
   /**
    * Returns if UI should show a button to enter Expert-Mode
@@ -1434,7 +1439,7 @@ export interface iMobileUiState {
 export type MobileUiState = "document" | "frames" | "add" | "details" | "text";
 
 export interface MobileUiMenuItems {
-  id: "back" | "undo" | "redo" | "previous" | "next" | "firstStep" | "lastStep",
+  id: "back" | "expert" | "undo" | "redo" | "previous" | "next" | "firstStep" | "lastStep",
   title: string,
   icon: iconName,
   disabled: boolean,
@@ -1540,6 +1545,7 @@ export type iconName =
   | "text-align-left"
   | "text-align-right"
   | "text-align-center"
+  | "check-circle-solid"
   | "check"
   | "check-square"
   | "user-circle"
