@@ -21,6 +21,7 @@
       "buttonPrevStep": "Previous Step",
       "buttonFirstStep": "First Step",
       "backToShop": "Back to Shop",
+      "imagePlacement": "Placement",
       "imageScale": "Image Zoom",
       "imageVeryLowQuality": "The image quality is very poor and the print will appear very blurry.",
       "imageLowQuality": "The image quality is poor and the print may appear blurred. You can't zoom in on the image.",
@@ -98,7 +99,7 @@
       "table": "Table",
       "dragDropHint": "Drag and drop images to the desired frames.",
       "closeEditorTitle": "Exit $1 Design",
-      "closeEditorTextOne": "Do you want to finish the design?",
+      "closeEditorTextOne": "Do you want to exit the design?",
       "closeEditorTextTwo": "Your unsaved changes will be discarded when you exit.",
       "distributionDialogTitle": "Autofill Frames",
       "distributionDialogTitleOld": "Image Distribution",
@@ -141,6 +142,7 @@
       "delete": "Delete",
 
       "pages": "Pages"
+
 
     },
     "errors": {
@@ -205,6 +207,7 @@
       "buttonPrevStep": "Vorheriger Schritt",
       "buttonFirstStep": "Erster Schritt",
       "backToShop": "Zurück zum Shop",
+      "imagePlacement": "Einpassung",
       "imageScale": "Skalieren",
       "imageVeryLowQuality": "Die Bildqualität ist sehr schlecht und der Druck wird sehr unscharf erscheinen.",
       "imageLowQuality": "Die Bildqualität ist schlecht und der Druck kann unscharf erscheinen. Sie können das Bild nicht weiter zoomen.",
@@ -387,6 +390,7 @@
       "buttonPrevStep": "Paso anterior",
       "buttonFirstStep": "Primer paso",
       "backToShop": "Volver a la tienda",
+      "imagePlacement": "Colocación",
       "imageScale": "Escala",
       "imageVeryLowQuality": "La calidad de la imagen es muy pobre y la impresión aparecerá muy borrosa.",
       "imageLowQuality": "La calidad de la imagen es pobre y la impresión puede aparecer borrosa. No se puede ampliar la imagen.",
@@ -568,6 +572,7 @@
       "buttonPrevStep": "Edellinen vaihe",
       "buttonFirstStep": "Ensimmäinen askel",
       "backToShop": "Takaisin kauppaan",
+      "imagePlacement": "Sijoitus",
       "imageScale": "Scale",
       "imageVeryLowQuality": "Kuvanlaatu on erittäin huono ja tuloste näyttää hyvin epätarkalta.",
       "imageLowQuality": "Kuvanlaatu on huono ja tuloste voi näyttää epätarkalta. Et voi zoomata kuvaa.",
@@ -749,6 +754,7 @@
       "buttonPrevStep": "Étape précédente",
       "buttonFirstStep": "Première étape",
       "backToShop": "Retour à la boutique",
+      "imagePlacement": "Placement",
       "imageScale": "Échelle",
       "imageVeryLowQuality": "La qualité de l'image est très mauvaise et l'impression apparaît très floue.",
       "imageLowQuality": "La qualité de l'image est mauvaise et l'impression peut paraître floue. Vous ne pouvez pas effectuer de zoom avant sur l'image.",
@@ -930,6 +936,7 @@
       "buttonPrevStep": "Предыдущий Шаг",
       "buttonFirstStep": "Первый шаг",
       "backToShop": "Назад в Магазин",
+      "imagePlacement": "Размещение",
       "imageScale": "Масштаб",
       "imageVeryLowQuality": "Качество изображения очень низкое, и отпечаток будет выглядеть очень размытым.",
       "imageLowQuality": "Качество изображения низкое, и отпечаток может получиться нечетким. Вы не можете увеличить изображение.",
@@ -1111,6 +1118,7 @@
       "buttonPrevStep": "Föregående steg",
       "buttonFirstStep": "Första steget",
       "backToShop": "Tillbaka till butiken",
+      "imagePlacement": "Placering",
       "imageScale": "Skala",
       "imageVeryLowQuality": "La calidad de la imagen es muy pobre y la impresión aparecerá muy borrosa.",
       "imageLowQuality": "La calidad de la imagen es pobre y la impresión puede aparecer borrosa. No se puede ampliar la imagen.",

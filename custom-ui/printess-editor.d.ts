@@ -606,6 +606,13 @@ export interface iPrintessApi {
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
 
   /**
+   * Sets image placement based on selection, can only handle a single selected image for now.
+   * TODO: Support for propertyId will follow
+   */
+  setImagePlacement(which: "fit" | "fill" | "face" | "group", propertyId?: string): Promise<void | (iExternalImageScaleHints & { scale: number })>
+
+
+  /**
    * Returns Buyer-Side Flag if ui should show a dedicated image tab
    */
   showTabNavigation(): boolean;
@@ -1240,7 +1247,7 @@ export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" |
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "handwriting-image" |
-  "image-scale" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
+  "image-scale" | "image-placement" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
 
 export interface iExternalProperty {
   id: string;
@@ -1324,6 +1331,7 @@ export interface iExternalimageMeta {
   vivid: number;
   hueRotate: number;
   invert: number;
+  placement: "fit" | "fill" | "face" | "group",
   thumbUrl: string;
   thumbCssUrl: string;
   canUpload: boolean;
@@ -1332,6 +1340,7 @@ export interface iExternalimageMeta {
   * Indicates if you can modify scaling on that image 
   */
   canScale: boolean;
+  canSetPlacement: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate" | "invert">;
   filterTags: ReadonlyArray<string> | Array<string>;
   isHandwriting: boolean
@@ -1602,6 +1611,7 @@ export type iconName =
   | "warp-mug"
   | "mesh"
   | "crop"
+  | "place-image"
   | "fill-image"
   | "fit-image"
   | "vertical-align-bottom-baseline"
