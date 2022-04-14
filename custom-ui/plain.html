@@ -52,7 +52,7 @@
     crossorigin="anonymous"></script>
 
   <!-- Load polyfills -->
-  <script src="https://editor.printess.com/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+  <script src="https://editor.printess.com/v/nightly/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 
   <script src="uiHelper.js"></script>
 
@@ -116,9 +116,9 @@
 
 
     window.WebComponents.waitFor(async () => {
-      const printessLoader = await import('https://editor.printess.com/printess-editor/printess-editor.js');
+      const printessLoader = await import('https://editor.printess.com/v/nightly/printess-editor/printess-editor.js');
       printess = await printessLoader.attachPrintess({
-        resourcePath: "https://editor.printess.com/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+        resourcePath: "https://editor.printess.com/v/nightly/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
 
         div: document.getElementById("desktop-printess-container"),
 
