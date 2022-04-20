@@ -2335,7 +2335,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (im.id === p.value)
                     thumb.style.border = "2px solid red";
                 thumb.onclick = () => __awaiter(this, void 0, void 0, function* () {
-                    var _j, _k;
                     const scaleHints = yield printess.setProperty(p.id, im.id);
                     p.value = im.id;
                     if (scaleHints && p.imageMeta) {
@@ -2343,8 +2342,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         p.imageMeta.scale = scaleHints.scale;
                         p.imageMeta.thumbCssUrl = im.thumbCssUrl;
                         p.imageMeta.thumbUrl = im.thumbUrl;
-                        p.imageMeta.canScale = p.value !== ((_j = p.validation) === null || _j === void 0 ? void 0 : _j.defaultValue);
-                        p.imageMeta.canSetPlacement = p.value !== ((_k = p.validation) === null || _k === void 0 ? void 0 : _k.defaultValue);
                     }
                     getImageUploadControl(printess, p, container, forMobile);
                     const propsDiv = document.getElementById("tabs-panel-" + p.id);
@@ -3858,7 +3855,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         footer.appendChild(ok);
         showModal(printess, id, content, printess.gl("ui.distributionDialogTitle"), footer);
     }
-    function renderAccordionItem(title, body) {
+    function renderAccordionItem(title, body, hideCollapseIcon) {
         const accordionItem = document.createElement("div");
         accordionItem.className = "accordion-item";
         const headerId = title.split(" ").join("") + "_PanelHeader";
@@ -3878,6 +3875,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             collapseButtons === null || collapseButtons === void 0 ? void 0 : collapseButtons.forEach(b => b.classList.remove("disabled"));
         };
         header.appendChild(accordionBtn);
+        if (hideCollapseIcon)
+            accordionBtn.classList.add("no-after");
         const bodyContainer = document.createElement("div");
         bodyContainer.className = "accordion-collapse collapse show";
         bodyContainer.id = bodyId;
@@ -3961,7 +3960,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     forMobileOrPhotoTab ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
                 }
                 if (!forMobileOrPhotoTab) {
-                    div.appendChild(renderAccordionItem(cluster.name, body));
+                    div.appendChild(renderAccordionItem(cluster.name, body, groupSnippets.length < 2));
                 }
             }
         }
@@ -4040,7 +4039,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 if (forLayoutDialog) {
                     container.classList.add("accordion");
-                    container.appendChild(renderAccordionItem(cluster.name, clusterDiv));
+                    container.appendChild(renderAccordionItem(cluster.name, clusterDiv, layoutSnippets.length < 2));
                 }
                 else {
                     container.appendChild(clusterDiv);
@@ -4444,10 +4443,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (printess.showTabNavigation()) {
             updateMobilePropertiesFullscreen(printess);
         }
-        if (state === "add") {
-            document.body.classList.add("no-mobile-button-bar");
-            renderMobileControlHost(printess, { state: "add" });
-        }
         const layoutsButton = document.querySelector(".show-layouts-button");
         if (layoutsButton) {
             layoutsButton.textContent = printess.gl("ui.changeLayout");
@@ -4460,6 +4455,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         renderUiButtonHints(printess, mobileUi, state, true);
         renderEditableFramesHint(printess);
+        if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
+            uih_layoutSelectionDialogHasBeenRendered = true;
+            renderLayoutSelectionDialog(printess, layoutSnippets, true);
+        }
         if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
             toggleChangeLayoutButtonHint();
         }
@@ -4551,13 +4550,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }, {
                 header: "addDesign",
-                msg: printess.gl("ui.addDesignHint"),
+                msg: printess.showTabNavigation() ? printess.gl("ui.addDesignLayoutHint") : printess.gl("ui.addDesignHint"),
                 position: "absolute",
-                top: "-150px",
+                top: printess.showTabNavigation() ? "-170px" : "-150px",
                 left: "30px",
                 color: "success",
                 show: printess.uiHintsDisplay().includes("groupSnippets") && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
-                task: () => renderMobileUi(printess, undefined, "add")
+                task: () => {
+                    sessionStorage.setItem("addDesign", "hint closed");
+                    renderMobilePropertiesFullscreen(printess, "add-design", "open");
+                }
             }, {
                 header: "changeLayout",
                 msg: printess.gl("ui.changeLayoutHint"),
@@ -4586,7 +4588,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (!printess.hasExpertButton() && expertAlert) {
             expertAlert.remove();
         }
-        const layoutsButton = document.querySelector(".show-layouts-button");
+        const layoutsButton = document.querySelector("button.show-layouts-button");
         const layoutAlert = document.getElementById("ui-hint-changeLayout");
         if ((layoutsButton.style.visibility === "hidden" || !layoutsButton) && layoutAlert) {
             layoutAlert.remove();
@@ -5003,7 +5005,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 id: "expert",
                 title: "ui.expertMode",
                 icon: "pen-swirl",
-                show: printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never" || noStepsMenu,
+                show: (printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || noStepsMenu,
                 disabled: false,
                 task: () => {
                     if (printess.isInExpertMode()) {

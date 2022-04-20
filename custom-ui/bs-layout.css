@@ -786,6 +786,10 @@ input[type="radio"]:checked+label > svg {
   fill: white;
 }
 
+.modal {
+  z-index: 100000;
+}
+
 .modal-body {
   overflow: auto;
 }
@@ -800,6 +804,10 @@ input[type="radio"]:checked+label > svg {
 }
 .layout-snippet-list.accordion {
   padding-bottom: 20px;
+}
+
+.accordion-button.no-after::after {
+  display: none;
 }
  
 .mobile-group-snippets-container { 
