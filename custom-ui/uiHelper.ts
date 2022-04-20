@@ -416,7 +416,7 @@ declare const bootstrap: any;
     }
 
     // open dialog with layout snippets
-    if (!uih_layoutSelectionDialogHasBeenRendered && printess.showLayoutsDialog()) {
+    if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
       uih_layoutSelectionDialogHasBeenRendered = true;
       renderLayoutSelectionDialog(printess, layoutSnippets, false);
     }
@@ -947,6 +947,8 @@ declare const bootstrap: any;
                 return getInvertImageChecker(printess, p, "image-invert", forMobile);
               //  }
               //return document.createElement("div");
+              case "image-placement":
+                return getImagePlacementControl(printess, p);
               case "image-scale":
                 {
                   const s = getImageScaleControl(printess, p, true);
@@ -2738,6 +2740,11 @@ declare const bootstrap: any;
           container.appendChild(filtersControl);
         }
 
+        const placementControl: HTMLElement | null = getImagePlacementControl(printess, p);
+        if (placementControl && p.imageMeta?.canSetPlacement && p.value !== p.validation?.defaultValue) {
+          container.appendChild(placementControl);
+        }
+
         const scaleControl: HTMLElement | null = getImageScaleControl(printess, p);
         if (scaleControl) {
           scaleControl.classList.add("mb-3");
@@ -2794,7 +2801,6 @@ declare const bootstrap: any;
             p.imageMeta.scale = scaleHints.scale;
             p.imageMeta.thumbCssUrl = im.thumbCssUrl;
             p.imageMeta.thumbUrl = im.thumbUrl;
-            p.imageMeta.canScale = p.value !== p.validation?.defaultValue;
           }
 
           //  const newImages = printess.getImages(p?.id);
@@ -2822,6 +2828,13 @@ declare const bootstrap: any;
         return container;
       } else {
         container.appendChild(imagePanel);
+
+        /** Image Placement ***/
+        const placementControl: HTMLElement | null = getImagePlacementControl(printess, p);
+        if (placementControl && p.imageMeta?.canSetPlacement && p.value !== p.validation?.defaultValue) {
+          container.appendChild(placementControl);
+        }
+
         /*** SCALE ***/
         const scaleControl: HTMLElement | null = getImageScaleControl(printess, p);
         if (scaleControl) {
@@ -2928,15 +2941,83 @@ declare const bootstrap: any;
     return container;
   }
 
-  function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean = false): HTMLElement | null {
-    if (!p.imageMeta?.canScale) {
+  function getImagePlacementControl(printess: iPrintessApi, p: iExternalProperty, container?: HTMLDivElement): HTMLElement {
+    const placementControls: { name: "fit" | "fill" | "face" | "group", icon: iconName }[] = [{
+      name: "fit",
+      icon: "fit-image",
+    }, {
+      name: "fill",
+      icon: "fill-image"
+    }, {
+      name: "face",
+      icon: "smile"
+    }, {
+      name: "group",
+      icon: "user-friends-solid"
+    }];
+
+    if (!container) {
+      container = document.createElement("div");
+      container.className = "image-placement-container mb-3";
+    } else {
+      container.innerHTML = "";
+    }
+
+
+
+    for (const pc of placementControls) {
+      const button = document.createElement("button");
+      button.className = "btn image-placement-button";
+      const txt = document.createElement("div");
+      txt.textContent = pc.name;
+      const icon = printess.getIcon(pc.icon);
+      icon.style.width = "30px";
+      icon.style.height = "30px";
+
+      if (p.imageMeta?.placement === pc.name) {
+        button.classList.add("btn-primary");
+      } else {
+        button.classList.add("btn-outline-primary");
+      }
+
+      button.appendChild(icon);
+      button.appendChild(txt);
+
+      button.onclick = async () => {
+        const scaleHints = await printess.setImagePlacement(pc.name, p.id);
+        if (scaleHints && p.imageMeta) {
+          p.imageMeta.scaleHints = scaleHints;
+          p.imageMeta.scale = scaleHints.scale;
+          p.imageMeta.placement = pc.name;
+
+          getImagePlacementControl(printess, p, container);
+          const scaleControl = <HTMLDivElement>document.getElementById("range-label");
+          if (scaleControl) {
+            //TODO: Add for Mobile
+            getImageScaleControl(printess, p, false, scaleControl);
+          }
+        }
+
+      }
+
+      container.appendChild(button);
+    }
+
+    return container;
+  }
+
+  function getImageScaleControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean = false, element?: HTMLDivElement): HTMLElement | null {
+    if (!p.imageMeta?.canScale || p.validation?.defaultValue === p.value) {
       return null;
     }
     if (p.kind === "image-id" || !p.imageMeta) {
       // no scalling for form fileds
       return null;
     }
-    const rangeLabel = document.createElement("label");
+    if (element) {
+      element.innerHTML = "";
+    }
+    const rangeLabel = element || document.createElement("label");
     rangeLabel.id = "range-label"
     const range: HTMLInputElement = document.createElement("input");
     range.className = "form-range";
@@ -4227,7 +4308,6 @@ declare const bootstrap: any;
           p.imageMeta.scale = scaleHints.scale;
           p.imageMeta.thumbCssUrl = im.thumbCssUrl;
           p.imageMeta.thumbUrl = im.thumbUrl;
-          p.imageMeta.canScale = p.value !== p.validation?.defaultValue;
         }
         if (forMobile) {
 
@@ -4565,7 +4645,7 @@ declare const bootstrap: any;
    * Accordion Items
    */
 
-  function renderAccordionItem(title: string, body: HTMLDivElement): HTMLElement {
+  function renderAccordionItem(title: string, body: HTMLDivElement, hideCollapseIcon: boolean): HTMLElement {
     const accordionItem = document.createElement("div");
     accordionItem.className = "accordion-item";
 
@@ -4587,6 +4667,8 @@ declare const bootstrap: any;
       collapseButtons?.forEach(b => b.classList.remove("disabled"));
     }
     header.appendChild(accordionBtn);
+
+    if (hideCollapseIcon) accordionBtn.classList.add("no-after");
 
     const bodyContainer = document.createElement("div");
     bodyContainer.className = "accordion-collapse collapse show";
@@ -4695,7 +4777,7 @@ declare const bootstrap: any;
         }
 
         if (!forMobileOrPhotoTab) {
-          div.appendChild(renderAccordionItem(cluster.name, body));
+          div.appendChild(renderAccordionItem(cluster.name, body, groupSnippets.length < 2));
         }
       }
     }
@@ -4720,7 +4802,6 @@ declare const bootstrap: any;
   function renderLayoutSelectionDialog(printess: iPrintessApi, layoutSnippets: iExternalSnippetCluster[], forMobile: boolean): void {
     const layoutContainer = document.createElement("div");
     layoutContainer.style.maxHeight = "70vh";
-    layoutContainer.style.overflow = "auto";
 
     const templateTitle = printess.getTemplateTitle();
     const title = templateTitle ? printess.gl("ui.selectLayoutTitle", templateTitle) : printess.gl("ui.selectLayoutWithoutTitle");
@@ -4730,11 +4811,11 @@ declare const bootstrap: any;
     infoText.innerHTML = printess.gl("ui.selectLayoutInfo", printess.getTemplateTitle());
 
     layoutContainer.appendChild(infoText);
-    layoutContainer.appendChild(renderLayoutSnippets(printess, layoutSnippets, forMobile, false));
+    layoutContainer.appendChild(renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
     showModal(printess, "layoutSnippetsSelection", layoutContainer, title);
   }
 
-  function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExternalSnippetCluster>, forMobile?: boolean, addSnippetTitle: boolean = false): HTMLDivElement {
+  function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExternalSnippetCluster>, forMobile?: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
     const container = document.createElement("div");
     container.className = "layout-snippet-list";
     if (layoutSnippets) {
@@ -4745,30 +4826,22 @@ declare const bootstrap: any;
         if (cluster === layoutSnippets[0]) {
           headline.style.marginTop = "0";
         }
-        container.appendChild(headline)
+        if (!forLayoutDialog) {
+          container.appendChild(headline);
+        }
 
         const clusterDiv = document.createElement("div");
         clusterDiv.className = "layout-snippet-cluster";
         for (const snippet of cluster.snippets) {
           const thumbDiv = document.createElement("div");
-          thumbDiv.className = "snippet-thumb big";
+          thumbDiv.className = forLayoutDialog ? "snippet-thumb layout-dialog" : "snippet-thumb big";
           thumbDiv.setAttribute("aria-label", "Close");
           thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
-          if (addSnippetTitle) {
-            thumbDiv.classList.add("d-flex", "flex-column", "justify-content-between");
-            thumbDiv.title = snippet.title;
-          }
 
           const thumb = document.createElement("img");
           thumb.src = snippet.thumbUrl;
           thumb.style.backgroundColor = snippet.bgColor;
           thumbDiv.appendChild(thumb);
-
-          const thumbTitle = document.createElement("div");
-          thumbTitle.textContent = snippet.title;
-          thumbTitle.style.fontSize = "12px";
-          thumbTitle.style.marginTop = "10px";
-          if (addSnippetTitle) thumbDiv.appendChild(thumbTitle);
 
           thumbDiv.onclick = () => {
             printess.insertLayoutSnippet(snippet.snippetUrl);
@@ -4788,7 +4861,13 @@ declare const bootstrap: any;
           }
           clusterDiv.appendChild(thumbDiv);
         }
-        container.appendChild(clusterDiv);
+
+        if (forLayoutDialog) {
+          container.classList.add("accordion");
+          container.appendChild(renderAccordionItem(cluster.name, clusterDiv, layoutSnippets.length < 2));
+        } else {
+          container.appendChild(clusterDiv);
+        }
       }
     }
     return container;
@@ -5267,11 +5346,11 @@ declare const bootstrap: any;
       updateMobilePropertiesFullscreen(printess);
     }
 
-    if (state === "add") {
+    /* if (state === "add") {
       // render list of group snippets
       document.body.classList.add("no-mobile-button-bar");
       renderMobileControlHost(printess, { state: "add" });
-    }
+    } */
 
     // translate change Layout button text
     const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
@@ -5291,10 +5370,10 @@ declare const bootstrap: any;
     renderEditableFramesHint(printess);
 
     // open dialog with layout snippets
-    /* if (!uih_layoutSelectionDialogHasBeenRendered && printess.showLayoutsDialog()) {
+    if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
       uih_layoutSelectionDialogHasBeenRendered = true;
       renderLayoutSelectionDialog(printess, layoutSnippets, true);
-    } */
+    }
 
     // attach/remove shadow pulse animation to/from "change layout" button
     if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
@@ -5407,13 +5486,16 @@ declare const bootstrap: any;
       }
     }, {
       header: "addDesign",
-      msg: printess.gl("ui.addDesignHint"),
+      msg: printess.showTabNavigation() ? printess.gl("ui.addDesignLayoutHint") : printess.gl("ui.addDesignHint"),
       position: "absolute",
-      top: "-150px",
+      top: printess.showTabNavigation() ? "-170px" : "-150px",
       left: "30px",
       color: "success",
       show: printess.uiHintsDisplay().includes("groupSnippets") && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
-      task: () => renderMobileUi(printess, undefined, "add")
+      task: () => {
+        sessionStorage.setItem("addDesign", "hint closed");
+        renderMobilePropertiesFullscreen(printess, "add-design", "open");
+      }
     }, {
       header: "changeLayout",
       msg: printess.gl("ui.changeLayoutHint"),
@@ -5443,7 +5525,7 @@ declare const bootstrap: any;
     if (!printess.hasExpertButton() && expertAlert) {
       expertAlert.remove();
     }
-    const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
+    const layoutsButton = <HTMLButtonElement>document.querySelector("button.show-layouts-button");
     const layoutAlert = document.getElementById("ui-hint-changeLayout");
     if ((layoutsButton.style.visibility === "hidden" || !layoutsButton) && layoutAlert) {
       layoutAlert.remove();
@@ -6032,7 +6114,7 @@ declare const bootstrap: any;
         id: "expert",
         title: "ui.expertMode",
         icon: "pen-swirl",
-        show: printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never" || noStepsMenu,
+        show: (printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || noStepsMenu,
         disabled: false,
         task: () => {
           if (printess.isInExpertMode()) {

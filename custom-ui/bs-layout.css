@@ -670,8 +670,8 @@ body {
 
   .fullscreen-add-properties {
     position: fixed;
-    height: 100vh;
-    width: 100vw;
+    height: 100%;
+    width: 100%;
     left: 0px;
     z-index: 999;
     background-color: var(--mobile-panel-background);
@@ -785,6 +785,14 @@ body {
 input[type="radio"]:checked+label > svg {
   fill: white;
 }
+
+.modal {
+  z-index: 100000;
+}
+
+.modal-body {
+  overflow: auto;
+}
 .layout-snippet-list {
   display: flex;
   flex-direction: column;
@@ -794,7 +802,13 @@ input[type="radio"]:checked+label > svg {
   flex-direction: row;
   flex-wrap: wrap;
 }
+.layout-snippet-list.accordion {
+  padding-bottom: 20px;
+}
 
+.accordion-button.no-after::after {
+  display: none;
+}
  
 .mobile-group-snippets-container { 
   /* padding-left: 15px; */
@@ -851,6 +865,21 @@ input[type="radio"]:checked+label > svg {
 .snippet-thumb.large {
   width: 200px;
   height: 200px;
+}
+.snippet-thumb.layout-dialog {
+  width: unset;
+  height: unset;
+  max-height: unset;
+  max-width: unset;
+  min-width: unset;
+  min-height: unset;
+  margin: 0px 10px 10px 0;
+  border: 1px solid var(--mobile-button-border);
+}
+.snippet-thumb.layout-dialog > img {
+  width: unset;
+  max-height: 400px;
+  max-width: 300px;
 }
 
 .snippet-cluster-name {
@@ -949,6 +978,22 @@ label {
 label > span {
   display: inline-block;
   min-width: 100px;
+}
+
+.image-placement-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+  margin-top: 0.25rem;
+}
+.image-placement-button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-right: 0.25rem;
+  width: 80px;
 }
 
 svg.scale-warning {
@@ -1060,8 +1105,8 @@ input[type='range']::-moz-range-thumb {
 
 .image-list-fullscreen {
   position: fixed;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   left: 0px;
   z-index: 999;
   background-color: var(--mobile-panel-background);
@@ -1070,11 +1115,11 @@ input[type='range']::-moz-range-thumb {
 }
 
 .upload-list-preset {
-  top: 100vh;
+  top: 100%;
 }
 
 .image-list-preset {
-  top: 100vh;
+  top: 100%;
 }
 
 .image-list-header {
@@ -1097,7 +1142,7 @@ input[type='range']::-moz-range-thumb {
 
 @keyframes expand {
   0% {
-    top: 100vh;
+    top: 100%;
   }
   
   100% {
@@ -1106,12 +1151,12 @@ input[type='range']::-moz-range-thumb {
 }
 
 .hide-upload-list {
-  top: 100vh;
+  top: 100%;
   animation: compress 1s ease;
 }
 
 .hide-image-list {
-  top: 100vh;
+  top: 100%;
   animation: compress 1s ease;
 }
 
@@ -1121,7 +1166,7 @@ input[type='range']::-moz-range-thumb {
   }
   
   100% {
-    top: 100vh;
+    top: 100%;
   }
 }
 
@@ -2311,6 +2356,10 @@ input#invert-image-checker {
   }
   .ui-hint-alert {
     max-width: 80vw;
+  }
+
+  .image-placement-container {
+    justify-content: center;
   }
   
 }
