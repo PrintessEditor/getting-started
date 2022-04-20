@@ -1736,4 +1736,5 @@ export type iconName =
   | "text-center"
   | "text-top"
   | "pen-swirl"
+  | "circle-1"
   | "handwriting";

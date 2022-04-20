@@ -2801,8 +2801,6 @@ declare const bootstrap: any;
             p.imageMeta.scale = scaleHints.scale;
             p.imageMeta.thumbCssUrl = im.thumbCssUrl;
             p.imageMeta.thumbUrl = im.thumbUrl;
-            p.imageMeta.canScale = p.value !== p.validation?.defaultValue;
-            p.imageMeta.canSetPlacement = p.value !== p.validation?.defaultValue;
           }
 
           //  const newImages = printess.getImages(p?.id);
@@ -2965,7 +2963,7 @@ declare const bootstrap: any;
       container.innerHTML = "";
     }
 
-  
+
 
     for (const pc of placementControls) {
       const button = document.createElement("button");
@@ -4647,7 +4645,7 @@ declare const bootstrap: any;
    * Accordion Items
    */
 
-  function renderAccordionItem(title: string, body: HTMLDivElement): HTMLElement {
+  function renderAccordionItem(title: string, body: HTMLDivElement, hideCollapseIcon: boolean): HTMLElement {
     const accordionItem = document.createElement("div");
     accordionItem.className = "accordion-item";
 
@@ -4669,6 +4667,8 @@ declare const bootstrap: any;
       collapseButtons?.forEach(b => b.classList.remove("disabled"));
     }
     header.appendChild(accordionBtn);
+
+    if (hideCollapseIcon) accordionBtn.classList.add("no-after");
 
     const bodyContainer = document.createElement("div");
     bodyContainer.className = "accordion-collapse collapse show";
@@ -4777,7 +4777,7 @@ declare const bootstrap: any;
         }
 
         if (!forMobileOrPhotoTab) {
-          div.appendChild(renderAccordionItem(cluster.name, body));
+          div.appendChild(renderAccordionItem(cluster.name, body, groupSnippets.length < 2));
         }
       }
     }
@@ -4864,7 +4864,7 @@ declare const bootstrap: any;
 
         if (forLayoutDialog) {
           container.classList.add("accordion");
-          container.appendChild(renderAccordionItem(cluster.name, clusterDiv));
+          container.appendChild(renderAccordionItem(cluster.name, clusterDiv, layoutSnippets.length < 2));
         } else {
           container.appendChild(clusterDiv);
         }
@@ -5346,11 +5346,11 @@ declare const bootstrap: any;
       updateMobilePropertiesFullscreen(printess);
     }
 
-    if (state === "add") {
+    /* if (state === "add") {
       // render list of group snippets
       document.body.classList.add("no-mobile-button-bar");
       renderMobileControlHost(printess, { state: "add" });
-    }
+    } */
 
     // translate change Layout button text
     const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
@@ -5370,10 +5370,10 @@ declare const bootstrap: any;
     renderEditableFramesHint(printess);
 
     // open dialog with layout snippets
-    /* if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
+    if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
       uih_layoutSelectionDialogHasBeenRendered = true;
       renderLayoutSelectionDialog(printess, layoutSnippets, true);
-    } */
+    }
 
     // attach/remove shadow pulse animation to/from "change layout" button
     if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
@@ -5486,13 +5486,16 @@ declare const bootstrap: any;
       }
     }, {
       header: "addDesign",
-      msg: printess.gl("ui.addDesignHint"),
+      msg: printess.showTabNavigation() ? printess.gl("ui.addDesignLayoutHint") : printess.gl("ui.addDesignHint"),
       position: "absolute",
-      top: "-150px",
+      top: printess.showTabNavigation() ? "-170px" : "-150px",
       left: "30px",
       color: "success",
       show: printess.uiHintsDisplay().includes("groupSnippets") && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
-      task: () => renderMobileUi(printess, undefined, "add")
+      task: () => {
+        sessionStorage.setItem("addDesign", "hint closed");
+        renderMobilePropertiesFullscreen(printess, "add-design", "open");
+      }
     }, {
       header: "changeLayout",
       msg: printess.gl("ui.changeLayoutHint"),
@@ -5522,7 +5525,7 @@ declare const bootstrap: any;
     if (!printess.hasExpertButton() && expertAlert) {
       expertAlert.remove();
     }
-    const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
+    const layoutsButton = <HTMLButtonElement>document.querySelector("button.show-layouts-button");
     const layoutAlert = document.getElementById("ui-hint-changeLayout");
     if ((layoutsButton.style.visibility === "hidden" || !layoutsButton) && layoutAlert) {
       layoutAlert.remove();
@@ -6111,7 +6114,7 @@ declare const bootstrap: any;
         id: "expert",
         title: "ui.expertMode",
         icon: "pen-swirl",
-        show: printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never" || noStepsMenu,
+        show: (printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || noStepsMenu,
         disabled: false,
         task: () => {
           if (printess.isInExpertMode()) {
