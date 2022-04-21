@@ -369,7 +369,7 @@ export interface iPrintessApi {
   * Returns true is the user has made edits on a spread.
   * @param spreadIdOrIndex: ID or Index of Spread to check for - if empty it checks for current spread
   */
-  hasBuyerContentEdits(spreadIdOrIndex?: string | number, documentName: string = ""): boolean
+  hasBuyerContentEdits(spreadIdOrIndex?: string | number, documentName?: string ): boolean
 
   /**
    * Returns only false if property refers to a formfield which is not visible, because it doesn' match a specific condition.
