@@ -369,7 +369,7 @@ export interface iPrintessApi {
   * Returns true is the user has made edits on a spread.
   * @param spreadIdOrIndex: ID or Index of Spread to check for - if empty it checks for current spread
   */
-  hasBuyerContentEdits(spreadIdOrIndex?: string | number, documentName: string = ""): boolean
+  hasBuyerContentEdits(spreadIdOrIndex?: string | number, documentName?: string): boolean
 
   /**
    * Returns only false if property refers to a formfield which is not visible, because it doesn' match a specific condition.
@@ -492,6 +492,11 @@ export interface iPrintessApi {
    * default is `#PHOTOS`
    */
   getInitialTabId(): string
+
+  /**
+   * If Tab-Navigation is enabled, this method tells if a "PHOTO" tab makes sense.
+   */
+   showPhotoTab(): boolean
 
   /**
    * Returns the current form field value and its possible list values if available
@@ -803,8 +808,6 @@ export interface iPrintessApi {
    */
   redoCount(): number
 
-
-
   /**
    * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
@@ -1102,7 +1105,12 @@ export interface iPrintessApi {
   /**
    * Returns if UI should show a button to enter Expert-Mode
    */
-  hasExpertButton(): boolean
+  hasExpertButton(): boolean,
+
+  /**
+   * Returns an array of buyer-editable documents and a list of frames for each spread including their class-names.
+   */
+  getBuyerFrameCountAndClasses(): Array<iFrameCountAndClasses>
 }
 
 export interface iBuyerStep {
@@ -1510,6 +1518,21 @@ export interface TemplateEditables {
   primaryDocument: DocumentContentEditables;
   formFields: FormFieldItem[];
 }
+
+
+export interface iFrameCountAndClasses {
+  documentName: string,
+  frames: number,
+  spreads: Array<iFrameCountAndClassesSpread>
+}
+
+export interface iFrameCountAndClassesSpread {
+  spreadName: string,
+  frames: number,
+  classes: Record<string, number>
+}
+
+
 
 export type iconName =
   "image"
