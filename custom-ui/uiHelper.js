@@ -468,8 +468,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             else {
                 printessDiv.classList.remove("preview-grid");
                 propsContainer.style.display = "flex";
+                propsContainer.style.height = "100%";
             }
-            if (uih_currentTabId === "LOADING") {
+            if (uih_currentTabId === "LOADING" || (uih_currentTabId === "#PHOTOS" && !printess.showPhotoTab())) {
                 uih_currentTabId = printess.getInitialTabId();
             }
             const printessDesktopGrid = document.getElementById("printess-desktop-grid");
@@ -592,6 +593,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             tabsToolbar.style.justifyContent = "space-between";
         }
         for (const t of tabs) {
+            if (t.id === "#PHOTOS" && !printess.showPhotoTab())
+                continue;
             if (forMobile && (t.id === "#BACKGROUND" || t.id === "#FORMFIELDS"))
                 continue;
             const tabItem = document.createElement("li");

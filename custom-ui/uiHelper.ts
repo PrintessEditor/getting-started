@@ -585,9 +585,10 @@ declare const bootstrap: any;
       } else {
         printessDiv.classList.remove("preview-grid")
         propsContainer.style.display = "flex";
+        propsContainer.style.height = "100%";
       }
 
-      if (uih_currentTabId === "LOADING") {
+      if (uih_currentTabId === "LOADING" || (uih_currentTabId === "#PHOTOS" && !printess.showPhotoTab())) {
         uih_currentTabId = printess.getInitialTabId();
       }
 
@@ -732,6 +733,7 @@ declare const bootstrap: any;
     }
 
     for (const t of tabs) {
+      if (t.id === "#PHOTOS" && !printess.showPhotoTab()) continue;
       if (forMobile && (t.id === "#BACKGROUND" || t.id === "#FORMFIELDS")) continue;
       const tabItem = document.createElement("li");
       tabItem.className = "nav-item";
