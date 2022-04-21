@@ -494,6 +494,11 @@ export interface iPrintessApi {
   getInitialTabId(): string
 
   /**
+   * If Tab-Navigation is enabled, this method tells if a "PHOTO" tab makes sense.
+   */
+   showPhotoTab(): boolean
+
+  /**
    * Returns the current form field value and its possible list values if available
    * @param fieldName Name of the Form-Field or Form-Field Property-ID
    */
@@ -803,8 +808,6 @@ export interface iPrintessApi {
    */
   redoCount(): number
 
-
-
   /**
    * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
@@ -1102,7 +1105,12 @@ export interface iPrintessApi {
   /**
    * Returns if UI should show a button to enter Expert-Mode
    */
-  hasExpertButton(): boolean
+  hasExpertButton(): boolean,
+
+  /**
+   * Returns an array of buyer-editable documents and a list of frames for each spread including their class-names.
+   */
+  getBuyerFrameCountAndClasses(): Array<iFrameCountAndClasses>
 }
 
 export interface iBuyerStep {
@@ -1510,6 +1518,21 @@ export interface TemplateEditables {
   primaryDocument: DocumentContentEditables;
   formFields: FormFieldItem[];
 }
+
+
+export interface iFrameCountAndClasses {
+  documentName: string,
+  frames: number,
+  spreads: Array<iFrameCountAndClassesSpread>
+}
+
+export interface iFrameCountAndClassesSpread {
+  spreadName: string,
+  frames: number,
+  classes: Record<string, number>
+}
+
+
 
 export type iconName =
   "image"
