@@ -81,7 +81,7 @@
       "customizeTab": "Settings",
       "creatingPreview": "Creating preview ...",
       "image": "Image",
-      "scale": "Scale",
+      "scale": "Zoom",
       "effects": "Effects",
       "sepia": "Sepia",
       "brightness": "Brightness",
@@ -127,7 +127,6 @@
       "turnOn": "Turn On",
       "selectImageFirst": "Please select an image first.",
       "search": "Search",
-
       "align": "Align",
       "left": "Left",
       "center": "Center",
@@ -141,10 +140,11 @@
       "group": "Group Frames",
       "ungroup": "Ungroup Frames",
       "delete": "Delete",
-
-      "pages": "Pages"
-
-
+      "pages": "Pages",
+      "placement-fit": "Fit",
+      "placement-fill": "Fill",
+      "placement-face": "Face",
+      "placement-group": "Group"
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
@@ -184,8 +184,6 @@
       "pasteBrowser": "Your browser doesn't allow us to read from clipboard."
     }
   },
-
-
   "de": {
     "ui": {
       "saveProgress": "Design wird gespeichert ...",
@@ -209,7 +207,7 @@
       "buttonFirstStep": "Erster Schritt",
       "backToShop": "Zurück zum Shop",
       "imagePlacement": "Einpassung",
-      "imageScale": "Skalieren",
+      "imageScale": "Bild-Zoom",
       "imageVeryLowQuality": "Die Bildqualität ist sehr schlecht und der Druck wird sehr unscharf erscheinen.",
       "imageLowQuality": "Die Bildqualität ist schlecht und der Druck kann unscharf erscheinen. Sie können das Bild nicht weiter zoomen.",
       "imageGoodQuality": "Die Bildqualität ist gut. Aber sie können das Bild nicht weiter zoomen.",
@@ -268,7 +266,7 @@
       "customizeTab": "Anpassen",
       "creatingPreview": "Erzeuge Vorschau ...",
       "image": "Bild",
-      "scale": "Skalierung",
+      "scale": "Zoom",
       "effects": "Effekte",
       "sepia": "Sepia",
       "brightness": "Helligkeit",
@@ -314,7 +312,6 @@
       "turnOn": "Einschalten",
       "selectImageFirst": "Bitte wählen Sie zuerst ein Bild aus.",
       "search": "Suche",
-
       "align": "Ausrichten",
       "left": "Links",
       "center": "Center",
@@ -328,9 +325,11 @@
       "group": " Rahmen gruppieren",
       "ungroup": "Gruppierung der Rahmen aufheben",
       "delete": "Löschen",
-
-      "pages": "Seiten"
-
+      "pages": "Seiten",
+      "placement-fit": "Einpassen",
+      "placement-fill": "Ausfüllen",
+      "placement-face": "Gesicht",
+      "placement-group": "Gruppe"
     },
     "errors": {
       "imageResolutionLowTitle": "Uups!\nSieht so aus, als ob Ihr Bild zu klein ist...",
@@ -393,7 +392,7 @@
       "buttonFirstStep": "Primer paso",
       "backToShop": "Volver a la tienda",
       "imagePlacement": "Colocación",
-      "imageScale": "Escala",
+      "imageScale": "Zoom de la imagen",
       "imageVeryLowQuality": "La calidad de la imagen es muy pobre y la impresión aparecerá muy borrosa.",
       "imageLowQuality": "La calidad de la imagen es pobre y la impresión puede aparecer borrosa. No se puede ampliar la imagen.",
       "imageGoodQuality": "La calidad de la imagen es buena. Pero no se puede ampliar la imagen.",
@@ -452,7 +451,7 @@
       "customizeTab": "Personalice",
       "creatingPreview": "Creación de la vista previa ...",
       "image": "Imagen",
-      "scale": "Escala",
+      "scale": "Zoom",
       "effects": "Efectos",
       "sepia": "Sepia",
       "brightness": "Brillo",
@@ -498,7 +497,6 @@
       "turnOn": "Activar",
       "selectImageFirst": "Seleccione primero una imagen.",
       "search": "Busque en",
-
       "align": "Alinear",
       "left": "Izquierda",
       "center": "Centro",
@@ -512,8 +510,11 @@
       "group": "Agrupar marcos",
       "ungroup": "Desagrupar cuadros",
       "delete": "Borrar",
-
-      "pages": "Páginas"
+      "pages": "Páginas",
+      "placement-fit": "Adaptación",
+      "placement-fill": "Rellenar",
+      "placement-face": "Cara",
+      "placement-group": "Grupo"
     },
     "errors": {
       "imageResolutionLowTitle": "Vaya!\nParece que tu foto es demasiado pequeña ...",
@@ -576,7 +577,7 @@
       "buttonFirstStep": "Ensimmäinen askel",
       "backToShop": "Takaisin kauppaan",
       "imagePlacement": "Sijoitus",
-      "imageScale": "Scale",
+      "imageScale": "Kuvan zoomaus",
       "imageVeryLowQuality": "Kuvanlaatu on erittäin huono ja tuloste näyttää hyvin epätarkalta.",
       "imageLowQuality": "Kuvanlaatu on huono ja tuloste voi näyttää epätarkalta. Et voi zoomata kuvaa.",
       "imageGoodQuality": "Kuvanlaatu on hyvä. Mutta et voi zoomata kuvaa enempää.",
@@ -635,7 +636,7 @@
       "customizeTab": "Räätälöi",
       "creatingPreview": "Esikatselun luominen ...",
       "image": "Kuva",
-      "scale": "Skaala",
+      "scale": "Suurenna",
       "effects": "Efektit",
       "sepia": "Sepia",
       "brightness": "Kirkkaus",
@@ -681,7 +682,6 @@
       "turnOn": "Ota käyttöön",
       "selectImageFirst": "Valitse ensin kuva.",
       "search": "Etsi",
-
       "align": "Kohdista",
       "left": "Vasen",
       "center": "Keskusta",
@@ -695,8 +695,11 @@
       "group": "Ryhmäkehykset",
       "ungroup": "Ryhmittämättömät kehykset",
       "delete": "Poista",
-
-      "pages": "Sivut"
+      "pages": "Sivut",
+      "placement-fit": "Sovittaminen",
+      "placement-fill": "Täytä",
+      "placement-face": "Kasvot",
+      "placement-group": "Ryhmä"
     },
     "errors": {
       "imageResolutionLowTitle": "Hups!\nKuvasi näyttää olevan liian pieni...",
@@ -759,7 +762,7 @@
       "buttonFirstStep": "Première étape",
       "backToShop": "Retour à la boutique",
       "imagePlacement": "Placement",
-      "imageScale": "Échelle",
+      "imageScale": "Zoom sur l'image",
       "imageVeryLowQuality": "La qualité de l'image est très mauvaise et l'impression apparaît très floue.",
       "imageLowQuality": "La qualité de l'image est mauvaise et l'impression peut paraître floue. Vous ne pouvez pas effectuer de zoom avant sur l'image.",
       "imageGoodQuality": "La qualité de l'image est bonne. Mais vous ne pouvez pas zoomer davantage sur l'image.",
@@ -818,7 +821,7 @@
       "customizeTab": "Personnalisez",
       "creatingPreview": "Création d'un aperçu ...",
       "image": "Image",
-      "scale": "Échelle",
+      "scale": "Zoom",
       "effects": "Effets",
       "sepia": "Sépia",
       "brightness": "Luminosité",
@@ -864,7 +867,6 @@
       "turnOn": "Activer",
       "selectImageFirst": "Veuillez d'abord sélectionner une image.",
       "search": "Recherche",
-
       "align": "Aligner",
       "left": "Gauche",
       "center": "Centre",
@@ -878,8 +880,11 @@
       "group": "Grouper les images",
       "ungroup": "Dégrouper les cadres",
       "delete": "Supprimer",
-
-      "pages": "Pages"
+      "pages": "Pages",
+      "placement-fit": "Ajuster",
+      "placement-fill": "Remplir",
+      "placement-face": "Visage",
+      "placement-group": "Groupe"
     },
     "errors": {
       "imageResolutionLowTitle": "Oups!\nOn dirait que votre image est trop petite...",
@@ -942,7 +947,7 @@
       "buttonFirstStep": "Первый шаг",
       "backToShop": "Назад в Магазин",
       "imagePlacement": "Размещение",
-      "imageScale": "Масштаб",
+      "imageScale": "Увеличение изображения",
       "imageVeryLowQuality": "Качество изображения очень низкое, и отпечаток будет выглядеть очень размытым.",
       "imageLowQuality": "Качество изображения низкое, и отпечаток может получиться нечетким. Вы не можете увеличить изображение.",
       "imageGoodQuality": "Качество изображения хорошее. Но вы не можете увеличить изображение.",
@@ -1001,7 +1006,7 @@
       "customizeTab": "Настроить",
       "creatingPreview": "Создание превью ...",
       "image": "Изображение",
-      "scale": "Масштаб",
+      "scale": "Увеличить",
       "effects": "Эффекты",
       "sepia": "Сепия",
       "brightness": "Яркость",
@@ -1047,7 +1052,6 @@
       "turnOn": "Включите",
       "selectImageFirst": "Сначала выберите изображение.",
       "search": "Поиск",
-
       "align": "Выравнивание",
       "left": "Слева",
       "center": "Центр",
@@ -1061,8 +1065,11 @@
       "group": "Группировать кадры",
       "ungroup": "Разгруппировать кадры",
       "delete": "Удалить",
-
-      "pages": "Страницы"
+      "pages": "Страницы",
+      "placement-fit": "Приспособление",
+      "placement-fill": "Заполнить",
+      "placement-face": "Лицо",
+      "placement-group": "Группа"
     },
     "errors": {
       "imageResolutionLowTitle": "Упс!\nПохоже, что ваше изображение слишком маленькое...",
@@ -1125,7 +1132,7 @@
       "buttonFirstStep": "Första steget",
       "backToShop": "Tillbaka till butiken",
       "imagePlacement": "Placering",
-      "imageScale": "Skala",
+      "imageScale": "Bildzoom",
       "imageVeryLowQuality": "La calidad de la imagen es muy pobre y la impresión aparecerá muy borrosa.",
       "imageLowQuality": "La calidad de la imagen es pobre y la impresión puede aparecer borrosa. No se puede ampliar la imagen.",
       "imageGoodQuality": "La calidad de la imagen es buena. Pero no se puede ampliar la imagen.",
@@ -1184,7 +1191,7 @@
       "customizeTab": "Anpassa",
       "creatingPreview": "Skapa förhandsgranskning ...",
       "image": "Foto",
-      "scale": "Skala",
+      "scale": "Zoom",
       "effects": "Effekter",
       "sepia": "Sepia",
       "brightness": "Ljusstyrka",
@@ -1230,7 +1237,6 @@
       "turnOn": "Slå på",
       "selectImageFirst": "Välj först en bild.",
       "search": "Sök på",
-
       "align": "Anpassa",
       "left": "Vänster",
       "center": "Centrum",
@@ -1244,8 +1250,11 @@
       "group": "Gruppera ramar",
       "ungroup": "Avlägsna gruppering av ramar",
       "delete": "Ta bort",
-
-      "pages": "Sidor"
+      "pages": "Sidor",
+      "placement-fit": "Passa in",
+      "placement-fill": "Fyll i",
+      "placement-face": "Ansikte",
+      "placement-group": "Grupp"
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nDet verkar som om bilden är för liten...",
