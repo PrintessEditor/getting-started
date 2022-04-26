@@ -496,7 +496,7 @@ export interface iPrintessApi {
   /**
    * If Tab-Navigation is enabled, this method tells if a "PHOTO" tab makes sense.
    */
-   showPhotoTab(): boolean
+  showPhotoTab(): boolean
 
   /**
    * Returns the current form field value and its possible list values if available
@@ -930,7 +930,7 @@ export interface iPrintessApi {
   /**
    * Jumps to the previous available preview document if there is one.
    */
-  gotoPreviousPreviewDocument(): Promise<void>
+  gotoPreviousPreviewDocument(zoomDuration?: number): Promise<void>
 
   /**
    * Jumps to the next available preview document if there is one.
@@ -1105,7 +1105,12 @@ export interface iPrintessApi {
   /**
    * Returns if UI should show a button to enter Expert-Mode
    */
-  hasExpertButton(): boolean,
+  hasExpertButton(): boolean
+
+  /** 
+   * Indicates if UI should show an alert prompt when user attempts to leave the buyer-side 
+   */
+  showAlertOnClose(): boolean
 
   /**
    * Returns an array of buyer-editable documents and a list of frames for each spread including their class-names.
@@ -1760,4 +1765,8 @@ export type iconName =
   | "text-top"
   | "pen-swirl"
   | "circle-1"
-  | "handwriting";
+  | "shirt"
+  | "focus-face"
+  | "focus-group"
+  | "handwriting"
+  | "burger-menu";
