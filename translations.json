@@ -127,6 +127,7 @@
       "turnOn": "Turn On",
       "selectImageFirst": "Please select an image first.",
       "search": "Search",
+
       "align": "Align",
       "left": "Left",
       "center": "Center",
@@ -140,11 +141,14 @@
       "group": "Group Frames",
       "ungroup": "Ungroup Frames",
       "delete": "Delete",
+
       "pages": "Pages",
       "placement-fit": "Fit",
       "placement-fill": "Fill",
       "placement-face": "Face",
       "placement-group": "Group"
+
+
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
@@ -184,6 +188,8 @@
       "pasteBrowser": "Your browser doesn't allow us to read from clipboard."
     }
   },
+
+
   "de": {
     "ui": {
       "saveProgress": "Design wird gespeichert ...",
@@ -312,6 +318,7 @@
       "turnOn": "Einschalten",
       "selectImageFirst": "Bitte wählen Sie zuerst ein Bild aus.",
       "search": "Suche",
+
       "align": "Ausrichten",
       "left": "Links",
       "center": "Center",
@@ -325,11 +332,14 @@
       "group": " Rahmen gruppieren",
       "ungroup": "Gruppierung der Rahmen aufheben",
       "delete": "Löschen",
+
       "pages": "Seiten",
       "placement-fit": "Einpassen",
       "placement-fill": "Ausfüllen",
       "placement-face": "Gesicht",
       "placement-group": "Gruppe"
+
+
     },
     "errors": {
       "imageResolutionLowTitle": "Uups!\nSieht so aus, als ob Ihr Bild zu klein ist...",
@@ -497,6 +507,7 @@
       "turnOn": "Activar",
       "selectImageFirst": "Seleccione primero una imagen.",
       "search": "Busque en",
+
       "align": "Alinear",
       "left": "Izquierda",
       "center": "Centro",
@@ -510,6 +521,7 @@
       "group": "Agrupar marcos",
       "ungroup": "Desagrupar cuadros",
       "delete": "Borrar",
+
       "pages": "Páginas",
       "placement-fit": "Adaptación",
       "placement-fill": "Rellenar",
@@ -682,6 +694,7 @@
       "turnOn": "Ota käyttöön",
       "selectImageFirst": "Valitse ensin kuva.",
       "search": "Etsi",
+
       "align": "Kohdista",
       "left": "Vasen",
       "center": "Keskusta",
@@ -695,6 +708,7 @@
       "group": "Ryhmäkehykset",
       "ungroup": "Ryhmittämättömät kehykset",
       "delete": "Poista",
+
       "pages": "Sivut",
       "placement-fit": "Sovittaminen",
       "placement-fill": "Täytä",
@@ -867,6 +881,7 @@
       "turnOn": "Activer",
       "selectImageFirst": "Veuillez d'abord sélectionner une image.",
       "search": "Recherche",
+
       "align": "Aligner",
       "left": "Gauche",
       "center": "Centre",
@@ -880,6 +895,7 @@
       "group": "Grouper les images",
       "ungroup": "Dégrouper les cadres",
       "delete": "Supprimer",
+
       "pages": "Pages",
       "placement-fit": "Ajuster",
       "placement-fill": "Remplir",
@@ -1052,6 +1068,7 @@
       "turnOn": "Включите",
       "selectImageFirst": "Сначала выберите изображение.",
       "search": "Поиск",
+
       "align": "Выравнивание",
       "left": "Слева",
       "center": "Центр",
@@ -1065,6 +1082,7 @@
       "group": "Группировать кадры",
       "ungroup": "Разгруппировать кадры",
       "delete": "Удалить",
+
       "pages": "Страницы",
       "placement-fit": "Приспособление",
       "placement-fill": "Заполнить",
@@ -1237,6 +1255,7 @@
       "turnOn": "Slå på",
       "selectImageFirst": "Välj först en bild.",
       "search": "Sök på",
+
       "align": "Anpassa",
       "left": "Vänster",
       "center": "Centrum",
@@ -1250,6 +1269,7 @@
       "group": "Gruppera ramar",
       "ungroup": "Avlägsna gruppering av ramar",
       "delete": "Ta bort",
+
       "pages": "Sidor",
       "placement-fit": "Passa in",
       "placement-fill": "Fyll i",

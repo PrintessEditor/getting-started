@@ -50,6 +50,7 @@ declare const bootstrap: any;
 
   let uih_stepTabOffset = 0;
   let uih_stepTabsScrollPosition = 0;
+  let uih_snippetsScrollPosition = 0;
 
   let uih_lastOverflowState = false;
   let uih_activeImageAccordion = "Buyer Upload";
@@ -761,6 +762,9 @@ declare const bootstrap: any;
         if (forMobile && t.id === uih_currentTabId) {
           closeMobileFullscreenContainer();
         }
+        if (t.id !== uih_currentTabId) {
+          uih_snippetsScrollPosition = 0;
+        }
         selectTab(printess, t.id);
         if (t.id === "#BACKGROUND") {
           printess.selectBackground(); // triggers complete redraw with new Selection 
@@ -807,6 +811,7 @@ declare const bootstrap: any;
         if (groupSnippets.length) {
           tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, forMobile) });
           container.appendChild(getTabPanel(tabs, "photo-frames"));
+          container.scrollTop = uih_snippetsScrollPosition;
         } else {
           container.appendChild(renderMyImagesTab(printess, forMobile, undefined, undefined, undefined, printess.showSearchBar(), true));
         }
@@ -816,6 +821,7 @@ declare const bootstrap: any;
       case "#LAYOUTS": {
         const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
         container.appendChild(layoutsDiv);
+        container.scrollTop = uih_snippetsScrollPosition;
         break;
       }
       case "#BACKGROUND": {
@@ -830,6 +836,7 @@ declare const bootstrap: any;
         if (groupSnippets.length) {
           const snippetsDiv = renderGroupSnippets(printess, groupSnippets, forMobile);
           container.appendChild(snippetsDiv);
+          container.scrollTop = uih_snippetsScrollPosition;
         }
         break;
       }
@@ -1810,10 +1817,14 @@ declare const bootstrap: any;
         tab.appendChild(tabLink);
 
         tab.onclick = async () => {
+          const comingFromPreview = printess.hasPreviewBackButton();
           setTabScrollPosition(div, tab, _forMobile);
           await gotoStep(printess, i);
           if (printess.hasPreviewBackButton()) {
-            // indicates taht we are in a preview step right now 
+            // indicates that we are in a preview step right now 
+            printess.resizePrintess();
+          }
+          if (comingFromPreview) {
             printess.resizePrintess();
           }
           if (isDesktopTabs) {
@@ -2257,7 +2268,7 @@ declare const bootstrap: any;
 
   function getCustomColorPicker(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean, button: HTMLButtonElement, metaProperty?: "color"): HTMLElement {
     const hexGroup = document.createElement("div");
-    hexGroup.className = "input-group input-group-sm mt-3 mb-2";
+    hexGroup.className = "input-group input-group-sm mt-3 mb-2 ms-1";
     hexGroup.style.width = "90%";
     const hexPicker = document.createElement("span");
     hexPicker.className = "input-group-text";
@@ -2266,7 +2277,7 @@ declare const bootstrap: any;
     hexIcon.style.height = "20px";
     const hexInput = document.createElement("input");
     hexInput.className = "form-control";
-    hexInput.id = "hex-color-input"
+    hexInput.id = "hex-color-input";
     hexInput.type = "text";
     hexInput.placeholder = "#000000";
     const submitHex = document.createElement("button");
@@ -2277,8 +2288,11 @@ declare const bootstrap: any;
     submitHex.onclick = () => {
       const colorInput = <HTMLInputElement>document.getElementById("hex-color-input");
       const color = colorInput?.value;
-      setColor(printess, p, color, color, metaProperty)
-      if (!forMobile) button.style.backgroundColor = color;
+      if (color) {
+        setColor(printess, p, color, color, metaProperty)
+        if (!forMobile) button.style.backgroundColor = color;
+      }
+
     }
 
     hexPicker.onclick = async () => {
@@ -3094,6 +3108,7 @@ declare const bootstrap: any;
           icon.style.color = "green";
         }
 
+        if (forMobile) span.style.fontSize = "12px";
         rangeLabel.appendChild(icon);
         rangeLabel.appendChild(span);
       } else if (!forMobile) {
@@ -4355,7 +4370,7 @@ declare const bootstrap: any;
           const mobileButtonsContainer = document.querySelector(".mobile-buttons-container");
           if (mobileButtonsContainer) {
             mobileButtonsContainer.innerHTML = "";
-            getMobileButtons(printess, <HTMLDivElement>mobileButtonsContainer, p.id, true);
+            getMobileButtons(printess, <HTMLDivElement>mobileButtonsContainer, p.id, true, true);
           }
 
           /* const mobileButtonDiv = document.getElementById(p.id + ":");
@@ -4807,6 +4822,10 @@ declare const bootstrap: any;
           };
 
           thumbDiv.onclick = () => {
+            const propsDiv = document.getElementById("desktop-properties");
+            if (propsDiv && !forMobile && printess.showTabNavigation()) {
+              uih_snippetsScrollPosition = propsDiv.scrollTop;
+            }
             if (forMobile) {
               closeMobileFullscreenContainer();
               div.innerHTML === "";
@@ -4885,6 +4904,10 @@ declare const bootstrap: any;
           thumbDiv.appendChild(thumb);
 
           thumbDiv.onclick = () => {
+            const propsDiv = document.getElementById("desktop-properties");
+            if (propsDiv && !forMobile && printess.showTabNavigation()) {
+              uih_snippetsScrollPosition = propsDiv.scrollTop;
+            }
             printess.insertLayoutSnippet(snippet.snippetUrl);
             // close off canvas via its button, the only way it propably worked ...
             const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
@@ -5459,7 +5482,8 @@ declare const bootstrap: any;
     if (layoutsButton) {
       layoutsButton.classList.add("layouts-button-pulse");
 
-      layoutsButton.onclick = () => {
+      layoutsButton.onclick = (e: MouseEvent) => {
+        e.preventDefault();
         // remove ui hint for "change layout" after clicking the "change layout" button
         const uiHintAlert = <HTMLDivElement>document.getElementById("ui-hint-changeLayout");
         uiHintAlert?.parentElement?.removeChild(uiHintAlert);
@@ -5602,7 +5626,8 @@ declare const bootstrap: any;
           if (hint.header === "changeLayout") {
             const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
             if (layoutsButton) {
-              layoutsButton.onclick = () => {
+              layoutsButton.onclick = (e: MouseEvent) => {
+                e.preventDefault();
                 layoutsButton.classList.remove("layouts-button-pulse");
                 layoutsButton.onclick = null;
               }
@@ -6456,7 +6481,7 @@ declare const bootstrap: any;
 
   }
 
-  function getMobileButtons(printess: iPrintessApi, barContainer?: HTMLDivElement, propertyIdFilter?: string, skipAutoSelect: boolean = false): { div: HTMLDivElement, autoSelectButton: iMobileUIButton | null } {
+  function getMobileButtons(printess: iPrintessApi, barContainer?: HTMLDivElement, propertyIdFilter?: string, skipAutoSelect: boolean = false, fromImageSelection: boolean = false): { div: HTMLDivElement, autoSelectButton: iMobileUIButton | null } {
     const container: HTMLDivElement = barContainer || document.createElement("div");
     container.className = "mobile-buttons-container";
 
@@ -6531,8 +6556,14 @@ declare const bootstrap: any;
     if (hasButtons && (!autoSelect || autoSelectHasMeta === true)) {
 
       for (const b of buttons.filter(b => !b.hide)) {
+        const selectScaleButton = b.newState.metaProperty === "image-scale" && b.newState.externalProperty?.imageMeta?.canScale && b.newState.externalProperty?.value !== b.newState.externalProperty?.validation?.defaultValue;
         const buttonDiv = document.createElement("div");
         buttonDiv.className = "no-selection";
+
+        if (selectScaleButton && !autoSelect && fromImageSelection) {
+          autoSelect = b;
+          buttonDiv.classList.add("selected");
+        }
 
         if (b.newState.tableRowIndex !== undefined) {
           buttonDiv.id = (b.newState.externalProperty?.id ?? "") + "$$$" + b.newState.tableRowIndex;

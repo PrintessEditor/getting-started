@@ -1378,7 +1378,8 @@ export interface iExternalFrame {
   left: string
 }
 
-export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
+export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside"
+  | "layout-snippet-no-repeat-persist-stickers" | "layout-snippet-repeat-all-persist-stickers" | "layout-snippet-repeat-inside-persist-stickers";
 export type MergeResource = "snippets" | "fonts" | "colors" | "images";
 
 export interface iMergeTemplate {
