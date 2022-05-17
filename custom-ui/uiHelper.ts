@@ -59,7 +59,7 @@ declare const bootstrap: any;
 
   let uih_layoutSelectionDialogHasBeenRendered = false;
 
-  console.log("Printess ui-helper loaded");
+  //console.log("Printess ui-helper loaded");
 
   function validateAllInputs(printess: iPrintessApi): boolean {
     const errors = printess.validate("all");
@@ -508,8 +508,19 @@ declare const bootstrap: any;
         if (printess.showTabNavigation()) {
           container.appendChild(getPropertiesTitle(printess));
         }
+        // || state === "text" && properties.length === 1 && properties[0].kind === "selection-text-style" && properties[0].textStyle?.allows.length === 1 && properties[0].textStyle?.allows[0] === "content"
+        if (state === "text" && properties.length === 0) {
+          const infoText = document.createElement("p");
+          infoText.textContent = printess.gl("ui.editTextInsideFrame");
+          container.appendChild(infoText);
+        }
         let colorsContainer = null;
         for (const p of properties) {
+          if (p.kind === "selection-text-style" && p.textStyle?.allows.length === 1 && p.textStyle?.allows[0] === "content") {
+            const infoText = document.createElement("p");
+            infoText.textContent = printess.gl("ui.editTextInsideFrame");
+            container.appendChild(infoText);
+          }
           if (p.kind === "color") {
             if (!colorsContainer) {
               colorsContainer = document.createElement("div");
@@ -639,7 +650,7 @@ declare const bootstrap: any;
             }
           }
 
-          if ((state === "text" || state === "frames") && uih_currentProperties.length) {
+          if (state === "text" || (state === "frames" && uih_currentProperties.length)) {
             uih_currentTabId = "#NONE";
           }
 
@@ -719,14 +730,14 @@ declare const bootstrap: any;
     const title = document.createElement("h3");
 
     let caption = "";
-    if (currentTab) {
-      caption = currentTab.head || currentTab.caption;
+    if (uih_currentState === "text") {
+      caption = "Text Frame";
     } else if (uih_currentState === "frames") {
       caption = getBuyerOverlayType(uih_currentProperties);
-    } else if (uih_currentState === "text") {
-      caption = "Text Frame";
+    } else if (currentTab) {
+      caption = currentTab.head || currentTab.caption;
     }
-    title.textContent = caption;
+    title.textContent = caption.replace(/\\n/g, "");
     titleDiv.appendChild(title);
 
     return titleDiv;
@@ -780,7 +791,7 @@ declare const bootstrap: any;
 
       const tabLink = document.createElement("a");
       tabLink.className = "nav-link " + (selected?.id === t.id ? "active" : "");
-      tabLink.textContent = t.caption;
+      tabLink.innerHTML = t.caption.replace(/\\n/g, "<br>");
 
       tabItem.appendChild(tabIcon);
 
@@ -1827,21 +1838,6 @@ declare const bootstrap: any;
           if (comingFromPreview) {
             printess.resizePrintess();
           }
-          if (isDesktopTabs) {
-            const activeTab = document.querySelectorAll("li.nav-item.active");
-            activeTab.forEach(e => e.classList.remove("active"));
-            const activeLink = document.querySelectorAll("a.nav-link.active");
-            activeLink.forEach(e => e.classList.remove("active"));
-            tab.classList.add("active");
-            tabLink.classList.add("active");
-          } else {
-            const activeTab = document.querySelectorAll(".active-step-tab");
-            activeTab.forEach(e => e.classList.remove("active-step-tab"));
-            const activeLink = document.querySelectorAll(".active-step-tablink");
-            activeLink.forEach(e => e.classList.remove("active-step-tablink"));
-            tab.classList.add("active-step-tab");
-            tabLink.classList.add("active-step-tablink");
-          }
         }
         ul.appendChild(tab);
       }
@@ -2138,10 +2134,11 @@ declare const bootstrap: any;
       for (const entry of p.listMeta.list) {
         const thumb = document.createElement("div");
         thumb.className = "no-selection image" + cssId;
-        if (p.kind === "color-list") {
-          thumb.style.backgroundColor = entry.key;
-        } else {
+
+        if (entry.imageUrl) {
           thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
+        } else if (p.kind === "color-list") {
+          thumb.style.backgroundColor = entry.key;
         }
 
         thumb.style.width = p.listMeta.thumbWidth + "px";
@@ -2217,7 +2214,6 @@ declare const bootstrap: any;
 
     for (const f of colors) {
       const color = document.createElement("a");
-      color.href = "#";
       color.className = "color-picker-color dropdown-item";
       color.style.backgroundColor = f.color;
       color.dataset.color = f.name;
@@ -2360,7 +2356,6 @@ declare const bootstrap: any;
           }
         }
         const a = document.createElement("a");
-        a.href = "#";
         a.classList.add("dropdown-item");
         a.onclick = () => {
           p.value = entry.key;
@@ -3310,7 +3305,6 @@ declare const bootstrap: any;
           }
         }
         //const a = document.createElement("a");
-        // a.href = "#";
         li.classList.add("dropdown-item");
         li.onclick = () => {
           button.innerHTML = "";
@@ -4704,12 +4698,14 @@ declare const bootstrap: any;
   function renderAccordionItem(title: string, body: HTMLDivElement, hideCollapseIcon: boolean): HTMLElement {
     const accordionItem = document.createElement("div");
     accordionItem.className = "accordion-item";
+    accordionItem.style.border = "none";
 
     const headerId = title.split(" ").join("") + "_PanelHeader";
     const bodyId = title.split(" ").join("") + "_PanelBody";
     const header = document.createElement("h2");
     header.className = "accordion-header";
     header.id = headerId;
+    header.style.borderBottom = "1px solid rgba(0,0,0,.125)";
     accordionItem.appendChild(header);
 
     const accordionBtn = document.createElement("button");
@@ -4717,6 +4713,7 @@ declare const bootstrap: any;
     accordionBtn.style.backgroundColor = "white";
     accordionBtn.setAttribute("data-bs-toggle", "collapse");
     accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
+    accordionBtn.style.boxShadow = "none";
     accordionBtn.textContent = title;
     accordionBtn.onclick = () => {
       const collapseButtons = document.querySelectorAll("button.accordion-collapse-btn.disabled");
@@ -4733,6 +4730,7 @@ declare const bootstrap: any;
 
     const accordionBody = document.createElement("div");
     accordionBody.className = "accordion-body";
+    accordionBody.style.padding = "0.75rem 0.5rem";
     accordionBody.appendChild(body);
     bodyContainer.appendChild(accordionBody);
 
@@ -5163,7 +5161,6 @@ declare const bootstrap: any;
     const value = row[col.name];
     for (const f of col.list || []) {
       const a = document.createElement("a");
-      a.href = "#";
       a.className = "color-picker-color dropdown-item";
       a.innerText = f.toString();
       if (value == f) {
@@ -5222,7 +5219,6 @@ declare const bootstrap: any;
           }
         }
         const a = document.createElement("a");
-        a.href = "#";
         a.classList.add("dropdown-item");
         a.onclick = () => {
           setTableValue(col, entry);
@@ -5532,8 +5528,8 @@ declare const bootstrap: any;
       header: "expertMode",
       msg: printess.gl("ui.expertModeHint"),
       position: "fixed",
-      top: "calc(var(--editor-pagebar-height) + 5px)",
-      left: "30px",
+      top: !forMobile && printess.pageNavigationDisplay() === "icons" ? "50px" : "calc(var(--editor-pagebar-height) + 5px)",
+      left: !forMobile && printess.pageNavigationDisplay() === "icons" ? "calc(100% - 450px)" : "30px",
       color: "danger",
       show: printess.uiHintsDisplay().includes("expertMode") && !sessionStorage.getItem("expertMode") && printess.hasExpertButton(),
       task: () => {
@@ -6158,6 +6154,8 @@ declare const bootstrap: any;
     menuList.style.top = "48px";
     menuList.style.left = "0px";
     menuList.style.zIndex = "1000";
+    const addSpreads = printess.canAddSpreads();
+    const removeSpreads = printess.canRemoveSpreads();
 
     const menuItems: Array<MobileUiMenuItems> = [
       {
@@ -6203,6 +6201,18 @@ declare const bootstrap: any;
         show: printess.showUndoRedo(),
         disabled: printess.redoCount() === 0,
         task: printess.redo
+      }, {
+        id: "addPages",
+        title: "+" + (addSpreads * 2) + " " + printess.gl("ui.pages"),
+        show: addSpreads > 0,
+        disabled: addSpreads === 0,
+        task: printess.addSpreads
+      }, {
+        id: "removePages",
+        title: "-" + (removeSpreads === 0 ? addSpreads * 2 : removeSpreads * 2) + " " + printess.gl("ui.pages"),
+        show: removeSpreads > 0 || addSpreads > 0,
+        disabled: removeSpreads === 0,
+        task: printess.removeSpreads
       }, {
         id: "previous",
         title: "ui.buttonPrevStep",
@@ -6255,49 +6265,59 @@ declare const bootstrap: any;
     ];
 
     menuItems.forEach((mi, idx) => {
-      const hasExpertButton = printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never";
-      const item = document.createElement("li");
-      item.className = "btn btn-primary d-flex w-25 justify-content-center align-items-center";
-      if (mi.disabled) item.classList.add("disabled");
-      if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) item.classList.add("reverse-menu-btn-content");
-      item.style.border = "1px solid rgba(0,0,0,.125)";
-      if (hasExpertButton || noStepsMenu) {
-        item.style.minWidth = "50%";
-      } else {
-        if (idx < 4) item.style.minWidth = "33%";
-        if (idx >= 4) item.style.minWidth = "50%";
+      if (mi.show) {
+        const hasExpertButton = printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never";
+        const item = document.createElement("li");
+        item.className = "btn btn-primary d-flex w-25 justify-content-center align-items-center";
+        if (mi.disabled) item.classList.add("disabled");
+        if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) item.classList.add("reverse-menu-btn-content");
+        item.style.border = "1px solid rgba(0,0,0,.125)";
+        if (hasExpertButton || noStepsMenu) {
+          item.style.minWidth = "50%";
+        } else {
+          if (idx < 4) item.style.minWidth = "33%";
+          if (idx >= 4) item.style.minWidth = "50%";
+        }
+
+        if (printess.isInExpertMode() && mi.id === "expert") {
+          item.classList.remove("btn-primary");
+          item.classList.add("btn-light");
+        }
+
+        if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu) item.style.minWidth = "100%";
+
+        const span = document.createElement("span");
+        span.textContent = printess.gl(mi.title);
+
+        if (mi.icon) {
+          const icon = printess.getIcon(mi.icon);
+          icon.style.width = "15px";
+          icon.style.height = "15px";
+          icon.style.marginRight = "10px";
+
+          if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
+            icon.style.marginLeft = "10px";
+            icon.style.marginRight = "0px";
+          }
+
+          if (printess.previewStepsCount() === 0 && (mi.id === "firstStep" || mi.id === "lastStep")) {
+            icon.style.width = "20px";
+            icon.style.height = "20px";
+          }
+
+          item.appendChild(icon);
+        }
+
+        item.appendChild(span);
+
+        item.onclick = () => {
+          const list = document.getElementById("mobile-menu-list");
+          if (list) list.parentElement?.removeChild(list);
+          mi.task();
+        }
+
+        menuList.appendChild(item);
       }
-
-      if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu) item.style.minWidth = "100%";
-
-      const span = document.createElement("span");
-      span.textContent = printess.gl(mi.title);
-
-      const icon = printess.getIcon(mi.icon);
-      icon.style.width = "15px";
-      icon.style.height = "15px";
-      icon.style.marginRight = "10px";
-
-      if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
-        icon.style.marginLeft = "10px";
-        icon.style.marginRight = "0px";
-      }
-
-      if (printess.previewStepsCount() === 0 && (mi.id === "firstStep" || mi.id === "lastStep")) {
-        icon.style.width = "20px";
-        icon.style.height = "20px";
-      }
-
-      item.appendChild(icon);
-      item.appendChild(span);
-
-      item.onclick = () => {
-        const list = document.getElementById("mobile-menu-list");
-        if (list) list.parentElement?.removeChild(list);
-        mi.task();
-      }
-
-      if (mi.show) menuList.appendChild(item);
     });
 
     listWrapper.appendChild(menuList);
