@@ -1057,6 +1057,11 @@ export interface iPrintessApi {
   getContentEditables(): TemplateEditables;
 
   /**
+   * Retrieves all price relevant form-field names and values
+   */
+  getAllPriceRelevantFormFields(): { [key: string]: string }
+
+  /**
    * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
    */
   getTranslations(): Record<string, Record<string, string | number> | string | number>;
@@ -1378,7 +1383,8 @@ export interface iExternalFrame {
   left: string
 }
 
-export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside";
+export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside"
+  | "layout-snippet-no-repeat-persist-stickers" | "layout-snippet-repeat-all-persist-stickers" | "layout-snippet-repeat-inside-persist-stickers";
 export type MergeResource = "snippets" | "fonts" | "colors" | "images";
 
 export interface iMergeTemplate {
@@ -1461,9 +1467,9 @@ export interface iMobileUiState {
 export type MobileUiState = "document" | "frames" | "add" | "details" | "text";
 
 export interface MobileUiMenuItems {
-  id: "back" | "expert" | "undo" | "redo" | "previous" | "next" | "firstStep" | "lastStep",
+  id: "back" | "expert" | "undo" | "redo" | "addPages" | "removePages" | "previous" | "next" | "firstStep" | "lastStep",
   title: string,
-  icon: iconName,
+  icon?: iconName,
   disabled: boolean,
   show: boolean,
   task: any

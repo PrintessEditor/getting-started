@@ -906,6 +906,12 @@ input[type="radio"]:checked+label > svg {
   box-shadow: 0 0 0 0 var(--bs-primary);
   animation: pulse-blue 1s cubic-bezier(0.4, 0, 1, 1) infinite;
 }
+button.show-layouts-button:focus {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  outline: none;
+  box-shadow: none;
+}
 
 
 .button-with-caption {
