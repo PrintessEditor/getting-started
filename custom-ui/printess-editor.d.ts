@@ -31,6 +31,16 @@ export interface printessAttachParameters {
   mergeTemplates?: iMergeTemplate[];
 
   /**
+   * Optional parameter for a content template (save token).
+   * This save token can be used to fill out buyer editable images and texts automatically.
+   * The content of this template is taken and applied to the template which should be loaded.
+   */
+  contentTemplate?: {
+    saveToken: string,
+    content?: "all" | "images" | "text"
+  };
+
+  /**
    * Activated by default. Deactivating `allowZoomAndPan` freezes the visible Area of the current document. 
    * The buyer will not be able to zoom or pan at all. It's handy for simple configurattions on desktop and conjunction with ```autoScale```
    * Handle with care on mobile, since users proably need zoom to have a closer look on their products.
@@ -536,6 +546,12 @@ export interface iPrintessApi {
   setNumberUiProperty(property: iExternalProperty, metaProperty: iExternalMetaPropertyKind | null, value: number): Promise<void>;
 
   /**
+   * Replaces multi-line text onlie works with a current ective multi-line-text-editor
+   * @param text The text to insert in to the active multi-line editor
+   */
+  setEditorText(text: string): boolean
+
+  /**
    * Method to set a text style meta-property
    * @param propertyId 
    * @param name 
@@ -809,15 +825,45 @@ export interface iPrintessApi {
   redoCount(): number
 
   /**
+   * return if zoom options should be displayed
+   */
+  allowZoomOptions(): boolean
+
+  /**
+   * Zoom in on spread visible
+   */
+  zoomIn(): void
+
+  /**
+   * Zoom out of spread visible
+   */
+  zoomOut(): void
+
+  /**
+   * Check for double page spreads to show/hide zoom to spread option
+   */
+  hasDoublePageSpreads(): boolean
+
+  /**
    * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
    */
   canAddSpreads(): 0 | 1 | 2
 
   /**
+   * Photo-Book only feature:
+   * re arranges all spreads by a given array of ids or `newSpread` 
+   * Handle with care, this can destroy your photo-book document
+   * @param newSpreadIds Array of spread ids in correct order
+   */
+  reArrangeSpreads(newSpreadIds: Array<string | "newSpread">): Promise<boolean>
+
+  /**
+   * Photo-Book only feature:
    * Add new spreads / pages to the current document before the back cover 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
-   */
+   * @param idx Optional: Position of Spread in Book (in Array of Spreads) 
+  */
   addSpreads(): Promise<boolean>
 
   /**
@@ -827,10 +873,12 @@ export interface iPrintessApi {
   canRemoveSpreads(): 0 | 1 | 2
 
   /**
- * Remove spreads / pages to the current document before the back cover 
- * The amount depends on the settings in the template. Template needs to be marked as `book`
- */
-  removeSpreads(): Promise<boolean>
+   * Photo-Book only feature:
+   * Remove spreads / pages from the current document before the back cover 
+   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   * @param ids Optional: Array of Spread Indices to be deleted
+   */
+  removeSpreads(ids?: Array<string>): Promise<boolean>
 
   /**
    * Gets the state of the "lockCoverInside" user setting in "book" mode
@@ -1228,7 +1276,11 @@ export interface iExternalDocAndSpreadInfo {
   /**
    * Information if the document has facing pages. If `true` first and last spread has 1 page all other spreads have 2 pages.
    */
-  facingPages: boolean
+  facingPages: boolean,
+  /**
+   * Information if the document is set to "book" mode and can therefore add/remove pages etc.
+   */
+  isBook: boolean
 }
 
 
@@ -1272,6 +1324,7 @@ export interface iExternalProperty {
   value: string | number;
   kind: iExternalPropertyKind;
   label: string;
+  controlGroup: number;
   validation?: iExternalValidation;
   textStyle?: iExternalTextStyle;
   imageMeta?: iExternalimageMeta;
@@ -1444,6 +1497,13 @@ export interface iExternalButton {
   caption?: string
 }
 
+export interface iDropdownItems {
+  caption: string,
+  disabled?: boolean,
+  show: boolean,
+  task: () => void
+}
+
 
 export interface iMobileUIButton {
   icon?: iconName | "none",
@@ -1472,7 +1532,7 @@ export interface MobileUiMenuItems {
   icon?: iconName,
   disabled: boolean,
   show: boolean,
-  task: any
+  task: () => void
 }
 
 export interface iButtonCircle {
@@ -1567,6 +1627,7 @@ export type iconName =
   | "plus-circle"
   | "plus-square"
   | "minus"
+  | "minus-light"
   | "shapes"
   | "square"
   | "settings"

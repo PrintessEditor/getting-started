@@ -136,6 +136,11 @@
             </svg>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" id="btnRelaceText" title="Insert Text to Multi-Line Editor">
+           Relace Text
+          </a>
+        </li>
 
 
 
@@ -401,6 +406,9 @@
           const newId = prompt("Load Saved Artwork by ID:", clipText);
           if (newId) printess.load(newId);
         });
+    };
+    document.getElementById("btnRelaceText").onclick = () => {
+       printess.setEditorText("Hallo du doofer Computer");
     };
 
     window.addEventListener('hashchange', function () {
