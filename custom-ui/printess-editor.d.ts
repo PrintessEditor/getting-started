@@ -31,6 +31,16 @@ export interface printessAttachParameters {
   mergeTemplates?: iMergeTemplate[];
 
   /**
+   * Optional parameter for a content template (save token).
+   * This save token can be used to fill out buyer editable images and texts automatically.
+   * The content of this template is taken and applied to the template which should be loaded.
+   */
+  contentTemplate?: {
+    saveToken: string,
+    content?: "all" | "images" | "text"
+  };
+
+  /**
    * Activated by default. Deactivating `allowZoomAndPan` freezes the visible Area of the current document. 
    * The buyer will not be able to zoom or pan at all. It's handy for simple configurattions on desktop and conjunction with ```autoScale```
    * Handle with care on mobile, since users proably need zoom to have a closer look on their products.
@@ -536,6 +546,12 @@ export interface iPrintessApi {
   setNumberUiProperty(property: iExternalProperty, metaProperty: iExternalMetaPropertyKind | null, value: number): Promise<void>;
 
   /**
+   * Replaces multi-line text onlie works with a current ective multi-line-text-editor
+   * @param text The text to insert in to the active multi-line editor
+   */
+  setEditorText(text: string): boolean
+
+  /**
    * Method to set a text style meta-property
    * @param propertyId 
    * @param name 
@@ -628,6 +644,11 @@ export interface iPrintessApi {
   showLayoutsDialog(): boolean;
 
   /**
+   * Returns if buyer is allowed to upload pdf files
+   */
+  allowPdfUpload(): boolean;
+
+  /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
    * Returns a list of all applied image-ids.
    */
@@ -638,6 +659,11 @@ export interface iPrintessApi {
    * if greater than 1 return true
    */
   allowImageDistribution(): boolean
+
+  /**
+   * Tells UI to always show image distribution button.
+   */
+  showImageDistributionButton(): boolean
 
   /**
    * delete buyer uploaded images that are not in use
@@ -707,7 +733,11 @@ export interface iPrintessApi {
     color: string;
   }>;
 
-
+  /**
+   * Returns hex color from rgb value
+   * @param color rgb color value
+   */
+  getHexColor(color: string): string
 
 
   /**
@@ -809,27 +839,65 @@ export interface iPrintessApi {
   redoCount(): number
 
   /**
-   * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
-   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   * return if zoom options should be displayed
    */
-  canAddSpreads(): 0 | 1 | 2
+  allowZoomOptions(): boolean
 
   /**
+   * Zoom in on spread visible
+   */
+  zoomIn(): void
+
+  /**
+   * Zoom out of spread visible
+   */
+  zoomOut(): void
+
+  /**
+   * Check for double page spreads to show/hide zoom to spread option
+   */
+  isDoublePageSpread(): boolean
+
+  /**
+   * Returns if the number of spreads fits the requirements set in the template
+   * @param spreadSize current number of spreads 
+   */
+  isNoOfPagesValid(spreadSize: number): boolean
+
+  /**
+   * Photo-Book only feature:
+   * re arranges all spreads by a given array of ids or `newSpread` 
+   * Handle with care, this can destroy your photo-book document
+   * @param newSpreadIds Array of spread ids in correct order
+   */
+  reArrangeSpreads(newSpreadIds: Array<string | "newSpread">): Promise<boolean>
+
+  /**
+   * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
+   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   * @param spreadSize Optional: number of current spreads (used in arrange pages dialog where actual number of spreads is not yet applied)
+   */
+  canAddSpreads(spreadSize?: number): 0 | 1 | 2
+
+  /**
+   * Photo-Book only feature:
    * Add new spreads / pages to the current document before the back cover 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
-   */
+  */
   addSpreads(): Promise<boolean>
 
   /**
    * Returns how many spreads would be removed before cover  `removeSpreads()`is called. 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
+   * @param spreadSize Optional: number of current spreads (used in arrange pages dialog where actual number of spreads is not yet applied)
    */
-  canRemoveSpreads(): 0 | 1 | 2
+  canRemoveSpreads(spraedSize?: number): 0 | 1 | 2
 
   /**
- * Remove spreads / pages to the current document before the back cover 
- * The amount depends on the settings in the template. Template needs to be marked as `book`
- */
+   * Photo-Book only feature:
+   * Remove spreads / pages from the current document before the back cover 
+   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   */
   removeSpreads(): Promise<boolean>
 
   /**
@@ -1228,7 +1296,11 @@ export interface iExternalDocAndSpreadInfo {
   /**
    * Information if the document has facing pages. If `true` first and last spread has 1 page all other spreads have 2 pages.
    */
-  facingPages: boolean
+  facingPages: boolean,
+  /**
+   * Information if the document is set to "book" mode and can therefore add/remove pages etc.
+   */
+  isBook: boolean
 }
 
 
@@ -1272,6 +1344,7 @@ export interface iExternalProperty {
   value: string | number;
   kind: iExternalPropertyKind;
   label: string;
+  controlGroup: number;
   validation?: iExternalValidation;
   textStyle?: iExternalTextStyle;
   imageMeta?: iExternalimageMeta;
@@ -1299,6 +1372,7 @@ export interface iExternalListMeta {
   thumbWidth: number;
   thumbHeight: number;
   imageCss: string;
+  descriptionFilter?: string;
 }
 export type iExternalFieldListEntry = {
   key: string,
@@ -1373,7 +1447,7 @@ export type iExternalErrors = Array<iExternalError>
 
 export interface iExternalError {
   boxIds: Array<string>,
-  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText",
+  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
 }
@@ -1444,6 +1518,13 @@ export interface iExternalButton {
   caption?: string
 }
 
+export interface iDropdownItems {
+  caption: string,
+  disabled?: boolean,
+  show: boolean,
+  task: () => void
+}
+
 
 export interface iMobileUIButton {
   icon?: iconName | "none",
@@ -1472,7 +1553,7 @@ export interface MobileUiMenuItems {
   icon?: iconName,
   disabled: boolean,
   show: boolean,
-  task: any
+  task: () => void
 }
 
 export interface iButtonCircle {
@@ -1567,6 +1648,7 @@ export type iconName =
   | "plus-circle"
   | "plus-square"
   | "minus"
+  | "minus-light"
   | "shapes"
   | "square"
   | "settings"
@@ -1602,6 +1684,7 @@ export type iconName =
   | "arrows-circle"
   | "arrows-h"
   | "arrows-v"
+  | "arrows"
   | "carret-down-solid"
   | "carret-right-solid"
   | "carret-left-solid"
