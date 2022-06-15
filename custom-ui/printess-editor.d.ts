@@ -644,6 +644,11 @@ export interface iPrintessApi {
   showLayoutsDialog(): boolean;
 
   /**
+   * Returns if buyer is allowed to upload pdf files
+   */
+  allowPdfUpload(): boolean;
+
+  /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
    * Returns a list of all applied image-ids.
    */
@@ -654,6 +659,11 @@ export interface iPrintessApi {
    * if greater than 1 return true
    */
   allowImageDistribution(): boolean
+
+  /**
+   * Tells UI to always show image distribution button.
+   */
+  showImageDistributionButton(): boolean
 
   /**
    * delete buyer uploaded images that are not in use
@@ -723,7 +733,11 @@ export interface iPrintessApi {
     color: string;
   }>;
 
-
+  /**
+   * Returns hex color from rgb value
+   * @param color rgb color value
+   */
+  getHexColor(color: string): string
 
 
   /**
@@ -842,13 +856,13 @@ export interface iPrintessApi {
   /**
    * Check for double page spreads to show/hide zoom to spread option
    */
-  hasDoublePageSpreads(): boolean
+  isDoublePageSpread(): boolean
 
   /**
-   * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
-   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   * Returns if the number of spreads fits the requirements set in the template
+   * @param spreadSize current number of spreads 
    */
-  canAddSpreads(): 0 | 1 | 2
+  isNoOfPagesValid(spreadSize: number): boolean
 
   /**
    * Photo-Book only feature:
@@ -859,26 +873,32 @@ export interface iPrintessApi {
   reArrangeSpreads(newSpreadIds: Array<string | "newSpread">): Promise<boolean>
 
   /**
+   * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
+   * The amount depends on the settings in the template. Template needs to be marked as `book`
+   * @param spreadSize Optional: number of current spreads (used in arrange pages dialog where actual number of spreads is not yet applied)
+   */
+  canAddSpreads(spreadSize?: number): 0 | 1 | 2
+
+  /**
    * Photo-Book only feature:
    * Add new spreads / pages to the current document before the back cover 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
-   * @param idx Optional: Position of Spread in Book (in Array of Spreads) 
   */
   addSpreads(): Promise<boolean>
 
   /**
    * Returns how many spreads would be removed before cover  `removeSpreads()`is called. 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
+   * @param spreadSize Optional: number of current spreads (used in arrange pages dialog where actual number of spreads is not yet applied)
    */
-  canRemoveSpreads(): 0 | 1 | 2
+  canRemoveSpreads(spraedSize?: number): 0 | 1 | 2
 
   /**
    * Photo-Book only feature:
    * Remove spreads / pages from the current document before the back cover 
    * The amount depends on the settings in the template. Template needs to be marked as `book`
-   * @param ids Optional: Array of Spread Indices to be deleted
    */
-  removeSpreads(ids?: Array<string>): Promise<boolean>
+  removeSpreads(): Promise<boolean>
 
   /**
    * Gets the state of the "lockCoverInside" user setting in "book" mode
@@ -1352,6 +1372,7 @@ export interface iExternalListMeta {
   thumbWidth: number;
   thumbHeight: number;
   imageCss: string;
+  descriptionFilter?: string;
 }
 export type iExternalFieldListEntry = {
   key: string,
@@ -1426,7 +1447,7 @@ export type iExternalErrors = Array<iExternalError>
 
 export interface iExternalError {
   boxIds: Array<string>,
-  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText",
+  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
 }
@@ -1663,6 +1684,7 @@ export type iconName =
   | "arrows-circle"
   | "arrows-h"
   | "arrows-v"
+  | "arrows"
   | "carret-down-solid"
   | "carret-right-solid"
   | "carret-left-solid"
