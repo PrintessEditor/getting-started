@@ -198,13 +198,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     const desktopGrid = document.getElementById("printess-desktop-grid");
                     if (desktopGrid) {
                         if (printess.autoScaleDetails().enabled) {
-                            printessDiv.style.height = printess.autoScaleDetails().height + "px";
-                            printessDiv.style.width = printess.autoScaleDetails().width + "px";
+                            printessDiv.style.height = Math.floor(printess.autoScaleDetails().height - 1) + "px";
+                            printessDiv.style.width = Math.floor(printess.autoScaleDetails().width - 1) + "px";
                             printess.resizePrintess();
                         }
                         else {
                             const height = desktopGrid.offsetHeight || window.innerHeight;
-                            const calcHeight = "calc(" + height + "px - var(--editor-pagebar-height) - var(--editor-margin-top) - var(--editor-margin-bottom))";
+                            const calcHeight = "calc(" + Math.floor(height) + "px - var(--editor-pagebar-height) - var(--editor-margin-top) - var(--editor-margin-bottom))";
                             printessDiv.style.height = calcHeight;
                             const desktopProperties = document.getElementById("desktop-properties");
                             if (printess.showTabNavigation() && desktopProperties) {
@@ -3790,6 +3790,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (marker)
                 marker.style.background = "transparent";
         };
+        pageItem.ondrop = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+        };
         return pageItem;
     }
     function getSpreadSeparator(spreadId, nextSpreadId) {
@@ -3817,6 +3821,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             ev.preventDefault();
             uih_lastDragTarget = undefined;
             marker.style.background = "transparent";
+        };
+        separator.ondrop = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
         };
         separator.appendChild(document.createElement("div"));
         separator.appendChild(marker);
@@ -3949,8 +3957,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             content.appendChild(infoText);
         }
         const scrollTopDiv = document.createElement("div");
-        scrollTopDiv.className = "scroll-up-indicator";
-        scrollTopDiv.ondragover = () => {
+        scrollTopDiv.className = "scroll-up-indicator no-selection";
+        scrollTopDiv.ondragover = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
             const container = document.querySelector(".modal-body");
             if (container) {
                 if (forMobile) {
@@ -4002,8 +4012,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         ul.appendChild(pagesContainer);
         content.appendChild(ul);
         const scrollBottomDiv = document.createElement("div");
-        scrollBottomDiv.className = "scroll-down-indicator";
-        scrollBottomDiv.ondragover = () => {
+        scrollBottomDiv.className = "scroll-down-indicator no-selection";
+        scrollBottomDiv.ondragover = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
             const container = document.querySelector(".modal-body");
             if (container) {
                 if (forMobile) {
@@ -5426,7 +5438,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (printess.hasPreviousStep()) {
                     container.appendChild(getMobileNavButton(buttons.previous, false));
                 }
-                if (printess.hasNextStep() && printess.getBasketButtonBehaviour() !== "add-to-basket") {
+                if (printess.hasNextStep()) {
                     container.appendChild(getMobileNavButton(buttons.next, false));
                 }
                 else {
@@ -5687,7 +5699,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 disabled: addSpreads === 0,
                 task: printess.addSpreads
             }, {
-                id: "removePages",
+                id: "arrangePages",
                 title: printess.gl("ui.arrangePages"),
                 show: isBookMode > 0,
                 disabled: false,
@@ -5851,7 +5863,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (pageBar && printess.pageNavigationDisplay() === "icons") {
                     pageBar.style.height = mobilePageBarHeight + "px";
                 }
-                const hidePageAndToolbar = printessHeight < 450 || isInEddiMode || viewPortTopOffset > 0;
+                const hidePageAndToolbar = printessHeight < 450 && controlHostHeight > 10 || isInEddiMode || viewPortTopOffset > 0;
                 showToolBar = !hidePageAndToolbar || printess.neverHideMobileToolbar();
                 showPageBar = !hidePageAndToolbar;
                 if (toolbar && showToolBar) {

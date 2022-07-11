@@ -2497,7 +2497,7 @@ input#invert-image-checker {
 
 .mobile-navbar {
   display: none;
-  position: absolute !important; /* to not be overidden by BS */
+  position: fixed !important; /* to not be overidden by BS; set to fixed instead of absolute, because scale moves navbar out of sight */
   flex-direction: column;
   left: 0;
   top: 0;
@@ -2662,9 +2662,18 @@ input#invert-image-checker {
   .mobile-navbar {
     display: flex;
   }
+  .layout-snippet-cluster {
+    justify-content: center;
+  }
+  .group-snippets {
+    justify-content: center;
+  }
   .group-snippets > .snippet-thumb {
     width: 100px; 
     height: 100px;
+  }
+  .snippet-cluster-name {
+    text-align: center;
   }
   .error-list {
     max-height: calc(100vh - 300px);

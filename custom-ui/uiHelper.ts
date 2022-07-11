@@ -230,12 +230,12 @@ declare const bootstrap: any;
           const desktopGrid: HTMLElement | null = document.getElementById("printess-desktop-grid");
           if (desktopGrid) {
             if (printess.autoScaleDetails().enabled) {
-              printessDiv.style.height = printess.autoScaleDetails().height + "px";
-              printessDiv.style.width = printess.autoScaleDetails().width + "px";
+              printessDiv.style.height = Math.floor(printess.autoScaleDetails().height - 1) + "px";
+              printessDiv.style.width = Math.floor(printess.autoScaleDetails().width - 1) + "px";
               printess.resizePrintess();
             } else {
               const height = desktopGrid.offsetHeight || window.innerHeight; // fallback when running inside printess-editor
-              const calcHeight = "calc(" + height + "px - var(--editor-pagebar-height) - var(--editor-margin-top) - var(--editor-margin-bottom))";
+              const calcHeight = "calc(" + Math.floor(height) + "px - var(--editor-pagebar-height) - var(--editor-margin-top) - var(--editor-margin-bottom))";
               printessDiv.style.height = calcHeight;
 
               const desktopProperties = document.getElementById("desktop-properties");
@@ -4489,6 +4489,10 @@ declare const bootstrap: any;
       uih_lastDragTarget = undefined;
       if (marker) marker.style.background = "transparent";
     }
+    pageItem.ondrop = (ev: DragEvent) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+    }
 
     return pageItem;
   }
@@ -4520,6 +4524,10 @@ declare const bootstrap: any;
       ev.preventDefault();
       uih_lastDragTarget = undefined;
       marker.style.background = "transparent";
+    }
+    separator.ondrop = (ev: DragEvent) => {
+      ev.stopPropagation();
+      ev.preventDefault();
     }
 
     separator.appendChild(document.createElement("div"));
@@ -4660,9 +4668,11 @@ declare const bootstrap: any;
     }
 
     const scrollTopDiv = document.createElement("div");
-    scrollTopDiv.className = "scroll-up-indicator";
+    scrollTopDiv.className = "scroll-up-indicator no-selection";
 
-    scrollTopDiv.ondragover = () => {
+    scrollTopDiv.ondragover = (ev: DragEvent) => {
+      ev.stopPropagation();
+      ev.preventDefault();
       const container = document.querySelector(".modal-body");
       if (container) {
         if (forMobile) {
@@ -4722,9 +4732,11 @@ declare const bootstrap: any;
     content.appendChild(ul);
 
     const scrollBottomDiv = document.createElement("div");
-    scrollBottomDiv.className = "scroll-down-indicator";
+    scrollBottomDiv.className = "scroll-down-indicator no-selection";
 
-    scrollBottomDiv.ondragover = () => {
+    scrollBottomDiv.ondragover = (ev: DragEvent) => {
+      ev.stopPropagation();
+      ev.preventDefault();
       const container = document.querySelector(".modal-body");
       if (container) {
         if (forMobile) {
@@ -6458,7 +6470,7 @@ declare const bootstrap: any;
           container.appendChild(getMobileNavButton(buttons.previous, false));
         }
 
-        if (printess.hasNextStep() && printess.getBasketButtonBehaviour() !== "add-to-basket") {
+        if (printess.hasNextStep()) {
           container.appendChild(getMobileNavButton(buttons.next, false));
         } else {
           container.appendChild(getMobileNavButton(buttons.basket, false));
@@ -6837,7 +6849,7 @@ declare const bootstrap: any;
         disabled: addSpreads === 0,
         task: printess.addSpreads
       }, {
-        id: "removePages",
+        id: "arrangePages",
         title: printess.gl("ui.arrangePages"),
         show: isBookMode > 0,
         disabled: false,
@@ -7041,7 +7053,7 @@ declare const bootstrap: any;
           pageBar.style.height = mobilePageBarHeight + "px";
         }
 
-        const hidePageAndToolbar = printessHeight < 450 || isInEddiMode || viewPortTopOffset > 0; // hide toolbar & pagebar to free up more space 
+        const hidePageAndToolbar = printessHeight < 450 && controlHostHeight > 10 || isInEddiMode || viewPortTopOffset > 0; // hide toolbar & pagebar to free up more space 
         showToolBar = !hidePageAndToolbar || printess.neverHideMobileToolbar();
         showPageBar = !hidePageAndToolbar;
 

@@ -208,6 +208,11 @@ export interface printessAttachParameters {
    * Activates Printess-Debug-Outputs
    */
   debug?: boolean;
+
+  /**
+   * Activate new Text-Area sync for Multi-Line inline editing 
+   */
+  useTextAreaSyncOnMobile?: boolean
 }
 
 
@@ -472,7 +477,7 @@ export interface iPrintessApi {
   setProperty(propertyId: string, propertyValue: string | number | iStoryContent): Promise<void | (iExternalImageScaleHints & { scale: number })>; // | Array<iExternalColorUpdate>>;
 
   /**
-   * Sets the vaue of a form field
+   * Sets the value of a form field
    * @param fieldNameOrId Name of the Form-Field or Form-Field Property-ID
    * @param newValue Must be string and will be converted if neccessary
    */
@@ -546,7 +551,7 @@ export interface iPrintessApi {
   setNumberUiProperty(property: iExternalProperty, metaProperty: iExternalMetaPropertyKind | null, value: number): Promise<void>;
 
   /**
-   * Replaces multi-line text onlie works with a current ective multi-line-text-editor
+   * Replaces multi-line text only works with a current active multi-line-text-editor
    * @param text The text to insert in to the active multi-line editor
    */
   setEditorText(text: string): boolean
@@ -1186,9 +1191,18 @@ export interface iPrintessApi {
   showAlertOnClose(): boolean
 
   /**
-   * Returns an array of buyer-editable documents and a list of frames for each spread including their class-names.
+   * @deprecated 
+   * This call is no longer supported, use `getBuyerFrameCountAndMarkers()` instead.
+   * This call will no longer return `iFrameCountAndClasses` intead it returns `iFrameCountAndMarkers`
    */
-  getBuyerFrameCountAndClasses(): Array<iFrameCountAndClasses>
+  getBuyerFrameCountAndClasses(): Array<iFrameCountAndMarkers>
+
+
+  /**
+   * Returns an array of buyer-editable documents and a list of frames for each spread including their frame markers.
+   * You can easily use them fro statistically purposes or to charge extra prices fro certain used layouts.
+   */
+   getBuyerFrameCountAndMarkers(): Array<iFrameCountAndMarkers>
 }
 
 export interface iBuyerStep {
@@ -1435,7 +1449,8 @@ export interface iExternalimageMeta {
   canSetPlacement: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate" | "invert">;
   filterTags: ReadonlyArray<string> | Array<string>;
-  isHandwriting: boolean
+  isHandwriting: boolean;
+  average: number;
 }
 export interface iExternalImageScaleHints {
   min: number;
@@ -1490,6 +1505,9 @@ export interface iMergeTemplate {
    * When producing this template, you'll see this merge template name instead of the master template name.
    */
   useAsTemplateName?: boolean;
+
+  /* Pass a pixel based position for placing the snippet */
+  pos?: iRect;
 }
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
@@ -1548,7 +1566,7 @@ export interface iMobileUiState {
 export type MobileUiState = "document" | "frames" | "add" | "details" | "text";
 
 export interface MobileUiMenuItems {
-  id: "back" | "expert" | "undo" | "redo" | "addPages" | "removePages" | "previous" | "next" | "firstStep" | "lastStep",
+  id: "back" | "expert" | "undo" | "redo" | "addPages" | "arrangePages" | "previous" | "next" | "firstStep" | "lastStep",
   title: string,
   icon?: iconName,
   disabled: boolean,
@@ -1611,19 +1629,37 @@ export interface TemplateEditables {
   formFields: FormFieldItem[];
 }
 
-
+/**
+ * @deprecated 
+ * This interface is no longer supported, use `getBuyerFrameCountAndMarkers()` instead.
+ */
 export interface iFrameCountAndClasses {
   documentName: string,
   frames: number,
   spreads: Array<iFrameCountAndClassesSpread>
 }
 
+/**
+ * @deprecated 
+ * This interface is no longer supported, use `getBuyerFrameCountAndMarkers()` instead.
+ */
 export interface iFrameCountAndClassesSpread {
   spreadName: string,
   frames: number,
   classes: Record<string, number>
 }
 
+export interface iFrameCountAndMarkers {
+  documentName: string,
+  frames: number,
+  spreads: Array<iFrameCountAndMarkersSpread>
+}
+
+export interface iFrameCountAndMarkersSpread {
+  spreadName: string,
+  frames: number,
+  markers: Record<string, number>
+}
 
 
 export type iconName =
