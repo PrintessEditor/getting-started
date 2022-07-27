@@ -107,6 +107,16 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="#" id="btnGetBuyerFrameCountAndMarkers" title="Get Buyer Frame Count And Markers"
+            data-bs-toggle="offcanvas" data-bs-target="#frameCountOffcanvas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 448 512">
+              <!--! Font Awesome Pro 6.1.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->
+              <path
+                d="M288 352h-48V144c0-5.906-3.25-11.31-8.453-14.09c-5.172-2.812-11.5-2.5-16.42 .7813l-48 32C159.8 167.6 157.8 177.5 162.7 184.9c4.875 7.344 14.8 9.312 22.19 4.438L208 173.9V352H160c-8.844 0-16 7.156-16 16S151.2 384 160 384h128c8.844 0 16-7.156 16-16S296.8 352 288 352zM384 32H64C28.65 32 0 60.65 0 96v320c0 35.35 28.65 64 64 64h320c35.35 0 64-28.65 64-64V96C448 60.65 419.3 32 384 32zM416 416c0 17.64-14.36 32-32 32H64c-17.64 0-32-14.36-32-32V96c0-17.64 14.36-32 32-32h320c17.64 0 32 14.36 32 32V416z" />
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="#" id="btnValidate" title="Show Validation JSON">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 576 512">
               <path fill="currentColor"
@@ -138,7 +148,7 @@
         </li>
         <li class="nav-item">
           <a class="nav-link" href="#" id="btnRelaceText" title="Insert Text to Multi-Line Editor">
-           Relace Text
+            Relace Text
           </a>
         </li>
 
@@ -174,6 +184,18 @@
         aria-label="Close"></button>
     </div>
     <pre id="propertiesJson" class="offcanvas-body">
+    </pre>
+  </div>
+
+  <!-- FOR TESTING ONLY: FRAME COUNT AND MARKERS VIEW -->
+  <div class="offcanvas offcanvas-start" data-bs-backdrop="false" tabindex="-1" id="frameCountOffcanvas"
+    aria-labelledby="offcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasLabel">Frame Count and Markers</h5>
+      <button type="button" class="btn-close text-reset" id="closeFrameCountOffcanvas" data-bs-dismiss="offcanvas"
+        aria-label="Close"></button>
+    </div>
+    <pre id="frameCountJson" class="offcanvas-body">
     </pre>
   </div>
 
@@ -213,6 +235,7 @@
       <a class="dropdown-item" href="#Newborn-Steps_draft">Newborn Card with Steps</a>
       <a class="dropdown-item" href="#sigTestPortrait_draft">Portrait Test Card</a>
       <a class="dropdown-item" href="#mff_draft">Form Field Test</a>
+      <a class="dropdown-item" href="#Frame Count Test_draft">Frame Count Test</a>
     </div>
   </div>
 
@@ -408,7 +431,17 @@
         });
     };
     document.getElementById("btnRelaceText").onclick = () => {
-       printess.setEditorText("Hallo du doofer Computer");
+      printess.setEditorText("Hallo du doofer Computer");
+    };
+    document.getElementById("btnGetBuyerFrameCountAndMarkers").onclick = () => {
+      // print frame count and markers for debug purposes
+      const frameCountPre = document.getElementById("frameCountJson");
+      const frameCountAndMarkers = printess.getBuyerFrameCountAndMarkers();
+
+      if (frameCountPre && frameCountAndMarkers) {
+        frameCountPre.innerHTML = frameCountAndMarkers.map(obj => JSON.stringify(obj, null, 4));
+      }
+      frameCountAndMarkers.forEach(f => console.log("Document Name: ", f.documentName, "\nFrames: ", f.frames, "\nSpreads: ", f.spreads));
     };
 
     window.addEventListener('hashchange', function () {

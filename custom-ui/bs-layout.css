@@ -693,7 +693,7 @@ body {
     border-color: rgba(255, 255, 255, 0.4)!important;
   }
 
-  .fullscreen-add-properties {
+  .fullscreen-add-properties, .fullscreen-mobile-dialog {
     position: fixed;
     height: 100%;
     width: 100%;
@@ -707,7 +707,7 @@ body {
   .mobile-tabs {
     grid-template-rows: 50px 1fr 70px;
   }
-  .fullscreen-add-properties .image-list-header {
+  .fullscreen-add-properties .image-list-header, .fullscreen-mobile-dialog .image-list-header {
     margin-bottom: 0px;
   }
   .mobile-fullscreen-content {
@@ -825,6 +825,10 @@ input[type="radio"]:checked+label > svg {
   width: 28px;
   height:  28px;
   cursor: pointer;
+}
+
+#CROPMODAL .modal-dialog {
+  max-width: unset;
 }
 
 #pageArrangementDialog .modal-dialog, #layoutSnippetsSelection .modal-dialog {
@@ -1329,6 +1333,21 @@ input[type='range']::-webkit-slider-thumb {
 
 input[type='range']::-moz-range-thumb {
   background-color: var(--bs-primary);
+}
+
+.slider-catch-radius::-webkit-slider-thumb {
+  background-clip: padding-box;
+  border: 0.4rem solid rgba(0, 0, 0, 0);
+  transform: scale(4);
+  box-shadow: none;
+}
+
+.slider-catch-radius::-moz-range-thumb {
+  background-clip: padding-box;
+  border: 0.4rem solid rgba(0, 0, 0, 0);
+  box-sizing: border-box;
+  transform: scale(4);
+  box-shadow: none;
 }
 
 
@@ -1866,6 +1885,29 @@ input#invert-image-checker {
 }
 .color-picker-color.selected {
   border: black 2px solid;
+}
+.red-line-for-transparent-color {
+  position: absolute;
+  height: 3px;
+  width: 25px;
+  top: 13px;
+  left: 1px;
+  transform-origin: 50% 50%;
+  transform: rotate(45deg);
+  background-color: red;
+}
+.color-picker-color.selected .red-line-for-transparent-color {
+  left: 0px;
+  top: 12px;
+}
+.text-large-properties .color-picker-color .red-line-for-transparent-color {
+  width: 18px;
+  top: 10px;
+  left: 2px;
+}
+.text-large-properties .color-picker-color.selected .red-line-for-transparent-color {
+  top: 9px;
+  left: 1px;
 }
 #custom-color-picker {
   width: 35px;
@@ -2662,9 +2704,18 @@ input#invert-image-checker {
   .mobile-navbar {
     display: flex;
   }
+  .layout-snippet-cluster {
+    justify-content: center;
+  }
+  .group-snippets {
+    justify-content: center;
+  }
   .group-snippets > .snippet-thumb {
     width: 100px; 
     height: 100px;
+  }
+  .snippet-cluster-name {
+    text-align: center;
   }
   .error-list {
     max-height: calc(100vh - 300px);
