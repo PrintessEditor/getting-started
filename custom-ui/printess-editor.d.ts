@@ -453,8 +453,10 @@ export interface iPrintessApi {
 
   /**
    * Returns a simple ui to change the postion of an image 
+   * @param propertyId
+   * @param forDesktopDialog give more space if for desktop dialog
    */
-  createCropUi(propertyId: string): null | { container: HTMLDivElement, setScale: (s: number) => void, getCropBox(): { top: number, left: number, width: number, height: number } }
+  createCropUi(propertyId: string, forDesktopDialog: boolean): null | { container: HTMLDivElement, setScale: (s: number) => void, getCropBox(): { top: number, left: number, width: number, height: number } }
 
   /**
    * Creates a new cropped image and assigns it to the passed form-field. Takes the currently assigned image as master
@@ -613,6 +615,12 @@ export interface iPrintessApi {
    * If all images are already assigned it takes the first image and re-assigns it
    */
   assignImageToNextPossibleFrame(imgId: string): Promise<boolean>
+
+  /**
+   * Check if image zoom is allowed
+   * @param propertyId 
+   */
+  canScale(propertyId: string): boolean;
 
   /**
    * Rotates an image by 90deg and saves the result as new image and assigns rotated image to frame automatically.
@@ -1201,8 +1209,9 @@ export interface iPrintessApi {
   /**
    * Returns an array of buyer-editable documents and a list of frames for each spread including their frame markers.
    * You can easily use them fro statistically purposes or to charge extra prices fro certain used layouts.
+   * Or just use the frame-count to determine if the user had made changes at all. 
    */
-   getBuyerFrameCountAndMarkers(): Array<iFrameCountAndMarkers>
+  getBuyerFrameCountAndMarkers(): Array<iFrameCountAndMarkers>
 }
 
 export interface iBuyerStep {
@@ -1299,6 +1308,10 @@ export interface iExternalDocAndSpreadInfo {
    * The ID of the document
    */
   docId: string,
+  /**
+   * The Title of the document
+   */
+  docTitle: string,
   /**
    * Information about all spreads of this document
    */
