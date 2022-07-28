@@ -657,6 +657,11 @@ export interface iPrintessApi {
   showLayoutsDialog(): boolean;
 
   /**
+   * Returns how many columns a Change Layout overview should have to display layout snippets more properly
+   */
+  numberOfColumns(): number
+
+  /**
    * Returns if buyer is allowed to upload pdf files
    */
   allowPdfUpload(): boolean;
