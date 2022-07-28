@@ -4271,7 +4271,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         if (!forMobile && images.length > 0 && (p === null || p === void 0 ? void 0 : p.kind) !== "image-id")
             container.appendChild(dragDropHint);
-        if (images.length === 0)
+        if (images.length === 0 && !(p === null || p === void 0 ? void 0 : p.id.startsWith("FF_")))
             container.appendChild(multipleImagesHint);
         return container;
     }
@@ -4770,6 +4770,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 const clusterDiv = document.createElement("div");
                 clusterDiv.className = "layout-snippet-cluster";
+                if (!forLayoutDialog) {
+                    const col = printess.numberOfColumns();
+                    clusterDiv.style.display = "grid";
+                    clusterDiv.style.gridTemplateColumns = `repeat(${col}, 1fr)`;
+                    clusterDiv.style.gridColumnGap = "5px";
+                }
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
                     thumbDiv.className = forLayoutDialog ? "snippet-thumb layout-dialog" : "snippet-thumb big";

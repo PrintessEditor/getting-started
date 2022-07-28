@@ -1127,11 +1127,10 @@ li.spread-separator {
   justify-content: center;
 }
 .snippet-thumb.big {
-  max-width: 250px;
   height: unset;
   max-height: unset; /*250px;*/
   margin-bottom: 6px;
-  min-width: 150px;
+  width: 100%;
 }
 .snippet-thumb.big > img {
   border: 1px solid var(--mobile-button-border);
@@ -1161,10 +1160,6 @@ li.spread-separator {
 .snippet-thumb.layout-dialog {
   width: unset;
   height: unset;
-  max-height: unset;
-  max-width: unset;
-  min-width: unset;
-  min-height: unset;
   margin: 0px 10px 10px 0;
   border: 1px solid var(--mobile-button-border);
 }
