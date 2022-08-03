@@ -147,6 +147,11 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="#" id="btnCenterInView" title="Center current spread in view">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 612 512" width="20" height="20" fill="currentColor"><path d="M369.9 97.9L286 14C277 5 264.8-.1 252.1-.1H48C21.5 0 0 21.5 0 48v416c0 26.5 21.5 48 48 48h288c26.5 0 48-21.5 48-48V131.9c0-12.7-5.1-25-14.1-34zm-22.6 22.7c2.1 2.1 3.5 4.6 4.2 7.4H256V32.5c2.8.7 5.3 2.1 7.4 4.2l83.9 83.9zM336 480H48c-8.8 0-16-7.2-16-16V48c0-8.8 7.2-16 16-16h176v104c0 13.3 10.7 24 24 24h104v304c0 8.8-7.2 16-16 16z"/></svg>
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="#" id="btnRelaceText" title="Insert Text to Multi-Line Editor">
             Relace Text
           </a>
@@ -235,7 +240,11 @@
       <a class="dropdown-item" href="#Newborn-Steps_draft">Newborn Card with Steps</a>
       <a class="dropdown-item" href="#sigTestPortrait_draft">Portrait Test Card</a>
       <a class="dropdown-item" href="#mff_draft">Form Field Test</a>
+      <a class="dropdown-item" href="#mff_draft-2">Form Field Test 2</a>
+      <a class="dropdown-item" href="#Photo-Calendar-Month-Pin">Calendar F1</a>
       <a class="dropdown-item" href="#Frame Count Test_draft">Frame Count Test</a>
+      <a class="dropdown-item" href="#exchange-id-test-1">exchange-id-test-1</a>
+      <a class="dropdown-item" href="#exchange-id-test-2">exchange-id-test-2</a>
     </div>
   </div>
 
@@ -433,6 +442,9 @@
     document.getElementById("btnRelaceText").onclick = () => {
       printess.setEditorText("Hallo du doofer Computer");
     };
+    document.getElementById("btnCenterInView").onclick = () => {
+      printess.centerSpreadInView();
+    };
     document.getElementById("btnGetBuyerFrameCountAndMarkers").onclick = () => {
       // print frame count and markers for debug purposes
       const frameCountPre = document.getElementById("frameCountJson");
@@ -444,7 +456,7 @@
       frameCountAndMarkers.forEach(f => console.log("Document Name: ", f.documentName, "\nFrames: ", f.frames, "\nSpreads: ", f.spreads));
     };
 
-    window.addEventListener('hashchange', function () {
+    window.addEventListener('hashchange', async function () {
       let id = decodeURIComponent(window.location.hash.substr(1));
       let loadPublishedVersion = true;
       if (id.endsWith("_draft")) {
@@ -455,7 +467,9 @@
       if (offcanvas) offcanvas.style.visibility = "";
       let pagebar = document.querySelector(".mobile-pagebar");
       if (pagebar) pagebar.parentElement.removeChild(pagebar); // will be re-attached on load callback
-      if (id && printess) printess.loadTemplate(id);
+      if (id && printess) {
+        printess.loadTemplate(id, undefined, true);
+      }
     }, false);
 
 
