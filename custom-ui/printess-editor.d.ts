@@ -230,7 +230,7 @@ export interface iPrintessApi {
    * @param mergeTemplates optional parameter to pass other templates to merge 
    * @param takeOverFormFieldValues optional parameter to transfer global form field values from previous to next document
    */
-  loadTemplate(templateNameOrToken: string, mergeTemplates?: [iMergeTemplate],  takeOverFormFieldValues?: boolean): Promise<void>
+  loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
 
   /**
    * Centers the current spread in the printess view container
