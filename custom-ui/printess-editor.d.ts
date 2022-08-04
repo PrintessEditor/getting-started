@@ -228,8 +228,14 @@ export interface iPrintessApi {
    * Load a template to the Printess editor.
    * @param templateNameOrToken can be either the name of a template (case sensitive) or the save-token received as a result of a user design save. 
    * @param mergeTemplates optional parameter to pass other templates to merge 
+   * @param takeOverFormFieldValues optional parameter to transfer global form field values from previous to next document
    */
-  loadTemplate(templateNameOrToken: string, mergeTemplates?: [iMergeTemplate]): Promise<void>
+  loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
+
+  /**
+   * Centers the current spread in the printess view container
+   */
+  centerSpreadInView(): void
 
   /**
    * @deprecated 
@@ -1667,15 +1673,23 @@ export interface iFrameCountAndClassesSpread {
   classes: Record<string, number>
 }
 
+//** Provides information about number of frames edited by the buyer per document */
 export interface iFrameCountAndMarkers {
+  /** Name of document */
   documentName: string,
+  /** Count of buyer manipulated frames */
   frames: number,
+  /** Detailed information about all spreads */
   spreads: Array<iFrameCountAndMarkersSpread>
 }
 
+//** Provides information about number of frames edited by the buyer per spread */
 export interface iFrameCountAndMarkersSpread {
+  /** Name of spread  */
   spreadName: string,
+  /** Count of buyer manipulated frames on spread */
   frames: number,
+  /** List of markes used by buyer manipulted frames on spread*/
   markers: Record<string, number>
 }
 

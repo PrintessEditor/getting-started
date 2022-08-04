@@ -79,6 +79,8 @@ body {
   grid-template-rows: calc(var(--editor-pagebar-height) + var(--editor-margin-top)) 1fr var(--editor-margin-bottom);
   grid-template-columns: 1fr 450px;
   column-gap: var(--editor-space-between);
+
+  overflow: hidden;
 }
 
 #desktop-pagebar {
