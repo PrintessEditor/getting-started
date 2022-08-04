@@ -601,11 +601,12 @@ declare const bootstrap: any;
       return "10fr ";
     }
   }
+
   /**
    * Desktop Tabs Navigation
    */
 
-  function getBuyerOverlayType(properties: Array<{ kind: iExternalPropertyKind }>): string {
+  function getBuyerOverlayType(printess: iPrintessApi, properties: Array<{ kind: iExternalPropertyKind }>): string {
 
     const isSingleLineText = properties.filter(p => p.kind === "single-line-text").length > 0;
     const isImage = properties.filter(p => p.kind === "image").length > 0;
@@ -616,13 +617,13 @@ declare const bootstrap: any;
     const isText = hasFont || isSingleLineText || isStory || properties.length === 0;
 
     if (isText && isImage) {
-      return "Sticker";
+      return printess.gl("ui.tabStickers");
     } else if (isText) {
-      return "Text Frame"
+      return printess.gl("ui.textFrame");
     } else if (isImage) {
-      return "Photo Frame";
+      return printess.gl("ui.photoFrame");
     } else if (isColor) {
-      return "Color";
+      return printess.gl("ui.color");
     }
 
     return "Sticker";
@@ -777,9 +778,9 @@ declare const bootstrap: any;
 
     let caption = "";
     if (uih_currentState === "text") {
-      caption = "Text Frame";
+      caption = printess.gl("ui.textFrame");
     } else if (uih_currentState === "frames") {
-      caption = getBuyerOverlayType(uih_currentProperties);
+      caption = getBuyerOverlayType(printess, uih_currentProperties);
     } else if (currentTab) {
       caption = currentTab.head || currentTab.caption;
     }
@@ -2218,6 +2219,7 @@ declare const bootstrap: any;
       for (const entry of p.listMeta.list) {
         const thumb = document.createElement("div");
         thumb.className = "no-selection image" + cssId;
+        //thumb.title = printess.gl(entry.label);
 
         if (entry.imageUrl) {
           thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
@@ -5289,7 +5291,7 @@ declare const bootstrap: any;
   function getMobileFullscreenContent(printess: iPrintessApi, id: string, container: HTMLElement, title: string, tabContent: HTMLElement, addTabsNavigation: boolean, p?: iExternalProperty): void {
     const header = document.createElement("div");
     header.className = "image-list-header bg-primary text-light";
-    header.innerHTML = printess.gl(title).replace(/\\n/g, "");
+    header.innerHTML = printess.gl(title).replace(/\\n/g, " ");
     const exitBtn = printess.getIcon("close");
     exitBtn.style.width = "20px";
     exitBtn.style.height = "24px";
@@ -5321,7 +5323,7 @@ declare const bootstrap: any;
     const imageListHeader = <HTMLElement>document.querySelector(".fullscreen-add-properties .image-list-header");
     if (imageListHeader) {
       const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
-      imageListHeader.innerHTML = caption.replace(/\\n/g, "");
+      imageListHeader.innerHTML = caption.replace(/\\n/g, " ");
       const exitBtn = printess.getIcon("close");
       exitBtn.style.width = "20px";
       exitBtn.style.height = "24px";

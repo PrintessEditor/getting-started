@@ -507,7 +507,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return "10fr ";
         }
     }
-    function getBuyerOverlayType(properties) {
+    function getBuyerOverlayType(printess, properties) {
         const isSingleLineText = properties.filter(p => p.kind === "single-line-text").length > 0;
         const isImage = properties.filter(p => p.kind === "image").length > 0;
         const isColor = properties.filter(p => p.kind === "color").length > 0;
@@ -515,16 +515,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const hasFont = properties.filter(p => p.kind === "font").length > 0;
         const isText = hasFont || isSingleLineText || isStory || properties.length === 0;
         if (isText && isImage) {
-            return "Sticker";
+            return printess.gl("ui.tabStickers");
         }
         else if (isText) {
-            return "Text Frame";
+            return printess.gl("ui.textFrame");
         }
         else if (isImage) {
-            return "Photo Frame";
+            return printess.gl("ui.photoFrame");
         }
         else if (isColor) {
-            return "Color";
+            return printess.gl("ui.color");
         }
         return "Sticker";
     }
@@ -655,10 +655,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const title = document.createElement("h3");
         let caption = "";
         if (uih_currentState === "text") {
-            caption = "Text Frame";
+            caption = printess.gl("ui.textFrame");
         }
         else if (uih_currentState === "frames") {
-            caption = getBuyerOverlayType(uih_currentProperties);
+            caption = getBuyerOverlayType(printess, uih_currentProperties);
         }
         else if (currentTab) {
             caption = currentTab.head || currentTab.caption;
@@ -4481,7 +4481,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         var _a;
         const header = document.createElement("div");
         header.className = "image-list-header bg-primary text-light";
-        header.innerHTML = printess.gl(title).replace(/\\n/g, "");
+        header.innerHTML = printess.gl(title).replace(/\\n/g, " ");
         const exitBtn = printess.getIcon("close");
         exitBtn.style.width = "20px";
         exitBtn.style.height = "24px";
@@ -4509,7 +4509,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const imageListHeader = document.querySelector(".fullscreen-add-properties .image-list-header");
         if (imageListHeader) {
             const caption = getMobilePropertiesCaption(printess, uih_currentTabs);
-            imageListHeader.innerHTML = caption.replace(/\\n/g, "");
+            imageListHeader.innerHTML = caption.replace(/\\n/g, " ");
             const exitBtn = printess.getIcon("close");
             exitBtn.style.width = "20px";
             exitBtn.style.height = "24px";
