@@ -1159,10 +1159,19 @@ export interface iPrintessApi {
   getTranslations(): Record<string, Record<string, string | number> | string | number>;
 
   /**
+   * @deprecated please use async version instead, to ensure open text editors are saved
    * Returns an array of external property errors that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
   validate(mode?: "all" | "until-current-step" | "selection"): Array<iExternalError>
+
+  /**
+   * Closes open editors and returns an array of external property errors 
+   * that can be used to display errors like missing text to the customer
+   * @param mode Specifies when and up to which point the validation should be done.
+   */
+  validateAsync(mode?: "all" | "until-current-step" | "selection"): Promise<Array<iExternalError>> 
+
 
   /**
    * Returns true if the associated mutli-line text-frame has text which does not fit into the frame
@@ -1219,7 +1228,7 @@ export interface iPrintessApi {
 
   /**
    * Returns an array of buyer-editable documents and a list of frames for each spread including their frame markers.
-   * You can easily use them fro statistically purposes or to charge extra prices fro certain used layouts.
+   * You can easily use them for statistically purposes or to charge extra prices for certain used layouts.
    * Or just use the frame-count to determine if the user had made changes at all. 
    */
   getBuyerFrameCountAndMarkers(): Array<iFrameCountAndMarkers>
@@ -1359,6 +1368,7 @@ export interface iExternalSnippet {
   snippetUrl: string;
   thumbUrl: string;
   bgColor: string;
+  priceLabel: string;
 }
 export interface iExternalFrameBounds {
   zoom: number;
@@ -1371,7 +1381,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "handwriting-image" |
@@ -1531,13 +1541,13 @@ export interface iMergeTemplate {
   useAsTemplateName?: boolean;
 
   /* Pass a pixel based position for placing the snippet */
-  pos?: iRect;
+  pos?: iExternalRect;
 }
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
-export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>) => HTMLDivElement;
+export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>, width: number, height: number) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
@@ -1567,6 +1577,12 @@ export interface iDropdownItems {
   task: () => void
 }
 
+export interface iExternalRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 
 export interface iMobileUIButton {
   icon?: iconName | "none",
@@ -1653,6 +1669,7 @@ export interface TemplateEditables {
   formFields: FormFieldItem[];
 }
 
+
 /**
  * @deprecated 
  * This interface is no longer supported, use `getBuyerFrameCountAndMarkers()` instead.
@@ -1673,7 +1690,7 @@ export interface iFrameCountAndClassesSpread {
   classes: Record<string, number>
 }
 
-//** Provides information about number of frames edited by the buyer per document */
+/** Provides information about number of frames edited by the buyer per document */
 export interface iFrameCountAndMarkers {
   /** Name of document */
   documentName: string,
@@ -1683,7 +1700,7 @@ export interface iFrameCountAndMarkers {
   spreads: Array<iFrameCountAndMarkersSpread>
 }
 
-//** Provides information about number of frames edited by the buyer per spread */
+/** Provides information about number of frames edited by the buyer per spread */
 export interface iFrameCountAndMarkersSpread {
   /** Name of spread  */
   spreadName: string,
@@ -1691,6 +1708,61 @@ export interface iFrameCountAndMarkersSpread {
   frames: number,
   /** List of markes used by buyer manipulted frames on spread*/
   markers: Record<string, number>
+}
+
+/** 
+ * passed whenever a price could have possible changed
+ * contains all price-relevant informations from printess in one place
+ */
+export type iExternalProductPriceInfo = {
+  /** key / value list of all price relevant form fields */
+  priceRelevantFormFields: { [key: string]: string },
+  /** Sum of all used priceCategoryGroups and there used amounts
+   * All used layout-snippets and stickers with a price category
+   * will be summed up here */
+  snippetPriceCategories: Array<iUsedPriceCategory>,
+  /** A list of all used document-price-categories. Only returns documents which have actually been edited by the buyer  */
+  priceCategories: Array<string>
+}
+
+/** Information about all used price categories plus the number of usages. */
+export interface iUsedPriceCategory {
+  priceCategory: number,
+  amount: number
+}
+
+/** Callback executed whenever price relevant information has changed.
+ * Once calculated the new price you can call `refreshPriceDisplay()`to update 
+ * the price and product informations for the user.
+ * Example for iframe integration: (can be called on `uiHelper` as well) 
+ * ``` 
+    iframe.contentWindow.postMessage({
+      cmd: "refreshPriceDisplay", display: {
+        price: string, // any string like "32.34€"
+        oldPrice?: string // will be crossed out
+        legalNotice?: string, // will be displayed under the price
+        productName?: string // to change product name dynamically 
+      })}
+    }, "*");
+    ```
+  */
+export type externalPriceChangeCallback = (infos: iExternalProductPriceInfo) => void;
+
+/**
+ * Structure expected when calling set price information 
+ */
+export interface iExternalPriceDisplay {
+  price: string,
+  oldPrice?: string
+  legalNotice?: string,
+  /**
+   *  can be dependend on form fields
+   */
+  productName?: string
+  /**
+   *  will be displayed via info icon in an iframe.
+   */
+  infoUrl?: string
 }
 
 
@@ -1926,4 +1998,6 @@ export type iconName =
   | "focus-face"
   | "focus-group"
   | "handwriting"
-  | "burger-menu";
+  | "burger-menu"
+  | "grid-lines"
+  | "info-circle";

@@ -16,6 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         renderDesktopUi: renderDesktopUi,
         refreshUndoRedoState: refreshUndoRedoState,
         refreshPagination: refreshPagination,
+        refreshPriceDisplay: refreshPriceDisplay,
         updatePageThumbnail: updatePageThumbnail,
         viewPortScroll: viewPortScroll,
         viewPortResize: viewPortResize,
@@ -37,6 +38,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_currentState = "document";
     let uih_currentRender = "never";
     let uih_currentVisiblePage;
+    let uih_currentPriceDisplay;
+    let uih_mobilePriceDisplay = "none";
     let uih_lastMobileState = null;
     let uih_autoSelectPending = false;
     let uih_lastPrintessHeight = 0;
@@ -174,6 +177,94 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
+    function refreshPriceDisplay(printess, priceDisplay) {
+        uih_currentPriceDisplay = priceDisplay;
+        if (priceDisplay && uih_currentRender === "mobile") {
+            document.body.classList.add("has-mobile-price-bar");
+            resizeMobileUi(printess);
+        }
+        else {
+            document.body.classList.remove("has-mobile-price-bar");
+        }
+        const priceDiv = document.getElementById("total-price-display");
+        if (priceDiv) {
+            getPriceDisplay(printess, priceDiv, priceDisplay, uih_currentRender === "mobile");
+        }
+        console.error("NEW PRICING ARRIVED", priceDisplay);
+    }
+    function getPriceInfoIcon(printess, infoUrl, forMobile) {
+        const infoIcon = printess.getIcon("info-circle");
+        infoIcon.classList.add("price-info-icon");
+        infoIcon.onclick = () => {
+            const iframe = document.createElement("iframe");
+            iframe.title = "Price Details";
+            iframe.src = infoUrl;
+            iframe.style.width = "100%";
+            iframe.style.height = "100%";
+            if (forMobile) {
+                const priceInfoDiv = document.getElementById("PRICE-INFO");
+                if (priceInfoDiv) {
+                    priceInfoDiv.remove();
+                }
+                renderMobileDialogFullscreen(printess, "PRICE-INFO", "Product Overview", iframe, false);
+            }
+            else {
+                showModal(printess, "PRICE-MODAL", iframe, "Product Overview");
+            }
+        };
+        return infoIcon;
+    }
+    function getPriceDisplay(printess, priceDiv, priceDisplay, forMobile = false) {
+        const price = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.price) || "";
+        const oldPrice = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.oldPrice) || "";
+        const legalNotice = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.legalNotice) || "";
+        const productName = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.productName) || printess.getTemplateTitle();
+        const infoUrl = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.infoUrl) || "";
+        priceDiv.innerHTML = "";
+        const headline = document.createElement("div");
+        headline.className = "total-price-haedline";
+        if (productName && (printess.pageNavigationDisplay() === "icons" || forMobile)) {
+            const productNameSpan = document.createElement("span");
+            productNameSpan.className = "product-name";
+            productNameSpan.innerText = printess.gl(productName);
+            if (infoUrl) {
+                const infoIcon = getPriceInfoIcon(printess, infoUrl, forMobile);
+                productNameSpan.appendChild(infoIcon);
+            }
+            priceDiv.appendChild(productNameSpan);
+        }
+        if (!legalNotice) {
+            priceDiv.classList.add("price-info-only");
+        }
+        else {
+            priceDiv.classList.remove("price-info-only");
+        }
+        const oldPriceSpan = document.createElement("span");
+        oldPriceSpan.style.textDecoration = "line-through";
+        oldPriceSpan.className = "me-2";
+        const newPriceSpan = document.createElement("span");
+        if (oldPrice)
+            newPriceSpan.style.color = "red";
+        headline.className = "total-price-headline";
+        if (infoUrl && printess.pageNavigationDisplay() !== "icons" && (!forMobile || !productName)) {
+            const infoIcon = getPriceInfoIcon(printess, infoUrl, forMobile);
+            if (oldPrice)
+                infoIcon.style.marginRight = "6px";
+            headline.appendChild(infoIcon);
+        }
+        headline.appendChild(oldPriceSpan);
+        headline.appendChild(newPriceSpan);
+        priceDiv.appendChild(headline);
+        oldPriceSpan.innerText = printess.gl(oldPrice);
+        newPriceSpan.innerText = printess.gl(price);
+        let subline = priceDiv.querySelector("span.total-price-subline");
+        if (!subline) {
+            subline = document.createElement("span");
+            subline.className = "total-price-subline";
+            priceDiv.appendChild(subline);
+        }
+        subline.innerText = printess.gl(legalNotice || "");
+    }
     function refreshPagination(printess) {
         if (uih_currentRender === "mobile") {
             renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
@@ -263,6 +354,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             mobileUi.innerHTML = "";
         }
         removeMobileFullscreenContainer();
+        const mobilePricebar = document.querySelector(".mobile-pricebar");
+        if (mobilePricebar) {
+            mobilePricebar.remove();
+        }
         const printessDiv = document.getElementById("desktop-printess-container");
         const container = document.getElementById("desktop-properties");
         if (!container || !printessDiv) {
@@ -493,7 +588,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getControlGroupWidth(p) {
         var _a, _b;
-        if ((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) {
+        if (p.kind === "label") {
+            return "auto";
+        }
+        else if ((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) {
             return ((_b = p.validation) === null || _b === void 0 ? void 0 : _b.maxChars) + "fr ";
         }
         else if (p.listMeta && p.listMeta.list.length > 0) {
@@ -739,7 +837,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 break;
             }
             case "#LAYOUTS": {
-                const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
+                const layoutsDiv = window.uiHelper.renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
                 container.appendChild(layoutsDiv);
                 container.scrollTop = uih_snippetsScrollPosition;
                 break;
@@ -765,6 +863,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getPropertyControl(printess, p, metaProperty, forMobile = false) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         switch (p.kind) {
+            case "label":
+                return getSimpleLabel(p.label, p.controlGroup > 0);
             case "single-line-text":
                 return getSingleLineTextBox(printess, p, forMobile);
             case "font":
@@ -915,6 +1015,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const div = document.createElement("div");
         div.innerText = printess.gl("ui.missingProperty", p.kind);
         return div;
+    }
+    function getSimpleLabel(text, forControlGroup = false) {
+        if (forControlGroup) {
+            const para = document.createElement("para");
+            para.style.marginTop = "38px";
+            para.style.marginBottom = "0";
+            para.style.marginLeft = "5px";
+            para.style.fontSize = "16pt";
+            para.textContent = text;
+            return para;
+        }
+        else {
+            const para = document.createElement("p");
+            para.style.marginTop = "1.5em";
+            para.style.marginBottom = "0.3em";
+            para.textContent = text;
+            return para;
+        }
     }
     function getChangeBackgroundButton(printess) {
         const ok = document.createElement("button");
@@ -1123,7 +1241,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.onblur = () => {
             printess.setZoomMode("spread");
         };
-        const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label, !!((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) && p.controlGroup === 0);
+        const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label, !!((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) && p.controlGroup === 0, p.controlGroup > 0);
         return r;
     }
     function getDesktopTitle(printess) {
@@ -1139,9 +1257,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             inner.style.alignItems = "center";
         }
         if (!forCornerTools) {
-            const h2 = document.createElement("h2");
-            h2.innerText = printess.gl(printess.getTemplateTitle());
-            inner.appendChild(h2);
+            const h3 = document.createElement("h3");
+            h3.innerText = printess.gl(printess.getTemplateTitle());
+            h3.style.margin = "0px";
+            inner.appendChild(h3);
+            const priceDiv = document.createElement("div");
+            priceDiv.className = "total-price-container";
+            priceDiv.id = "total-price-display";
+            if (uih_currentPriceDisplay)
+                getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+            inner.appendChild(priceDiv);
         }
         if (printess.hasPreviewBackButton()) {
             inner.appendChild(getPreviewBackButton(printess));
@@ -1707,7 +1832,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
         }
     }
-    function addLabel(printess, input, id, forMobile, kind, label, hasMaxChars = false) {
+    function addLabel(printess, input, id, forMobile, kind, label, hasMaxChars = false, inControlGroup = false) {
         input.classList.add("form-control");
         const container = document.createElement("div");
         !forMobile && container.classList.add("mb-3");
@@ -1721,6 +1846,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             htmlLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
             htmlLabel.innerHTML = printess.gl(label) || "";
             htmlLabel.style.display = forMobile ? "none" : "inline-block";
+            if (inControlGroup) {
+                htmlLabel.style.fontSize = "0.85em";
+                htmlLabel.style.opacity = "0.7";
+            }
             if (kind === "image" && !forMobile) {
                 const button = document.createElement("button");
                 button.className = "btn btn-primary image-upload-btn";
@@ -2160,7 +2289,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return ddContent;
         }
         else {
-            return addLabel(printess, dropdown, p.id, false, p.kind, p.label);
+            return addLabel(printess, dropdown, p.id, false, p.kind, p.label, false, p.controlGroup > 0);
         }
     }
     function getDropdownItemContent(printess, meta, entry) {
@@ -3490,6 +3619,34 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         ];
         return zoomItems;
     }
+    function getPageArrangementButtons(printess, addSpreads, removeSpreads, forMobile) {
+        const li = document.createElement("li");
+        li.className = "big-page-item mr";
+        if (forMobile) {
+            li.classList.add("mobile");
+        }
+        else {
+            li.appendChild(document.createElement("div"));
+        }
+        const pageButtons = document.createElement("div");
+        pageButtons.className = "modify-page-buttons";
+        if (addSpreads > 0) {
+            const btnAdd = document.createElement("div");
+            btnAdd.className = "btn btn-sm btn-outline-secondary w-100";
+            btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
+            btnAdd.onclick = () => printess.addSpreads();
+            pageButtons.appendChild(btnAdd);
+        }
+        if (addSpreads || removeSpreads) {
+            const arrangePagesBtn = document.createElement("button");
+            arrangePagesBtn.className = "btn btn-sm btn-outline-secondary w-100";
+            arrangePagesBtn.innerText = "Arrange Pages";
+            arrangePagesBtn.onclick = () => getArrangePagesOverlay(printess, forMobile);
+            pageButtons.appendChild(arrangePagesBtn);
+        }
+        li.appendChild(pageButtons);
+        return li;
+    }
     function renderPageNavigation(printess, container, large = false, forMobile = false) {
         var _a, _b, _c, _d;
         const spreads = printess.getAllSpreads();
@@ -3584,6 +3741,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     };
                 }
                 pages.appendChild(tabsContainer);
+                const wrapper = document.createElement("div");
+                wrapper.className = "d-flex";
+                const priceDiv = document.createElement("div");
+                priceDiv.className = "total-price-container";
+                priceDiv.id = "total-price-display";
+                if (uih_currentPriceDisplay) {
+                    getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+                }
                 const button = document.createElement("button");
                 button.className = "btn btn-primary ms-2";
                 const icon = printess.getIcon("shopping-cart-add");
@@ -3591,8 +3756,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon.style.height = "25px";
                 button.onclick = () => addToBasket(printess);
                 button.appendChild(icon);
+                wrapper.appendChild(priceDiv);
+                wrapper.appendChild(button);
                 if (printess.stepHeaderDisplay() === "tabs list")
-                    pages.appendChild(button);
+                    pages.appendChild(wrapper);
                 return;
             }
             if (printess.pageNavigationDisplay() === "icons") {
@@ -3672,6 +3839,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             pagesContainer.appendChild(li);
                         }
                     }
+                }
+                const addSpreads = printess.canAddSpreads();
+                const removeSpreads = printess.canRemoveSpreads();
+                if (addSpreads > 0 || removeSpreads > 0) {
+                    pagesContainer.appendChild(getPageArrangementButtons(printess, addSpreads, removeSpreads, forMobile));
                 }
                 ul.appendChild(pagesContainer);
             }
@@ -3763,32 +3935,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     cornerTools.classList.add("expert-mode");
                 }
                 cornerTools.appendChild(getBackUndoMiniBar(printess));
-                const addSpreads = printess.canAddSpreads();
-                const removeSpreads = printess.canRemoveSpreads();
-                if (addSpreads > 0 || removeSpreads > 0) {
-                    const pageButtons = document.createElement("div");
-                    pageButtons.className = "modify-page-buttons";
-                    if (addSpreads > 0) {
-                        const btnAdd = document.createElement("div");
-                        btnAdd.className = "btn btn-sm btn-secondary";
-                        btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
-                        btnAdd.onclick = () => printess.addSpreads();
-                        pageButtons.appendChild(btnAdd);
-                    }
-                    if (addSpreads || removeSpreads) {
-                        const arrangePagesBtn = document.createElement("button");
-                        arrangePagesBtn.className = "btn btn-sm btn-secondary";
-                        arrangePagesBtn.innerText = "Arrange Pages";
-                        arrangePagesBtn.onclick = () => getArrangePagesOverlay(printess, forMobile);
-                        pageButtons.appendChild(arrangePagesBtn);
-                    }
-                    cornerTools.appendChild(pageButtons);
+                const priceDiv = document.createElement("div");
+                priceDiv.className = "total-price-container";
+                priceDiv.id = "total-price-display";
+                if (uih_currentPriceDisplay) {
+                    getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
                 }
                 else {
                     const h2 = document.createElement("h2");
                     h2.innerText = printess.gl(printess.getTemplateTitle());
-                    cornerTools.appendChild(h2);
+                    priceDiv.appendChild(h2);
                 }
+                cornerTools.appendChild(priceDiv);
                 cornerTools.appendChild(getDesktopTitle(printess));
                 pages.appendChild(cornerTools);
                 const gradient = document.createElement("div");
@@ -4431,11 +4589,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return caption;
     }
-    function renderMobileDialogFullscreen(printess, id, caption, content) {
+    function renderMobileDialogFullscreen(printess, id, caption, content, addTabsNavigation = true) {
         const container = document.createElement("div");
         container.id = id;
         container.className = "fullscreen-mobile-dialog show-image-list";
-        getMobileFullscreenContent(printess, id, container, caption, content, true);
+        getMobileFullscreenContent(printess, id, container, caption, content, addTabsNavigation);
         document.body.appendChild(container);
     }
     function renderMobilePropertiesFullscreen(printess, id, state) {
@@ -4488,8 +4646,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         exitBtn.onclick = () => {
             container === null || container === void 0 ? void 0 : container.classList.remove("show-image-list");
             container === null || container === void 0 ? void 0 : container.classList.add("hide-image-list");
-            if (id === "CROPMODAL") {
-                window.setTimeout(() => hideModal(id), 2000);
+            if (id === "CROPMODAL" || id === "PRICE-INFO") {
+                window.setTimeout(() => hideModal(id), 1000);
             }
         };
         header.appendChild(exitBtn);
@@ -4607,7 +4765,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         footer.appendChild(ok);
         showModal(printess, id, content, printess.gl("ui.distributionDialogTitle"), footer);
     }
-    function renderAccordionItem(title, body, hideCollapseIcon) {
+    function renderAccordionItem(printess, title, body, hideCollapseIcon) {
+        const forPhotoTab = uih_currentTabId === "#PHOTOS" && printess.showTabNavigation();
         const accordionItem = document.createElement("div");
         accordionItem.className = "accordion-item";
         accordionItem.style.border = "none";
@@ -4617,7 +4776,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         header.className = "accordion-header";
         header.id = headerId;
         header.style.borderBottom = "1px solid rgba(0,0,0,.125)";
-        accordionItem.appendChild(header);
+        if (!forPhotoTab)
+            accordionItem.appendChild(header);
         const accordionBtn = document.createElement("button");
         accordionBtn.className = "accordion-button";
         accordionBtn.style.backgroundColor = "white";
@@ -4677,13 +4837,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return buttonWrapper;
     }
     function renderGroupSnippets(printess, groupSnippets, forMobile) {
-        const forMobileOrPhotoTab = forMobile || (uih_currentTabId === "#PHOTOS" && printess.showTabNavigation());
+        const forPhotoTab = uih_currentTabId === "#PHOTOS" && printess.showTabNavigation();
         const div = document.createElement("div");
-        div.className = forMobileOrPhotoTab ? "group-snippets" : "accordion";
+        div.className = forMobile ? "group-snippets" : "accordion";
         div.id = "group-snippets";
         if (groupSnippets.length > 0) {
             for (const cluster of groupSnippets) {
-                if (forMobile) {
+                if (forMobile && !forPhotoTab) {
                     const headline = document.createElement("h5");
                     headline.className = "snippet-cluster-name";
                     headline.textContent = cluster.name;
@@ -4693,7 +4853,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     div.appendChild(hr);
                 }
                 const body = document.createElement("div");
-                body.className = "d-flex flex-wrap";
+                body.className = "d-grid";
+                body.style.gridTemplateColumns = "1fr 1fr 1fr";
+                body.style.gridGap = "6px";
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
                     thumbDiv.className = "snippet-thumb";
@@ -4706,6 +4868,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         var _a;
                         (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${"SNIP:" + snippet.snippetUrl}`);
                     };
+                    const priceBox = document.createElement("span");
+                    priceBox.className = "badge bg-primary";
+                    priceBox.textContent = printess.gl(snippet.priceLabel);
+                    if (snippet.priceLabel)
+                        thumbDiv.appendChild(priceBox);
                     thumbDiv.onclick = () => {
                         const propsDiv = document.getElementById("desktop-properties");
                         if (propsDiv && !forMobile && printess.showTabNavigation()) {
@@ -4717,17 +4884,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         }
                         printess.insertGroupSnippet(snippet.snippetUrl);
                     };
-                    forMobileOrPhotoTab ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
+                    forMobile ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
                 }
-                if (!forMobileOrPhotoTab) {
-                    div.appendChild(renderAccordionItem(cluster.name, body, groupSnippets.length < 2));
+                if (!forMobile) {
+                    div.appendChild(renderAccordionItem(printess, cluster.name, body, groupSnippets.length < 2));
                 }
             }
         }
         if (forMobile) {
             const mobile = document.createElement("div");
             mobile.className = "mobile-group-snippets-container";
-            div.style.marginTop = "-20px";
+            div.style.marginTop = forPhotoTab ? "0px" : "-20px";
             mobile.appendChild(div);
             return mobile;
         }
@@ -4751,7 +4918,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const infoText = document.createElement("p");
         infoText.innerHTML = printess.gl("ui.selectLayoutInfo", printess.getTemplateTitle());
         layoutContainer.appendChild(infoText);
-        layoutContainer.appendChild(renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
+        layoutContainer.appendChild(window.uiHelper.renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
         showModal(printess, "layoutSnippetsSelection", layoutContainer, title);
     }
     function renderLayoutSnippets(printess, layoutSnippets, forMobile, forLayoutDialog = false) {
@@ -4774,17 +4941,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     const col = printess.numberOfColumns();
                     clusterDiv.style.display = "grid";
                     clusterDiv.style.gridTemplateColumns = `repeat(${col}, 1fr)`;
-                    clusterDiv.style.gridColumnGap = "5px";
+                    clusterDiv.style.gridGap = "6px";
                 }
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
                     thumbDiv.className = forLayoutDialog ? "snippet-thumb layout-dialog" : "snippet-thumb big";
                     thumbDiv.setAttribute("aria-label", "Close");
                     thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
+                    thumbDiv.setAttribute("data-bs-target", "#layoutOffcanvas");
                     const thumb = document.createElement("img");
                     thumb.src = snippet.thumbUrl;
                     thumb.style.backgroundColor = snippet.bgColor;
                     thumbDiv.appendChild(thumb);
+                    const priceBox = document.createElement("span");
+                    priceBox.className = "badge bg-primary";
+                    priceBox.textContent = printess.gl(snippet.priceLabel);
+                    if (snippet.priceLabel)
+                        thumbDiv.appendChild(priceBox);
                     thumbDiv.onclick = () => {
                         const propsDiv = document.getElementById("desktop-properties");
                         if (propsDiv && !forMobile && printess.showTabNavigation()) {
@@ -4808,7 +4981,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 if (forLayoutDialog) {
                     container.classList.add("accordion");
-                    container.appendChild(renderAccordionItem(cluster.name, clusterDiv, layoutSnippets.length < 2));
+                    container.appendChild(renderAccordionItem(printess, cluster.name, clusterDiv, layoutSnippets.length < 2));
                 }
                 else {
                     container.appendChild(clusterDiv);
@@ -5194,11 +5367,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (printessBuyerPropertiesButton) {
             printessBuyerPropertiesButton.style.display = "none";
         }
-        if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
+        if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
             document.body.classList.add("has-mobile-page-bar");
         }
         else {
             document.body.classList.remove("has-mobile-page-bar");
+        }
+        if (printess.pageNavigationDisplay() === "icons") {
+            document.body.classList.add("has-mobile-icon-pagebar");
+        }
+        else {
+            document.body.classList.remove("has-mobile-icon-pagebar");
         }
         let autoSelectButton = null;
         if (state !== "add") {
@@ -5948,6 +6127,62 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return pagebar;
     }
+    function getMobilePriceBarDiv(printess) {
+        let pricebar = document.querySelector(".mobile-pricebar");
+        if (!pricebar) {
+            pricebar = document.createElement("div");
+            pricebar.className = "mobile-pricebar";
+            document.body.appendChild(pricebar);
+        }
+        else {
+            pricebar.innerHTML = "";
+        }
+        const priceDiv = document.createElement("div");
+        priceDiv.className = "total-price-container";
+        priceDiv.id = "total-price-display";
+        pricebar.appendChild(priceDiv);
+        const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
+        let mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+        if (printess.pageNavigationDisplay() === "icons") {
+            mobilePageBarHeight = 100;
+        }
+        if (pricebar && uih_mobilePriceDisplay !== "closed") {
+            pricebar.style.top = mobileNavBarHeight + mobilePageBarHeight + "px";
+        }
+        getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay, true);
+        const closer = document.createElement("div");
+        closer.className = "price-display-side-closer";
+        const closeIco = printess.getIcon("close");
+        closeIco.classList.add("close-icon");
+        closer.appendChild(closeIco);
+        closer.onclick = () => {
+            if (pricebar)
+                pricebar.classList.add("closed");
+            uih_mobilePriceDisplay = "closed";
+            resizeMobileUi(printess);
+            pricebar === null || pricebar === void 0 ? void 0 : pricebar.appendChild(opener);
+        };
+        const opener = document.createElement("div");
+        opener.className = "mobile-price-display-opener";
+        const openIco = printess.getIcon("grid-lines");
+        openIco.classList.add("open-icon");
+        opener.appendChild(openIco);
+        opener.ontouchstart = () => {
+            if (pricebar)
+                pricebar.classList.remove("closed");
+            uih_mobilePriceDisplay = "open";
+            resizeMobileUi(printess);
+            pricebar === null || pricebar === void 0 ? void 0 : pricebar.removeChild(opener);
+        };
+        opener.onmousedown = () => {
+            if (pricebar)
+                pricebar.classList.remove("closed");
+            uih_mobilePriceDisplay = "open";
+            resizeMobileUi(printess);
+            pricebar === null || pricebar === void 0 ? void 0 : pricebar.removeChild(opener);
+        };
+        pricebar.appendChild(closer);
+    }
     function resizeMobileUi(printess) {
         if (uih_autoSelectPending)
             return;
@@ -5957,6 +6192,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const controlHostHeight = controlHost.offsetHeight;
             const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
             let mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+            const mobilePriceBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pricebar-height").trim().replace("px", "") || "");
             const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
             if (printess.pageNavigationDisplay() === "icons") {
                 mobilePageBarHeight = 100;
@@ -5977,14 +6213,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const isInEddiMode = printess.isSoftwareKeyBoardExpanded() || (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "selection-text-style");
                 let showToolBar = false;
                 let showPageBar = false;
+                let showPriceBar = false;
                 const toolBar = document.querySelector(".mobile-navbar");
                 const pageBar = document.querySelector(".mobile-pagebar");
+                const priceBar = document.querySelector(".mobile-pricebar");
                 if (pageBar && printess.pageNavigationDisplay() === "icons") {
                     pageBar.style.height = mobilePageBarHeight + "px";
                 }
                 const hidePageAndToolbar = printessHeight < 450 && controlHostHeight > 10 || isInEddiMode || viewPortTopOffset > 0;
                 showToolBar = !hidePageAndToolbar || printess.neverHideMobileToolbar();
                 showPageBar = !hidePageAndToolbar;
+                showPriceBar = !hidePageAndToolbar;
                 if (toolbar && showToolBar) {
                     printessTop += mobileNavBarHeight;
                     printessHeight -= mobileNavBarHeight;
@@ -5992,6 +6231,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (pageBar && showPageBar) {
                     printessTop += mobilePageBarHeight;
                     printessHeight -= mobilePageBarHeight;
+                }
+                if (priceBar && showPriceBar) {
+                    printessTop += mobilePriceBarHeight;
+                    printessHeight -= mobilePriceBarHeight;
+                }
+                if (priceBar && uih_mobilePriceDisplay === "closed") {
+                    printessTop -= mobilePriceBarHeight;
+                    printessHeight += mobilePriceBarHeight;
                 }
                 const activeFFId = getActiveFormFieldId();
                 const focusSelection = printess.getZoomMode() === "frame";
@@ -6028,6 +6275,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             pageBar.style.visibility = "hidden";
                         }
                     }
+                    if (priceBar) {
+                        if (showPriceBar) {
+                            priceBar.style.visibility = "visible";
+                        }
+                        else {
+                            priceBar.style.visibility = "hidden";
+                        }
+                    }
                     printess.resizePrintess(true, focusSelection, undefined, printessHeight, focusSelection ? activeFFId : undefined);
                 }
             }
@@ -6048,6 +6303,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const hasButtons = buttons.length > 0;
         if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
             renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
+        }
+        else {
+            const pagebar = document.querySelector(".mobile-pagebar");
+            if (pagebar)
+                pagebar.remove();
+        }
+        getMobilePriceBarDiv(printess);
+        if (uih_currentPriceDisplay) {
+            document.body.classList.add("has-mobile-price-bar");
+        }
+        else {
+            document.body.classList.remove("has-mobile-price-bar");
         }
         let autoSelect = null;
         let autoSelectHasMeta = false;

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import { iconName, iExternalError, iExternalListMeta, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn, iExternalPropertyKind, iExternalImage, MobileUiMenuItems, iExternalSnippet, iExternalTab, iDropdownItems, iExternalDocAndSpreadInfo } from "./printess-editor";
+import { iconName, iExternalError, iExternalListMeta, iExternalPriceDisplay, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn, iExternalPropertyKind, iExternalImage, MobileUiMenuItems, iExternalSnippet, iExternalTab, iDropdownItems, iExternalDocAndSpreadInfo } from "./printess-editor";
 
 declare const bootstrap: any;
 
@@ -13,6 +13,7 @@ declare const bootstrap: any;
     renderDesktopUi: renderDesktopUi,
     refreshUndoRedoState: refreshUndoRedoState,
     refreshPagination: refreshPagination,
+    refreshPriceDisplay: refreshPriceDisplay,
     updatePageThumbnail: updatePageThumbnail,
     viewPortScroll: viewPortScroll,
     viewPortResize: viewPortResize,
@@ -38,6 +39,8 @@ declare const bootstrap: any;
   let uih_currentState: MobileUiState = "document";
   let uih_currentRender: "mobile" | "desktop" | "never" = "never";
   let uih_currentVisiblePage: "left-page" | "right-page" | "entire" | null;
+  let uih_currentPriceDisplay: iExternalPriceDisplay;
+  let uih_mobilePriceDisplay: "none" | "open" | "closed" = "none";
 
   let uih_lastMobileState: iMobileUiState | null = null;
   let uih_autoSelectPending: boolean = false;
@@ -192,6 +195,112 @@ declare const bootstrap: any;
       }
     }
   }
+  function refreshPriceDisplay(printess: iPrintessApi, priceDisplay: iExternalPriceDisplay) {
+
+    uih_currentPriceDisplay = priceDisplay;
+
+    if (priceDisplay && uih_currentRender === "mobile") {
+      document.body.classList.add("has-mobile-price-bar");
+      resizeMobileUi(printess);
+    } else {
+      document.body.classList.remove("has-mobile-price-bar");
+    }
+
+    //TODO: @AK  update ui with new price 
+    // Another TODO: add a spinner when price changes?!
+    // One more TODO: handle display without legal Notice (increase price display => different for cornertools!)
+    const priceDiv = <HTMLDivElement>document.getElementById("total-price-display");
+    if (priceDiv) {
+      getPriceDisplay(printess, priceDiv, priceDisplay, uih_currentRender === "mobile");
+    }
+
+    console.error("NEW PRICING ARRIVED", priceDisplay);
+  }
+
+  function getPriceInfoIcon(printess: iPrintessApi, infoUrl: string, forMobile: boolean): SVGElement {
+
+    const infoIcon = printess.getIcon("info-circle");
+    infoIcon.classList.add("price-info-icon");
+
+    infoIcon.onclick = () => {
+      const iframe = document.createElement("iframe");
+      iframe.title = "Price Details";
+      iframe.src = infoUrl;
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+
+      if (forMobile) {
+        const priceInfoDiv = document.getElementById("PRICE-INFO");
+        if (priceInfoDiv) {
+          priceInfoDiv.remove();
+        }
+        renderMobileDialogFullscreen(printess, "PRICE-INFO", "Product Overview", iframe, false);
+      } else {
+        showModal(printess, "PRICE-MODAL", iframe, "Product Overview");
+      }
+    }
+
+    return infoIcon;
+  }
+
+  function getPriceDisplay(printess: iPrintessApi, priceDiv: HTMLDivElement, priceDisplay: iExternalPriceDisplay, forMobile: boolean = false): void {
+    const price = priceDisplay?.price || "";
+    const oldPrice = priceDisplay?.oldPrice || "";
+    const legalNotice = priceDisplay?.legalNotice || "";
+    const productName = priceDisplay?.productName || printess.getTemplateTitle();
+    const infoUrl = priceDisplay?.infoUrl || "";
+
+    priceDiv.innerHTML = "";
+
+    const headline = document.createElement("div");
+    headline.className = "total-price-haedline";
+
+    if (productName && (printess.pageNavigationDisplay() === "icons" || forMobile)) {
+      const productNameSpan = document.createElement("span");
+      productNameSpan.className = "product-name";
+      productNameSpan.innerText = printess.gl(productName);
+
+      if (infoUrl) {
+        const infoIcon = getPriceInfoIcon(printess, infoUrl, forMobile)
+        productNameSpan.appendChild(infoIcon);
+      }
+      priceDiv.appendChild(productNameSpan);
+    }
+    if (!legalNotice) {
+      priceDiv.classList.add("price-info-only");
+    } else {
+      priceDiv.classList.remove("price-info-only");
+    }
+
+    const oldPriceSpan = document.createElement("span");
+    oldPriceSpan.style.textDecoration = "line-through";
+    oldPriceSpan.className = "me-2";
+    const newPriceSpan = document.createElement("span");
+    if (oldPrice) newPriceSpan.style.color = "red";
+    headline.className = "total-price-headline";
+
+    if (infoUrl && printess.pageNavigationDisplay() !== "icons" && (!forMobile || !productName)) {
+      const infoIcon = getPriceInfoIcon(printess, infoUrl, forMobile);
+      if (oldPrice) infoIcon.style.marginRight = "6px";
+      headline.appendChild(infoIcon);
+    }
+
+    headline.appendChild(oldPriceSpan);
+    headline.appendChild(newPriceSpan);
+    priceDiv.appendChild(headline);
+
+    oldPriceSpan.innerText = printess.gl(oldPrice);
+    newPriceSpan.innerText = printess.gl(price);
+
+    let subline = <HTMLSpanElement>priceDiv.querySelector("span.total-price-subline")
+    if (!subline) {
+      subline = document.createElement("span");
+      subline.className = "total-price-subline";
+      priceDiv.appendChild(subline);
+    }
+    subline.innerText = printess.gl(legalNotice || "");
+  }
+
   function refreshPagination(printess: iPrintessApi) {
 
     if (uih_currentRender === "mobile") {
@@ -311,6 +420,10 @@ declare const bootstrap: any;
       mobileUi.innerHTML = "";
     }
     removeMobileFullscreenContainer();
+    const mobilePricebar: HTMLDivElement | null = document.querySelector(".mobile-pricebar");
+    if (mobilePricebar) {
+      mobilePricebar.remove();
+    }
 
 
     const printessDiv = document.getElementById("desktop-printess-container");
@@ -526,7 +639,7 @@ declare const bootstrap: any;
     let controlGroup: number = 0;
     let controlGroupDiv: HTMLDivElement | null = null;
     let controlGroupTCs: string = "";
-    let colorsContainer = null;
+    let colorsContainer: HTMLDivElement | null = null;
     //let setEventTab = false;
     for (const p of properties) {
       //setEventTab = p.tableMeta && p.tableMeta.tableType === "calendar-events" ? true : false;
@@ -589,7 +702,9 @@ declare const bootstrap: any;
   }
 
   function getControlGroupWidth(p: iExternalProperty): string {
-    if (p.validation?.maxChars) {
+    if (p.kind === "label") {
+      return "auto";
+    } else if (p.validation?.maxChars) {
       return p.validation?.maxChars + "fr ";
     } else if (p.listMeta && p.listMeta.list.length > 0) {
       let c = 1;
@@ -877,7 +992,7 @@ declare const bootstrap: any;
         break;
       }
       case "#LAYOUTS": {
-        const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
+        const layoutsDiv = (<any>window).uiHelper.renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
         container.appendChild(layoutsDiv);
         container.scrollTop = uih_snippetsScrollPosition;
         break;
@@ -911,6 +1026,10 @@ declare const bootstrap: any;
 
       /* case "background-button":
         return getChangeBackgroundButton(printess); */
+
+      case "label":
+
+        return getSimpleLabel(p.label, p.controlGroup > 0);
 
       case "single-line-text":
         return getSingleLineTextBox(printess, p, forMobile);
@@ -1111,6 +1230,24 @@ declare const bootstrap: any;
    * All various controls rendering 
    */
 
+
+  function getSimpleLabel(text: string, forControlGroup: boolean = false): HTMLElement {
+    if (forControlGroup) {
+      const para = document.createElement("para");
+      para.style.marginTop = "38px";
+      para.style.marginBottom = "0";
+      para.style.marginLeft = "5px";
+      para.style.fontSize = "16pt";
+      para.textContent = text
+      return para;
+    } else {
+      const para = document.createElement("p");
+      para.style.marginTop = "1.5em";
+      para.style.marginBottom = "0.3em";
+      para.textContent = text
+      return para;
+    }
+  }
 
   function getChangeBackgroundButton(printess: iPrintessApi): HTMLElement {
     const ok = document.createElement("button");
@@ -1367,7 +1504,7 @@ declare const bootstrap: any;
       printess.setZoomMode("spread");
     }
 
-    const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label, !!p.validation?.maxChars && p.controlGroup === 0);
+    const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label, !!p.validation?.maxChars && p.controlGroup === 0, p.controlGroup > 0);
     return r;
 
     /* window.setTimeout(() => {
@@ -1391,9 +1528,16 @@ declare const bootstrap: any;
     }
 
     if (!forCornerTools) {
-      const h2 = document.createElement("h2");
-      h2.innerText = printess.gl(printess.getTemplateTitle());
-      inner.appendChild(h2);
+      const h3 = document.createElement("h3");
+      h3.innerText = printess.gl(printess.getTemplateTitle());
+      h3.style.margin = "0px";
+      inner.appendChild(h3);
+
+      const priceDiv = document.createElement("div");
+      priceDiv.className = "total-price-container";
+      priceDiv.id = "total-price-display";
+      if (uih_currentPriceDisplay) getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+      inner.appendChild(priceDiv);
     }
 
     if (printess.hasPreviewBackButton()) {
@@ -2031,7 +2175,7 @@ declare const bootstrap: any;
 
   }
 
-  function addLabel(printess: iPrintessApi, input: HTMLElement, id: string, forMobile: boolean, kind: iExternalPropertyKind, label?: string, hasMaxChars: boolean = false): HTMLElement {
+  function addLabel(printess: iPrintessApi, input: HTMLElement, id: string, forMobile: boolean, kind: iExternalPropertyKind, label?: string, hasMaxChars: boolean = false, inControlGroup: boolean = false): HTMLElement {
     input.classList.add("form-control");
 
     const container = document.createElement("div");
@@ -2047,6 +2191,10 @@ declare const bootstrap: any;
       htmlLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
       htmlLabel.innerHTML = printess.gl(label) || "";
       htmlLabel.style.display = forMobile ? "none" : "inline-block";
+      if (inControlGroup) {
+        htmlLabel.style.fontSize = "0.85em";
+        htmlLabel.style.opacity = "0.7";
+      }
 
       if (kind === "image" && !forMobile) {
         const button = document.createElement("button");
@@ -2535,7 +2683,7 @@ declare const bootstrap: any;
     if (asList) {
       return ddContent;
     } else {
-      return addLabel(printess, dropdown, p.id, false, p.kind, p.label);
+      return addLabel(printess, dropdown, p.id, false, p.kind, p.label, false, p.controlGroup > 0);
     }
   }
 
@@ -4112,6 +4260,51 @@ declare const bootstrap: any;
     return zoomItems;
   }
 
+  // Get the add pages and arrange pages buttons for books to add them right after the page icons
+  function getPageArrangementButtons(printess: iPrintessApi, addSpreads: number, removeSpreads: number, forMobile: boolean): HTMLLIElement {
+    const li = document.createElement("li");
+    li.className = "big-page-item mr";
+    if (forMobile) {
+      li.classList.add("mobile");
+    } else {
+      li.appendChild(document.createElement("div"));
+    }
+
+    const pageButtons = document.createElement("div");
+    pageButtons.className = "modify-page-buttons";
+
+    if (addSpreads > 0) {
+      const btnAdd = document.createElement("div");
+      btnAdd.className = "btn btn-sm btn-outline-secondary w-100";
+      btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
+      btnAdd.onclick = () => printess.addSpreads();
+      pageButtons.appendChild(btnAdd);
+    }
+    if (addSpreads || removeSpreads) {
+      const arrangePagesBtn = document.createElement("button");
+      arrangePagesBtn.className = "btn btn-sm btn-outline-secondary w-100";
+      arrangePagesBtn.innerText = "Arrange Pages";
+      arrangePagesBtn.onclick = () => getArrangePagesOverlay(printess, forMobile);
+      pageButtons.appendChild(arrangePagesBtn);
+    }
+
+    /* if (removeSpreads > 0) {
+      const btnRemove = document.createElement("div");
+      btnRemove.className = "btn btn-sm btn-secondary";
+      btnRemove.innerText = "-" + (addSpreads * 2) + " " + printess.gl("ui.pages");
+      btnRemove.onclick = () => {
+        printess.removeSpreads();
+        printess.resizePrintess();
+      }
+      pageButtons.appendChild(btnRemove);
+    }*/
+
+    li.appendChild(pageButtons);
+
+
+    return li
+  }
+
   function renderPageNavigation(printess: iPrintessApi, container?: HTMLDivElement, large: boolean = false, forMobile: boolean = false): void {
 
     const spreads = printess.getAllSpreads();
@@ -4222,6 +4415,18 @@ declare const bootstrap: any;
 
         pages.appendChild(tabsContainer);
 
+        // container for price preview and basket button
+        const wrapper = document.createElement("div");
+        wrapper.className = "d-flex";
+
+        const priceDiv = document.createElement("div");
+        priceDiv.className = "total-price-container";
+        priceDiv.id = "total-price-display";
+        if (uih_currentPriceDisplay) {
+          getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+        }
+
+
         // Mini-Cart Button
         const button = document.createElement("button");
         button.className = "btn btn-primary ms-2";
@@ -4232,7 +4437,10 @@ declare const bootstrap: any;
         button.onclick = () => addToBasket(printess);
 
         button.appendChild(icon);
-        if (printess.stepHeaderDisplay() === "tabs list") pages.appendChild(button);
+        wrapper.appendChild(priceDiv);
+        wrapper.appendChild(button);
+
+        if (printess.stepHeaderDisplay() === "tabs list") pages.appendChild(wrapper);
 
         return;
       }
@@ -4328,11 +4536,15 @@ declare const bootstrap: any;
           }
 
         }
+
+        // attach add pages and arrange pages buttons to the list
+        const addSpreads = printess.canAddSpreads();
+        const removeSpreads = printess.canRemoveSpreads();
+        if (addSpreads > 0 || removeSpreads > 0) {
+          pagesContainer.appendChild(getPageArrangementButtons(printess, addSpreads, removeSpreads, forMobile));
+        }
+
         ul.appendChild(pagesContainer);
-
-
-
-
 
 
 
@@ -4450,45 +4662,18 @@ declare const bootstrap: any;
 
         cornerTools.appendChild(getBackUndoMiniBar(printess));
 
-        const addSpreads = printess.canAddSpreads();
-        const removeSpreads = printess.canRemoveSpreads();
-        if (addSpreads > 0 || removeSpreads > 0) {
-          const pageButtons = document.createElement("div");
-          pageButtons.className = "modify-page-buttons";
-
-          if (addSpreads > 0) {
-            const btnAdd = document.createElement("div");
-            btnAdd.className = "btn btn-sm btn-secondary";
-            btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
-            btnAdd.onclick = () => printess.addSpreads();
-            pageButtons.appendChild(btnAdd);
-          }
-          if (addSpreads || removeSpreads) {
-            const arrangePagesBtn = document.createElement("button");
-            arrangePagesBtn.className = "btn btn-sm btn-secondary";
-            arrangePagesBtn.innerText = "Arrange Pages";
-            arrangePagesBtn.onclick = () => getArrangePagesOverlay(printess, forMobile);
-            pageButtons.appendChild(arrangePagesBtn);
-          }
-
-          /* if (removeSpreads > 0) {
-             const btnRemove = document.createElement("div");
-             btnRemove.className = "btn btn-sm btn-secondary";
-             btnRemove.innerText = "-" + (addSpreads * 2) + " " + printess.gl("ui.pages");
-             btnRemove.onclick = () => {
-               printess.removeSpreads();
-               printess.resizePrintess();
-             }
-             pageButtons.appendChild(btnRemove);
-           }*/
-
-          cornerTools.appendChild(pageButtons);
+        const priceDiv = document.createElement("div");
+        priceDiv.className = "total-price-container";
+        priceDiv.id = "total-price-display";
+        if (uih_currentPriceDisplay) {
+          getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
         } else {
           const h2 = document.createElement("h2");
           h2.innerText = printess.gl(printess.getTemplateTitle());
-          cornerTools.appendChild(h2);
+          priceDiv.appendChild(h2);
         }
 
+        cornerTools.appendChild(priceDiv);
         cornerTools.appendChild(getDesktopTitle(printess));
 
         pages.appendChild(cornerTools);
@@ -5232,12 +5417,12 @@ declare const bootstrap: any;
   }
 
   // Fullscreen Dialogs on mobile
-  function renderMobileDialogFullscreen(printess: iPrintessApi, id: string, caption: string, content: HTMLElement): void {
+  function renderMobileDialogFullscreen(printess: iPrintessApi, id: string, caption: string, content: HTMLElement, addTabsNavigation: boolean = true): void {
     const container = document.createElement("div");
     container.id = id;
     container.className = "fullscreen-mobile-dialog show-image-list";
 
-    getMobileFullscreenContent(printess, id, container, caption, content, true);
+    getMobileFullscreenContent(printess, id, container, caption, content, addTabsNavigation);
 
     document.body.appendChild(container);
   }
@@ -5299,8 +5484,8 @@ declare const bootstrap: any;
       container?.classList.remove("show-image-list");
       container?.classList.add("hide-image-list");
 
-      if (id === "CROPMODAL") {
-        window.setTimeout(() => hideModal(id), 2000);
+      if (id === "CROPMODAL" || id === "PRICE-INFO") {
+        window.setTimeout(() => hideModal(id), 1000);
       }
     }
     header.appendChild(exitBtn);
@@ -5451,7 +5636,8 @@ declare const bootstrap: any;
    * Accordion Items
    */
 
-  function renderAccordionItem(title: string, body: HTMLDivElement, hideCollapseIcon: boolean): HTMLElement {
+  function renderAccordionItem(printess: iPrintessApi, title: string, body: HTMLDivElement, hideCollapseIcon: boolean): HTMLElement {
+    const forPhotoTab = uih_currentTabId === "#PHOTOS" && printess.showTabNavigation();
     const accordionItem = document.createElement("div");
     accordionItem.className = "accordion-item";
     accordionItem.style.border = "none";
@@ -5462,7 +5648,7 @@ declare const bootstrap: any;
     header.className = "accordion-header";
     header.id = headerId;
     header.style.borderBottom = "1px solid rgba(0,0,0,.125)";
-    accordionItem.appendChild(header);
+    if (!forPhotoTab) accordionItem.appendChild(header);
 
     const accordionBtn = document.createElement("button");
     accordionBtn.className = "accordion-button";
@@ -5541,16 +5727,16 @@ declare const bootstrap: any;
 
   function renderGroupSnippets(printess: iPrintessApi, groupSnippets: Array<iExternalSnippetCluster>, forMobile: boolean): HTMLElement {
 
-    const forMobileOrPhotoTab = forMobile || (uih_currentTabId === "#PHOTOS" && printess.showTabNavigation());
+    const forPhotoTab = uih_currentTabId === "#PHOTOS" && printess.showTabNavigation();
     const div = document.createElement("div");
-    div.className = forMobileOrPhotoTab ? "group-snippets" : "accordion";
+    div.className = forMobile ? "group-snippets" : "accordion";
     div.id = "group-snippets";
 
     if (groupSnippets.length > 0) {
       // no selection, show add-able snippets instead
       for (const cluster of groupSnippets) {
 
-        if (forMobile) {
+        if (forMobile && !forPhotoTab) {
           const headline = document.createElement("h5");
           headline.className = "snippet-cluster-name";
           headline.textContent = cluster.name;
@@ -5561,7 +5747,9 @@ declare const bootstrap: any;
         }
 
         const body = document.createElement("div");
-        body.className = "d-flex flex-wrap";
+        body.className = "d-grid";
+        body.style.gridTemplateColumns = "1fr 1fr 1fr";
+        body.style.gridGap = "6px";
 
         for (const snippet of cluster.snippets) {
           const thumbDiv = document.createElement("div");
@@ -5575,6 +5763,11 @@ declare const bootstrap: any;
             ev.dataTransfer?.setData('text/plain', `${"SNIP:" + snippet.snippetUrl}`)
           };
 
+          const priceBox = document.createElement("span");
+          priceBox.className = "badge bg-primary"; //"snippet-price-box";
+          priceBox.textContent = printess.gl(snippet.priceLabel);
+          if (snippet.priceLabel) thumbDiv.appendChild(priceBox);
+
           thumbDiv.onclick = () => {
             const propsDiv = document.getElementById("desktop-properties");
             if (propsDiv && !forMobile && printess.showTabNavigation()) {
@@ -5587,18 +5780,18 @@ declare const bootstrap: any;
             printess.insertGroupSnippet(snippet.snippetUrl);
           }
 
-          forMobileOrPhotoTab ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
+          forMobile ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
         }
 
-        if (!forMobileOrPhotoTab) {
-          div.appendChild(renderAccordionItem(cluster.name, body, groupSnippets.length < 2));
+        if (!forMobile) {
+          div.appendChild(renderAccordionItem(printess, cluster.name, body, groupSnippets.length < 2));
         }
       }
     }
     if (forMobile) {
       const mobile = document.createElement("div");
       mobile.className = "mobile-group-snippets-container";
-      div.style.marginTop = "-20px";
+      div.style.marginTop = forPhotoTab ? "0px" : "-20px";
       mobile.appendChild(div);
       return mobile;
     } else {
@@ -5624,7 +5817,7 @@ declare const bootstrap: any;
     infoText.innerHTML = printess.gl("ui.selectLayoutInfo", printess.getTemplateTitle());
 
     layoutContainer.appendChild(infoText);
-    layoutContainer.appendChild(renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
+    layoutContainer.appendChild((<any>window).uiHelper.renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
     showModal(printess, "layoutSnippetsSelection", layoutContainer, title);
   }
 
@@ -5650,7 +5843,7 @@ declare const bootstrap: any;
           const col = printess.numberOfColumns();
           clusterDiv.style.display = "grid";
           clusterDiv.style.gridTemplateColumns = `repeat(${col}, 1fr)`;
-          clusterDiv.style.gridColumnGap = "5px";
+          clusterDiv.style.gridGap = "6px";
         }
 
         for (const snippet of cluster.snippets) {
@@ -5658,11 +5851,17 @@ declare const bootstrap: any;
           thumbDiv.className = forLayoutDialog ? "snippet-thumb layout-dialog" : "snippet-thumb big";
           thumbDiv.setAttribute("aria-label", "Close");
           thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
+          thumbDiv.setAttribute("data-bs-target", "#layoutOffcanvas");
 
           const thumb = document.createElement("img");
           thumb.src = snippet.thumbUrl;
           thumb.style.backgroundColor = snippet.bgColor;
           thumbDiv.appendChild(thumb);
+
+          const priceBox = document.createElement("span");
+          priceBox.className = "badge bg-primary"; //"snippet-price-box";
+          priceBox.textContent = printess.gl(snippet.priceLabel);
+          if (snippet.priceLabel) thumbDiv.appendChild(priceBox);
 
           thumbDiv.onclick = () => {
             const propsDiv = document.getElementById("desktop-properties");
@@ -5689,7 +5888,7 @@ declare const bootstrap: any;
 
         if (forLayoutDialog) {
           container.classList.add("accordion");
-          container.appendChild(renderAccordionItem(cluster.name, clusterDiv, layoutSnippets.length < 2));
+          container.appendChild(renderAccordionItem(printess, cluster.name, clusterDiv, layoutSnippets.length < 2));
         } else {
           container.appendChild(clusterDiv);
         }
@@ -6143,10 +6342,15 @@ declare const bootstrap: any;
     }
 
 
-    if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
+    if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
       document.body.classList.add("has-mobile-page-bar");
     } else {
       document.body.classList.remove("has-mobile-page-bar");
+    }
+    if (printess.pageNavigationDisplay() === "icons") {
+      document.body.classList.add("has-mobile-icon-pagebar");
+    } else {
+      document.body.classList.remove("has-mobile-icon-pagebar");
     }
 
     // document.documentElement.style.setProperty("--mobile-pagebar-height", "0")
@@ -7111,6 +7315,71 @@ declare const bootstrap: any;
     return pagebar;
   }
 
+  function getMobilePriceBarDiv(printess: iPrintessApi): void {
+    let pricebar: HTMLDivElement | null = document.querySelector(".mobile-pricebar");
+
+    if (!pricebar) {
+      pricebar = document.createElement("div");
+      pricebar.className = "mobile-pricebar";
+      document.body.appendChild(pricebar);
+    } else {
+      pricebar.innerHTML = "";
+    }
+
+    const priceDiv = document.createElement("div");
+    priceDiv.className = "total-price-container";
+    priceDiv.id = "total-price-display";
+    pricebar.appendChild(priceDiv);
+
+    const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
+    let mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+
+    if (printess.pageNavigationDisplay() === "icons") {
+      mobilePageBarHeight = 100;
+    }
+
+    if (pricebar && uih_mobilePriceDisplay !== "closed") {
+      pricebar.style.top = mobileNavBarHeight + mobilePageBarHeight + "px";
+    }
+
+    getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay, true);
+
+    const closer = document.createElement("div");
+    closer.className = "price-display-side-closer";
+    const closeIco = printess.getIcon("close");
+    closeIco.classList.add("close-icon")
+    closer.appendChild(closeIco);
+
+    closer.onclick = () => {
+      if (pricebar) pricebar.classList.add("closed");
+      uih_mobilePriceDisplay = "closed";
+      resizeMobileUi(printess);
+      pricebar?.appendChild(opener);
+    }
+
+    const opener = document.createElement("div");
+    opener.className = "mobile-price-display-opener";
+    const openIco = printess.getIcon("grid-lines");
+    openIco.classList.add("open-icon");
+    opener.appendChild(openIco);
+
+    opener.ontouchstart = () => {
+      if (pricebar) pricebar.classList.remove("closed");
+      uih_mobilePriceDisplay = "open";
+      resizeMobileUi(printess);
+      pricebar?.removeChild(opener);
+    }
+
+    opener.onmousedown = () => {
+      if (pricebar) pricebar.classList.remove("closed");
+      uih_mobilePriceDisplay = "open";
+      resizeMobileUi(printess);
+      pricebar?.removeChild(opener);
+    }
+
+    pricebar.appendChild(closer);
+  }
+
   /*
   function getMobileSelectedProperty(properties: Array<iExternalProperty>): iExternalProperty | null {
     const selectedButton = document.querySelector(".mobile-property-button.selected");
@@ -7127,7 +7396,7 @@ declare const bootstrap: any;
 
 
 
-  function resizeMobileUi(printess: iPrintessApi) {
+  function resizeMobileUi(printess: iPrintessApi) { //, priceDisplayState: "none" | "open" | "close" = "none") {
 
     if (uih_autoSelectPending) return;
 
@@ -7141,6 +7410,7 @@ declare const bootstrap: any;
       // read button bar height from CSS Variable.
       const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
       let mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+      const mobilePriceBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pricebar-height").trim().replace("px", "") || "");
       const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
 
       if (printess.pageNavigationDisplay() === "icons") {
@@ -7178,8 +7448,10 @@ declare const bootstrap: any;
 
         let showToolBar: boolean = false;
         let showPageBar: boolean = false;
+        let showPriceBar: boolean = false;
         const toolBar: HTMLDivElement | null = document.querySelector(".mobile-navbar");
         const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
+        const priceBar: HTMLDivElement | null = document.querySelector(".mobile-pricebar");
         if (pageBar && printess.pageNavigationDisplay() === "icons") {
           pageBar.style.height = mobilePageBarHeight + "px";
         }
@@ -7187,6 +7459,7 @@ declare const bootstrap: any;
         const hidePageAndToolbar = printessHeight < 450 && controlHostHeight > 10 || isInEddiMode || viewPortTopOffset > 0; // hide toolbar & pagebar to free up more space 
         showToolBar = !hidePageAndToolbar || printess.neverHideMobileToolbar();
         showPageBar = !hidePageAndToolbar;
+        showPriceBar = !hidePageAndToolbar;
 
         // reduce printess-height by visible toolbar and pagebar
         if (toolbar && showToolBar) {
@@ -7196,6 +7469,16 @@ declare const bootstrap: any;
         if (pageBar && showPageBar) {
           printessTop += mobilePageBarHeight;
           printessHeight -= mobilePageBarHeight;
+        }
+
+        if (priceBar && showPriceBar) {
+          printessTop += mobilePriceBarHeight;
+          printessHeight -= mobilePriceBarHeight;
+        }
+
+        if (priceBar && uih_mobilePriceDisplay === "closed") {
+          printessTop -= mobilePriceBarHeight;
+          printessHeight += mobilePriceBarHeight;
         }
 
         // if (printessHeight < 450 || isInEddiMode || viewPortTopOffset > 0) { // sometimes iphone sticks at some topoffset like 0.39...
@@ -7264,6 +7547,13 @@ declare const bootstrap: any;
               pageBar.style.visibility = "hidden";
             }
           }
+          if (priceBar) {
+            if (showPriceBar) {
+              priceBar.style.visibility = "visible";
+            } else {
+              priceBar.style.visibility = "hidden";
+            }
+          }
 
           printess.resizePrintess(true, focusSelection, undefined, printessHeight, focusSelection ? activeFFId : undefined);
           // console.warn("resizePrintess height:" + printessHeight, window.visualViewport);
@@ -7297,6 +7587,16 @@ declare const bootstrap: any;
 
     if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
       renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
+    } else {
+      const pagebar = document.querySelector(".mobile-pagebar");
+      if (pagebar) pagebar.remove();
+    }
+
+    getMobilePriceBarDiv(printess);
+    if (uih_currentPriceDisplay) {
+      document.body.classList.add("has-mobile-price-bar");
+    } else {
+      document.body.classList.remove("has-mobile-price-bar");
     }
 
     let autoSelect: iMobileUIButton | null = null;
