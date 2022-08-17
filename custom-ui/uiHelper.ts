@@ -643,7 +643,7 @@ declare const bootstrap: any;
     //let setEventTab = false;
     for (const p of properties) {
       //setEventTab = p.tableMeta && p.tableMeta.tableType === "calendar-events" ? true : false;
-      t.push(JSON.stringify(p, undefined, 2));
+      t.push(JSON.stringify(<object>p, undefined, 2));
       if (p.kind === "color" && state !== "document") {
         const twoColorProps = uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors();
         if (!colorsContainer) {
@@ -5050,7 +5050,7 @@ declare const bootstrap: any;
     ok.id = "apply-book-changes";
     ok.textContent = printess.gl("ui.applyChanges");
     ok.onclick = async () => {
-      const allSpreadIds = [];
+      const allSpreadIds: Array<string> = [];
       let showPagesAddedInfo = false;
       for (const div of document.querySelector("#page-arrange-dialog-spreads")?.children ?? []) {
         if (div.classList.contains("spread-item")) {
