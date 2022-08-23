@@ -156,6 +156,7 @@
       "onePageAddedInfo": "One page was added to your book!",
       "twoPagesAddedTitle": "Pages Added",
       "twoPagesAddedInfo": "Two pages were added to your book!",
+      "productOverview": "Product Overview",
 
       "editText": "Edit Text",
       "closeTextEditing": "Close Text Editing",
@@ -386,6 +387,7 @@
       "onePageAddedInfo": "Eine Seite wurde zu Ihrem Buch hinzugefügt!",
       "twoPagesAddedTitle": "Seiten hinzugefügt",
       "twoPagesAddedInfo": "Ihrem Buch wurden zwei Seiten hinzugefügt!",
+      "productOverview": "Produktübersicht",
 
       "editText": "Text bearbeiten",
       "closeTextEditing": "Textbearbeitung schließen",
@@ -614,6 +616,7 @@
       "onePageAddedInfo": "Se ha añadido una página a su libro.",
       "twoPagesAddedTitle": "Páginas añadidas",
       "twoPagesAddedInfo": "Se han añadido dos páginas a su libro.",
+      "productOverview": "Resumen del producto",
 
       "editText": "Editar texto",
       "closeTextEditing": "Cerrar la edición de texto",
@@ -840,6 +843,7 @@
       "onePageAddedInfo": "Yksi sivu on lisätty kirjaasi!",
       "twoPagesAddedTitle": "Lisätty sivuja",
       "twoPagesAddedInfo": "Kirjallesi lisättiin kaksi sivua!",
+      "productOverview": "Tuotteen yleiskatsaus",
 
       "editText": "Muokkaa tekstiä",
       "closeTextEditing": "Sulje tekstin muokkaus",
@@ -1066,6 +1070,7 @@
       "onePageAddedInfo": "Une page a été ajoutée à votre livre !",
       "twoPagesAddedTitle": "Pages ajoutées",
       "twoPagesAddedInfo": "Deux pages ont été ajoutées à votre livre !",
+      "productOverview": "Aperçu du produit",
 
       "editText": "Modifier le texte",
       "closeTextEditing": "Fermer l'édition du texte",
@@ -1292,6 +1297,7 @@
       "onePageAddedInfo": "Одна страница была добавлена в Вашу книгу!",
       "twoPagesAddedTitle": "Страницы добавлены",
       "twoPagesAddedInfo": "Две страницы были добавлены в вашу книгу!",
+      "productOverview": "Обзор продукции",
 
       "editText": "Редактирование текста",
       "closeTextEditing": "Закрыть редактирование текста",
@@ -1518,6 +1524,7 @@
       "onePageAddedInfo": "En sida har lagts till i din bok!",
       "twoPagesAddedTitle": "Sidor som lagts till",
       "twoPagesAddedInfo": "Två sidor har lagts till i din bok!",
+      "productOverview": "Produktöversikt",
 
       "editText": "Redigera text",
       "closeTextEditing": "Stänga textredigering",

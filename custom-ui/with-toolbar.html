@@ -163,6 +163,11 @@
             Relace Text
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link"  id="btnPersistExchangeData" title="Persist exchange Data">
+            PERSIST
+          </a>
+        </li>
 
 
 
@@ -253,6 +258,8 @@
       <a class="dropdown-item" href="#exchange-id-test-1">exchange-id-test-1</a>
       <a class="dropdown-item" href="#exchange-id-test-2">exchange-id-test-2</a>
       <a class="dropdown-item" href="#price-tester_draft">price-tester</a>
+      <a class="dropdown-item" href="#doc-exchange-1_draft">doc exchange 1</a>
+      <a class="dropdown-item" href="#doc-exchange-2_draft">doc exchange 2</a>
     </div>
   </div>
 
@@ -449,6 +456,9 @@
     };
     document.getElementById("btnRelaceText").onclick = () => {
       printess.setEditorText("Hallo du doofer Computer");
+    };
+    document.getElementById("btnPersistExchangeData").onclick = () => {
+      printess.persistExchangeState();
     };
     document.getElementById("btnCenterInView").onclick = () => {
       printess.centerSpreadInView();

@@ -232,6 +232,8 @@ export interface iPrintessApi {
    */
   loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
 
+
+
   /**
    * Centers the current spread in the printess view container
    */
@@ -264,6 +266,18 @@ export interface iPrintessApi {
    * @param saveToken  
    */
   unexpireJson(saveToken: string): Promise<void>;
+
+
+  /**
+   * Should be called before redirecting to a new template.
+   * Will save the current state to the browser storage and apply it automatically to the next loaded template
+   * Applies Frame and Document`exchange-ids` as well as template-wide form fields
+   * @param frames add frame exchange-ids (image, text, story)
+   * @param documents  add documents with exchange-ids
+   * @param formFields  add all user-defined from fields on template level
+   */
+  persistExchangeState(frames: boolean = true, documents: boolean = true, formFields: boolean = true): Promise<void>
+
 
   /**
    * Returns the add to basket callback you have set in `attachPrintess()`
@@ -1154,6 +1168,11 @@ export interface iPrintessApi {
   getAllPriceRelevantFormFields(): { [key: string]: string }
 
   /**
+   * Retrieves all price relevant form-fields plus tag information and referenced price-categories
+   */
+  getAllPriceRelevantFormFieldsExt(): { priceCategories: Array<string>, formFields: { [key: string]: { value: string, tag: string } } }
+
+  /**
    * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
    */
   getTranslations(): Record<string, Record<string, string | number> | string | number>;
@@ -1170,7 +1189,7 @@ export interface iPrintessApi {
    * that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
-  validateAsync(mode?: "all" | "until-current-step" | "selection"): Promise<Array<iExternalError>> 
+  validateAsync(mode?: "all" | "until-current-step" | "selection"): Promise<Array<iExternalError>>
 
 
   /**
@@ -1544,7 +1563,7 @@ export interface iMergeTemplate {
   pos?: iExternalRect;
 }
 
-export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
+export declare type externalFormFieldChangeCallback = (name: string, value: string, tag: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>, width: number, height: number) => HTMLDivElement;
@@ -1716,7 +1735,7 @@ export interface iFrameCountAndMarkersSpread {
  */
 export type iExternalProductPriceInfo = {
   /** key / value list of all price relevant form fields */
-  priceRelevantFormFields: { [key: string]: string },
+  priceRelevantFormFields: { [key: string]: { value: string, tag: string } },
   /** Sum of all used priceCategoryGroups and there used amounts
    * All used layout-snippets and stickers with a price category
    * will be summed up here */

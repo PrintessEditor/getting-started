@@ -25,6 +25,8 @@ declare const bootstrap: any;
   function resetUi(): void {
     // called before toggle to buyer side in design mode
     uih_currentTabId = "LOADING";
+    uih_currentPriceDisplay = undefined;
+    uih_mobilePriceDisplay = "none";
   }
 
   let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -39,7 +41,7 @@ declare const bootstrap: any;
   let uih_currentState: MobileUiState = "document";
   let uih_currentRender: "mobile" | "desktop" | "never" = "never";
   let uih_currentVisiblePage: "left-page" | "right-page" | "entire" | null;
-  let uih_currentPriceDisplay: iExternalPriceDisplay;
+  let uih_currentPriceDisplay: iExternalPriceDisplay | undefined;
   let uih_mobilePriceDisplay: "none" | "open" | "closed" = "none";
 
   let uih_lastMobileState: iMobileUiState | null = null;
@@ -90,6 +92,12 @@ declare const bootstrap: any;
         callback("");
       });
     }
+
+    const closeLayoutsButton = <HTMLButtonElement>document.getElementById("closeLayoutOffCanvas");
+    if (closeLayoutsButton) {
+      closeLayoutsButton.click();
+    }
+
     // add some timeout to ensure toggling back to admin side has been completed
     window.setTimeout(() => {
       removeAllUiHints();
@@ -97,6 +105,7 @@ declare const bootstrap: any;
       uih_layoutSelectionDialogHasBeenRendered = false;
     }, 200);
   }
+
   function removeAllUiHints() {
 
     if (renderEditableFramesHintTimer) {
@@ -217,33 +226,25 @@ declare const bootstrap: any;
     console.error("NEW PRICING ARRIVED", priceDisplay);
   }
 
-  function getPriceInfoIcon(printess: iPrintessApi, infoUrl: string, forMobile: boolean): SVGElement {
+  function getIframeOverlay(printess: iPrintessApi, title: string, infoUrl: string, forMobile: boolean): void {
+    const iframe = document.createElement("iframe");
+    iframe.title = printess.gl(title);
+    iframe.src = infoUrl;
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
 
-    const infoIcon = printess.getIcon("info-circle");
-    infoIcon.classList.add("price-info-icon");
-
-    infoIcon.onclick = () => {
-      const iframe = document.createElement("iframe");
-      iframe.title = "Price Details";
-      iframe.src = infoUrl;
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-
-      if (forMobile) {
-        const priceInfoDiv = document.getElementById("PRICE-INFO");
-        if (priceInfoDiv) {
-          priceInfoDiv.remove();
-        }
-        renderMobileDialogFullscreen(printess, "PRICE-INFO", "Product Overview", iframe, false);
-      } else {
-        showModal(printess, "PRICE-MODAL", iframe, "Product Overview");
+    if (forMobile) {
+      const productInfoDiv = document.getElementById("PRICE-INFO");
+      if (productInfoDiv) {
+        productInfoDiv.remove();
       }
+      renderMobileDialogFullscreen(printess, "PRICE-INFO", title, iframe, false);
+    } else {
+      showModal(printess, "PRICE-MODAL", iframe, title);
     }
-
-    return infoIcon;
   }
 
-  function getPriceDisplay(printess: iPrintessApi, priceDiv: HTMLDivElement, priceDisplay: iExternalPriceDisplay, forMobile: boolean = false): void {
+  function getPriceDisplay(printess: iPrintessApi, priceDiv: HTMLDivElement, priceDisplay: iExternalPriceDisplay | undefined, forMobile: boolean = false): void {
     const price = priceDisplay?.price || "";
     const oldPrice = priceDisplay?.oldPrice || "";
     const legalNotice = priceDisplay?.legalNotice || "";
@@ -253,15 +254,17 @@ declare const bootstrap: any;
     priceDiv.innerHTML = "";
 
     const headline = document.createElement("div");
-    headline.className = "total-price-haedline";
+    headline.className = "total-price-headline";
 
-    if (productName && (printess.pageNavigationDisplay() === "icons" || forMobile)) {
+    if (productName && (printess.pageNavigationDisplay() === "icons" || printess.stepHeaderDisplay() === "tabs list" || forMobile)) {
       const productNameSpan = document.createElement("span");
       productNameSpan.className = "product-name";
       productNameSpan.innerText = printess.gl(productName);
 
       if (infoUrl) {
-        const infoIcon = getPriceInfoIcon(printess, infoUrl, forMobile)
+        const infoIcon = printess.getIcon("info-circle");
+        infoIcon.classList.add("price-info-icon");
+        infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), infoUrl, forMobile);
         productNameSpan.appendChild(infoIcon);
       }
       priceDiv.appendChild(productNameSpan);
@@ -275,13 +278,17 @@ declare const bootstrap: any;
     const oldPriceSpan = document.createElement("span");
     oldPriceSpan.style.textDecoration = "line-through";
     oldPriceSpan.className = "me-2";
+    oldPriceSpan.innerText = printess.gl(oldPrice);
+
     const newPriceSpan = document.createElement("span");
     if (oldPrice) newPriceSpan.style.color = "red";
-    headline.className = "total-price-headline";
+    newPriceSpan.innerText = printess.gl(price);
 
-    if (infoUrl && printess.pageNavigationDisplay() !== "icons" && (!forMobile || !productName)) {
-      const infoIcon = getPriceInfoIcon(printess, infoUrl, forMobile);
+    if (infoUrl && printess.pageNavigationDisplay() !== "icons" && printess.stepHeaderDisplay() !== "tabs list" && (!forMobile || !productName)) {
+      const infoIcon = printess.getIcon("info-circle");
+      infoIcon.classList.add("price-info-icon");
       if (oldPrice) infoIcon.style.marginRight = "6px";
+      infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), infoUrl, forMobile);
       headline.appendChild(infoIcon);
     }
 
@@ -289,16 +296,35 @@ declare const bootstrap: any;
     headline.appendChild(newPriceSpan);
     priceDiv.appendChild(headline);
 
-    oldPriceSpan.innerText = printess.gl(oldPrice);
-    newPriceSpan.innerText = printess.gl(price);
+    const subline = document.createElement("span");
+    subline.className = "total-price-subline";
+    subline.innerHTML = getLegalNoticeText(printess, legalNotice, forMobile);
+    priceDiv.appendChild(subline);
+  }
 
-    let subline = <HTMLSpanElement>priceDiv.querySelector("span.total-price-subline")
-    if (!subline) {
-      subline = document.createElement("span");
-      subline.className = "total-price-subline";
-      priceDiv.appendChild(subline);
+  function getLegalNoticeText(printess: iPrintessApi, legalNotice: string, forMobile: boolean): string {
+    const regex = /\[([^)]*)\]\((http[^\]]*)\)/gm
+    //const matches = /\[(.+)\]\((https?:\/\/[^\s]+)(?: "(.+)")?\)|(https?:\/\/[^\s]+)/ig.exec(legalNotice);
+
+    const listOfLinks = legalNotice.match(regex) || "";
+
+    if (listOfLinks) {
+      for (let i = 0; i < listOfLinks.length; i++) {
+        const text = listOfLinks[i].split("](")[0].replace("[", "");
+        const link = listOfLinks[i].split("](")[1].replace(")", "");
+        const id = "legal-notice-link-" + i;
+        const a = `<span id=${id} style="color: var(--bs-primary); cursor: pointer;">${text}</span>`;
+
+        legalNotice = legalNotice.replace(listOfLinks[i], a);
+
+        window.setTimeout(() => {
+          const agb = document.getElementById(id);
+          if (agb) agb.onclick = () => getIframeOverlay(printess, text, link, forMobile);
+        }, 100)
+      }
     }
-    subline.innerText = printess.gl(legalNotice || "");
+
+    return legalNotice;
   }
 
   function refreshPagination(printess: iPrintessApi) {
@@ -424,7 +450,10 @@ declare const bootstrap: any;
     if (mobilePricebar) {
       mobilePricebar.remove();
     }
-
+    const mobilePricebarOpener: HTMLDivElement | null = document.querySelector(".mobile-price-display-opener");
+    if (mobilePricebarOpener) {
+      mobilePricebarOpener.remove();
+    }
 
     const printessDiv = document.getElementById("desktop-printess-container");
     const container = document.getElementById("desktop-properties");
@@ -509,6 +538,8 @@ declare const bootstrap: any;
       layoutsButton.textContent = printess.gl("ui.changeLayout");
       if (printess.showTabNavigation()) {
         layoutsButton.style.visibility = "hidden";
+      } else if (layoutSnippets.length > 0) {
+        layoutsButton.style.visibility = "visible";
       }
     }
 
@@ -639,11 +670,11 @@ declare const bootstrap: any;
     let controlGroup: number = 0;
     let controlGroupDiv: HTMLDivElement | null = null;
     let controlGroupTCs: string = "";
-    let colorsContainer: HTMLDivElement | null = null;
+    let colorsContainer = null;
     //let setEventTab = false;
     for (const p of properties) {
       //setEventTab = p.tableMeta && p.tableMeta.tableType === "calendar-events" ? true : false;
-      t.push(JSON.stringify(<object>p, undefined, 2));
+      t.push(JSON.stringify(p, undefined, 2));
       if (p.kind === "color" && state !== "document") {
         const twoColorProps = uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors();
         if (!colorsContainer) {
@@ -784,6 +815,9 @@ declare const bootstrap: any;
         printessDesktopGrid.classList.add("main-tabs");
         if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons") {
           printessDesktopGrid.appendChild(desktopTitleOrSteps);
+        } else {
+          const desktopTitle: HTMLDivElement | null = document.querySelector("div.desktop-title-or-steps");
+          if (desktopTitle) printessDesktopGrid.removeChild(desktopTitle);
         }
 
         const tabsContainer = getDesktopTabsContainer(printessDesktopGrid);
@@ -4359,7 +4393,7 @@ declare const bootstrap: any;
         const tabsContainer = document.createElement("div");
         tabsContainer.className = "step-tabs-list";
         tabsContainer.id = "step-tab-list";
-        tabsContainer.style.marginLeft = "10px";
+        tabsContainer.style.margin = "0 10px";
 
         if (!forMobile && printess.stepHeaderDisplay() === "badge list") {
           const prevTab = document.createElement("div");
@@ -4417,7 +4451,7 @@ declare const bootstrap: any;
 
         // container for price preview and basket button
         const wrapper = document.createElement("div");
-        wrapper.className = "d-flex";
+        wrapper.className = "d-flex price-basket-wrapper";
 
         const priceDiv = document.createElement("div");
         priceDiv.className = "total-price-container";
@@ -6385,9 +6419,13 @@ declare const bootstrap: any;
 
     // translate change Layout button text
     const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
-    if (layoutsButton) {
+    if (layoutsButton && printess.showTabNavigation()) {
       layoutsButton.textContent = printess.gl("ui.changeLayout");
       layoutsButton.style.visibility = "hidden";
+    }
+    const closeLayoutsButton = <HTMLButtonElement>document.getElementById("closeLayoutOffCanvas");
+    if (closeLayoutsButton && printess.showTabNavigation()) {
+      closeLayoutsButton.click();
     }
 
     // add editable frames hint to session storage if frame has been selected
@@ -6413,7 +6451,7 @@ declare const bootstrap: any;
     }
 
     // Buttons for "add" & "previous/next step" & "basket" & "done"
-    if ((groupSnippets.length > 0 || layoutSnippets.length > 0) && state !== "add") {
+    if ((groupSnippets.length > 0 || (layoutSnippets.length > 0 && printess.showTabNavigation())) && state !== "add") {
       mobileUi.appendChild(getMobilePlusButton(printess));
     }
     if (state !== "document") {
@@ -7344,37 +7382,53 @@ declare const bootstrap: any;
 
     getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay, true);
 
+    let opener: HTMLDivElement | null = document.querySelector(".mobile-price-display-opener");
+    if (!opener) {
+      opener = document.createElement("div");
+      opener.className = "mobile-price-display-opener";
+      const openIco = printess.getIcon("grid-lines");
+      openIco.classList.add("open-icon");
+      opener.appendChild(openIco);
+      document.body.appendChild(opener);
+    }
+    if (uih_mobilePriceDisplay === "open" || uih_mobilePriceDisplay === "none") {
+      opener.classList.add("hidden");
+    } else {
+      opener.classList.remove("hidden");
+    }
+
     const closer = document.createElement("div");
     closer.className = "price-display-side-closer";
     const closeIco = printess.getIcon("close");
     closeIco.classList.add("close-icon")
     closer.appendChild(closeIco);
 
-    closer.onclick = () => {
+    closer.ontouchstart = () => {
+      opener?.classList.remove("hidden");
       if (pricebar) pricebar.classList.add("closed");
       uih_mobilePriceDisplay = "closed";
       resizeMobileUi(printess);
-      pricebar?.appendChild(opener);
     }
 
-    const opener = document.createElement("div");
-    opener.className = "mobile-price-display-opener";
-    const openIco = printess.getIcon("grid-lines");
-    openIco.classList.add("open-icon");
-    opener.appendChild(openIco);
+    closer.onmousedown = () => {
+      opener?.classList.remove("hidden");
+      if (pricebar) pricebar.classList.add("closed");
+      uih_mobilePriceDisplay = "closed";
+      resizeMobileUi(printess);
+    }
 
     opener.ontouchstart = () => {
       if (pricebar) pricebar.classList.remove("closed");
       uih_mobilePriceDisplay = "open";
       resizeMobileUi(printess);
-      pricebar?.removeChild(opener);
+      opener?.classList.add("hidden");
     }
 
     opener.onmousedown = () => {
       if (pricebar) pricebar.classList.remove("closed");
       uih_mobilePriceDisplay = "open";
       resizeMobileUi(printess);
-      pricebar?.removeChild(opener);
+      opener?.classList.add("hidden");
     }
 
     pricebar.appendChild(closer);
@@ -7452,6 +7506,7 @@ declare const bootstrap: any;
         const toolBar: HTMLDivElement | null = document.querySelector(".mobile-navbar");
         const pageBar: HTMLDivElement | null = document.querySelector(".mobile-pagebar");
         const priceBar: HTMLDivElement | null = document.querySelector(".mobile-pricebar");
+        const priceBarOpener: HTMLDivElement | null = document.querySelector(".mobile-price-display-opener");
         if (pageBar && printess.pageNavigationDisplay() === "icons") {
           pageBar.style.height = mobilePageBarHeight + "px";
         }
@@ -7552,6 +7607,13 @@ declare const bootstrap: any;
               priceBar.style.visibility = "visible";
             } else {
               priceBar.style.visibility = "hidden";
+            }
+          }
+          if (priceBarOpener) {
+            if (showPriceBar && uih_mobilePriceDisplay === "closed") {
+              priceBarOpener.classList.remove("hidden");
+            } else {
+              priceBarOpener.classList.add("hidden");
             }
           }
 
