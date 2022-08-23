@@ -272,11 +272,11 @@ export interface iPrintessApi {
    * Should be called before redirecting to a new template.
    * Will save the current state to the browser storage and apply it automatically to the next loaded template
    * Applies Frame and Document`exchange-ids` as well as template-wide form fields
-   * @param frames add frame exchange-ids (image, text, story)
-   * @param documents  add documents with exchange-ids
-   * @param formFields  add all user-defined from fields on template level
+   * @param frames (default true) add frame exchange-ids (image, text, story)
+   * @param documents (default true) add documents with exchange-ids
+   * @param formFields  (default true) add all user-defined from fields on template level
    */
-  persistExchangeState(frames: boolean = true, documents: boolean = true, formFields: boolean = true): Promise<void>
+  persistExchangeState(frames?: boolean, documents?: boolean, formFields?: boolean): Promise<void>
 
 
   /**
