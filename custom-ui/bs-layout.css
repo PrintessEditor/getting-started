@@ -342,10 +342,10 @@ body {
   column-gap: 5px;
 }
 .desktop-title-bar.active-step {
-   grid-template-columns: auto 1fr auto auto  ;
+   grid-template-columns: auto 1fr auto auto auto;
 }
 .desktop-title-bar.active-step-only-badge {
-   grid-template-columns: 1fr auto auto auto  ;
+   grid-template-columns: 1fr auto auto auto auto;
 }
 .desktop-title-bar.active-step-badge-list {
    grid-template-columns: auto 1fr auto  ;
@@ -818,6 +818,9 @@ body {
     padding: 10px;
     height: 100%;
     overflow-y: auto;
+  }
+  .mobile-fullscreen-content > div {
+    height: 100%;
   }
   .mobile-fullscreen-content .tab-content.card {
     border: none;

@@ -182,7 +182,10 @@
       "placement-fit": "Fit",
       "placement-fill": "Fill",
       "placement-face": "Face",
-      "placement-group": "Group"
+      "placement-group": "Group",
+
+      "leftPage": "Left Page",
+      "rightPage": "Right Page"
 
 
     },
@@ -413,7 +416,11 @@
       "placement-fit": "Einpassen",
       "placement-fill": "Ausfüllen",
       "placement-face": "Gesicht",
-      "placement-group": "Gruppe"
+      "placement-group": "Gruppe",
+
+      "leftPage": "Linke Seite",
+      "rightPage": "Rechte Seite"
+
 
 
     },
@@ -642,7 +649,11 @@
       "placement-fit": "Adaptación",
       "placement-fill": "Rellenar",
       "placement-face": "Cara",
-      "placement-group": "Grupo"
+      "placement-group": "Grupo",
+
+      "leftPage": "Página izquierda",
+      "rightPage": "Página derecha"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Vaya!\nParece que tu foto es demasiado pequeña ...",
@@ -869,7 +880,10 @@
       "placement-fit": "Sovittaminen",
       "placement-fill": "Täytä",
       "placement-face": "Kasvot",
-      "placement-group": "Ryhmä"
+      "placement-group": "Ryhmä",
+
+      "leftPage": "Vasen sivu",
+      "rightPage": "Oikea sivu"
     },
     "errors": {
       "imageResolutionLowTitle": "Hups!\nKuvasi näyttää olevan liian pieni...",
@@ -1096,7 +1110,10 @@
       "placement-fit": "Ajuster",
       "placement-fill": "Remplir",
       "placement-face": "Visage",
-      "placement-group": "Groupe"
+      "placement-group": "Groupe",
+
+      "leftPage": "Page de gauche",
+      "rightPage": "Page de droite"
     },
     "errors": {
       "imageResolutionLowTitle": "Oups!\nOn dirait que votre image est trop petite...",
@@ -1323,7 +1340,10 @@
       "placement-fit": "Приспособление",
       "placement-fill": "Заполнить",
       "placement-face": "Лицо",
-      "placement-group": "Группа"
+      "placement-group": "Группа",
+
+      "leftPage": "Левая страница",
+      "rightPage": "Правая страница"
     },
     "errors": {
       "imageResolutionLowTitle": "Упс!\nПохоже, что ваше изображение слишком маленькое...",
@@ -1550,7 +1570,10 @@
       "placement-fit": "Passa in",
       "placement-fill": "Fyll i",
       "placement-face": "Ansikte",
-      "placement-group": "Grupp"
+      "placement-group": "Grupp",
+
+      "leftPage": "Vänster sida",
+      "rightPage": "Höger sida"
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nDet verkar som om bilden är för liten...",

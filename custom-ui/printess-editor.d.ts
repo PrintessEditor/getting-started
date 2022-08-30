@@ -280,6 +280,13 @@ export interface iPrintessApi {
 
 
   /**
+   * Method to merge the current document content on another document of the current template
+   * @param targetDocId The id of the document to merge on
+   * @param frames Which frames should be merged, default to "snippets" which means all frames placed as layout- or sticker-snippet. "all" will delete all frames in the target document before copying over the new frames.
+   */
+   mergeCurrentDocumentToTargetDocument(targetDocId: string, frames: "all" | "snippets") :Promise<void>
+
+  /**
    * Returns the add to basket callback you have set in `attachPrintess()`
    */
   getAddToBasketCallback(): null | ((saveToken: string, url: string) => void);

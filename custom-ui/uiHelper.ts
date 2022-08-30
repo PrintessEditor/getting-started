@@ -6,7 +6,7 @@ declare const bootstrap: any;
 
 (function () {
   (<any>window).uiHelper = {
-    renderLayoutSnippets: renderLayoutSnippets,
+    renderLayoutSnippets: renderLayoutSnippets, // TODO: raus!!!
     getOverlay: getOverlay,
     renderMobileUi: renderMobileUi,
     renderMobileNavBar: renderMobileNavBar,
@@ -19,7 +19,8 @@ declare const bootstrap: any;
     viewPortResize: viewPortResize,
     viewPortScrollInIFrame: viewPortScrollInIFrame,
     resize: resize,
-    resetUi: resetUi
+    resetUi: resetUi,
+    customLayouSnippetRenderCallback: undefined
   }
 
   function resetUi(): void {
@@ -229,7 +230,7 @@ declare const bootstrap: any;
   function getIframeOverlay(printess: iPrintessApi, title: string, infoUrl: string, forMobile: boolean): void {
     const iframe = document.createElement("iframe");
     iframe.title = printess.gl(title);
-    iframe.src = infoUrl;
+    iframe.src = infoUrl.startsWith("/") ? window.location.origin + infoUrl : infoUrl;
     iframe.style.width = "100%";
     iframe.style.height = "100%";
 
@@ -303,7 +304,7 @@ declare const bootstrap: any;
   }
 
   function getLegalNoticeText(printess: iPrintessApi, legalNotice: string, forMobile: boolean): string {
-    const regex = /\[([^)]*)\]\((http[^\]]*)\)/gm
+    const regex = /\[([^)]*)\]\(([^\]]*)\)/gm // /\[([^)]*)\]\((http[^\]]*)\)/gm
     //const matches = /\[(.+)\]\((https?:\/\/[^\s]+)(?: "(.+)")?\)|(https?:\/\/[^\s]+)/ig.exec(legalNotice);
 
     const listOfLinks = legalNotice.match(regex) || "";
@@ -1026,7 +1027,7 @@ declare const bootstrap: any;
         break;
       }
       case "#LAYOUTS": {
-        const layoutsDiv = (<any>window).uiHelper.renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
+        const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
         container.appendChild(layoutsDiv);
         container.scrollTop = uih_snippetsScrollPosition;
         break;
@@ -1152,7 +1153,7 @@ declare const bootstrap: any;
             // rotate and crop
             tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p, forMobile) });
             if (p.imageMeta?.hasFFCropEditor) {
-              tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
+              tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false, !forMobile) });
             }
           }
           return getTabPanel(tabs, p.id);
@@ -1276,8 +1277,7 @@ declare const bootstrap: any;
       return para;
     } else {
       const para = document.createElement("p");
-      para.style.marginTop = "1.5em";
-      para.style.marginBottom = "0.3em";
+      para.className = "mb-1";
       para.textContent = text
       return para;
     }
@@ -1520,7 +1520,7 @@ declare const bootstrap: any;
 
       const mobileButtonDiv = document.getElementById(p.id + ":");
       if (mobileButtonDiv) {
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
       }
     }
     inp.onfocus = () => {
@@ -1926,6 +1926,12 @@ declare const bootstrap: any;
       grid.appendChild(div);
     }
 
+    const priceDiv = document.createElement("div");
+    priceDiv.className = "total-price-container";
+    priceDiv.id = "total-price-display";
+    if (uih_currentPriceDisplay) getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+    grid.appendChild(priceDiv);
+
     if (printess.hasPreviousStep()) {
       const prevStep = document.createElement("button");
       prevStep.className = "btn btn-outline-primary me-1";
@@ -2185,7 +2191,7 @@ declare const bootstrap: any;
       validate(printess, p);
       const mobileButtonDiv = document.getElementById(p.id + ":");
       if (mobileButtonDiv) {
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
       }
     }
     inp.onfocus = () => {
@@ -2420,7 +2426,7 @@ declare const bootstrap: any;
           p.value = entry.key;
           const mobileButtonDiv = document.getElementById(p.id + ":");
           if (mobileButtonDiv) {
-            drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+            drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
           }
 
         }
@@ -2554,7 +2560,7 @@ declare const bootstrap: any;
       const mobileButtonDiv = document.getElementById(p.id + ":color") || document.getElementById(p.id + ":text-style-color");
       if (mobileButtonDiv && p.textStyle) {
         p.textStyle.color = color;
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
       }
     } else {
       await printess.setProperty(p.id, name).then(() => setPropertyVisibilities(printess));
@@ -2562,7 +2568,7 @@ declare const bootstrap: any;
 
       const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
       if (mobileButtonDiv) {
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
       }
     }
   }
@@ -2696,7 +2702,7 @@ declare const bootstrap: any;
             setPropertyVisibilities(printess);
             const mobileButtonDiv = document.getElementById(p.id + ":");
             if (mobileButtonDiv) {
-              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
             }
           });
           if (p.listMeta) {
@@ -3479,7 +3485,7 @@ declare const bootstrap: any;
         span.textContent = forMobile ? "" : printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale));
         const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
         if (mobileButtonDiv) {
-          drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+          drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
         }
 
       }
@@ -3601,7 +3607,7 @@ declare const bootstrap: any;
       // update mobile circle if present
       const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty ?? ""));
       if (mobileButtonDiv) {
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
       }
     }
     const span = document.createElement("span");
@@ -3678,7 +3684,7 @@ declare const bootstrap: any;
             // update button 
             const mobileButtonDiv = document.getElementById(p.id + ":text-style-size");
             if (mobileButtonDiv) {
-              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
             }
           }
 
@@ -3772,7 +3778,7 @@ declare const bootstrap: any;
             // update button 
             const mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
             if (mobileButtonDiv) {
-              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p])
+              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup)
             }
           } else {
             button.innerHTML = "";
@@ -3924,7 +3930,7 @@ declare const bootstrap: any;
         mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-vAlign-hAlign");
       }
       if (mobileButtonDiv) {
-        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p]);
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
       }
 
     }
@@ -5840,22 +5846,77 @@ declare const bootstrap: any;
     }
   }
 
-  function renderLayoutSelectionDialog(printess: iPrintessApi, layoutSnippets: iExternalSnippetCluster[], forMobile: boolean): void {
-    const layoutContainer = document.createElement("div");
-    layoutContainer.style.maxHeight = "70vh";
+  // Handle external layout snippets display and return a HTMLDivElement which replaces the internal layout-snippet-list
+  function getExternalSnippetDiv(printess: iPrintessApi, layoutSnippets: iExternalSnippetCluster[], modalId: string, forMobile: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
+    /**
+     * customLayouSnippetRenderCallback will be called with those parameters and expects 
+     * a HTMLDivElement as return value.
+     * printess: iPrintessApi, 
+     * layoutSnippets: Array<iExternalSnippetCluster>, 
+     * forMobile?: boolean, 
+     * forLayoutDialog: boolean = false
+     * insertTemplateAsLayoutSnippet-Callback 
+     * cancelCallback
+     * 
+     * @return  HTMLDivElement 
+     */
+    const modalHtml = (<any>window).uiHelper.customLayouSnippetRenderCallback(printess, layoutSnippets, forMobile, forLayoutDialog, (templateName: string, templateVersion: "draft" | "published", documentName: string, mode: "layout" | "group" = "layout") => {
 
+      // insert layouts callback => add layout snippet and close dialogs / offcanvas
+
+      printess.insertTemplateAsLayoutSnippet(templateName, templateVersion, documentName, mode);
+      closeLayoutOverlays(printess, forMobile);
+
+    }, () => {
+      // cancel callback => close dialogs / offcanvas
+      closeLayoutOverlays(printess, forMobile);
+    });
+
+    return modalHtml;
+  }
+
+  function renderLayoutSelectionDialog(printess: iPrintessApi, layoutSnippets: iExternalSnippetCluster[], forMobile: boolean): void {
+    const modalId = "layoutSnippetsSelection";
     const templateTitle = printess.getTemplateTitle();
     const title = templateTitle ? printess.gl("ui.selectLayoutTitle", templateTitle) : printess.gl("ui.selectLayoutWithoutTitle");
+
+    const layoutContainer: HTMLDivElement = document.createElement("div");
+    layoutContainer.style.height = "calc(100% - 3.5rem)";
 
     const infoText = document.createElement("p");
     infoText.innerHTML = printess.gl("ui.selectLayoutInfo", printess.getTemplateTitle());
 
     layoutContainer.appendChild(infoText);
-    layoutContainer.appendChild((<any>window).uiHelper.renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
-    showModal(printess, "layoutSnippetsSelection", layoutContainer, title);
+    layoutContainer.appendChild(renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
+
+    showModal(printess, modalId, layoutContainer, title);
+  }
+
+  function closeLayoutOverlays(printess: iPrintessApi, forMobile: boolean) {
+    // close off canvas via its button, the only way it propably worked ...
+    const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
+    if (myOffcanvas) myOffcanvas.click();
+
+    const offCanvas = document.getElementById("layoutOffcanvas");
+    if (offCanvas) offCanvas.style.visibility = "hidden";
+
+    const layoutsDialog = document.getElementById("layoutSnippetsSelection");
+    if (layoutsDialog) layoutsDialog.remove();
+
+    if (forMobile && printess.showTabNavigation()) {
+      closeMobileFullscreenContainer();
+    }
   }
 
   function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExternalSnippetCluster>, forMobile?: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
+
+    if ((<any>window).uiHelper.customLayouSnippetRenderCallback) {
+      const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, "layoutSnippetsSelection", forMobile ?? uih_currentRender === "mobile", forLayoutDialog);
+      if (externalSnippetContainer && externalSnippetContainer.nodeType) { // && externalSnippetContainer instanceof Element) {
+        return externalSnippetContainer;
+      }
+    }
+
     const container = document.createElement("div");
     container.className = "layout-snippet-list";
     if (layoutSnippets) {
@@ -5903,19 +5964,8 @@ declare const bootstrap: any;
               uih_snippetsScrollPosition = propsDiv.scrollTop;
             }
             printess.insertLayoutSnippet(snippet.snippetUrl);
-            // close off canvas via its button, the only way it propably worked ...
-            const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
-            if (myOffcanvas) myOffcanvas.click();
-
-            const offCanvas = document.getElementById("layoutOffcanvas");
-            if (offCanvas) offCanvas.style.visibility = "hidden";
-
-            const layoutsDialog = document.getElementById("layoutSnippetsSelection");
-            if (layoutsDialog) layoutsDialog.remove();
-
-            if (forMobile && printess.showTabNavigation()) {
-              closeMobileFullscreenContainer();
-            }
+            // close layout dialogs / canvas
+            closeLayoutOverlays(printess, forMobile ?? uih_currentRender === "mobile");
           }
           clusterDiv.appendChild(thumbDiv);
         }
@@ -7408,6 +7458,8 @@ declare const bootstrap: any;
       if (pricebar) pricebar.classList.add("closed");
       uih_mobilePriceDisplay = "closed";
       resizeMobileUi(printess);
+    }, {
+      passive: true
     }
 
     closer.onmousedown = () => {
@@ -7422,6 +7474,8 @@ declare const bootstrap: any;
       uih_mobilePriceDisplay = "open";
       resizeMobileUi(printess);
       opener?.classList.add("hidden");
+    }, {
+      passive: true
     }
 
     opener.onmousedown = () => {
@@ -7762,11 +7816,11 @@ declare const bootstrap: any;
         }
 
         if (b.newState.externalProperty?.kind === "background-button") {
-          drawButtonContent(printess, buttonDiv, [b.newState.externalProperty])
+          drawButtonContent(printess, buttonDiv, [b.newState.externalProperty], controlGroup)
         } else if (controlGroup > 0) {
-          drawButtonContent(printess, buttonDiv, properties);
+          drawButtonContent(printess, buttonDiv, properties, controlGroup);
         } else {
-          drawButtonContent(printess, buttonDiv, uih_currentProperties);
+          drawButtonContent(printess, buttonDiv, uih_currentProperties, controlGroup);
         }
 
         buttonContainer.appendChild(buttonDiv);
@@ -7942,7 +7996,7 @@ declare const bootstrap: any;
               buttonDiv.classList.toggle("selected");
               buttonDiv.innerHTML = "";
               properties = properties && properties.length > 0 ? properties : uih_currentProperties;
-              drawButtonContent(printess, buttonDiv, properties);
+              drawButtonContent(printess, buttonDiv, properties, b.newState.externalProperty?.controlGroup || 0);
               if (b.newState.externalProperty?.kind === "image" && printess.canMoveSelectedFrames()) {
                 // for images its not good to zoom if they are moveable. Quite impossible to catch the handles 
                 printess.setZoomMode("spread");
@@ -7961,8 +8015,14 @@ declare const bootstrap: any;
       document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
       buttonDiv.classList.toggle("selected");
       buttonDiv.innerHTML = "";
-      properties = properties && properties.length > 0 ? properties : uih_currentProperties;
-      drawButtonContent(printess, buttonDiv, properties);
+      if (b.newState.externalProperty && b.newState.externalProperty.controlGroup > 0) {
+        properties = properties || uih_currentProperties;
+      } else if (b.newState.externalProperty) {
+        properties = [b.newState.externalProperty];
+      } else {
+        properties = uih_currentProperties;
+      }
+      drawButtonContent(printess, buttonDiv, properties, b.newState.externalProperty?.controlGroup || 0);
       centerMobileButton(buttonDiv);
 
       // center frame 
@@ -8040,7 +8100,7 @@ declare const bootstrap: any;
         } else {
           if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
             // render control grouped input fields together
-            controlHost.style.overflow = "unset";
+            controlHost.style.overflow = "auto";
             getProperties(printess, uih_currentState, properties, controlHost);
           } else {
             const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
@@ -8160,7 +8220,7 @@ declare const bootstrap: any;
   }
 
 
-  function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, properties: Array<iExternalProperty>) {
+  function drawButtonContent(printess: iPrintessApi, buttonDiv: HTMLDivElement, properties: Array<iExternalProperty>, controlGroup: number) {
 
     // find property by button id.
     const id = buttonDiv.id.split(":")
@@ -8197,8 +8257,6 @@ declare const bootstrap: any;
 
     const isSelected = buttonDiv.classList.contains("selected");
     buttonDiv.innerHTML = "";
-
-    const controlGroup = properties[0]?.controlGroup || 0;
 
     if (printess.isTextButton(b) || controlGroup > 0) {
       let caption: string = "";
