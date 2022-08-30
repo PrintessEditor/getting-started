@@ -23,7 +23,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         viewPortScrollInIFrame: viewPortScrollInIFrame,
         resize: resize,
         resetUi: resetUi,
-        customLayouSnippetRenderCallback: undefined
+        customLayoutSnippetRenderCallback: undefined
     };
     function resetUi() {
         uih_currentTabId = "LOADING";
@@ -202,7 +202,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getIframeOverlay(printess, title, infoUrl, forMobile) {
         const iframe = document.createElement("iframe");
         iframe.title = printess.gl(title);
-        iframe.src = infoUrl.startsWith("/") ? window.location.origin + infoUrl : infoUrl;
+        iframe.src = infoUrl.startsWith("/") ? window.origin + infoUrl : infoUrl;
         iframe.style.width = "100%";
         iframe.style.height = "100%";
         if (forMobile) {
@@ -4949,7 +4949,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getExternalSnippetDiv(printess, layoutSnippets, modalId, forMobile, forLayoutDialog = false) {
-        const modalHtml = window.uiHelper.customLayouSnippetRenderCallback(printess, layoutSnippets, forMobile, forLayoutDialog, (templateName, templateVersion, documentName, mode = "layout") => {
+        const modalHtml = window.uiHelper.customLayoutSnippetRenderCallback(printess, layoutSnippets, forMobile, forLayoutDialog, (templateName, templateVersion, documentName, mode = "layout") => {
             printess.insertTemplateAsLayoutSnippet(templateName, templateVersion, documentName, mode);
             closeLayoutOverlays(printess, forMobile);
         }, () => {
@@ -4984,7 +4984,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function renderLayoutSnippets(printess, layoutSnippets, forMobile, forLayoutDialog = false) {
-        if (window.uiHelper.customLayouSnippetRenderCallback) {
+        if (window.uiHelper.customLayoutSnippetRenderCallback) {
             const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, "layoutSnippetsSelection", forMobile !== null && forMobile !== void 0 ? forMobile : uih_currentRender === "mobile", forLayoutDialog);
             if (externalSnippetContainer && externalSnippetContainer.nodeType) {
                 return externalSnippetContainer;

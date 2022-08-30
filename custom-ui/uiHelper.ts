@@ -6,7 +6,7 @@ declare const bootstrap: any;
 
 (function () {
   (<any>window).uiHelper = {
-    renderLayoutSnippets: renderLayoutSnippets, // TODO: raus!!!
+    renderLayoutSnippets: renderLayoutSnippets,
     getOverlay: getOverlay,
     renderMobileUi: renderMobileUi,
     renderMobileNavBar: renderMobileNavBar,
@@ -20,7 +20,7 @@ declare const bootstrap: any;
     viewPortScrollInIFrame: viewPortScrollInIFrame,
     resize: resize,
     resetUi: resetUi,
-    customLayouSnippetRenderCallback: undefined
+    customLayoutSnippetRenderCallback: undefined
   }
 
   function resetUi(): void {
@@ -230,7 +230,7 @@ declare const bootstrap: any;
   function getIframeOverlay(printess: iPrintessApi, title: string, infoUrl: string, forMobile: boolean): void {
     const iframe = document.createElement("iframe");
     iframe.title = printess.gl(title);
-    iframe.src = infoUrl.startsWith("/") ? window.location.origin + infoUrl : infoUrl;
+    iframe.src = infoUrl.startsWith("/") ? window.origin + infoUrl : infoUrl;
     iframe.style.width = "100%";
     iframe.style.height = "100%";
 
@@ -304,8 +304,7 @@ declare const bootstrap: any;
   }
 
   function getLegalNoticeText(printess: iPrintessApi, legalNotice: string, forMobile: boolean): string {
-    const regex = /\[([^)]*)\]\(([^\]]*)\)/gm // /\[([^)]*)\]\((http[^\]]*)\)/gm
-    //const matches = /\[(.+)\]\((https?:\/\/[^\s]+)(?: "(.+)")?\)|(https?:\/\/[^\s]+)/ig.exec(legalNotice);
+    const regex = /\[([^)]*)\]\(([^\]]*)\)/gm   // /\[([^)]*)\]\((http[^\]]*)\)/gm
 
     const listOfLinks = legalNotice.match(regex) || "";
 
@@ -5849,7 +5848,7 @@ declare const bootstrap: any;
   // Handle external layout snippets display and return a HTMLDivElement which replaces the internal layout-snippet-list
   function getExternalSnippetDiv(printess: iPrintessApi, layoutSnippets: iExternalSnippetCluster[], modalId: string, forMobile: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
     /**
-     * customLayouSnippetRenderCallback will be called with those parameters and expects 
+     * customLayoutSnippetRenderCallback will be called with those parameters and expects 
      * a HTMLDivElement as return value.
      * printess: iPrintessApi, 
      * layoutSnippets: Array<iExternalSnippetCluster>, 
@@ -5860,7 +5859,7 @@ declare const bootstrap: any;
      * 
      * @return  HTMLDivElement 
      */
-    const modalHtml = (<any>window).uiHelper.customLayouSnippetRenderCallback(printess, layoutSnippets, forMobile, forLayoutDialog, (templateName: string, templateVersion: "draft" | "published", documentName: string, mode: "layout" | "group" = "layout") => {
+    const modalHtml = (<any>window).uiHelper.customLayoutSnippetRenderCallback(printess, layoutSnippets, forMobile, forLayoutDialog, (templateName: string, templateVersion: "draft" | "published", documentName: string, mode: "layout" | "group" = "layout") => {
 
       // insert layouts callback => add layout snippet and close dialogs / offcanvas
 
@@ -5910,7 +5909,7 @@ declare const bootstrap: any;
 
   function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExternalSnippetCluster>, forMobile?: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
 
-    if ((<any>window).uiHelper.customLayouSnippetRenderCallback) {
+    if ((<any>window).uiHelper.customLayoutSnippetRenderCallback) {
       const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, "layoutSnippetsSelection", forMobile ?? uih_currentRender === "mobile", forLayoutDialog);
       if (externalSnippetContainer && externalSnippetContainer.nodeType) { // && externalSnippetContainer instanceof Element) {
         return externalSnippetContainer;
