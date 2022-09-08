@@ -52,7 +52,8 @@
     crossorigin="anonymous"></script>
 
   <!-- Load polyfills -->
-  <script src="https://editor.printess.com/v/nightly/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+  <script
+    src="https://editor.printess.com/v/1.3.0/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
 
   <script src="uiHelper.js"></script>
 
@@ -71,7 +72,7 @@
 
 
     const loadingDoneCallback = function (spreads, title) {
-       // remove your progress overlay here
+      // remove your progress overlay here
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
@@ -118,9 +119,9 @@
 
 
     window.WebComponents.waitFor(async () => {
-      const printessLoader = await import('https://editor.printess.com/v/nightly/printess-editor/printess-editor.js');
+      const printessLoader = await import('https://editor.printess.com/v/1.3.0/printess-editor/printess-editor.js');
       printess = await printessLoader.attachPrintess({
-        resourcePath: "https://editor.printess.com/v/nightly/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
+        resourcePath: "https://editor.printess.com/v/1.3.0/printess-editor", // relative or absolute path to where the printess-editor directory is. E.g. http://mydomain.com/library 
 
         div: document.getElementById("desktop-printess-container"),
 
@@ -148,8 +149,8 @@
 
       });
 
-     // listen to visual viewport changes to detect virtual keyboard on iOs and Android
-     if (window.visualViewport) {
+      // listen to visual viewport changes to detect virtual keyboard on iOs and Android
+      if (window.visualViewport) {
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
         window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
       } else {
