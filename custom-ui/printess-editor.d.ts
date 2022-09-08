@@ -284,7 +284,7 @@ export interface iPrintessApi {
    * @param targetDocId The id of the document to merge on
    * @param frames Which frames should be merged, default to "snippets" which means all frames placed as layout- or sticker-snippet. "all" will delete all frames in the target document before copying over the new frames.
    */
-   mergeCurrentDocumentToTargetDocument(targetDocId: string, frames: "all" | "snippets") :Promise<void>
+  mergeCurrentDocumentToTargetDocument(targetDocId: string, frames: "all" | "snippets"): Promise<void>
 
   /**
    * Returns the add to basket callback you have set in `attachPrintess()`
@@ -358,6 +358,11 @@ export interface iPrintessApi {
    * @param part  "entire" | "left-page" | "right-page"
    */
   selectDocumentAndSpread(docId: string, spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
+
+  /**
+   * Retrieves current documen id, returns empty string if doc is not yet loaded.
+   */
+  getCurrentDocumentId(): string
 
   /**
    * Moves Printess focus to next page if available. Focus on single pages not spreads.
@@ -592,7 +597,7 @@ export interface iPrintessApi {
    * @param value 
    * @param textStyleMode 
    */
-  setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
+  setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign" | "pStyle", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
 
   /**
    * Method to set an image meta-property
@@ -779,6 +784,15 @@ export interface iPrintessApi {
   }>;
 
   /**
+   * Returns a list of available paragraph-style for a certain selected property (frame).
+   * @param propertyId Id of property to filter available styles per frame
+   */
+  getParagraphStyles(propertyId: string): Array<{
+    class: string,
+    css: string
+  }>;
+
+  /**
    * Returns hex color from rgb value
    * @param color rgb color value
    */
@@ -807,7 +821,22 @@ export interface iPrintessApi {
 
   getTemplateTitle(): string;
 
-  insertLayoutSnippet(snippetUrl: string): Promise<void>;
+  /**
+   * Get the link required for displaying an info icon that opens a product info overlay / dialog
+   */
+  getProductInfoUrl(): string;
+
+  /**
+   * Insert a Layout-Snippet on the current spread of the current document
+   * @param snippetUrl The Url of the snippet
+   * @param targetPage optional, forces layout-snippets to left or right side if aspect ratio of snippet matches dimensions a single page of a double page spread
+   */
+  insertLayoutSnippet(snippetUrl: string, targetPage?: "left" | "right"): Promise<void>;
+
+  /**
+   * Insert a Sticker (Group-Snippet) on the current spread of the current document
+   * @param snippetUrl The Url of the snippet
+   */
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
   /**
@@ -846,7 +875,7 @@ export interface iPrintessApi {
   /**
    * Returns if buyer ui should display the page navigation as icons for all docs or just numbers for current doc
    */
-  pageNavigationDisplay(): "hide" | "numbers" | "icons";
+  pageNavigationDisplay(): "hide" | "numbers" | "icons" | "doc-tabs";
 
   /**
    * Returns if buyer ui should display the search bar for searching through images
@@ -1074,6 +1103,16 @@ export interface iPrintessApi {
   isTextEditorOpen(): boolean
 
   /**
+   * Open rich- or simple-text-editor
+   */
+  showTextEditor(): void
+
+  /**
+   * Returns `true` if either rich- or simple-text-editing is allowed (text-content is turned on)
+   */
+  showEnterTextEditorButton(): boolean
+
+  /**
    * Goes to the next available step (if any)
    * @param zoom overrides the frames zoom settings for all devices
    */
@@ -1154,7 +1193,7 @@ export interface iPrintessApi {
    */
   autoScaleDetails(): { enabled: boolean, width: number, height: number }
 
-  centerSelection(focusFormFieldId?: string): Promise<void>
+  centerSelection(focusFormFieldId?: string, forceZoom?: "spread" | "frame"): Promise<void>
 
   /**
    * 
@@ -1410,7 +1449,7 @@ export interface iExternalFrameBounds {
 export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
-  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "handwriting-image" |
+  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
   "image-scale" | "image-placement" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
 
 export interface iExternalProperty {
@@ -1432,6 +1471,7 @@ export interface iExternalTextStyle {
   hAlign: "bullet" | "left" | "center" | "right" | "justifyLeft" | "justifyCenter" | "justifyRight" | "justifyJustify";
   vAlign: "top" | "center" | "bottom";
   allows: Array<"content" | "mandatory" | "color" | "stroke" | "font" | "size" | "lineHeight" | "tracking" | "baselineShift" | "horizontalAlignment" | "verticalAlignment" | "padding" | "styles" | "bullet" | "indent" | "paragraphSpacing" | "baselineGrid" | "handWriting">;
+  pStyle: string;
 }
 export interface iExternalValidation {
   maxChars: number;
@@ -2019,6 +2059,7 @@ export type iconName =
   | "text-center"
   | "text-top"
   | "pen-swirl"
+  | "pen-solid"
   | "circle-1"
   | "shirt"
   | "focus-face"

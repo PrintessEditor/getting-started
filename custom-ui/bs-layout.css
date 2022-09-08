@@ -117,6 +117,17 @@ body {
   overflow-y: auto;
   padding-right: var(--editor-margin-right);
 }
+
+#external-layouts-container {
+  position: fixed;
+  left: var(--editor-toolbar-width);
+  top: calc(var(--editor-pagebar-height) + var(--editor-margin-top));
+  width: 400px;
+  height: calc(100% - calc(var(--editor-pagebar-height) + var(--editor-margin-top)));
+  background: white;
+  border-right: 1px solid #6c757d;
+  padding: 10px;
+}
  
 
 #desktop-pagebar.tabs {
@@ -357,7 +368,7 @@ body {
   align-self: center;
 }
 .desktop-title-bar.steps {
-   grid-template-columns:  minmax(auto, 1fr) auto auto  ;
+   grid-template-columns:  minmax(auto, 1fr) auto auto auto;
 }
 .step-n-of {
   display: flex;
@@ -419,6 +430,7 @@ body {
   text-align: right;
   max-height: 38px;
   margin-left: .5rem!important;
+  align-self: center;
 }
 .total-price-container.price-info-only {
   font-size: 1.75rem;
@@ -446,6 +458,7 @@ body {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  margin-right: auto;
 }
 
 .price-info-icon {
@@ -455,6 +468,19 @@ body {
   margin-left: 6px;
   justify-self: center;
   cursor: pointer;
+}
+.product-info-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--bs-primary);
+  margin-right: 6px;
+  justify-self: center;
+  cursor: pointer;
+}
+.corner-tools .product-info-icon {
+  width: 20px;
+  height: 20px;
+  align-self: center;
 }
 
 .corner-tools > .total-price-container, .price-basket-wrapper > .total-price-container {

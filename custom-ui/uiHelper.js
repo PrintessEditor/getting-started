@@ -38,6 +38,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_currentTabs = [];
     let uih_currentTabId = "LOADING";
     let uih_currentLayoutSnippets = [];
+    let uih_previousLayoutSnippets = [];
     let uih_currentState = "document";
     let uih_currentRender = "never";
     let uih_currentVisiblePage;
@@ -197,7 +198,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (priceDiv) {
             getPriceDisplay(printess, priceDiv, priceDisplay, uih_currentRender === "mobile");
         }
-        console.error("NEW PRICING ARRIVED", priceDisplay);
     }
     function getIframeOverlay(printess, title, infoUrl, forMobile) {
         const iframe = document.createElement("iframe");
@@ -221,21 +221,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const oldPrice = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.oldPrice) || "";
         const legalNotice = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.legalNotice) || "";
         const productName = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.productName) || printess.getTemplateTitle();
-        const infoUrl = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.infoUrl) || "";
+        const infoUrl = printess.getProductInfoUrl() || (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.infoUrl) || "";
         priceDiv.innerHTML = "";
         const headline = document.createElement("div");
         headline.className = "total-price-headline";
-        if (productName && (printess.pageNavigationDisplay() === "icons" || printess.stepHeaderDisplay() === "tabs list" || forMobile)) {
+        if (productName) {
+            const dekstopTitle = document.querySelector(".desktop-title-bar > h3") || document.querySelector(".desktop-title-bar > h2");
+            if (dekstopTitle)
+                dekstopTitle.style.display = "none";
             const productNameSpan = document.createElement("span");
             productNameSpan.className = "product-name";
             productNameSpan.innerText = printess.gl(productName);
-            if (infoUrl) {
-                const infoIcon = printess.getIcon("info-circle");
-                infoIcon.classList.add("price-info-icon");
-                infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), infoUrl, forMobile);
-                productNameSpan.appendChild(infoIcon);
+            const currentStep = printess.getStep();
+            const showStepTitle = printess.stepHeaderDisplay() === "only title" || printess.stepHeaderDisplay() === "title and badge";
+            if (currentStep && showStepTitle) {
+                productNameSpan.innerText = printess.gl(currentStep.title) || printess.gl("ui.step") + (currentStep.index + 1);
             }
-            priceDiv.appendChild(productNameSpan);
+            headline.appendChild(productNameSpan);
         }
         if (!legalNotice) {
             priceDiv.classList.add("price-info-only");
@@ -251,7 +253,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (oldPrice)
             newPriceSpan.style.color = "red";
         newPriceSpan.innerText = printess.gl(price);
-        if (infoUrl && printess.pageNavigationDisplay() !== "icons" && printess.stepHeaderDisplay() !== "tabs list" && (!forMobile || !productName)) {
+        if (infoUrl) {
             const infoIcon = printess.getIcon("info-circle");
             infoIcon.classList.add("price-info-icon");
             if (oldPrice)
@@ -296,10 +298,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function _viewPortScroll(printess, _what) {
-        if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
-            uih_viewportOffsetTop = window.visualViewport.offsetTop;
-            uih_viewportHeight = window.visualViewport.height;
-            uih_viewportWidth = window.visualViewport.width;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        if (uih_viewportOffsetTop !== ((_a = window.visualViewport) === null || _a === void 0 ? void 0 : _a.offsetTop) || uih_viewportHeight !== ((_b = window.visualViewport) === null || _b === void 0 ? void 0 : _b.height) || uih_viewportWidth !== ((_c = window.visualViewport) === null || _c === void 0 ? void 0 : _c.width)) {
+            uih_viewportOffsetTop = (_e = (_d = window.visualViewport) === null || _d === void 0 ? void 0 : _d.offsetTop) !== null && _e !== void 0 ? _e : 0;
+            uih_viewportHeight = (_g = (_f = window.visualViewport) === null || _f === void 0 ? void 0 : _f.height) !== null && _g !== void 0 ? _g : 0;
+            uih_viewportWidth = (_j = (_h = window.visualViewport) === null || _h === void 0 ? void 0 : _h.width) !== null && _j !== void 0 ? _j : 0;
             const printessDiv = document.getElementById("desktop-printess-container");
             if (printessDiv) {
                 if (printess.isMobile()) {
@@ -388,7 +391,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (!container || !printessDiv) {
             throw new Error("#desktop-properties or #desktop-printess-container not found, please add to html.");
         }
-        if (printess.stepHeaderDisplay() === "tabs list" || printess.pageNavigationDisplay() === "icons") {
+        const isPageIconsNavigation = printess.pageNavigationDisplay() === "icons";
+        const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+        const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+        const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
+        if (isStepTabsList || isDocTabs || isPageIconsNavigation) {
             container.classList.add("move-down");
         }
         else {
@@ -414,7 +421,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             desktopTitleOrSteps.innerHTML = "";
         }
-        if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons") {
+        if (!isStepTabsList && !isStepBadgeList && !isDocTabs) {
             if (printess.hasSteps()) {
                 const desktopStepsUi = getDesktopStepsUi(printess);
                 if (printess.showTabNavigation()) {
@@ -477,6 +484,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout") && !printess.showTabNavigation()) {
             toggleChangeLayoutButtonHint();
         }
+        const tabsAndSnippetsLoaded = uih_currentLayoutSnippets.length > 0 && uih_currentTabs.length > 0;
+        if (window.uiHelper.customLayoutSnippetRenderCallback && printess.showTabNavigation() && tabsAndSnippetsLoaded) {
+            getExternalSnippetsContainer(printess);
+        }
+        else {
+            removeExternalSnippetsContainer();
+        }
         if (printess.hasPreviewBackButton()) {
         }
         else if (state === "document") {
@@ -528,11 +542,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(getPropertiesTitle(printess));
                 }
                 if (state === "text") {
-                    const infoText = document.createElement("p");
-                    infoText.textContent = printess.gl("ui.editTextInsideFrame");
-                    if (!printess.showTabNavigation())
-                        infoText.style.padding = "30px";
-                    container.appendChild(infoText);
+                    if (!printess.isTextEditorOpen() && printess.showEnterTextEditorButton()) {
+                        const textEditInfo = document.createElement("p");
+                        textEditInfo.textContent = printess.gl("ui.editTextButtonInfo");
+                        const textEditBtn = document.createElement("button");
+                        textEditBtn.className = "btn btn-primary mt-2 d-flex align-items-center";
+                        textEditBtn.style.width = "fit-content";
+                        const icon = printess.getIcon("pen-solid");
+                        icon.classList.add("me-2");
+                        icon.style.width = "16px";
+                        icon.style.height = "16px";
+                        const span = document.createElement("span");
+                        span.textContent = printess.gl("ui.editTextButton");
+                        textEditBtn.appendChild(icon);
+                        textEditBtn.appendChild(span);
+                        textEditBtn.onclick = () => {
+                            printess.showTextEditor();
+                        };
+                        container.appendChild(textEditInfo);
+                        container.appendChild(textEditBtn);
+                    }
                 }
                 const props = getProperties(printess, state, properties, container);
                 t = t.concat(props);
@@ -614,6 +643,39 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return t;
     }
+    function getExternalSnippetsContainer(printess) {
+        let layoutsDiv = document.getElementById("external-layouts-container");
+        const currentSnippets = JSON.stringify(uih_currentLayoutSnippets);
+        const previousSnippets = JSON.stringify(uih_previousLayoutSnippets);
+        const snippetsChanged = currentSnippets !== previousSnippets;
+        if (!layoutsDiv) {
+            uih_previousLayoutSnippets = uih_currentLayoutSnippets;
+            layoutsDiv = document.createElement("div");
+            layoutsDiv.id = "external-layouts-container";
+            layoutsDiv.style.display = "none";
+            const titleDiv = getPropertiesTitle(printess, true);
+            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
+            layoutsDiv.appendChild(titleDiv);
+            layoutsDiv.appendChild(content);
+            document.body.appendChild(layoutsDiv);
+        }
+        else if (snippetsChanged && layoutsDiv) {
+            uih_previousLayoutSnippets = uih_currentLayoutSnippets;
+            layoutsDiv.innerHTML = "";
+            const titleDiv = getPropertiesTitle(printess, true);
+            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
+            layoutsDiv.appendChild(titleDiv);
+            layoutsDiv.appendChild(content);
+        }
+        else {
+            layoutsDiv.style.display = "none";
+        }
+    }
+    function removeExternalSnippetsContainer() {
+        const layoutsDiv = document.getElementById("external-layouts-container");
+        if (layoutsDiv)
+            layoutsDiv.remove();
+    }
     function getControlGroupWidth(p) {
         var _a, _b;
         if (p.kind === "label") {
@@ -687,7 +749,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const printessDesktopGrid = document.getElementById("printess-desktop-grid");
             if (printessDesktopGrid) {
                 printessDesktopGrid.classList.add("main-tabs");
-                if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons") {
+                if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons" && printess.pageNavigationDisplay() !== "doc-tabs") {
                     printessDesktopGrid.appendChild(desktopTitleOrSteps);
                 }
                 else {
@@ -763,7 +825,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getPropertiesTitle(printess) {
+    function getPropertiesTitle(printess, forExternalLayoutsContainer = false) {
         const currentTab = uih_currentTabs.filter(t => t.id === uih_currentTabId)[0] || "";
         const hasFormFieldTab = uih_currentTabs.filter(t => t.id === "#FORMFIELDS").length > 0;
         const titleDiv = document.createElement("div");
@@ -785,7 +847,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const title = document.createElement("h3");
         let caption = "";
-        if (uih_currentState === "text") {
+        if (forExternalLayoutsContainer) {
+            caption = printess.gl("ui.changeLayout");
+        }
+        else if (uih_currentState === "text") {
             caption = printess.gl("ui.textFrame");
         }
         else if (uih_currentState === "frames") {
@@ -870,9 +935,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 break;
             }
             case "#LAYOUTS": {
-                const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
-                container.appendChild(layoutsDiv);
-                container.scrollTop = uih_snippetsScrollPosition;
+                let layoutsDiv = document.getElementById("external-layouts-container");
+                if (!layoutsDiv || forMobile) {
+                    layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
+                    container.appendChild(layoutsDiv);
+                    container.scrollTop = uih_snippetsScrollPosition;
+                }
+                else {
+                    layoutsDiv.style.display = "block";
+                }
                 break;
             }
             case "#BACKGROUND": {
@@ -920,6 +991,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             return getVAlignControl(printess, p, true);
                         case "text-style-vAlign-hAlign":
                             return getVAlignAndHAlignControl(printess, p, true);
+                        case "text-style-paragraph-style":
+                            return getParagraphStyleDropDown(printess, p, true);
                         case "handwriting-image":
                             return getImageUploadControl(printess, p, undefined, forMobile);
                         default:
@@ -1170,6 +1243,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (p.textStyle.allows.indexOf("font") >= 0) {
             getFontDropDown(printess, p, false, group1, false);
         }
+        if (p.textStyle.allows.indexOf("styles") >= 0) {
+            getParagraphStyleDropDown(printess, p, false, group1, false);
+        }
         textPropertiesDiv.appendChild(group1);
         textPropertiesDiv.appendChild(getTextAlignmentControl(printess, p));
         return textPropertiesDiv;
@@ -1179,6 +1255,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         textPropertiesDiv.classList.add("mb-3");
         if (!p.textStyle) {
             return textPropertiesDiv;
+        }
+        if (p.textStyle.allows.indexOf("styles") >= 0) {
+            textPropertiesDiv.appendChild(getTextPropertyScrollContainer(getParagraphStyleDropDown(printess, p, true, undefined, true)));
         }
         if (p.textStyle.allows.indexOf("font") >= 0) {
             const group1 = document.createElement("div");
@@ -1292,12 +1371,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const h3 = document.createElement("h3");
             h3.innerText = printess.gl(printess.getTemplateTitle());
             h3.style.margin = "0px";
+            h3.style.display = uih_currentPriceDisplay ? "none" : "hidden";
             inner.appendChild(h3);
             const priceDiv = document.createElement("div");
             priceDiv.className = "total-price-container";
             priceDiv.id = "total-price-display";
-            if (uih_currentPriceDisplay)
+            if (uih_currentPriceDisplay) {
                 getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+            }
+            else if (printess.getProductInfoUrl()) {
+                const infoIcon = printess.getIcon("info-circle");
+                infoIcon.classList.add("product-info-icon");
+                infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), false);
+                priceDiv.appendChild(infoIcon);
+            }
             inner.appendChild(priceDiv);
         }
         if (printess.hasPreviewBackButton()) {
@@ -1329,6 +1416,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const basketBtn = document.createElement("button");
         const caption = printess.gl("ui.buttonBasket");
         basketBtn.className = "btn btn-primary";
+        basketBtn.style.whiteSpace = "nowrap";
         basketBtn.innerText = caption;
         const icon = printess.gl("ui.buttonBasketIcon");
         if (icon) {
@@ -1350,7 +1438,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getPreviewBackButton(printess) {
         const btn = document.createElement("button");
         btn.className = "btn btn-outline-primary";
-        if (printess.showTabNavigation() && printess.pageNavigationDisplay() !== "icons") {
+        if (printess.pageNavigationDisplay() === "doc-tabs") {
+            btn.classList.add("ms-2");
+        }
+        else if (printess.showTabNavigation() && printess.pageNavigationDisplay() !== "icons") {
             btn.classList.add("ms-1");
         }
         else {
@@ -1565,6 +1656,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const h2 = document.createElement("h2");
                 h2.style.flexGrow = "1";
                 h2.className = "mb-0";
+                h2.style.display = uih_currentPriceDisplay ? "none" : "hidden";
                 h2.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
                 grid.appendChild(h2);
             }
@@ -1586,6 +1678,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             grid.classList.add("steps");
             const h2 = document.createElement("h2");
             h2.style.flexGrow = "1";
+            h2.style.display = uih_currentPriceDisplay ? "none" : "hidden";
             h2.className = "mb-0";
             h2.innerText = printess.getTemplateTitle();
             grid.appendChild(h2);
@@ -1609,8 +1702,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const priceDiv = document.createElement("div");
         priceDiv.className = "total-price-container";
         priceDiv.id = "total-price-display";
-        if (uih_currentPriceDisplay)
+        if (uih_currentPriceDisplay) {
             getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+        }
+        else if (printess.getProductInfoUrl()) {
+            const infoIcon = printess.getIcon("info-circle");
+            infoIcon.classList.add("product-info-icon");
+            infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), false);
+            priceDiv.appendChild(infoIcon);
+        }
         grid.appendChild(priceDiv);
         if (printess.hasPreviousStep()) {
             const prevStep = document.createElement("button");
@@ -1661,7 +1761,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return badge;
     }
     function getCurrentTab(printess, value, forMobile = true) {
-        if ((printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list")) {
+        const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+        const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+        const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
+        if (isDocTabs || isStepTabsList || isStepBadgeList) {
             const tabsListScrollbar = document.getElementById("tabs-list-scrollbar");
             const curStepTab = document.getElementById("tab-step-" + value);
             setTabScrollPosition(tabsListScrollbar, curStepTab, forMobile);
@@ -1683,11 +1786,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getStepsTabsList(printess, _forMobile = false, displayType) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e, _f;
+        const docs = displayType === "doc tabs" ? printess.getAllDocsAndSpreads() : [];
         const div = document.createElement("div");
         div.className = "tabs-list";
         div.id = "tabs-list-scrollbar";
-        const isDesktopTabs = (!_forMobile && displayType === "tabs list");
+        const isDesktopTabs = (!_forMobile && (displayType === "tabs list" || displayType === "doc tabs"));
         const ul = document.createElement("ul");
         ul.className = "nav nav-tabs flex-nowrap " + (_forMobile ? "" : "step-tabs-desktop");
         if (displayType === "badge list")
@@ -1713,9 +1817,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             prev.appendChild(prevLink);
             ul.appendChild(prev);
         }
-        const cur = printess.getStep();
-        if (cur) {
-            for (let i = 0; i <= ((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0); i++) {
+        let curIndex = -1;
+        let maxIndex = 0;
+        if (displayType === "doc tabs") {
+            curIndex = 0;
+            for (let idx = 0; idx < docs.length; idx++) {
+                if (docs[idx].docId === printess.getCurrentDocumentId()) {
+                    curIndex = idx;
+                }
+            }
+            maxIndex = docs.length - 1;
+        }
+        else {
+            curIndex = (_b = (_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : -1;
+            maxIndex = (_d = (_c = printess.lastStep()) === null || _c === void 0 ? void 0 : _c.index) !== null && _d !== void 0 ? _d : 0;
+        }
+        if (curIndex >= 0) {
+            for (let i = 0; i <= (maxIndex); i++) {
                 const tab = document.createElement("li");
                 tab.className = "nav-item " + (isDesktopTabs ? "" : "tab-item");
                 if (displayType === "badge list")
@@ -1725,7 +1843,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 tabLink.className = "nav-link text-truncate ";
                 if (displayType === "badge list")
                     tabLink.classList.add("badge-link");
-                if (cur.index === i) {
+                if (curIndex === i) {
                     if (isDesktopTabs) {
                         tab.classList.add("active");
                         tabLink.classList.add("active");
@@ -1745,13 +1863,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         tabLink.classList.remove("active-step-tab");
                     }
                 }
-                const stepTitle = (_d = (_c = printess.getStepByIndex(i)) === null || _c === void 0 ? void 0 : _c.title) !== null && _d !== void 0 ? _d : "";
+                let stepTitle = "";
+                if (displayType === "doc tabs") {
+                    stepTitle = docs[i].docTitle;
+                }
+                else {
+                    stepTitle = (_f = (_e = printess.getStepByIndex(i)) === null || _e === void 0 ? void 0 : _e.title) !== null && _f !== void 0 ? _f : "";
+                }
                 tabLink.innerText = stepTitle.length === 0 || displayType === "badge list" ? (i + 1).toString() : stepTitle;
                 tab.appendChild(tabLink);
                 tab.onclick = () => __awaiter(this, void 0, void 0, function* () {
                     const comingFromPreview = printess.hasPreviewBackButton();
                     setTabScrollPosition(div, tab, _forMobile);
-                    yield gotoStep(printess, i);
+                    if (displayType === "doc tabs") {
+                        yield printess.selectDocumentAndSpread(docs[i].docId, 0);
+                    }
+                    else {
+                        yield gotoStep(printess, i);
+                    }
                     if (printess.hasPreviewBackButton()) {
                         printess.resizePrintess();
                     }
@@ -1787,54 +1916,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         div.appendChild(ul);
         return div;
     }
-    function getStepsBadgeList(printess, _forMobile = false) {
-        var _a, _b;
-        const sm = "";
-        const div = document.createElement("div");
-        div.className = "badge-list";
-        const cur = printess.getStep();
-        if (cur && printess.isCurrentStepActive()) {
-            const prevBadge = document.createElement("div");
-            prevBadge.className = "step-badge outline gray d-flex justify-content-center align-items-center" + sm;
-            prevBadge.style.paddingRight = "2px";
-            prevBadge.appendChild(printess.getIcon("carret-left-solid"));
-            if (printess.hasPreviousStep()) {
-                prevBadge.onclick = () => printess.previousStep();
-                prevBadge.classList.add("selectable");
-            }
-            else {
-                prevBadge.classList.add("disabled");
-            }
-            div.appendChild(prevBadge);
-            for (let i = 0; i <= ((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0); i++) {
-                const badge = document.createElement("div");
-                badge.className = "step-badge" + sm;
-                if (cur.index !== i) {
-                    badge.classList.add("gray");
-                    badge.classList.add("selectable");
-                }
-                badge.innerText = (i + 1).toString();
-                badge.onclick = () => gotoStep(printess, i);
-                div.appendChild(badge);
-            }
-            const nextBadge = document.createElement("div");
-            nextBadge.className = "step-badge outline gray d-flex justify-content-center align-items-center" + sm;
-            nextBadge.style.paddingLeft = "2px";
-            nextBadge.appendChild(printess.getIcon("carret-right-solid"));
-            if (printess.hasNextStep()) {
-                nextBadge.onclick = () => gotoNextStep(printess);
-                nextBadge.classList.add("selectable");
-            }
-            else {
-                nextBadge.classList.add("disabled");
-            }
-            div.appendChild(nextBadge);
-        }
-        return div;
-    }
     function getStepsPutToBasketButton(printess) {
         const basketButton = document.createElement("button");
         basketButton.className = "btn btn-primary";
+        basketButton.style.whiteSpace = "nowrap";
         basketButton.innerText = printess.gl("ui.buttonBasket");
         basketButton.onclick = () => addToBasket(printess);
         return basketButton;
@@ -2578,7 +2663,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getImageCropControl(printess, p, showSkipBtn, forDesktopDialog = false) {
         const container = document.createElement("div");
-        if (p.value) {
+        if (p) {
             const ui = printess.createCropUi(p.id, forDesktopDialog);
             if (!ui) {
                 container.innerText = printess.gl("ui.selectImageFirst");
@@ -3231,11 +3316,100 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return dropdown;
         }
     }
+    function getParagraphStyleDropDown(printess, p, asList, dropdown, fullWidth = true) {
+        var _a;
+        if (!dropdown) {
+            dropdown = document.createElement("div");
+            dropdown.classList.add("btn-group");
+            dropdown.classList.add("form-control");
+        }
+        dropdown.style.padding = "0";
+        const styles = ["[none]", ...printess.getParagraphStyles(p.id).map(x => x.class)];
+        const ddContent = document.createElement("ul");
+        const selectedItem = ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.pStyle) || "[none]";
+        if (styles.length) {
+            const button = document.createElement("button");
+            button.className = "btn btn-light dropdown-toggle";
+            if (fullWidth) {
+                button.classList.add("full-width");
+            }
+            button.dataset.bsToggle = "dropdown";
+            button.dataset.bsAutoClose = "true";
+            button.setAttribute("aria-expanded", "false");
+            if (selectedItem) {
+                button.appendChild(getDropdownTextContent(selectedItem));
+            }
+            dropdown.appendChild(button);
+            if (asList) {
+                ddContent.classList.add("list-group");
+            }
+            else {
+                ddContent.classList.add("dropdown-menu");
+                ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+                ddContent.style.width = "100%";
+                ddContent.style.maxHeight = "400px";
+            }
+            ddContent.style.overflow = "hidden auto";
+            for (const entry of styles) {
+                const li = document.createElement("li");
+                li.classList.add("dropdown-item");
+                if (asList) {
+                    li.classList.add("list-group-item");
+                    li.classList.add("font");
+                    if (entry === selectedItem) {
+                        li.classList.add("active");
+                    }
+                }
+                li.onclick = () => {
+                    if (p.textStyle) {
+                        printess.setTextStyleProperty(p.id, "pStyle", entry);
+                        p.textStyle.pStyle = entry;
+                    }
+                    else {
+                        printess.setProperty(p.id, entry);
+                        p.value = entry;
+                    }
+                    if (asList) {
+                        ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+                        li.classList.add("active");
+                        const mobileButtonDiv = document.getElementById(p.id + ":text-style-paragraph-style");
+                        if (mobileButtonDiv) {
+                            drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
+                        }
+                    }
+                    else {
+                        button.innerHTML = "";
+                        button.appendChild(getDropdownTextContent(entry));
+                    }
+                };
+                li.appendChild(getDropdownTextContent(entry));
+                ddContent.appendChild(li);
+            }
+            dropdown.appendChild(ddContent);
+        }
+        if (asList) {
+            const cont = document.createElement("p");
+            const txt = document.createElement("label");
+            txt.classList.add("mb-1");
+            txt.innerText = "Paragraph Style:";
+            cont.appendChild(txt);
+            cont.appendChild(ddContent);
+            return cont;
+        }
+        else {
+            return dropdown;
+        }
+    }
     function getDropdownImageContent(thumbUrl) {
         const img = document.createElement("img");
         img.src = thumbUrl;
         img.style.height = "20px";
         return img;
+    }
+    function getDropdownTextContent(text) {
+        const txt = document.createElement("span");
+        txt.innerText = text;
+        return txt;
     }
     function getVAlignControl(printess, p, forMobile) {
         const group = document.createElement("div");
@@ -3584,7 +3758,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getDropdownMenu(printess, title, dropdownItems, showDropdownTriangle = true, icon) {
         const cornerTools = printess.pageNavigationDisplay() === "icons";
         const dropdown = document.createElement("div");
-        dropdown.className = "dropdown me-1";
+        dropdown.className = "dropdown d-flex me-1";
         const dropdownBtn = document.createElement("button");
         dropdownBtn.className = "btn btn-outline-secondary dropdown-toggle";
         dropdownBtn.id = "dropdownMenuButton";
@@ -3707,13 +3881,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             pages.classList.remove("tabs");
             pages.classList.remove("big");
+            const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+            const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+            const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
             if (printess.pageNavigationDisplay() === "icons") {
                 pages.classList.add("big");
                 ul.style.overflowX = "auto";
                 document.documentElement.style.setProperty("--editor-pagebar-height", "122px");
                 document.documentElement.style.setProperty("--editor-margin-top", "10px");
             }
-            else if (printess.stepHeaderDisplay() === "tabs list") {
+            else if (isStepTabsList || isDocTabs) {
                 pages.classList.add("tabs");
                 ul.style.overflowX = "auto";
                 document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
@@ -3722,12 +3899,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 ul.classList.add("justify-content-center");
                 document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
             }
-            if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list") {
+            if (isStepTabsList || isStepBadgeList || isDocTabs) {
                 const tabsContainer = document.createElement("div");
                 tabsContainer.className = "step-tabs-list";
                 tabsContainer.id = "step-tab-list";
                 tabsContainer.style.margin = "0 10px";
-                if (!forMobile && printess.stepHeaderDisplay() === "badge list") {
+                if (!forMobile && !isDocTabs && isStepBadgeList) {
                     const prevTab = document.createElement("div");
                     prevTab.className = "nav-item";
                     const prevTabLink = document.createElement("a");
@@ -3751,8 +3928,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         }
                     };
                 }
-                tabsContainer.appendChild(getStepsTabsList(printess, forMobile, printess.stepHeaderDisplay()));
-                if (!forMobile && printess.stepHeaderDisplay() !== "tabs list") {
+                tabsContainer.appendChild(getStepsTabsList(printess, forMobile, isDocTabs ? "doc tabs" : printess.stepHeaderDisplay()));
+                if (!forMobile && !isDocTabs && !isStepTabsList) {
                     const nextTab = document.createElement("div");
                     nextTab.className = "nav-item";
                     nextTab.style.zIndex = "10";
@@ -3787,6 +3964,34 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (uih_currentPriceDisplay) {
                     getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
                 }
+                else if (printess.getProductInfoUrl()) {
+                    const infoIcon = printess.getIcon("info-circle");
+                    infoIcon.classList.add("product-info-icon");
+                    infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), forMobile);
+                    priceDiv.appendChild(infoIcon);
+                }
+                wrapper.appendChild(priceDiv);
+                const basketBtnBehaviour = printess.getBasketButtonBehaviour();
+                if (basketBtnBehaviour === "go-to-preview" && isDocTabs) {
+                    const previewBtn = document.createElement("button");
+                    previewBtn.className = "btn btn-outline-primary";
+                    previewBtn.classList.add("ms-2");
+                    previewBtn.innerText = printess.gl("ui.buttonPreview");
+                    previewBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                        if (validateAllInputs(printess) === true) {
+                            yield printess.gotoNextPreviewDocument(0);
+                            if (printess.showTabNavigation()) {
+                                printess.resizePrintess();
+                            }
+                        }
+                    });
+                    wrapper.appendChild(previewBtn);
+                }
+                else if (printess.hasPreviewBackButton() && isDocTabs) {
+                    tabsContainer.style.visibility = "hidden";
+                    const previewBackButton = getPreviewBackButton(printess);
+                    wrapper.appendChild(previewBackButton);
+                }
                 const button = document.createElement("button");
                 button.className = "btn btn-primary ms-2";
                 const icon = printess.getIcon("shopping-cart-add");
@@ -3794,9 +3999,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon.style.height = "25px";
                 button.onclick = () => addToBasket(printess);
                 button.appendChild(icon);
-                wrapper.appendChild(priceDiv);
                 wrapper.appendChild(button);
-                if (printess.stepHeaderDisplay() === "tabs list")
+                if (isStepTabsList || isDocTabs)
                     pages.appendChild(wrapper);
                 return;
             }
@@ -3983,6 +4187,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     const h2 = document.createElement("h2");
                     h2.innerText = printess.gl(printess.getTemplateTitle());
                     priceDiv.appendChild(h2);
+                    if (printess.getProductInfoUrl()) {
+                        const infoIcon = printess.getIcon("info-circle");
+                        infoIcon.classList.add("product-info-icon");
+                        infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), false);
+                        priceDiv.appendChild(infoIcon);
+                    }
                 }
                 cornerTools.appendChild(priceDiv);
                 cornerTools.appendChild(getDesktopTitle(printess));
@@ -5647,7 +5857,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 flexWrapper.className = "d-flex w-100 justify-content-end mt-1";
                 const open = document.createElement("span");
                 open.className = "layout-hint-open";
-                open.textContent = hint.header === "expertMode" ? "Turn On" : "Show Me";
+                open.textContent = hint.header === "expertMode" ? printess.gl("ui.turnOn") : printess.gl("ui.showMe");
                 open.onclick = () => {
                     var _a;
                     sessionStorage.setItem(hint.header, "hint closed");
@@ -5813,13 +6023,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         nav.className = "navbar navbar-dark";
         nav.style.flexWrap = "nowrap";
         const basketBtnBehaviour = printess.getBasketButtonBehaviour();
-        const showTitle = printess.hasSteps();
+        const hasSteps = printess.hasSteps();
+        const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
         const isBookMode = printess.canAddSpreads() || printess.canRemoveSpreads();
-        const noStepsMenu = printess.showUndoRedo() && !printess.hasSteps() && printess.hasExpertButton() && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0);
-        const showUndoRedo = printess.showUndoRedo() && !printess.hasSteps() && !printess.hasPreviewBackButton();
-        const showCloseBtn = !printess.hasSteps() && (!printess.showUndoRedo() || !showTitle);
-        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !printess.hasSteps();
-        const showExpertBtnWithSteps = printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() === "never";
+        const noStepsMenu = printess.showUndoRedo() && !hasSteps && printess.hasExpertButton() && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0);
+        const showUndoRedo = printess.showUndoRedo() && !hasSteps && !printess.hasPreviewBackButton() && !isDocTabs;
+        const hideCloseBtn = hasSteps || (isDocTabs && printess.showUndoRedo());
+        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps;
+        const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never";
         {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm ms-2 me-2 main-button";
@@ -5836,7 +6047,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 nav.appendChild(btn);
             }
             else {
-                if (!noStepsMenu && showCloseBtn) {
+                if (!noStepsMenu && !hideCloseBtn) {
                     const callback = printess.getBackButtonCallback();
                     btn.className = "btn btn-sm text-white me-2 ms-2";
                     btn.textContent = printess.gl("ui.buttonBack");
@@ -5889,7 +6100,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
         }
-        if (showTitle) {
+        if (hasSteps) {
             const s = printess.getStep();
             const hd = printess.stepHeaderDisplay();
             if (s && hd !== "never") {
@@ -5932,6 +6143,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 document.body.classList.remove("mobile-has-steps-header");
             }
         }
+        else if (isDocTabs) {
+            const docTabs = document.createElement("div");
+            docTabs.style.flexGrow = "1";
+            docTabs.style.display = "flex";
+            docTabs.style.alignItems = "center";
+            docTabs.style.justifyContent = "center";
+            docTabs.classList.add("step-tabs-list");
+            docTabs.id = "step-tab-list";
+            document.body.classList.add("mobile-has-steps-header");
+            const scrollRight = document.createElement("div");
+            scrollRight.className = "scroll-right-indicator";
+            scrollRight.style.backgroundImage = "linear-gradient(to right, rgba(168,168,168,0), var(--bs-primary))";
+            scrollRight.style.display = "inline-block";
+            docTabs.appendChild(getStepsTabsList(printess, true, "doc tabs"));
+            docTabs.appendChild(scrollRight);
+            nav.appendChild(docTabs);
+            if (printess.hasPreviewBackButton()) {
+                docTabs.style.visibility = "hidden";
+            }
+        }
         else if (showUndoRedo) {
             const undoredo = document.createElement("div");
             undoredo.style.display = "flex";
@@ -5962,7 +6193,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const wrapper = document.createElement("div");
         wrapper.className = "d-flex";
-        if (basketBtnBehaviour === "go-to-preview" && printess.stepHeaderDisplay() !== "tabs list" && printess.stepHeaderDisplay() !== "badge list") {
+        const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+        const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
+        if (basketBtnBehaviour === "go-to-preview" && !isStepTabsList && !isStepBadgeList) {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm ms-2 main-button";
             btn.classList.add("btn-outline-light");
