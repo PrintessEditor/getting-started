@@ -199,6 +199,12 @@ export interface printessAttachParameters {
   imageListChangeCallback?: () => void,
 
   /**
+   * Height of the printess canvas in pixel below which the current selection is zoomed.
+   * Default value is 400. So if the height of printess canvas drops below 400px the frame zoom behaves like on mobile.
+   */
+  maxHeightForZoomingToFrames?: number,
+
+  /**
    * The public key which is used to verify the used JWT. 
    * Do not touch this parameter when using the Printess public API.
    */
@@ -212,7 +218,14 @@ export interface printessAttachParameters {
   /**
    * Activate new Text-Area sync for Multi-Line inline editing 
    */
-  useTextAreaSyncOnMobile?: boolean
+  useTextAreaSyncOnMobile?: boolean,
+
+  /**
+   * Labels displayed at stickers which have a price categorie-number set 
+   * e.g. ["1,50€","2,50€","3,50€","4,50€","5,50€"]
+   */
+  snippetPriceCategoryLabels?: Array<string>
+
 }
 
 

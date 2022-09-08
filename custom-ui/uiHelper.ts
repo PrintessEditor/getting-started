@@ -797,7 +797,7 @@ declare const bootstrap: any;
 
       layoutsDiv.appendChild(titleDiv);
       layoutsDiv.appendChild(content);
-    } else {
+    } else if (uih_currentTabId !== "#LAYOUTS") {
       layoutsDiv.style.display = "none";
     }
   }

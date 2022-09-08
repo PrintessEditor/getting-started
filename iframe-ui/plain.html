@@ -128,14 +128,14 @@
       }, "*");
     }
 
-
+   
     /* *************************** */
     /*   Forward Visual Viewport   */
     /* *************************** */
     if (window.visualViewport) {
       window.visualViewport.addEventListener("scroll", () => {
         // unfortunately an iframe on iOS is not able to receive the correct visual-viewport, so we forward it. 
-        iframe.contentWindow.postMessage({ cmd: "viewportScroll", height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop }, "*")
+        iframe.contentWindow.postMessage({ cmd: "viewportScroll", height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop },"*")
       })
     }
 

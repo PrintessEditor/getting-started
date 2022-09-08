@@ -667,7 +667,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             layoutsDiv.appendChild(titleDiv);
             layoutsDiv.appendChild(content);
         }
-        else {
+        else if (uih_currentTabId !== "#LAYOUTS") {
             layoutsDiv.style.display = "none";
         }
     }
