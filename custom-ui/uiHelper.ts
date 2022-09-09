@@ -573,12 +573,10 @@ declare const bootstrap: any;
       toggleChangeLayoutButtonHint();
     }
 
-    // render layout snippets and hide them until relevant to display
-    const tabsAndSnippetsLoaded = uih_currentLayoutSnippets.length > 0 && uih_currentTabs.length > 0
-    if ((<any>window).uiHelper.customLayoutSnippetRenderCallback && printess.showTabNavigation() && tabsAndSnippetsLoaded) {
-      getExternalSnippetsContainer(printess);
-    } else {
-      removeExternalSnippetsContainer();
+    // external layout snippets container
+    let layoutsDiv = document.getElementById("external-layouts-container");
+    if (layoutsDiv) {
+      layoutsDiv.style.display = "none";
     }
 
     if (printess.hasPreviewBackButton()) {
@@ -598,6 +596,9 @@ declare const bootstrap: any;
           container.appendChild(getPropertiesTitle(printess));
           if (uih_currentTabId === "#FORMFIELDS") {
             container.appendChild(propsDiv);
+          } else if (uih_currentTabId === "#LAYOUTS" && uih_currentLayoutSnippets.length === 0) {
+            uih_currentTabId = printess.getInitialTabId();
+            renderTabNavigationProperties(printess, container, false);
           } else {
             renderTabNavigationProperties(printess, container, false);
           }
@@ -770,8 +771,8 @@ declare const bootstrap: any;
   function getExternalSnippetsContainer(printess: iPrintessApi): void {
     let layoutsDiv = document.getElementById("external-layouts-container");
 
-    const currentSnippets = JSON.stringify(uih_currentLayoutSnippets);
-    const previousSnippets = JSON.stringify(uih_previousLayoutSnippets);
+    const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+    const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
     const snippetsChanged = currentSnippets !== previousSnippets;
 
     if (!layoutsDiv) {
@@ -779,7 +780,6 @@ declare const bootstrap: any;
 
       layoutsDiv = document.createElement("div");
       layoutsDiv.id = "external-layouts-container";
-      layoutsDiv.style.display = "none";
 
       const titleDiv = getPropertiesTitle(printess, true);
       const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
@@ -797,8 +797,12 @@ declare const bootstrap: any;
 
       layoutsDiv.appendChild(titleDiv);
       layoutsDiv.appendChild(content);
-    } else if (uih_currentTabId !== "#LAYOUTS") {
+    }
+
+    if (uih_currentLayoutSnippets.length === 0) {
       layoutsDiv.style.display = "none";
+    } else {
+      layoutsDiv.style.display = "block";
     }
   }
 
@@ -1103,13 +1107,19 @@ declare const bootstrap: any;
         break;
       }
       case "#LAYOUTS": {
-        let layoutsDiv = document.getElementById("external-layouts-container");
-        if (!layoutsDiv || forMobile) {
-          layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
+        // render layout snippets and hide them until relevant to display
+        //const tabsAndSnippetsLoaded = uih_currentLayoutSnippets.length > 0 && uih_currentTabs.length > 0;
+
+        if ((<any>window).uiHelper.customLayoutSnippetRenderCallback && !forMobile) {
+
+          getExternalSnippetsContainer(printess);
+
+        } else {
+          removeExternalSnippetsContainer();
+
+          const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
           container.appendChild(layoutsDiv);
           container.scrollTop = uih_snippetsScrollPosition;
-        } else {
-          layoutsDiv.style.display = "block";
         }
         break;
       }

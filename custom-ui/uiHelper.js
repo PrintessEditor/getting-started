@@ -484,12 +484,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout") && !printess.showTabNavigation()) {
             toggleChangeLayoutButtonHint();
         }
-        const tabsAndSnippetsLoaded = uih_currentLayoutSnippets.length > 0 && uih_currentTabs.length > 0;
-        if (window.uiHelper.customLayoutSnippetRenderCallback && printess.showTabNavigation() && tabsAndSnippetsLoaded) {
-            getExternalSnippetsContainer(printess);
-        }
-        else {
-            removeExternalSnippetsContainer();
+        let layoutsDiv = document.getElementById("external-layouts-container");
+        if (layoutsDiv) {
+            layoutsDiv.style.display = "none";
         }
         if (printess.hasPreviewBackButton()) {
         }
@@ -505,6 +502,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(getPropertiesTitle(printess));
                     if (uih_currentTabId === "#FORMFIELDS") {
                         container.appendChild(propsDiv);
+                    }
+                    else if (uih_currentTabId === "#LAYOUTS" && uih_currentLayoutSnippets.length === 0) {
+                        uih_currentTabId = printess.getInitialTabId();
+                        renderTabNavigationProperties(printess, container, false);
                     }
                     else {
                         renderTabNavigationProperties(printess, container, false);
@@ -645,14 +646,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getExternalSnippetsContainer(printess) {
         let layoutsDiv = document.getElementById("external-layouts-container");
-        const currentSnippets = JSON.stringify(uih_currentLayoutSnippets);
-        const previousSnippets = JSON.stringify(uih_previousLayoutSnippets);
+        const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+        const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
         const snippetsChanged = currentSnippets !== previousSnippets;
         if (!layoutsDiv) {
             uih_previousLayoutSnippets = uih_currentLayoutSnippets;
             layoutsDiv = document.createElement("div");
             layoutsDiv.id = "external-layouts-container";
-            layoutsDiv.style.display = "none";
             const titleDiv = getPropertiesTitle(printess, true);
             const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
             layoutsDiv.appendChild(titleDiv);
@@ -667,8 +667,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             layoutsDiv.appendChild(titleDiv);
             layoutsDiv.appendChild(content);
         }
-        else if (uih_currentTabId !== "#LAYOUTS") {
+        if (uih_currentLayoutSnippets.length === 0) {
             layoutsDiv.style.display = "none";
+        }
+        else {
+            layoutsDiv.style.display = "block";
         }
     }
     function removeExternalSnippetsContainer() {
@@ -935,14 +938,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 break;
             }
             case "#LAYOUTS": {
-                let layoutsDiv = document.getElementById("external-layouts-container");
-                if (!layoutsDiv || forMobile) {
-                    layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
-                    container.appendChild(layoutsDiv);
-                    container.scrollTop = uih_snippetsScrollPosition;
+                if (window.uiHelper.customLayoutSnippetRenderCallback && !forMobile) {
+                    getExternalSnippetsContainer(printess);
                 }
                 else {
-                    layoutsDiv.style.display = "block";
+                    removeExternalSnippetsContainer();
+                    const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
+                    container.appendChild(layoutsDiv);
+                    container.scrollTop = uih_snippetsScrollPosition;
                 }
                 break;
             }
