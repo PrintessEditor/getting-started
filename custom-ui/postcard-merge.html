@@ -71,7 +71,7 @@
 
 
     const loadingDoneCallback = function (spreads, title) {
-       // remove your progress overlay here
+      // remove your progress overlay here
     }
 
     const spreadChangeCallback = (groupSnippets, layoutSnippets) => {
@@ -81,9 +81,6 @@
       // remember groupSnippets for showing as add-able items
       currentGroupSnippets = groupSnippets;
 
-      const layoutSnippetsDiv = document.getElementById("layoutSnippets");
-      layoutSnippetsDiv.innerHTML = "";
-      layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
       document.querySelector(".show-layouts-button").style.visibility = layoutSnippets.length ? "visible" : "hidden";
 
     }
@@ -148,8 +145,8 @@
 
       });
 
-     // listen to visual viewport changes to detect virtual keyboard on iOs and Android
-     if (window.visualViewport) {
+      // listen to visual viewport changes to detect virtual keyboard on iOs and Android
+      if (window.visualViewport) {
         window.visualViewport.addEventListener("scroll", () => uiHelper.viewPortScroll(printess)); // safari
         window.visualViewport.addEventListener("resize", () => uiHelper.viewPortResize(printess)); // android
       } else {

@@ -199,6 +199,12 @@ export interface printessAttachParameters {
   imageListChangeCallback?: () => void,
 
   /**
+   * Height of the printess canvas in pixel below which the current selection is zoomed.
+   * Default value is 400. So if the height of printess canvas drops below 400px the frame zoom behaves like on mobile.
+   */
+  maxHeightForZoomingToFrames?: number,
+
+  /**
    * The public key which is used to verify the used JWT. 
    * Do not touch this parameter when using the Printess public API.
    */
@@ -212,7 +218,14 @@ export interface printessAttachParameters {
   /**
    * Activate new Text-Area sync for Multi-Line inline editing 
    */
-  useTextAreaSyncOnMobile?: boolean
+  useTextAreaSyncOnMobile?: boolean,
+
+  /**
+   * Labels displayed at stickers which have a price categorie-number set 
+   * e.g. ["1,50€","2,50€","3,50€","4,50€","5,50€"]
+   */
+  snippetPriceCategoryLabels?: Array<string>
+
 }
 
 
@@ -231,6 +244,8 @@ export interface iPrintessApi {
    * @param takeOverFormFieldValues optional parameter to transfer global form field values from previous to next document
    */
   loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
+
+
 
   /**
    * Centers the current spread in the printess view container
@@ -264,6 +279,25 @@ export interface iPrintessApi {
    * @param saveToken  
    */
   unexpireJson(saveToken: string): Promise<void>;
+
+
+  /**
+   * Should be called before redirecting to a new template.
+   * Will save the current state to the browser storage and apply it automatically to the next loaded template
+   * Applies Frame and Document`exchange-ids` as well as template-wide form fields
+   * @param frames (default true) add frame exchange-ids (image, text, story)
+   * @param documents (default true) add documents with exchange-ids
+   * @param formFields  (default true) add all user-defined from fields on template level
+   */
+  persistExchangeState(frames?: boolean, documents?: boolean, formFields?: boolean): Promise<void>
+
+
+  /**
+   * Method to merge the current document content on another document of the current template
+   * @param targetDocId The id of the document to merge on
+   * @param frames Which frames should be merged, default to "snippets" which means all frames placed as layout- or sticker-snippet. "all" will delete all frames in the target document before copying over the new frames.
+   */
+  mergeCurrentDocumentToTargetDocument(targetDocId: string, frames: "all" | "snippets"): Promise<void>
 
   /**
    * Returns the add to basket callback you have set in `attachPrintess()`
@@ -337,6 +371,11 @@ export interface iPrintessApi {
    * @param part  "entire" | "left-page" | "right-page"
    */
   selectDocumentAndSpread(docId: string, spreadIndex: number, part?: "entire" | "left-page" | "right-page"): Promise<void>;
+
+  /**
+   * Retrieves current documen id, returns empty string if doc is not yet loaded.
+   */
+  getCurrentDocumentId(): string
 
   /**
    * Moves Printess focus to next page if available. Focus on single pages not spreads.
@@ -571,7 +610,7 @@ export interface iPrintessApi {
    * @param value 
    * @param textStyleMode 
    */
-  setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
+  setTextStyleProperty(propertyId: string, name: "font" | "color" | "size" | "hAlign" | "vAlign" | "pStyle", value: string, textStyleMode?: textStyleModeEnum): Promise<void>;
 
   /**
    * Method to set an image meta-property
@@ -758,6 +797,15 @@ export interface iPrintessApi {
   }>;
 
   /**
+   * Returns a list of available paragraph-style for a certain selected property (frame).
+   * @param propertyId Id of property to filter available styles per frame
+   */
+  getParagraphStyles(propertyId: string): Array<{
+    class: string,
+    css: string
+  }>;
+
+  /**
    * Returns hex color from rgb value
    * @param color rgb color value
    */
@@ -786,7 +834,22 @@ export interface iPrintessApi {
 
   getTemplateTitle(): string;
 
-  insertLayoutSnippet(snippetUrl: string): Promise<void>;
+  /**
+   * Get the link required for displaying an info icon that opens a product info overlay / dialog
+   */
+  getProductInfoUrl(): string;
+
+  /**
+   * Insert a Layout-Snippet on the current spread of the current document
+   * @param snippetUrl The Url of the snippet
+   * @param targetPage optional, forces layout-snippets to left or right side if aspect ratio of snippet matches dimensions a single page of a double page spread
+   */
+  insertLayoutSnippet(snippetUrl: string, targetPage?: "left" | "right"): Promise<void>;
+
+  /**
+   * Insert a Sticker (Group-Snippet) on the current spread of the current document
+   * @param snippetUrl The Url of the snippet
+   */
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
   /**
@@ -825,7 +888,7 @@ export interface iPrintessApi {
   /**
    * Returns if buyer ui should display the page navigation as icons for all docs or just numbers for current doc
    */
-  pageNavigationDisplay(): "hide" | "numbers" | "icons";
+  pageNavigationDisplay(): "hide" | "numbers" | "icons" | "doc-tabs";
 
   /**
    * Returns if buyer ui should display the search bar for searching through images
@@ -1053,6 +1116,16 @@ export interface iPrintessApi {
   isTextEditorOpen(): boolean
 
   /**
+   * Open rich- or simple-text-editor
+   */
+  showTextEditor(): void
+
+  /**
+   * Returns `true` if either rich- or simple-text-editing is allowed (text-content is turned on)
+   */
+  showEnterTextEditorButton(): boolean
+
+  /**
    * Goes to the next available step (if any)
    * @param zoom overrides the frames zoom settings for all devices
    */
@@ -1133,7 +1206,7 @@ export interface iPrintessApi {
    */
   autoScaleDetails(): { enabled: boolean, width: number, height: number }
 
-  centerSelection(focusFormFieldId?: string): Promise<void>
+  centerSelection(focusFormFieldId?: string, forceZoom?: "spread" | "frame"): Promise<void>
 
   /**
    * 
@@ -1154,15 +1227,29 @@ export interface iPrintessApi {
   getAllPriceRelevantFormFields(): { [key: string]: string }
 
   /**
+   * Retrieves all price relevant form-fields plus tag information and referenced price-categories
+   */
+  getAllPriceRelevantFormFieldsExt(): { priceCategories: Array<string>, formFields: { [key: string]: { value: string, tag: string } } }
+
+  /**
    * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
    */
   getTranslations(): Record<string, Record<string, string | number> | string | number>;
 
   /**
+   * @deprecated please use async version instead, to ensure open text editors are saved
    * Returns an array of external property errors that can be used to display errors like missing text to the customer
    * @param mode Specifies when and up to which point the validation should be done.
    */
   validate(mode?: "all" | "until-current-step" | "selection"): Array<iExternalError>
+
+  /**
+   * Closes open editors and returns an array of external property errors 
+   * that can be used to display errors like missing text to the customer
+   * @param mode Specifies when and up to which point the validation should be done.
+   */
+  validateAsync(mode?: "all" | "until-current-step" | "selection"): Promise<Array<iExternalError>>
+
 
   /**
    * Returns true if the associated mutli-line text-frame has text which does not fit into the frame
@@ -1219,7 +1306,7 @@ export interface iPrintessApi {
 
   /**
    * Returns an array of buyer-editable documents and a list of frames for each spread including their frame markers.
-   * You can easily use them fro statistically purposes or to charge extra prices fro certain used layouts.
+   * You can easily use them for statistically purposes or to charge extra prices for certain used layouts.
    * Or just use the frame-count to determine if the user had made changes at all. 
    */
   getBuyerFrameCountAndMarkers(): Array<iFrameCountAndMarkers>
@@ -1359,6 +1446,7 @@ export interface iExternalSnippet {
   snippetUrl: string;
   thumbUrl: string;
   bgColor: string;
+  priceLabel: string;
 }
 export interface iExternalFrameBounds {
   zoom: number;
@@ -1371,10 +1459,10 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
-  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "handwriting-image" |
+  "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
   "image-scale" | "image-placement" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
 
 export interface iExternalProperty {
@@ -1396,6 +1484,7 @@ export interface iExternalTextStyle {
   hAlign: "bullet" | "left" | "center" | "right" | "justifyLeft" | "justifyCenter" | "justifyRight" | "justifyJustify";
   vAlign: "top" | "center" | "bottom";
   allows: Array<"content" | "mandatory" | "color" | "stroke" | "font" | "size" | "lineHeight" | "tracking" | "baselineShift" | "horizontalAlignment" | "verticalAlignment" | "padding" | "styles" | "bullet" | "indent" | "paragraphSpacing" | "baselineGrid" | "handWriting">;
+  pStyle: string;
 }
 export interface iExternalValidation {
   maxChars: number;
@@ -1416,7 +1505,8 @@ export type iExternalFieldListEntry = {
   key: string,
   label: string, // multi-language??
   description: string,
-  imageUrl: string
+  imageUrl: string,
+  tag: string
 }
 export interface iExternalTableMeta {
   columns: Array<iExternalTableColumn>;
@@ -1531,13 +1621,13 @@ export interface iMergeTemplate {
   useAsTemplateName?: boolean;
 
   /* Pass a pixel based position for placing the snippet */
-  pos?: iRect;
+  pos?: iExternalRect;
 }
 
-export declare type externalFormFieldChangeCallback = (name: string, value: string) => void;
+export declare type externalFormFieldChangeCallback = (name: string, value: string, tag: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
-export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>) => HTMLDivElement;
+export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>, width: number, height: number) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
@@ -1567,6 +1657,12 @@ export interface iDropdownItems {
   task: () => void
 }
 
+export interface iExternalRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 
 export interface iMobileUIButton {
   icon?: iconName | "none",
@@ -1653,6 +1749,7 @@ export interface TemplateEditables {
   formFields: FormFieldItem[];
 }
 
+
 /**
  * @deprecated 
  * This interface is no longer supported, use `getBuyerFrameCountAndMarkers()` instead.
@@ -1673,7 +1770,7 @@ export interface iFrameCountAndClassesSpread {
   classes: Record<string, number>
 }
 
-//** Provides information about number of frames edited by the buyer per document */
+/** Provides information about number of frames edited by the buyer per document */
 export interface iFrameCountAndMarkers {
   /** Name of document */
   documentName: string,
@@ -1683,7 +1780,7 @@ export interface iFrameCountAndMarkers {
   spreads: Array<iFrameCountAndMarkersSpread>
 }
 
-//** Provides information about number of frames edited by the buyer per spread */
+/** Provides information about number of frames edited by the buyer per spread */
 export interface iFrameCountAndMarkersSpread {
   /** Name of spread  */
   spreadName: string,
@@ -1691,6 +1788,61 @@ export interface iFrameCountAndMarkersSpread {
   frames: number,
   /** List of markes used by buyer manipulted frames on spread*/
   markers: Record<string, number>
+}
+
+/** 
+ * passed whenever a price could have possible changed
+ * contains all price-relevant informations from printess in one place
+ */
+export type iExternalProductPriceInfo = {
+  /** key / value list of all price relevant form fields */
+  priceRelevantFormFields: { [key: string]: { value: string, tag: string } },
+  /** Sum of all used priceCategoryGroups and there used amounts
+   * All used layout-snippets and stickers with a price category
+   * will be summed up here */
+  snippetPriceCategories: Array<iUsedPriceCategory>,
+  /** A list of all used document-price-categories. Only returns documents which have actually been edited by the buyer  */
+  priceCategories: Array<string>
+}
+
+/** Information about all used price categories plus the number of usages. */
+export interface iUsedPriceCategory {
+  priceCategory: number,
+  amount: number
+}
+
+/** Callback executed whenever price relevant information has changed.
+ * Once calculated the new price you can call `refreshPriceDisplay()`to update 
+ * the price and product informations for the user.
+ * Example for iframe integration: (can be called on `uiHelper` as well) 
+ * ``` 
+    iframe.contentWindow.postMessage({
+      cmd: "refreshPriceDisplay", display: {
+        price: string, // any string like "32.34€"
+        oldPrice?: string // will be crossed out
+        legalNotice?: string, // will be displayed under the price
+        productName?: string // to change product name dynamically 
+      })}
+    }, "*");
+    ```
+  */
+export type externalPriceChangeCallback = (infos: iExternalProductPriceInfo) => void;
+
+/**
+ * Structure expected when calling set price information 
+ */
+export interface iExternalPriceDisplay {
+  price: string,
+  oldPrice?: string
+  legalNotice?: string,
+  /**
+   *  can be dependend on form fields
+   */
+  productName?: string
+  /**
+   *  will be displayed via info icon in an iframe.
+   */
+  infoUrl?: string
 }
 
 
@@ -1921,9 +2073,12 @@ export type iconName =
   | "text-center"
   | "text-top"
   | "pen-swirl"
+  | "pen-solid"
   | "circle-1"
   | "shirt"
   | "focus-face"
   | "focus-group"
   | "handwriting"
-  | "burger-menu";
+  | "burger-menu"
+  | "grid-lines"
+  | "info-circle";

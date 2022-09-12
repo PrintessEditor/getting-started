@@ -9,22 +9,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 (function () {
     window.uiHelper = {
-        renderLayoutSnippets: renderLayoutSnippets,
         getOverlay: getOverlay,
         renderMobileUi: renderMobileUi,
         renderMobileNavBar: renderMobileNavBar,
         renderDesktopUi: renderDesktopUi,
         refreshUndoRedoState: refreshUndoRedoState,
         refreshPagination: refreshPagination,
+        refreshPriceDisplay: refreshPriceDisplay,
         updatePageThumbnail: updatePageThumbnail,
         viewPortScroll: viewPortScroll,
         viewPortResize: viewPortResize,
         viewPortScrollInIFrame: viewPortScrollInIFrame,
         resize: resize,
-        resetUi: resetUi
+        resetUi: resetUi,
+        customLayoutSnippetRenderCallback: undefined
     };
     function resetUi() {
         uih_currentTabId = "LOADING";
+        uih_currentPriceDisplay = undefined;
+        uih_mobilePriceDisplay = "none";
     }
     let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     let uih_viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
@@ -34,9 +37,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_currentTabs = [];
     let uih_currentTabId = "LOADING";
     let uih_currentLayoutSnippets = [];
+    let uih_previousLayoutSnippets = [];
     let uih_currentState = "document";
     let uih_currentRender = "never";
     let uih_currentVisiblePage;
+    let uih_currentPriceDisplay;
+    let uih_mobilePriceDisplay = "none";
     let uih_lastMobileState = null;
     let uih_autoSelectPending = false;
     let uih_lastPrintessHeight = 0;
@@ -74,6 +80,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 console.error(reason);
                 callback("");
             });
+        }
+        const closeLayoutsButton = document.getElementById("closeLayoutOffCanvas");
+        if (closeLayoutsButton) {
+            closeLayoutsButton.click();
         }
         window.setTimeout(() => {
             removeAllUiHints();
@@ -168,11 +178,116 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (mobile && uih_currentRender !== "mobile") {
                 renderMobileUi(printess);
                 renderMobileNavBar(printess);
+                removeExternalSnippetsContainer();
             }
             if (!mobile && uih_currentRender !== "desktop") {
                 renderDesktopUi(printess);
+                removeExternalSnippetsContainer();
             }
         }
+    }
+    function refreshPriceDisplay(printess, priceDisplay) {
+        uih_currentPriceDisplay = priceDisplay;
+        if (priceDisplay && uih_currentRender === "mobile") {
+            document.body.classList.add("has-mobile-price-bar");
+            resizeMobileUi(printess);
+        }
+        else {
+            document.body.classList.remove("has-mobile-price-bar");
+        }
+        const priceDiv = document.getElementById("total-price-display");
+        if (priceDiv) {
+            getPriceDisplay(printess, priceDiv, priceDisplay, uih_currentRender === "mobile");
+        }
+    }
+    function getIframeOverlay(printess, title, infoUrl, forMobile) {
+        const iframe = document.createElement("iframe");
+        iframe.title = printess.gl(title);
+        iframe.src = infoUrl.startsWith("/") ? window.origin + infoUrl : infoUrl;
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        if (forMobile) {
+            const productInfoDiv = document.getElementById("PRICE-INFO");
+            if (productInfoDiv) {
+                productInfoDiv.remove();
+            }
+            renderMobileDialogFullscreen(printess, "PRICE-INFO", title, iframe, false);
+        }
+        else {
+            showModal(printess, "PRICE-MODAL", iframe, title);
+        }
+    }
+    function getPriceDisplay(printess, priceDiv, priceDisplay, forMobile = false) {
+        const price = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.price) || "";
+        const oldPrice = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.oldPrice) || "";
+        const legalNotice = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.legalNotice) || "";
+        const productName = (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.productName) || printess.getTemplateTitle();
+        const infoUrl = printess.getProductInfoUrl() || (priceDisplay === null || priceDisplay === void 0 ? void 0 : priceDisplay.infoUrl) || "";
+        priceDiv.innerHTML = "";
+        const headline = document.createElement("div");
+        headline.className = "total-price-headline";
+        if (productName) {
+            const dekstopTitle = document.querySelector(".desktop-title-bar > h3") || document.querySelector(".desktop-title-bar > h2");
+            if (dekstopTitle)
+                dekstopTitle.style.display = "none";
+            const productNameSpan = document.createElement("span");
+            productNameSpan.className = "product-name";
+            productNameSpan.innerText = printess.gl(productName);
+            const currentStep = printess.getStep();
+            const showStepTitle = printess.stepHeaderDisplay() === "only title" || printess.stepHeaderDisplay() === "title and badge";
+            if (currentStep && showStepTitle) {
+                productNameSpan.innerText = printess.gl(currentStep.title) || printess.gl("ui.step") + (currentStep.index + 1);
+            }
+            headline.appendChild(productNameSpan);
+        }
+        if (!legalNotice) {
+            priceDiv.classList.add("price-info-only");
+        }
+        else {
+            priceDiv.classList.remove("price-info-only");
+        }
+        const oldPriceSpan = document.createElement("span");
+        oldPriceSpan.style.textDecoration = "line-through";
+        oldPriceSpan.className = "me-2";
+        oldPriceSpan.innerText = printess.gl(oldPrice);
+        const newPriceSpan = document.createElement("span");
+        if (oldPrice)
+            newPriceSpan.style.color = "red";
+        newPriceSpan.innerText = printess.gl(price);
+        if (infoUrl) {
+            const infoIcon = printess.getIcon("info-circle");
+            infoIcon.classList.add("price-info-icon");
+            if (oldPrice)
+                infoIcon.style.marginRight = "6px";
+            infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), infoUrl, forMobile);
+            headline.appendChild(infoIcon);
+        }
+        headline.appendChild(oldPriceSpan);
+        headline.appendChild(newPriceSpan);
+        priceDiv.appendChild(headline);
+        const subline = document.createElement("span");
+        subline.className = "total-price-subline";
+        subline.innerHTML = getLegalNoticeText(printess, legalNotice, forMobile);
+        priceDiv.appendChild(subline);
+    }
+    function getLegalNoticeText(printess, legalNotice, forMobile) {
+        const regex = /\[([^)]*)\]\(([^\]]*)\)/gm;
+        const listOfLinks = legalNotice.match(regex) || "";
+        if (listOfLinks) {
+            for (let i = 0; i < listOfLinks.length; i++) {
+                const text = listOfLinks[i].split("](")[0].replace("[", "");
+                const link = listOfLinks[i].split("](")[1].replace(")", "");
+                const id = "legal-notice-link-" + i;
+                const a = `<span id=${id} style="color: var(--bs-primary); cursor: pointer;">${text}</span>`;
+                legalNotice = legalNotice.replace(listOfLinks[i], a);
+                window.setTimeout(() => {
+                    const agb = document.getElementById(id);
+                    if (agb)
+                        agb.onclick = () => getIframeOverlay(printess, text, link, forMobile);
+                }, 100);
+            }
+        }
+        return legalNotice;
     }
     function refreshPagination(printess) {
         if (uih_currentRender === "mobile") {
@@ -184,10 +299,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function _viewPortScroll(printess, _what) {
-        if (uih_viewportOffsetTop !== window.visualViewport.offsetTop || uih_viewportHeight !== window.visualViewport.height || uih_viewportWidth !== window.visualViewport.width) {
-            uih_viewportOffsetTop = window.visualViewport.offsetTop;
-            uih_viewportHeight = window.visualViewport.height;
-            uih_viewportWidth = window.visualViewport.width;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        if (uih_viewportOffsetTop !== ((_a = window.visualViewport) === null || _a === void 0 ? void 0 : _a.offsetTop) || uih_viewportHeight !== ((_b = window.visualViewport) === null || _b === void 0 ? void 0 : _b.height) || uih_viewportWidth !== ((_c = window.visualViewport) === null || _c === void 0 ? void 0 : _c.width)) {
+            uih_viewportOffsetTop = (_e = (_d = window.visualViewport) === null || _d === void 0 ? void 0 : _d.offsetTop) !== null && _e !== void 0 ? _e : 0;
+            uih_viewportHeight = (_g = (_f = window.visualViewport) === null || _f === void 0 ? void 0 : _f.height) !== null && _g !== void 0 ? _g : 0;
+            uih_viewportWidth = (_j = (_h = window.visualViewport) === null || _h === void 0 ? void 0 : _h.width) !== null && _j !== void 0 ? _j : 0;
             const printessDiv = document.getElementById("desktop-printess-container");
             if (printessDiv) {
                 if (printess.isMobile()) {
@@ -263,12 +379,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             mobileUi.innerHTML = "";
         }
         removeMobileFullscreenContainer();
+        const mobilePricebar = document.querySelector(".mobile-pricebar");
+        if (mobilePricebar) {
+            mobilePricebar.remove();
+        }
+        const mobilePricebarOpener = document.querySelector(".mobile-price-display-opener");
+        if (mobilePricebarOpener) {
+            mobilePricebarOpener.remove();
+        }
         const printessDiv = document.getElementById("desktop-printess-container");
         const container = document.getElementById("desktop-properties");
         if (!container || !printessDiv) {
             throw new Error("#desktop-properties or #desktop-printess-container not found, please add to html.");
         }
-        if (printess.stepHeaderDisplay() === "tabs list" || printess.pageNavigationDisplay() === "icons") {
+        const isPageIconsNavigation = printess.pageNavigationDisplay() === "icons";
+        const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+        const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+        const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
+        if (isStepTabsList || isDocTabs || isPageIconsNavigation) {
             container.classList.add("move-down");
         }
         else {
@@ -294,7 +422,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             desktopTitleOrSteps.innerHTML = "";
         }
-        if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons") {
+        if (!isPageIconsNavigation && !isStepTabsList && !isStepBadgeList && !isDocTabs) {
             if (printess.hasSteps()) {
                 const desktopStepsUi = getDesktopStepsUi(printess);
                 if (printess.showTabNavigation()) {
@@ -335,6 +463,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (printess.showTabNavigation()) {
                 layoutsButton.style.visibility = "hidden";
             }
+            else if (layoutSnippets.length > 0) {
+                layoutsButton.style.visibility = "visible";
+            }
         }
         renderUiButtonHints(printess, document.body, state, false);
         renderEditableFramesHint(printess);
@@ -354,6 +485,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout") && !printess.showTabNavigation()) {
             toggleChangeLayoutButtonHint();
         }
+        const externalLayoutsContainer = document.getElementById("external-layouts-container");
+        if (externalLayoutsContainer && (uih_currentTabId !== "#LAYOUTS" || uih_currentLayoutSnippets.length === 0)) {
+            externalLayoutsContainer.style.display = "none";
+        }
+        if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+            handleOffcanvasLayoutsContainer(printess, false);
+        }
         if (printess.hasPreviewBackButton()) {
         }
         else if (state === "document") {
@@ -368,6 +506,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(getPropertiesTitle(printess));
                     if (uih_currentTabId === "#FORMFIELDS") {
                         container.appendChild(propsDiv);
+                    }
+                    else if (uih_currentTabId === "#LAYOUTS" && uih_currentLayoutSnippets.length === 0) {
+                        uih_currentTabId = printess.getInitialTabId();
+                        renderTabNavigationProperties(printess, container, false);
                     }
                     else {
                         renderTabNavigationProperties(printess, container, false);
@@ -405,11 +547,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(getPropertiesTitle(printess));
                 }
                 if (state === "text") {
-                    const infoText = document.createElement("p");
-                    infoText.textContent = printess.gl("ui.editTextInsideFrame");
-                    if (!printess.showTabNavigation())
-                        infoText.style.padding = "30px";
-                    container.appendChild(infoText);
+                    if (!printess.isTextEditorOpen() && printess.showEnterTextEditorButton()) {
+                        const textEditInfo = document.createElement("p");
+                        textEditInfo.textContent = printess.gl("ui.editTextButtonInfo");
+                        const textEditBtn = document.createElement("button");
+                        textEditBtn.className = "btn btn-primary mt-2 d-flex align-items-center";
+                        textEditBtn.style.width = "fit-content";
+                        const icon = printess.getIcon("pen-solid");
+                        icon.classList.add("me-2");
+                        icon.style.width = "16px";
+                        icon.style.height = "16px";
+                        const span = document.createElement("span");
+                        span.textContent = printess.gl("ui.editTextButton");
+                        textEditBtn.appendChild(icon);
+                        textEditBtn.appendChild(span);
+                        textEditBtn.onclick = () => {
+                            printess.showTextEditor();
+                        };
+                        container.appendChild(textEditInfo);
+                        container.appendChild(textEditBtn);
+                    }
                 }
                 const props = getProperties(printess, state, properties, container);
                 t = t.concat(props);
@@ -491,9 +648,63 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return t;
     }
+    function handleOffcanvasLayoutsContainer(printess, forMobile) {
+        const layoutsDiv = document.getElementById("layoutSnippets");
+        const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+        const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+        const snippetsChanged = currentSnippets !== previousSnippets;
+        if (layoutsDiv && snippetsChanged) {
+            layoutsDiv.innerHTML = "";
+            layoutsDiv.scrollTop = 0;
+            layoutsDiv.appendChild(renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false));
+        }
+        const showLayoutsButton = document.querySelector(".show-layouts-button");
+        if (showLayoutsButton)
+            showLayoutsButton.style.visibility = "visible";
+    }
+    function getExternalSnippetsContainer(printess, forMobile) {
+        let layoutsDiv = document.getElementById("external-layouts-container");
+        const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+        const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+        const snippetsChanged = currentSnippets !== previousSnippets;
+        if (!layoutsDiv) {
+            uih_previousLayoutSnippets = uih_currentLayoutSnippets;
+            layoutsDiv = document.createElement("div");
+            layoutsDiv.id = "external-layouts-container";
+            const titleDiv = getPropertiesTitle(printess, true);
+            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false);
+            if (!forMobile)
+                layoutsDiv.appendChild(titleDiv);
+            layoutsDiv.appendChild(content);
+            document.body.appendChild(layoutsDiv);
+        }
+        else if (snippetsChanged && layoutsDiv) {
+            uih_previousLayoutSnippets = uih_currentLayoutSnippets;
+            layoutsDiv.innerHTML = "";
+            const titleDiv = getPropertiesTitle(printess, true);
+            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false);
+            if (!forMobile)
+                layoutsDiv.appendChild(titleDiv);
+            layoutsDiv.appendChild(content);
+        }
+        if (uih_currentLayoutSnippets.length === 0) {
+            layoutsDiv.style.display = "none";
+        }
+        else if (!forMobile) {
+            layoutsDiv.style.display = "block";
+        }
+    }
+    function removeExternalSnippetsContainer() {
+        const layoutsDiv = document.getElementById("external-layouts-container");
+        if (layoutsDiv)
+            layoutsDiv.remove();
+    }
     function getControlGroupWidth(p) {
         var _a, _b;
-        if ((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) {
+        if (p.kind === "label") {
+            return "auto";
+        }
+        else if ((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) {
             return ((_b = p.validation) === null || _b === void 0 ? void 0 : _b.maxChars) + "fr ";
         }
         else if (p.listMeta && p.listMeta.list.length > 0) {
@@ -561,8 +772,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const printessDesktopGrid = document.getElementById("printess-desktop-grid");
             if (printessDesktopGrid) {
                 printessDesktopGrid.classList.add("main-tabs");
-                if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons") {
+                if (printess.stepHeaderDisplay() !== "tabs list" && printess.pageNavigationDisplay() !== "icons" && printess.pageNavigationDisplay() !== "doc-tabs") {
                     printessDesktopGrid.appendChild(desktopTitleOrSteps);
+                }
+                else {
+                    const desktopTitle = document.querySelector("div.desktop-title-or-steps");
+                    if (desktopTitle)
+                        printessDesktopGrid.removeChild(desktopTitle);
                 }
                 const tabsContainer = getDesktopTabsContainer(printessDesktopGrid);
                 const isBackgroundSelected = printess.isBackgroundSelected();
@@ -632,7 +848,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getPropertiesTitle(printess) {
+    function getPropertiesTitle(printess, forExternalLayoutsContainer = false) {
         const currentTab = uih_currentTabs.filter(t => t.id === uih_currentTabId)[0] || "";
         const hasFormFieldTab = uih_currentTabs.filter(t => t.id === "#FORMFIELDS").length > 0;
         const titleDiv = document.createElement("div");
@@ -654,7 +870,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const title = document.createElement("h3");
         let caption = "";
-        if (uih_currentState === "text") {
+        if (forExternalLayoutsContainer) {
+            caption = printess.gl("ui.changeLayout");
+        }
+        else if (uih_currentState === "text") {
             caption = printess.gl("ui.textFrame");
         }
         else if (uih_currentState === "frames") {
@@ -706,6 +925,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 else {
                     printess.clearSelection();
                 }
+                const externalLayoutsContainer = document.getElementById("external-layouts-container");
+                if (externalLayoutsContainer && forMobile) {
+                    externalLayoutsContainer.classList.remove("open-external-layouts-container");
+                    if (t.id === "#LAYOUTS") {
+                        externalLayoutsContainer.classList.add("show-external-layouts-container");
+                    }
+                    else {
+                        externalLayoutsContainer.classList.remove("show-external-layouts-container");
+                    }
+                }
             };
             const tabIcon = printess.getIcon(t.icon);
             tabIcon.classList.add("desktop-tab-icon");
@@ -739,9 +968,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 break;
             }
             case "#LAYOUTS": {
-                const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
-                container.appendChild(layoutsDiv);
-                container.scrollTop = uih_snippetsScrollPosition;
+                if (window.uiHelper.customLayoutSnippetRenderCallback) {
+                    getExternalSnippetsContainer(printess, forMobile);
+                }
+                else {
+                    removeExternalSnippetsContainer();
+                    const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
+                    container.appendChild(layoutsDiv);
+                    container.scrollTop = uih_snippetsScrollPosition;
+                }
                 break;
             }
             case "#BACKGROUND": {
@@ -765,6 +1000,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getPropertyControl(printess, p, metaProperty, forMobile = false) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         switch (p.kind) {
+            case "label":
+                return getSimpleLabel(p.label, p.controlGroup > 0);
             case "single-line-text":
                 return getSingleLineTextBox(printess, p, forMobile);
             case "font":
@@ -787,6 +1024,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             return getVAlignControl(printess, p, true);
                         case "text-style-vAlign-hAlign":
                             return getVAlignAndHAlignControl(printess, p, true);
+                        case "text-style-paragraph-style":
+                            return getParagraphStyleDropDown(printess, p, true);
                         case "handwriting-image":
                             return getImageUploadControl(printess, p, undefined, forMobile);
                         default:
@@ -836,7 +1075,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (((_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.canUpload) && p.value !== ((_c = p.validation) === null || _c === void 0 ? void 0 : _c.defaultValue)) {
                         tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p, forMobile) });
                         if ((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.hasFFCropEditor) {
-                            tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false) });
+                            tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false, !forMobile) });
                         }
                     }
                     return getTabPanel(tabs, p.id);
@@ -915,6 +1154,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const div = document.createElement("div");
         div.innerText = printess.gl("ui.missingProperty", p.kind);
         return div;
+    }
+    function getSimpleLabel(text, forControlGroup = false) {
+        if (forControlGroup) {
+            const para = document.createElement("para");
+            para.style.marginTop = "38px";
+            para.style.marginBottom = "0";
+            para.style.marginLeft = "5px";
+            para.style.fontSize = "16pt";
+            para.textContent = text;
+            return para;
+        }
+        else {
+            const para = document.createElement("p");
+            para.className = "mb-1";
+            para.textContent = text;
+            return para;
+        }
     }
     function getChangeBackgroundButton(printess) {
         const ok = document.createElement("button");
@@ -1020,6 +1276,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (p.textStyle.allows.indexOf("font") >= 0) {
             getFontDropDown(printess, p, false, group1, false);
         }
+        if (p.textStyle.allows.indexOf("styles") >= 0) {
+            getParagraphStyleDropDown(printess, p, false, group1, false);
+        }
         textPropertiesDiv.appendChild(group1);
         textPropertiesDiv.appendChild(getTextAlignmentControl(printess, p));
         return textPropertiesDiv;
@@ -1029,6 +1288,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         textPropertiesDiv.classList.add("mb-3");
         if (!p.textStyle) {
             return textPropertiesDiv;
+        }
+        if (p.textStyle.allows.indexOf("styles") >= 0) {
+            textPropertiesDiv.appendChild(getTextPropertyScrollContainer(getParagraphStyleDropDown(printess, p, true, undefined, true)));
         }
         if (p.textStyle.allows.indexOf("font") >= 0) {
             const group1 = document.createElement("div");
@@ -1106,7 +1368,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             validate(printess, p);
             const mobileButtonDiv = document.getElementById(p.id + ":");
             if (mobileButtonDiv) {
-                drawButtonContent(printess, mobileButtonDiv, [p]);
+                drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
             }
         };
         inp.onfocus = () => {
@@ -1123,7 +1385,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.onblur = () => {
             printess.setZoomMode("spread");
         };
-        const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label, !!((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) && p.controlGroup === 0);
+        const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label, !!((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) && p.controlGroup === 0, p.controlGroup > 0);
         return r;
     }
     function getDesktopTitle(printess) {
@@ -1139,9 +1401,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             inner.style.alignItems = "center";
         }
         if (!forCornerTools) {
-            const h2 = document.createElement("h2");
-            h2.innerText = printess.gl(printess.getTemplateTitle());
-            inner.appendChild(h2);
+            const h3 = document.createElement("h3");
+            h3.innerText = printess.gl(printess.getTemplateTitle());
+            h3.style.margin = "0px";
+            h3.style.display = uih_currentPriceDisplay ? "none" : "hidden";
+            inner.appendChild(h3);
+            const priceDiv = document.createElement("div");
+            priceDiv.className = "total-price-container";
+            priceDiv.id = "total-price-display";
+            if (uih_currentPriceDisplay) {
+                getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+            }
+            else if (printess.getProductInfoUrl()) {
+                const infoIcon = printess.getIcon("info-circle");
+                infoIcon.classList.add("product-info-icon");
+                infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), false);
+                priceDiv.appendChild(infoIcon);
+            }
+            inner.appendChild(priceDiv);
         }
         if (printess.hasPreviewBackButton()) {
             inner.appendChild(getPreviewBackButton(printess));
@@ -1172,6 +1449,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const basketBtn = document.createElement("button");
         const caption = printess.gl("ui.buttonBasket");
         basketBtn.className = "btn btn-primary";
+        basketBtn.style.whiteSpace = "nowrap";
         basketBtn.innerText = caption;
         const icon = printess.gl("ui.buttonBasketIcon");
         if (icon) {
@@ -1193,7 +1471,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getPreviewBackButton(printess) {
         const btn = document.createElement("button");
         btn.className = "btn btn-outline-primary";
-        if (printess.showTabNavigation() && printess.pageNavigationDisplay() !== "icons") {
+        if (printess.pageNavigationDisplay() === "doc-tabs") {
+            btn.classList.add("ms-2");
+        }
+        else if (printess.showTabNavigation() && printess.pageNavigationDisplay() !== "icons") {
             btn.classList.add("ms-1");
         }
         else {
@@ -1408,6 +1689,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const h2 = document.createElement("h2");
                 h2.style.flexGrow = "1";
                 h2.className = "mb-0";
+                h2.style.display = uih_currentPriceDisplay ? "none" : "hidden";
                 h2.innerText = printess.gl(cur.title) || printess.gl("ui.step") + (cur.index + 1);
                 grid.appendChild(h2);
             }
@@ -1429,6 +1711,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             grid.classList.add("steps");
             const h2 = document.createElement("h2");
             h2.style.flexGrow = "1";
+            h2.style.display = uih_currentPriceDisplay ? "none" : "hidden";
             h2.className = "mb-0";
             h2.innerText = printess.getTemplateTitle();
             grid.appendChild(h2);
@@ -1449,6 +1732,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             div.appendChild(badge2);
             grid.appendChild(div);
         }
+        const priceDiv = document.createElement("div");
+        priceDiv.className = "total-price-container";
+        priceDiv.id = "total-price-display";
+        if (uih_currentPriceDisplay) {
+            getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+        }
+        else if (printess.getProductInfoUrl()) {
+            const infoIcon = printess.getIcon("info-circle");
+            infoIcon.classList.add("product-info-icon");
+            infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), false);
+            priceDiv.appendChild(infoIcon);
+        }
+        grid.appendChild(priceDiv);
         if (printess.hasPreviousStep()) {
             const prevStep = document.createElement("button");
             prevStep.className = "btn btn-outline-primary me-1";
@@ -1498,7 +1794,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return badge;
     }
     function getCurrentTab(printess, value, forMobile = true) {
-        if ((printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list")) {
+        const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+        const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+        const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
+        if (isDocTabs || isStepTabsList || isStepBadgeList) {
             const tabsListScrollbar = document.getElementById("tabs-list-scrollbar");
             const curStepTab = document.getElementById("tab-step-" + value);
             setTabScrollPosition(tabsListScrollbar, curStepTab, forMobile);
@@ -1520,11 +1819,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getStepsTabsList(printess, _forMobile = false, displayType) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e, _f;
+        const docs = displayType === "doc tabs" ? printess.getAllDocsAndSpreads() : [];
         const div = document.createElement("div");
         div.className = "tabs-list";
         div.id = "tabs-list-scrollbar";
-        const isDesktopTabs = (!_forMobile && displayType === "tabs list");
+        const isDesktopTabs = (!_forMobile && (displayType === "tabs list" || displayType === "doc tabs"));
         const ul = document.createElement("ul");
         ul.className = "nav nav-tabs flex-nowrap " + (_forMobile ? "" : "step-tabs-desktop");
         if (displayType === "badge list")
@@ -1550,9 +1850,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             prev.appendChild(prevLink);
             ul.appendChild(prev);
         }
-        const cur = printess.getStep();
-        if (cur) {
-            for (let i = 0; i <= ((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0); i++) {
+        let curIndex = -1;
+        let maxIndex = 0;
+        if (displayType === "doc tabs") {
+            curIndex = 0;
+            for (let idx = 0; idx < docs.length; idx++) {
+                if (docs[idx].docId === printess.getCurrentDocumentId()) {
+                    curIndex = idx;
+                }
+            }
+            maxIndex = docs.length - 1;
+        }
+        else {
+            curIndex = (_b = (_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : -1;
+            maxIndex = (_d = (_c = printess.lastStep()) === null || _c === void 0 ? void 0 : _c.index) !== null && _d !== void 0 ? _d : 0;
+        }
+        if (curIndex >= 0) {
+            for (let i = 0; i <= (maxIndex); i++) {
                 const tab = document.createElement("li");
                 tab.className = "nav-item " + (isDesktopTabs ? "" : "tab-item");
                 if (displayType === "badge list")
@@ -1562,7 +1876,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 tabLink.className = "nav-link text-truncate ";
                 if (displayType === "badge list")
                     tabLink.classList.add("badge-link");
-                if (cur.index === i) {
+                if (curIndex === i) {
                     if (isDesktopTabs) {
                         tab.classList.add("active");
                         tabLink.classList.add("active");
@@ -1582,13 +1896,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         tabLink.classList.remove("active-step-tab");
                     }
                 }
-                const stepTitle = (_d = (_c = printess.getStepByIndex(i)) === null || _c === void 0 ? void 0 : _c.title) !== null && _d !== void 0 ? _d : "";
+                let stepTitle = "";
+                if (displayType === "doc tabs") {
+                    stepTitle = docs[i].docTitle;
+                }
+                else {
+                    stepTitle = (_f = (_e = printess.getStepByIndex(i)) === null || _e === void 0 ? void 0 : _e.title) !== null && _f !== void 0 ? _f : "";
+                }
                 tabLink.innerText = stepTitle.length === 0 || displayType === "badge list" ? (i + 1).toString() : stepTitle;
                 tab.appendChild(tabLink);
                 tab.onclick = () => __awaiter(this, void 0, void 0, function* () {
                     const comingFromPreview = printess.hasPreviewBackButton();
                     setTabScrollPosition(div, tab, _forMobile);
-                    yield gotoStep(printess, i);
+                    if (displayType === "doc tabs") {
+                        yield printess.selectDocumentAndSpread(docs[i].docId, 0);
+                    }
+                    else {
+                        yield gotoStep(printess, i);
+                    }
                     if (printess.hasPreviewBackButton()) {
                         printess.resizePrintess();
                     }
@@ -1624,54 +1949,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         div.appendChild(ul);
         return div;
     }
-    function getStepsBadgeList(printess, _forMobile = false) {
-        var _a, _b;
-        const sm = "";
-        const div = document.createElement("div");
-        div.className = "badge-list";
-        const cur = printess.getStep();
-        if (cur && printess.isCurrentStepActive()) {
-            const prevBadge = document.createElement("div");
-            prevBadge.className = "step-badge outline gray d-flex justify-content-center align-items-center" + sm;
-            prevBadge.style.paddingRight = "2px";
-            prevBadge.appendChild(printess.getIcon("carret-left-solid"));
-            if (printess.hasPreviousStep()) {
-                prevBadge.onclick = () => printess.previousStep();
-                prevBadge.classList.add("selectable");
-            }
-            else {
-                prevBadge.classList.add("disabled");
-            }
-            div.appendChild(prevBadge);
-            for (let i = 0; i <= ((_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0); i++) {
-                const badge = document.createElement("div");
-                badge.className = "step-badge" + sm;
-                if (cur.index !== i) {
-                    badge.classList.add("gray");
-                    badge.classList.add("selectable");
-                }
-                badge.innerText = (i + 1).toString();
-                badge.onclick = () => gotoStep(printess, i);
-                div.appendChild(badge);
-            }
-            const nextBadge = document.createElement("div");
-            nextBadge.className = "step-badge outline gray d-flex justify-content-center align-items-center" + sm;
-            nextBadge.style.paddingLeft = "2px";
-            nextBadge.appendChild(printess.getIcon("carret-right-solid"));
-            if (printess.hasNextStep()) {
-                nextBadge.onclick = () => gotoNextStep(printess);
-                nextBadge.classList.add("selectable");
-            }
-            else {
-                nextBadge.classList.add("disabled");
-            }
-            div.appendChild(nextBadge);
-        }
-        return div;
-    }
     function getStepsPutToBasketButton(printess) {
         const basketButton = document.createElement("button");
         basketButton.className = "btn btn-primary";
+        basketButton.style.whiteSpace = "nowrap";
         basketButton.innerText = printess.gl("ui.buttonBasket");
         basketButton.onclick = () => addToBasket(printess);
         return basketButton;
@@ -1687,7 +1968,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             validate(printess, p);
             const mobileButtonDiv = document.getElementById(p.id + ":");
             if (mobileButtonDiv) {
-                drawButtonContent(printess, mobileButtonDiv, [p]);
+                drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
             }
         });
         inp.onfocus = () => {
@@ -1707,7 +1988,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
         }
     }
-    function addLabel(printess, input, id, forMobile, kind, label, hasMaxChars = false) {
+    function addLabel(printess, input, id, forMobile, kind, label, hasMaxChars = false, inControlGroup = false) {
         input.classList.add("form-control");
         const container = document.createElement("div");
         !forMobile && container.classList.add("mb-3");
@@ -1721,6 +2002,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             htmlLabel.setAttribute("for", "inp_" + id.replace("#", "-HASH-"));
             htmlLabel.innerHTML = printess.gl(label) || "";
             htmlLabel.style.display = forMobile ? "none" : "inline-block";
+            if (inControlGroup) {
+                htmlLabel.style.fontSize = "0.85em";
+                htmlLabel.style.opacity = "0.7";
+            }
             if (kind === "image" && !forMobile) {
                 const button = document.createElement("button");
                 button.className = "btn btn-primary image-upload-btn";
@@ -1888,7 +2173,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     p.value = entry.key;
                     const mobileButtonDiv = document.getElementById(p.id + ":");
                     if (mobileButtonDiv) {
-                        drawButtonContent(printess, mobileButtonDiv, [p]);
+                        drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                     }
                 };
                 imageList.appendChild(thumb);
@@ -2003,7 +2288,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const mobileButtonDiv = document.getElementById(p.id + ":color") || document.getElementById(p.id + ":text-style-color");
                 if (mobileButtonDiv && p.textStyle) {
                     p.textStyle.color = color;
-                    drawButtonContent(printess, mobileButtonDiv, [p]);
+                    drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                 }
             }
             else {
@@ -2011,7 +2296,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 p.value = color;
                 const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
                 if (mobileButtonDiv) {
-                    drawButtonContent(printess, mobileButtonDiv, [p]);
+                    drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                 }
             }
         });
@@ -2138,7 +2423,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         setPropertyVisibilities(printess);
                         const mobileButtonDiv = document.getElementById(p.id + ":");
                         if (mobileButtonDiv) {
-                            drawButtonContent(printess, mobileButtonDiv, [p]);
+                            drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                         }
                     });
                     if (p.listMeta) {
@@ -2160,7 +2445,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return ddContent;
         }
         else {
-            return addLabel(printess, dropdown, p.id, false, p.kind, p.label);
+            return addLabel(printess, dropdown, p.id, false, p.kind, p.label, false, p.controlGroup > 0);
         }
     }
     function getDropdownItemContent(printess, meta, entry) {
@@ -2185,6 +2470,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const label = document.createElement("div");
         label.classList.add("dropdown-list-label");
         label.innerText = printess.gl(entry.label);
+        const priceBadge = document.createElement("div");
+        priceBadge.className = "badge bg-primary";
+        priceBadge.style.marginLeft = "auto";
+        priceBadge.textContent = printess.gl(entry.tag);
         div.appendChild(label);
         return div;
     }
@@ -2411,7 +2700,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getImageCropControl(printess, p, showSkipBtn, forDesktopDialog = false) {
         const container = document.createElement("div");
-        if (p.value) {
+        if (p) {
             const ui = printess.createCropUi(p.id, forDesktopDialog);
             if (!ui) {
                 container.innerText = printess.gl("ui.selectImageFirst");
@@ -2791,7 +3080,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 span.textContent = forMobile ? "" : printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / newScale));
                 const mobileButtonDiv = document.getElementById(p.id + ":image-scale");
                 if (mobileButtonDiv) {
-                    drawButtonContent(printess, mobileButtonDiv, [p]);
+                    drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                 }
             }
         };
@@ -2894,7 +3183,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             const mobileButtonDiv = document.getElementById(p.id + ":" + (metaProperty !== null && metaProperty !== void 0 ? metaProperty : ""));
             if (mobileButtonDiv) {
-                drawButtonContent(printess, mobileButtonDiv, [p]);
+                drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
             }
         };
         const span = document.createElement("span");
@@ -2964,7 +3253,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         li.classList.add("active");
                         const mobileButtonDiv = document.getElementById(p.id + ":text-style-size");
                         if (mobileButtonDiv) {
-                            drawButtonContent(printess, mobileButtonDiv, [p]);
+                            drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                         }
                     }
                 };
@@ -3044,7 +3333,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         li.classList.add("active");
                         const mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
                         if (mobileButtonDiv) {
-                            drawButtonContent(printess, mobileButtonDiv, [p]);
+                            drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                         }
                     }
                     else {
@@ -3064,11 +3353,100 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return dropdown;
         }
     }
+    function getParagraphStyleDropDown(printess, p, asList, dropdown, fullWidth = true) {
+        var _a;
+        if (!dropdown) {
+            dropdown = document.createElement("div");
+            dropdown.classList.add("btn-group");
+            dropdown.classList.add("form-control");
+        }
+        dropdown.style.padding = "0";
+        const styles = ["[none]", ...printess.getParagraphStyles(p.id).map(x => x.class)];
+        const ddContent = document.createElement("ul");
+        const selectedItem = ((_a = p.textStyle) === null || _a === void 0 ? void 0 : _a.pStyle) || "[none]";
+        if (styles.length) {
+            const button = document.createElement("button");
+            button.className = "btn btn-light dropdown-toggle";
+            if (fullWidth) {
+                button.classList.add("full-width");
+            }
+            button.dataset.bsToggle = "dropdown";
+            button.dataset.bsAutoClose = "true";
+            button.setAttribute("aria-expanded", "false");
+            if (selectedItem) {
+                button.appendChild(getDropdownTextContent(selectedItem));
+            }
+            dropdown.appendChild(button);
+            if (asList) {
+                ddContent.classList.add("list-group");
+            }
+            else {
+                ddContent.classList.add("dropdown-menu");
+                ddContent.setAttribute("aria-labelledby", "defaultDropdown");
+                ddContent.style.width = "100%";
+                ddContent.style.maxHeight = "400px";
+            }
+            ddContent.style.overflow = "hidden auto";
+            for (const entry of styles) {
+                const li = document.createElement("li");
+                li.classList.add("dropdown-item");
+                if (asList) {
+                    li.classList.add("list-group-item");
+                    li.classList.add("font");
+                    if (entry === selectedItem) {
+                        li.classList.add("active");
+                    }
+                }
+                li.onclick = () => {
+                    if (p.textStyle) {
+                        printess.setTextStyleProperty(p.id, "pStyle", entry);
+                        p.textStyle.pStyle = entry;
+                    }
+                    else {
+                        printess.setProperty(p.id, entry);
+                        p.value = entry;
+                    }
+                    if (asList) {
+                        ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+                        li.classList.add("active");
+                        const mobileButtonDiv = document.getElementById(p.id + ":text-style-paragraph-style");
+                        if (mobileButtonDiv) {
+                            drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
+                        }
+                    }
+                    else {
+                        button.innerHTML = "";
+                        button.appendChild(getDropdownTextContent(entry));
+                    }
+                };
+                li.appendChild(getDropdownTextContent(entry));
+                ddContent.appendChild(li);
+            }
+            dropdown.appendChild(ddContent);
+        }
+        if (asList) {
+            const cont = document.createElement("p");
+            const txt = document.createElement("label");
+            txt.classList.add("mb-1");
+            txt.innerText = "Paragraph Style:";
+            cont.appendChild(txt);
+            cont.appendChild(ddContent);
+            return cont;
+        }
+        else {
+            return dropdown;
+        }
+    }
     function getDropdownImageContent(thumbUrl) {
         const img = document.createElement("img");
         img.src = thumbUrl;
         img.style.height = "20px";
         return img;
+    }
+    function getDropdownTextContent(text) {
+        const txt = document.createElement("span");
+        txt.innerText = text;
+        return txt;
     }
     function getVAlignControl(printess, p, forMobile) {
         const group = document.createElement("div");
@@ -3173,7 +3551,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 mobileButtonDiv = document.getElementById(p.id + ":" + "text-style-vAlign-hAlign");
             }
             if (mobileButtonDiv) {
-                drawButtonContent(printess, mobileButtonDiv, [p]);
+                drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
             }
         };
         return radio;
@@ -3394,7 +3772,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (!cornerTools)
                 miniBar.appendChild(btnZoomIn);
             const dropdownItems = getItemsForZoomDropdown(printess);
-            miniBar.appendChild(getDropdownMenu(printess, "", dropdownItems, false, "search-light"));
+            miniBar.appendChild(getZoomOptionsMenu(printess, "", dropdownItems, false, "search-light"));
             const btnZoomOut = document.createElement("button");
             btnZoomOut.className = "btn btn-sm btn-outline-secondary me-2";
             const iconZoomOut = printess.getIcon("minus-light");
@@ -3414,10 +3792,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return miniBar;
     }
-    function getDropdownMenu(printess, title, dropdownItems, showDropdownTriangle = true, icon) {
+    function getZoomOptionsMenu(printess, title, dropdownItems, showDropdownTriangle = true, icon) {
         const cornerTools = printess.pageNavigationDisplay() === "icons";
         const dropdown = document.createElement("div");
-        dropdown.className = "dropdown me-1";
+        dropdown.className = "dropdown d-flex me-1";
         const dropdownBtn = document.createElement("button");
         dropdownBtn.className = "btn btn-outline-secondary dropdown-toggle";
         dropdownBtn.id = "dropdownMenuButton";
@@ -3490,6 +3868,34 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         ];
         return zoomItems;
     }
+    function getPageArrangementButtons(printess, addSpreads, removeSpreads, forMobile) {
+        const li = document.createElement("li");
+        li.className = "big-page-item mr";
+        if (forMobile) {
+            li.classList.add("mobile");
+        }
+        else {
+            li.appendChild(document.createElement("div"));
+        }
+        const pageButtons = document.createElement("div");
+        pageButtons.className = "modify-page-buttons";
+        if (addSpreads > 0) {
+            const btnAdd = document.createElement("div");
+            btnAdd.className = "btn btn-sm btn-outline-secondary w-100";
+            btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
+            btnAdd.onclick = () => printess.addSpreads();
+            pageButtons.appendChild(btnAdd);
+        }
+        if (addSpreads || removeSpreads) {
+            const arrangePagesBtn = document.createElement("button");
+            arrangePagesBtn.className = "btn btn-sm btn-outline-secondary w-100";
+            arrangePagesBtn.innerText = "Arrange Pages";
+            arrangePagesBtn.onclick = () => getArrangePagesOverlay(printess, forMobile);
+            pageButtons.appendChild(arrangePagesBtn);
+        }
+        li.appendChild(pageButtons);
+        return li;
+    }
     function renderPageNavigation(printess, container, large = false, forMobile = false) {
         var _a, _b, _c, _d;
         const spreads = printess.getAllSpreads();
@@ -3512,13 +3918,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             pages.classList.remove("tabs");
             pages.classList.remove("big");
+            const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+            const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+            const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
             if (printess.pageNavigationDisplay() === "icons") {
                 pages.classList.add("big");
                 ul.style.overflowX = "auto";
                 document.documentElement.style.setProperty("--editor-pagebar-height", "122px");
                 document.documentElement.style.setProperty("--editor-margin-top", "10px");
             }
-            else if (printess.stepHeaderDisplay() === "tabs list") {
+            else if (isStepTabsList || isDocTabs) {
                 pages.classList.add("tabs");
                 ul.style.overflowX = "auto";
                 document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
@@ -3527,12 +3936,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 ul.classList.add("justify-content-center");
                 document.documentElement.style.setProperty("--editor-pagebar-height", "50px");
             }
-            if (printess.stepHeaderDisplay() === "tabs list" || printess.stepHeaderDisplay() === "badge list") {
+            if (isStepTabsList || isStepBadgeList || isDocTabs) {
                 const tabsContainer = document.createElement("div");
                 tabsContainer.className = "step-tabs-list";
                 tabsContainer.id = "step-tab-list";
-                tabsContainer.style.marginLeft = "10px";
-                if (!forMobile && printess.stepHeaderDisplay() === "badge list") {
+                tabsContainer.style.margin = "0 10px";
+                if (!forMobile && !isDocTabs && isStepBadgeList) {
                     const prevTab = document.createElement("div");
                     prevTab.className = "nav-item";
                     const prevTabLink = document.createElement("a");
@@ -3556,8 +3965,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         }
                     };
                 }
-                tabsContainer.appendChild(getStepsTabsList(printess, forMobile, printess.stepHeaderDisplay()));
-                if (!forMobile && printess.stepHeaderDisplay() !== "tabs list") {
+                tabsContainer.appendChild(getStepsTabsList(printess, forMobile, isDocTabs ? "doc tabs" : printess.stepHeaderDisplay()));
+                if (!forMobile && !isDocTabs && !isStepTabsList) {
                     const nextTab = document.createElement("div");
                     nextTab.className = "nav-item";
                     nextTab.style.zIndex = "10";
@@ -3584,6 +3993,42 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     };
                 }
                 pages.appendChild(tabsContainer);
+                const wrapper = document.createElement("div");
+                wrapper.className = "d-flex price-basket-wrapper";
+                const priceDiv = document.createElement("div");
+                priceDiv.className = "total-price-container";
+                priceDiv.id = "total-price-display";
+                if (uih_currentPriceDisplay) {
+                    getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
+                }
+                else if (printess.getProductInfoUrl()) {
+                    const infoIcon = printess.getIcon("info-circle");
+                    infoIcon.classList.add("product-info-icon");
+                    infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), forMobile);
+                    priceDiv.appendChild(infoIcon);
+                }
+                wrapper.appendChild(priceDiv);
+                const basketBtnBehaviour = printess.getBasketButtonBehaviour();
+                if (basketBtnBehaviour === "go-to-preview" && isDocTabs) {
+                    const previewBtn = document.createElement("button");
+                    previewBtn.className = "btn btn-outline-primary";
+                    previewBtn.classList.add("ms-2");
+                    previewBtn.innerText = printess.gl("ui.buttonPreview");
+                    previewBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                        if (validateAllInputs(printess) === true) {
+                            yield printess.gotoNextPreviewDocument(0);
+                            if (printess.showTabNavigation()) {
+                                printess.resizePrintess();
+                            }
+                        }
+                    });
+                    wrapper.appendChild(previewBtn);
+                }
+                else if (printess.hasPreviewBackButton() && isDocTabs) {
+                    tabsContainer.style.visibility = "hidden";
+                    const previewBackButton = getPreviewBackButton(printess);
+                    wrapper.appendChild(previewBackButton);
+                }
                 const button = document.createElement("button");
                 button.className = "btn btn-primary ms-2";
                 const icon = printess.getIcon("shopping-cart-add");
@@ -3591,8 +4036,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon.style.height = "25px";
                 button.onclick = () => addToBasket(printess);
                 button.appendChild(icon);
-                if (printess.stepHeaderDisplay() === "tabs list")
-                    pages.appendChild(button);
+                wrapper.appendChild(button);
+                if (isStepTabsList || isDocTabs)
+                    pages.appendChild(wrapper);
                 return;
             }
             if (printess.pageNavigationDisplay() === "icons") {
@@ -3672,6 +4118,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             pagesContainer.appendChild(li);
                         }
                     }
+                }
+                const addSpreads = printess.canAddSpreads();
+                const removeSpreads = printess.canRemoveSpreads();
+                if (addSpreads > 0 || removeSpreads > 0) {
+                    pagesContainer.appendChild(getPageArrangementButtons(printess, addSpreads, removeSpreads, forMobile));
                 }
                 ul.appendChild(pagesContainer);
             }
@@ -3763,32 +4214,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     cornerTools.classList.add("expert-mode");
                 }
                 cornerTools.appendChild(getBackUndoMiniBar(printess));
-                const addSpreads = printess.canAddSpreads();
-                const removeSpreads = printess.canRemoveSpreads();
-                if (addSpreads > 0 || removeSpreads > 0) {
-                    const pageButtons = document.createElement("div");
-                    pageButtons.className = "modify-page-buttons";
-                    if (addSpreads > 0) {
-                        const btnAdd = document.createElement("div");
-                        btnAdd.className = "btn btn-sm btn-secondary";
-                        btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
-                        btnAdd.onclick = () => printess.addSpreads();
-                        pageButtons.appendChild(btnAdd);
-                    }
-                    if (addSpreads || removeSpreads) {
-                        const arrangePagesBtn = document.createElement("button");
-                        arrangePagesBtn.className = "btn btn-sm btn-secondary";
-                        arrangePagesBtn.innerText = "Arrange Pages";
-                        arrangePagesBtn.onclick = () => getArrangePagesOverlay(printess, forMobile);
-                        pageButtons.appendChild(arrangePagesBtn);
-                    }
-                    cornerTools.appendChild(pageButtons);
+                const priceDiv = document.createElement("div");
+                priceDiv.className = "total-price-container";
+                priceDiv.id = "total-price-display";
+                if (uih_currentPriceDisplay) {
+                    getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay);
                 }
                 else {
                     const h2 = document.createElement("h2");
                     h2.innerText = printess.gl(printess.getTemplateTitle());
-                    cornerTools.appendChild(h2);
+                    priceDiv.appendChild(h2);
+                    if (printess.getProductInfoUrl()) {
+                        const infoIcon = printess.getIcon("info-circle");
+                        infoIcon.classList.add("product-info-icon");
+                        infoIcon.onclick = () => getIframeOverlay(printess, printess.gl("ui.productOverview"), printess.getProductInfoUrl(), false);
+                        priceDiv.appendChild(infoIcon);
+                    }
                 }
+                cornerTools.appendChild(priceDiv);
                 cornerTools.appendChild(getDesktopTitle(printess));
                 pages.appendChild(cornerTools);
                 const gradient = document.createElement("div");
@@ -4431,11 +4874,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return caption;
     }
-    function renderMobileDialogFullscreen(printess, id, caption, content) {
+    function renderMobileDialogFullscreen(printess, id, caption, content, addTabsNavigation = true) {
         const container = document.createElement("div");
         container.id = id;
         container.className = "fullscreen-mobile-dialog show-image-list";
-        getMobileFullscreenContent(printess, id, container, caption, content, true);
+        getMobileFullscreenContent(printess, id, container, caption, content, addTabsNavigation);
         document.body.appendChild(container);
     }
     function renderMobilePropertiesFullscreen(printess, id, state) {
@@ -4488,8 +4931,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         exitBtn.onclick = () => {
             container === null || container === void 0 ? void 0 : container.classList.remove("show-image-list");
             container === null || container === void 0 ? void 0 : container.classList.add("hide-image-list");
-            if (id === "CROPMODAL") {
-                window.setTimeout(() => hideModal(id), 2000);
+            closeMobileExternalLayoutsContainer();
+            if (id === "CROPMODAL" || id === "PRICE-INFO") {
+                window.setTimeout(() => hideModal(id), 1000);
             }
         };
         header.appendChild(exitBtn);
@@ -4537,13 +4981,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             fullscreenContainer.classList.remove("hide-image-list");
             fullscreenContainer.classList.add("show-image-list");
         }
+        const externalLayoutsContainer = document.getElementById("external-layouts-container");
+        if (externalLayoutsContainer) {
+            externalLayoutsContainer.classList.remove("hide-external-layouts-container");
+            if (uih_currentTabId !== "#LAYOUTS") {
+                externalLayoutsContainer.style.display = "none";
+            }
+            else {
+                externalLayoutsContainer.classList.add("show-external-layouts-container");
+                externalLayoutsContainer.classList.add("open-external-layouts-container");
+            }
+        }
+    }
+    function closeMobileExternalLayoutsContainer() {
+        const externalLayoutsContainer = document.getElementById("external-layouts-container");
+        if (externalLayoutsContainer) {
+            externalLayoutsContainer.classList.remove("show-external-layouts-container");
+            externalLayoutsContainer.classList.remove("open-external-layouts-container");
+            externalLayoutsContainer.classList.add("hide-external-layouts-container");
+        }
     }
     function closeMobileFullscreenContainer() {
+        closeMobileExternalLayoutsContainer();
         const fullscreenContainer = document.querySelector(".fullscreen-add-properties.show-image-list") || document.querySelector(".image-list-fullscreen.show-image-list");
-        fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.remove("show-image-list");
-        fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.add("hide-image-list");
+        if (fullscreenContainer) {
+            fullscreenContainer.classList.remove("show-image-list");
+            fullscreenContainer.classList.add("hide-image-list");
+        }
     }
     function removeMobileFullscreenContainer() {
+        closeMobileExternalLayoutsContainer();
         const fullscreenContainer = document.querySelector(".fullscreen-add-properties");
         const imageListContainer = document.querySelector(".image-list-fullscreen");
         if (fullscreenContainer)
@@ -4607,7 +5074,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         footer.appendChild(ok);
         showModal(printess, id, content, printess.gl("ui.distributionDialogTitle"), footer);
     }
-    function renderAccordionItem(title, body, hideCollapseIcon) {
+    function renderAccordionItem(printess, title, body, hideCollapseIcon) {
+        const forPhotoTab = uih_currentTabId === "#PHOTOS" && printess.showTabNavigation();
         const accordionItem = document.createElement("div");
         accordionItem.className = "accordion-item";
         accordionItem.style.border = "none";
@@ -4617,7 +5085,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         header.className = "accordion-header";
         header.id = headerId;
         header.style.borderBottom = "1px solid rgba(0,0,0,.125)";
-        accordionItem.appendChild(header);
+        if (!forPhotoTab)
+            accordionItem.appendChild(header);
         const accordionBtn = document.createElement("button");
         accordionBtn.className = "accordion-button";
         accordionBtn.style.backgroundColor = "white";
@@ -4677,13 +5146,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return buttonWrapper;
     }
     function renderGroupSnippets(printess, groupSnippets, forMobile) {
-        const forMobileOrPhotoTab = forMobile || (uih_currentTabId === "#PHOTOS" && printess.showTabNavigation());
+        const forPhotoTab = uih_currentTabId === "#PHOTOS" && printess.showTabNavigation();
         const div = document.createElement("div");
-        div.className = forMobileOrPhotoTab ? "group-snippets" : "accordion";
+        div.className = forMobile ? "group-snippets" : "accordion";
         div.id = "group-snippets";
         if (groupSnippets.length > 0) {
             for (const cluster of groupSnippets) {
-                if (forMobile) {
+                if (forMobile && !forPhotoTab) {
                     const headline = document.createElement("h5");
                     headline.className = "snippet-cluster-name";
                     headline.textContent = cluster.name;
@@ -4693,7 +5162,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     div.appendChild(hr);
                 }
                 const body = document.createElement("div");
-                body.className = "d-flex flex-wrap";
+                body.className = "d-grid";
+                body.style.gridTemplateColumns = "1fr 1fr 1fr";
+                body.style.gridGap = "6px";
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
                     thumbDiv.className = "snippet-thumb";
@@ -4706,6 +5177,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         var _a;
                         (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', `${"SNIP:" + snippet.snippetUrl}`);
                     };
+                    const priceBox = document.createElement("span");
+                    priceBox.className = "badge bg-primary";
+                    priceBox.textContent = printess.gl(snippet.priceLabel);
+                    if (snippet.priceLabel)
+                        thumbDiv.appendChild(priceBox);
                     thumbDiv.onclick = () => {
                         const propsDiv = document.getElementById("desktop-properties");
                         if (propsDiv && !forMobile && printess.showTabNavigation()) {
@@ -4717,17 +5193,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         }
                         printess.insertGroupSnippet(snippet.snippetUrl);
                     };
-                    forMobileOrPhotoTab ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
+                    forMobile ? div.appendChild(thumbDiv) : body.appendChild(thumbDiv);
                 }
-                if (!forMobileOrPhotoTab) {
-                    div.appendChild(renderAccordionItem(cluster.name, body, groupSnippets.length < 2));
+                if (!forMobile) {
+                    div.appendChild(renderAccordionItem(printess, cluster.name, body, groupSnippets.length < 2));
                 }
             }
         }
         if (forMobile) {
             const mobile = document.createElement("div");
             mobile.className = "mobile-group-snippets-container";
-            div.style.marginTop = "-20px";
+            div.style.marginTop = forPhotoTab ? "0px" : "-20px";
             mobile.appendChild(div);
             return mobile;
         }
@@ -4743,18 +5219,49 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
+    function getExternalSnippetDiv(printess, layoutSnippets, forMobile, forLayoutDialog = false) {
+        const modalHtml = window.uiHelper.customLayoutSnippetRenderCallback(printess, layoutSnippets, forMobile, forLayoutDialog, (templateName, templateVersion, documentName, mode = "layout") => {
+            printess.insertTemplateAsLayoutSnippet(templateName, templateVersion, documentName, mode);
+            closeLayoutOverlays(printess, forMobile);
+        }, () => {
+            closeLayoutOverlays(printess, forMobile);
+        });
+        modalHtml.id = "external-layouts-content";
+        return modalHtml;
+    }
     function renderLayoutSelectionDialog(printess, layoutSnippets, forMobile) {
-        const layoutContainer = document.createElement("div");
-        layoutContainer.style.maxHeight = "70vh";
+        const modalId = "layoutSnippetsSelection";
         const templateTitle = printess.getTemplateTitle();
         const title = templateTitle ? printess.gl("ui.selectLayoutTitle", templateTitle) : printess.gl("ui.selectLayoutWithoutTitle");
+        const layoutContainer = document.createElement("div");
+        layoutContainer.style.height = "calc(100% - 3.5rem)";
         const infoText = document.createElement("p");
         infoText.innerHTML = printess.gl("ui.selectLayoutInfo", printess.getTemplateTitle());
         layoutContainer.appendChild(infoText);
         layoutContainer.appendChild(renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
-        showModal(printess, "layoutSnippetsSelection", layoutContainer, title);
+        showModal(printess, modalId, layoutContainer, title);
+    }
+    function closeLayoutOverlays(printess, forMobile) {
+        const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
+        if (myOffcanvas)
+            myOffcanvas.click();
+        const offCanvas = document.getElementById("layoutOffcanvas");
+        if (offCanvas)
+            offCanvas.style.visibility = "hidden";
+        const layoutsDialog = document.getElementById("layoutSnippetsSelection");
+        if (layoutsDialog)
+            layoutsDialog.remove();
+        if (printess.showTabNavigation()) {
+            closeMobileFullscreenContainer();
+        }
     }
     function renderLayoutSnippets(printess, layoutSnippets, forMobile, forLayoutDialog = false) {
+        if (window.uiHelper.customLayoutSnippetRenderCallback && layoutSnippets) {
+            const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, forMobile !== null && forMobile !== void 0 ? forMobile : uih_currentRender === "mobile", forLayoutDialog);
+            if (externalSnippetContainer && externalSnippetContainer.nodeType) {
+                return externalSnippetContainer;
+            }
+        }
         const container = document.createElement("div");
         container.className = "layout-snippet-list";
         if (layoutSnippets) {
@@ -4774,41 +5281,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     const col = printess.numberOfColumns();
                     clusterDiv.style.display = "grid";
                     clusterDiv.style.gridTemplateColumns = `repeat(${col}, 1fr)`;
-                    clusterDiv.style.gridColumnGap = "5px";
+                    clusterDiv.style.gridGap = "6px";
                 }
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
                     thumbDiv.className = forLayoutDialog ? "snippet-thumb layout-dialog" : "snippet-thumb big";
                     thumbDiv.setAttribute("aria-label", "Close");
                     thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
+                    thumbDiv.setAttribute("data-bs-target", "#layoutOffcanvas");
                     const thumb = document.createElement("img");
                     thumb.src = snippet.thumbUrl;
                     thumb.style.backgroundColor = snippet.bgColor;
                     thumbDiv.appendChild(thumb);
+                    const priceBox = document.createElement("span");
+                    priceBox.className = "badge bg-primary";
+                    priceBox.textContent = printess.gl(snippet.priceLabel);
+                    if (snippet.priceLabel)
+                        thumbDiv.appendChild(priceBox);
                     thumbDiv.onclick = () => {
                         const propsDiv = document.getElementById("desktop-properties");
                         if (propsDiv && !forMobile && printess.showTabNavigation()) {
                             uih_snippetsScrollPosition = propsDiv.scrollTop;
                         }
                         printess.insertLayoutSnippet(snippet.snippetUrl);
-                        const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
-                        if (myOffcanvas)
-                            myOffcanvas.click();
-                        const offCanvas = document.getElementById("layoutOffcanvas");
-                        if (offCanvas)
-                            offCanvas.style.visibility = "hidden";
-                        const layoutsDialog = document.getElementById("layoutSnippetsSelection");
-                        if (layoutsDialog)
-                            layoutsDialog.remove();
-                        if (forMobile && printess.showTabNavigation()) {
-                            closeMobileFullscreenContainer();
-                        }
+                        closeLayoutOverlays(printess, forMobile !== null && forMobile !== void 0 ? forMobile : uih_currentRender === "mobile");
                     };
                     clusterDiv.appendChild(thumbDiv);
                 }
                 if (forLayoutDialog) {
                     container.classList.add("accordion");
-                    container.appendChild(renderAccordionItem(cluster.name, clusterDiv, layoutSnippets.length < 2));
+                    container.appendChild(renderAccordionItem(printess, cluster.name, clusterDiv, layoutSnippets.length < 2));
                 }
                 else {
                     container.appendChild(clusterDiv);
@@ -5194,11 +5696,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (printessBuyerPropertiesButton) {
             printessBuyerPropertiesButton.style.display = "none";
         }
-        if (printess.spreadCount() > 1 && printess.showPageNavigation()) {
+        if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
             document.body.classList.add("has-mobile-page-bar");
         }
         else {
             document.body.classList.remove("has-mobile-page-bar");
+        }
+        if (printess.pageNavigationDisplay() === "icons") {
+            document.body.classList.add("has-mobile-icon-pagebar");
+        }
+        else {
+            document.body.classList.remove("has-mobile-icon-pagebar");
         }
         let autoSelectButton = null;
         if (state !== "add") {
@@ -5217,9 +5725,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             updateMobilePropertiesFullscreen(printess);
         }
         const layoutsButton = document.querySelector(".show-layouts-button");
-        if (layoutsButton) {
-            layoutsButton.textContent = printess.gl("ui.changeLayout");
+        if (layoutsButton && printess.showTabNavigation()) {
             layoutsButton.style.visibility = "hidden";
+        }
+        else if (layoutsButton && layoutSnippets.length > 0) {
+            layoutsButton.textContent = printess.gl("ui.changeLayout");
+            layoutsButton.style.visibility = "visible";
+        }
+        const closeLayoutsButton = document.getElementById("closeLayoutOffCanvas");
+        if (closeLayoutsButton && printess.showTabNavigation()) {
+            closeLayoutsButton.click();
+        }
+        if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+            handleOffcanvasLayoutsContainer(printess, true);
         }
         if (printess.hasSelection()) {
             sessionStorage.setItem("editableFrames", "hint closed");
@@ -5236,7 +5754,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
             toggleChangeLayoutButtonHint();
         }
-        if ((groupSnippets.length > 0 || layoutSnippets.length > 0) && state !== "add") {
+        if ((groupSnippets.length > 0 || (layoutSnippets.length > 0 && printess.showTabNavigation())) && state !== "add") {
             mobileUi.appendChild(getMobilePlusButton(printess));
         }
         if (state !== "document") {
@@ -5276,7 +5794,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     let renderEditableFramesHintTimer = 0;
     function renderEditableFramesHint(printess) {
-        const showEditableFramesHint = printess.uiHintsDisplay().includes("editableFrames") && !sessionStorage.getItem("editableFrames");
+        const showEditableFramesHint = false;
         if (showEditableFramesHint) {
             renderEditableFramesHintTimer = window.setTimeout(() => {
                 renderEditableFramesHintTimer = 0;
@@ -5407,7 +5925,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 flexWrapper.className = "d-flex w-100 justify-content-end mt-1";
                 const open = document.createElement("span");
                 open.className = "layout-hint-open";
-                open.textContent = hint.header === "expertMode" ? "Turn On" : "Show Me";
+                open.textContent = hint.header === "expertMode" ? printess.gl("ui.turnOn") : printess.gl("ui.showMe");
                 open.onclick = () => {
                     var _a;
                     sessionStorage.setItem(hint.header, "hint closed");
@@ -5573,13 +6091,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         nav.className = "navbar navbar-dark";
         nav.style.flexWrap = "nowrap";
         const basketBtnBehaviour = printess.getBasketButtonBehaviour();
-        const showTitle = printess.hasSteps();
+        const hasSteps = printess.hasSteps();
+        const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
         const isBookMode = printess.canAddSpreads() || printess.canRemoveSpreads();
-        const noStepsMenu = printess.showUndoRedo() && !printess.hasSteps() && printess.hasExpertButton() && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0);
-        const showUndoRedo = printess.showUndoRedo() && !printess.hasSteps() && !printess.hasPreviewBackButton();
-        const showCloseBtn = !printess.hasSteps() && (!printess.showUndoRedo() || !showTitle);
-        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !printess.hasSteps();
-        const showExpertBtnWithSteps = printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() === "never";
+        const noStepsMenu = printess.showUndoRedo() && !hasSteps && printess.hasExpertButton() && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0);
+        const showUndoRedo = printess.showUndoRedo() && !hasSteps && !printess.hasPreviewBackButton() && !isDocTabs;
+        const hideCloseBtn = hasSteps || (isDocTabs && printess.showUndoRedo());
+        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps;
+        const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never";
         {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm ms-2 me-2 main-button";
@@ -5596,7 +6115,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 nav.appendChild(btn);
             }
             else {
-                if (!noStepsMenu && showCloseBtn) {
+                if (!noStepsMenu && !hideCloseBtn) {
                     const callback = printess.getBackButtonCallback();
                     btn.className = "btn btn-sm text-white me-2 ms-2";
                     btn.textContent = printess.gl("ui.buttonBack");
@@ -5649,7 +6168,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
         }
-        if (showTitle) {
+        if (hasSteps) {
             const s = printess.getStep();
             const hd = printess.stepHeaderDisplay();
             if (s && hd !== "never") {
@@ -5692,6 +6211,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 document.body.classList.remove("mobile-has-steps-header");
             }
         }
+        else if (isDocTabs) {
+            const docTabs = document.createElement("div");
+            docTabs.style.flexGrow = "1";
+            docTabs.style.display = "flex";
+            docTabs.style.alignItems = "center";
+            docTabs.style.justifyContent = "center";
+            docTabs.classList.add("step-tabs-list");
+            docTabs.id = "step-tab-list";
+            document.body.classList.add("mobile-has-steps-header");
+            const scrollRight = document.createElement("div");
+            scrollRight.className = "scroll-right-indicator";
+            scrollRight.style.backgroundImage = "linear-gradient(to right, rgba(168,168,168,0), var(--bs-primary))";
+            scrollRight.style.display = "inline-block";
+            docTabs.appendChild(getStepsTabsList(printess, true, "doc tabs"));
+            docTabs.appendChild(scrollRight);
+            nav.appendChild(docTabs);
+            if (printess.hasPreviewBackButton()) {
+                docTabs.style.visibility = "hidden";
+            }
+        }
         else if (showUndoRedo) {
             const undoredo = document.createElement("div");
             undoredo.style.display = "flex";
@@ -5722,7 +6261,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const wrapper = document.createElement("div");
         wrapper.className = "d-flex";
-        if (basketBtnBehaviour === "go-to-preview" && printess.stepHeaderDisplay() !== "tabs list" && printess.stepHeaderDisplay() !== "badge list") {
+        const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
+        const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
+        if (basketBtnBehaviour === "go-to-preview" && !isStepTabsList && !isStepBadgeList) {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm ms-2 main-button";
             btn.classList.add("btn-outline-light");
@@ -5948,6 +6489,83 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return pagebar;
     }
+    function getMobilePriceBarDiv(printess) {
+        let pricebar = document.querySelector(".mobile-pricebar");
+        if (!pricebar) {
+            pricebar = document.createElement("div");
+            pricebar.className = "mobile-pricebar";
+            document.body.appendChild(pricebar);
+        }
+        else {
+            pricebar.innerHTML = "";
+        }
+        const priceDiv = document.createElement("div");
+        priceDiv.className = "total-price-container";
+        priceDiv.id = "total-price-display";
+        pricebar.appendChild(priceDiv);
+        const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
+        let mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+        if (printess.pageNavigationDisplay() === "icons") {
+            mobilePageBarHeight = 100;
+        }
+        if (pricebar && uih_mobilePriceDisplay !== "closed") {
+            pricebar.style.top = mobileNavBarHeight + mobilePageBarHeight + "px";
+        }
+        getPriceDisplay(printess, priceDiv, uih_currentPriceDisplay, true);
+        let opener = document.querySelector(".mobile-price-display-opener");
+        if (!opener) {
+            opener = document.createElement("div");
+            opener.className = "mobile-price-display-opener";
+            const openIco = printess.getIcon("grid-lines");
+            openIco.classList.add("open-icon");
+            opener.appendChild(openIco);
+            document.body.appendChild(opener);
+        }
+        if (uih_mobilePriceDisplay === "open" || uih_mobilePriceDisplay === "none") {
+            opener.classList.add("hidden");
+        }
+        else {
+            opener.classList.remove("hidden");
+        }
+        const closer = document.createElement("div");
+        closer.className = "price-display-side-closer";
+        const closeIco = printess.getIcon("close");
+        closeIco.classList.add("close-icon");
+        closer.appendChild(closeIco);
+        closer.ontouchstart = () => {
+            opener === null || opener === void 0 ? void 0 : opener.classList.remove("hidden");
+            if (pricebar)
+                pricebar.classList.add("closed");
+            uih_mobilePriceDisplay = "closed";
+            resizeMobileUi(printess);
+        }, {
+            passive: true
+        };
+        closer.onmousedown = () => {
+            opener === null || opener === void 0 ? void 0 : opener.classList.remove("hidden");
+            if (pricebar)
+                pricebar.classList.add("closed");
+            uih_mobilePriceDisplay = "closed";
+            resizeMobileUi(printess);
+        };
+        opener.ontouchstart = () => {
+            if (pricebar)
+                pricebar.classList.remove("closed");
+            uih_mobilePriceDisplay = "open";
+            resizeMobileUi(printess);
+            opener === null || opener === void 0 ? void 0 : opener.classList.add("hidden");
+        }, {
+            passive: true
+        };
+        opener.onmousedown = () => {
+            if (pricebar)
+                pricebar.classList.remove("closed");
+            uih_mobilePriceDisplay = "open";
+            resizeMobileUi(printess);
+            opener === null || opener === void 0 ? void 0 : opener.classList.add("hidden");
+        };
+        pricebar.appendChild(closer);
+    }
     function resizeMobileUi(printess) {
         if (uih_autoSelectPending)
             return;
@@ -5957,6 +6575,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const controlHostHeight = controlHost.offsetHeight;
             const mobileNavBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-navbar-height").trim().replace("px", "") || "");
             let mobilePageBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pagebar-height").trim().replace("px", "") || "");
+            const mobilePriceBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-pricebar-height").trim().replace("px", "") || "");
             const mobileButtonBarHeight = parseInt(getComputedStyle(document.body).getPropertyValue("--mobile-buttonbar-height").trim().replace("px", "") || "");
             if (printess.pageNavigationDisplay() === "icons") {
                 mobilePageBarHeight = 100;
@@ -5977,14 +6596,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const isInEddiMode = printess.isSoftwareKeyBoardExpanded() || (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "selection-text-style");
                 let showToolBar = false;
                 let showPageBar = false;
+                let showPriceBar = false;
                 const toolBar = document.querySelector(".mobile-navbar");
                 const pageBar = document.querySelector(".mobile-pagebar");
+                const priceBar = document.querySelector(".mobile-pricebar");
+                const priceBarOpener = document.querySelector(".mobile-price-display-opener");
                 if (pageBar && printess.pageNavigationDisplay() === "icons") {
                     pageBar.style.height = mobilePageBarHeight + "px";
                 }
                 const hidePageAndToolbar = printessHeight < 450 && controlHostHeight > 10 || isInEddiMode || viewPortTopOffset > 0;
                 showToolBar = !hidePageAndToolbar || printess.neverHideMobileToolbar();
                 showPageBar = !hidePageAndToolbar;
+                showPriceBar = !hidePageAndToolbar;
                 if (toolbar && showToolBar) {
                     printessTop += mobileNavBarHeight;
                     printessHeight -= mobileNavBarHeight;
@@ -5992,6 +6615,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (pageBar && showPageBar) {
                     printessTop += mobilePageBarHeight;
                     printessHeight -= mobilePageBarHeight;
+                }
+                if (priceBar && showPriceBar) {
+                    printessTop += mobilePriceBarHeight;
+                    printessHeight -= mobilePriceBarHeight;
+                }
+                if (priceBar && uih_mobilePriceDisplay === "closed") {
+                    printessTop -= mobilePriceBarHeight;
+                    printessHeight += mobilePriceBarHeight;
                 }
                 const activeFFId = getActiveFormFieldId();
                 const focusSelection = printess.getZoomMode() === "frame";
@@ -6028,6 +6659,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             pageBar.style.visibility = "hidden";
                         }
                     }
+                    if (priceBar) {
+                        if (showPriceBar) {
+                            priceBar.style.visibility = "visible";
+                        }
+                        else {
+                            priceBar.style.visibility = "hidden";
+                        }
+                    }
+                    if (priceBarOpener) {
+                        if (showPriceBar && uih_mobilePriceDisplay === "closed") {
+                            priceBarOpener.classList.remove("hidden");
+                        }
+                        else {
+                            priceBarOpener.classList.add("hidden");
+                        }
+                    }
                     printess.resizePrintess(true, focusSelection, undefined, printessHeight, focusSelection ? activeFFId : undefined);
                 }
             }
@@ -6048,6 +6695,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const hasButtons = buttons.length > 0;
         if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
             renderPageNavigation(printess, getMobilePageBarDiv(), false, true);
+        }
+        else {
+            const pagebar = document.querySelector(".mobile-pagebar");
+            if (pagebar)
+                pagebar.remove();
+        }
+        getMobilePriceBarDiv(printess);
+        if (uih_currentPriceDisplay) {
+            document.body.classList.add("has-mobile-price-bar");
+        }
+        else {
+            document.body.classList.remove("has-mobile-price-bar");
         }
         let autoSelect = null;
         let autoSelectHasMeta = false;
@@ -6116,13 +6775,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     mobileUiButtonClick(printess, b, buttonDiv, container, false, properties);
                 };
                 if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "background-button") {
-                    drawButtonContent(printess, buttonDiv, [b.newState.externalProperty]);
+                    drawButtonContent(printess, buttonDiv, [b.newState.externalProperty], controlGroup);
                 }
                 else if (controlGroup > 0) {
-                    drawButtonContent(printess, buttonDiv, properties);
+                    drawButtonContent(printess, buttonDiv, properties, controlGroup);
                 }
                 else {
-                    drawButtonContent(printess, buttonDiv, uih_currentProperties);
+                    drawButtonContent(printess, buttonDiv, uih_currentProperties, controlGroup);
                 }
                 buttonContainer.appendChild(buttonDiv);
             }
@@ -6203,7 +6862,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return { div: container, autoSelectButton: autoSelect };
     }
     function mobileUiButtonClick(printess, b, buttonDiv, container, fromAutoSelect, properties) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
         printess.setZoomMode("spread");
         let hadSelectedButtons = false;
         const selectImageZoomButton = fromAutoSelect && ((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "image" && ((_b = b.newState.externalProperty) === null || _b === void 0 ? void 0 : _b.value) !== ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.validation) === null || _d === void 0 ? void 0 : _d.defaultValue) && ((_f = (_e = b.newState.externalProperty) === null || _e === void 0 ? void 0 : _e.imageMeta) === null || _f === void 0 ? void 0 : _f.canScale);
@@ -6270,15 +6929,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 if (selectImageZoomButton) {
                     window.setTimeout(() => {
-                        var _a, _b, _c;
+                        var _a, _b, _c, _d;
                         const bid = ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "") + ":image-scale";
                         const buttonDiv = (document.getElementById(bid));
                         if (buttonDiv) {
                             buttonDiv.classList.toggle("selected");
                             buttonDiv.innerHTML = "";
                             properties = properties && properties.length > 0 ? properties : uih_currentProperties;
-                            drawButtonContent(printess, buttonDiv, properties);
-                            if (((_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.kind) === "image" && printess.canMoveSelectedFrames()) {
+                            drawButtonContent(printess, buttonDiv, properties, ((_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.controlGroup) || 0);
+                            if (((_d = b.newState.externalProperty) === null || _d === void 0 ? void 0 : _d.kind) === "image" && printess.canMoveSelectedFrames()) {
                                 printess.setZoomMode("spread");
                             }
                             else {
@@ -6297,10 +6956,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
             buttonDiv.classList.toggle("selected");
             buttonDiv.innerHTML = "";
-            properties = properties && properties.length > 0 ? properties : uih_currentProperties;
-            drawButtonContent(printess, buttonDiv, properties);
+            if (b.newState.externalProperty && b.newState.externalProperty.controlGroup > 0) {
+                properties = properties || uih_currentProperties;
+            }
+            else if (b.newState.externalProperty) {
+                properties = [b.newState.externalProperty];
+            }
+            else {
+                properties = uih_currentProperties;
+            }
+            drawButtonContent(printess, buttonDiv, properties, ((_m = b.newState.externalProperty) === null || _m === void 0 ? void 0 : _m.controlGroup) || 0);
             centerMobileButton(buttonDiv);
-            if (((_m = b.newState.externalProperty) === null || _m === void 0 ? void 0 : _m.kind) === "image" && printess.canMoveSelectedFrames()) {
+            if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "image" && printess.canMoveSelectedFrames()) {
                 printess.setZoomMode("spread");
             }
             else {
@@ -6308,10 +6975,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             const backButton = document.querySelector(".mobile-property-back-button");
             if (backButton) {
-                (_o = backButton.parentElement) === null || _o === void 0 ? void 0 : _o.removeChild(backButton);
+                (_p = backButton.parentElement) === null || _p === void 0 ? void 0 : _p.removeChild(backButton);
             }
             getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, uih_currentState, fromAutoSelect, willHaveControlHost(b.newState)));
-            if (((_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.kind) === "selection-text-style" && !hadSelectedButtons) {
+            if (((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.kind) === "selection-text-style" && !hadSelectedButtons) {
                 window.setTimeout(() => {
                     renderMobileControlHost(printess, b.newState);
                 }, 500);
@@ -6348,7 +7015,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 else {
                     if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
-                        controlHost.style.overflow = "unset";
+                        controlHost.style.overflow = "auto";
                         getProperties(printess, uih_currentState, properties, controlHost);
                     }
                     else {
@@ -6446,8 +7113,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return "mobile-control-sm";
     }
-    function drawButtonContent(printess, buttonDiv, properties) {
-        var _a, _b, _c;
+    function drawButtonContent(printess, buttonDiv, properties, controlGroup) {
+        var _a, _b;
         const id = buttonDiv.id.split(":");
         let propertyId = id[0];
         let rowIndex = undefined;
@@ -6482,7 +7149,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return;
         const isSelected = buttonDiv.classList.contains("selected");
         buttonDiv.innerHTML = "";
-        const controlGroup = ((_c = properties[0]) === null || _c === void 0 ? void 0 : _c.controlGroup) || 0;
         if (printess.isTextButton(b) || controlGroup > 0) {
             let caption = "";
             if (controlGroup > 0) {

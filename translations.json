@@ -64,6 +64,8 @@
       "addTextFrame": "Add Text Frame",
       "photoFrame": "Photo Frame",
       "textFrame": "Text Frame",
+      "editTextButton": "Edit Text",
+      "editTextButtonInfo": "Click to start text editing inside the text frame.",
       "editTextInsideFrame": "You can edit the text directly inside the text frame ...",
       "selectImage": "My Photos",
       "uploadImageLabel": "Upload images from your device",
@@ -156,6 +158,7 @@
       "onePageAddedInfo": "One page was added to your book!",
       "twoPagesAddedTitle": "Pages Added",
       "twoPagesAddedInfo": "Two pages were added to your book!",
+      "productOverview": "Product Overview",
 
       "editText": "Edit Text",
       "closeTextEditing": "Close Text Editing",
@@ -181,7 +184,10 @@
       "placement-fit": "Fit",
       "placement-fill": "Fill",
       "placement-face": "Face",
-      "placement-group": "Group"
+      "placement-group": "Group",
+
+      "leftPage": "Left Page",
+      "rightPage": "Right Page"
 
 
     },
@@ -294,6 +300,8 @@
       "addTextFrame": "Textrahmem hinzufügen",
       "photoFrame": "Fotorahmen",
       "textFrame": "Textrahmen",
+      "editTextButton": "Text bearbeiten",
+      "editTextButtonInfo": "Klicken Sie auf die Schaltfläche, um die Textbearbeitung innerhalb des Textrahmens zu starten.",
       "editTextInsideFrame": "Sie können den Text direkt innerhalb des Textrahmens bearbeiten ...",
       "selectImage": "Meine Fotos",
       "uploadImageLabel": "Bilder von Ihrem Gerät hochladen",
@@ -386,6 +394,7 @@
       "onePageAddedInfo": "Eine Seite wurde zu Ihrem Buch hinzugefügt!",
       "twoPagesAddedTitle": "Seiten hinzugefügt",
       "twoPagesAddedInfo": "Ihrem Buch wurden zwei Seiten hinzugefügt!",
+      "productOverview": "Produktübersicht",
 
       "editText": "Text bearbeiten",
       "closeTextEditing": "Textbearbeitung schließen",
@@ -411,7 +420,11 @@
       "placement-fit": "Einpassen",
       "placement-fill": "Ausfüllen",
       "placement-face": "Gesicht",
-      "placement-group": "Gruppe"
+      "placement-group": "Gruppe",
+
+      "leftPage": "Linke Seite",
+      "rightPage": "Rechte Seite"
+
 
 
     },
@@ -522,6 +535,8 @@
       "addTextFrame": "Añadir marco de texto",
       "photoFrame": "Marco de fotos",
       "textFrame": "Marco de texto",
+      "editTextButton": "Editar texto",
+      "editTextButtonInfo": "Haga clic en el botón para iniciar la edición de texto dentro del marco de texto.",
       "editTextInsideFrame": "Puede editar el texto directamente dentro del marco de texto ...",
       "selectImage": "Mis fotos",
       "uploadImageLabel": "Subir imágenes desde su dispositivo",
@@ -614,6 +629,7 @@
       "onePageAddedInfo": "Se ha añadido una página a su libro.",
       "twoPagesAddedTitle": "Páginas añadidas",
       "twoPagesAddedInfo": "Se han añadido dos páginas a su libro.",
+      "productOverview": "Resumen del producto",
 
       "editText": "Editar texto",
       "closeTextEditing": "Cerrar la edición de texto",
@@ -639,7 +655,11 @@
       "placement-fit": "Adaptación",
       "placement-fill": "Rellenar",
       "placement-face": "Cara",
-      "placement-group": "Grupo"
+      "placement-group": "Grupo",
+
+      "leftPage": "Página izquierda",
+      "rightPage": "Página derecha"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Vaya!\nParece que tu foto es demasiado pequeña ...",
@@ -748,6 +768,8 @@
       "addTextFrame": "Lisää tekstikehys",
       "photoFrame": "Valokuvakehys",
       "textFrame": "Tekstikehys",
+      "editTextButton": "Muokkaa tekstiä",
+      "editTextButtonInfo": "Aloita tekstin muokkaus tekstikehyksen sisällä napsauttamalla painiketta.",
       "editTextInsideFrame": "Voit muokata tekstiä suoraan tekstikehyksen sisällä ...",
       "selectImage": "Minun Valokuvani",
       "uploadImageLabel": "Lataa kuvia laitteestasi",
@@ -840,6 +862,7 @@
       "onePageAddedInfo": "Yksi sivu on lisätty kirjaasi!",
       "twoPagesAddedTitle": "Lisätty sivuja",
       "twoPagesAddedInfo": "Kirjallesi lisättiin kaksi sivua!",
+      "productOverview": "Tuotteen yleiskatsaus",
 
       "editText": "Muokkaa tekstiä",
       "closeTextEditing": "Sulje tekstin muokkaus",
@@ -865,7 +888,10 @@
       "placement-fit": "Sovittaminen",
       "placement-fill": "Täytä",
       "placement-face": "Kasvot",
-      "placement-group": "Ryhmä"
+      "placement-group": "Ryhmä",
+
+      "leftPage": "Vasen sivu",
+      "rightPage": "Oikea sivu"
     },
     "errors": {
       "imageResolutionLowTitle": "Hups!\nKuvasi näyttää olevan liian pieni...",
@@ -974,6 +1000,8 @@
       "addTextFrame": "Ajouter un cadre de texte",
       "photoFrame": "Cadre photo",
       "textFrame": "Cadre de texte",
+      "editTextButton": "Modifier le texte",
+      "editTextButtonInfo": "Cliquez sur le bouton pour lancer l'édition du texte à l'intérieur du cadre de texte.",
       "editTextInsideFrame": "Vous pouvez éditer le texte directement dans le cadre de texte ...",
       "selectImage": "Me Photos",
       "uploadImageLabel": "Téléchargez des images depuis votre appareil",
@@ -1066,6 +1094,7 @@
       "onePageAddedInfo": "Une page a été ajoutée à votre livre !",
       "twoPagesAddedTitle": "Pages ajoutées",
       "twoPagesAddedInfo": "Deux pages ont été ajoutées à votre livre !",
+      "productOverview": "Aperçu du produit",
 
       "editText": "Modifier le texte",
       "closeTextEditing": "Fermer l'édition du texte",
@@ -1091,7 +1120,10 @@
       "placement-fit": "Ajuster",
       "placement-fill": "Remplir",
       "placement-face": "Visage",
-      "placement-group": "Groupe"
+      "placement-group": "Groupe",
+
+      "leftPage": "Page de gauche",
+      "rightPage": "Page de droite"
     },
     "errors": {
       "imageResolutionLowTitle": "Oups!\nOn dirait que votre image est trop petite...",
@@ -1200,6 +1232,8 @@
       "addTextFrame": "Добавить текстовую рамку",
       "photoFrame": "Фоторамка",
       "textFrame": "Текстовая рамка",
+      "editTextButton": "Редактировать текст",
+      "editTextButtonInfo": "Нажмите кнопку, чтобы начать редактирование текста внутри текстовой рамки.",
       "editTextInsideFrame": "Вы можете редактировать текст непосредственно в текстовой рамке ...",
       "selectImage": "Мои Фото",
       "uploadImageLabel": "Загрузите изображения с вашего устройства",
@@ -1292,6 +1326,7 @@
       "onePageAddedInfo": "Одна страница была добавлена в Вашу книгу!",
       "twoPagesAddedTitle": "Страницы добавлены",
       "twoPagesAddedInfo": "Две страницы были добавлены в вашу книгу!",
+      "productOverview": "Обзор продукции",
 
       "editText": "Редактирование текста",
       "closeTextEditing": "Закрыть редактирование текста",
@@ -1317,7 +1352,10 @@
       "placement-fit": "Приспособление",
       "placement-fill": "Заполнить",
       "placement-face": "Лицо",
-      "placement-group": "Группа"
+      "placement-group": "Группа",
+
+      "leftPage": "Левая страница",
+      "rightPage": "Правая страница"
     },
     "errors": {
       "imageResolutionLowTitle": "Упс!\nПохоже, что ваше изображение слишком маленькое...",
@@ -1426,6 +1464,8 @@
       "addTextFrame": "Lägg till en textram",
       "photoFrame": "Fotoram",
       "textFrame": "Textram",
+      "editTextButton": "Redigera text",
+      "editTextButtonInfo": "Klicka på knappen för att starta textredigering i textramen.",
       "editTextInsideFrame": "Du kan redigera texten direkt i textramen ...",
       "selectImage": "Mina Bilder",
       "uploadImageLabel": "Ladda upp bilder från din enhet",
@@ -1518,6 +1558,7 @@
       "onePageAddedInfo": "En sida har lagts till i din bok!",
       "twoPagesAddedTitle": "Sidor som lagts till",
       "twoPagesAddedInfo": "Två sidor har lagts till i din bok!",
+      "productOverview": "Produktöversikt",
 
       "editText": "Redigera text",
       "closeTextEditing": "Stänga textredigering",
@@ -1543,7 +1584,10 @@
       "placement-fit": "Passa in",
       "placement-fill": "Fyll i",
       "placement-face": "Ansikte",
-      "placement-group": "Grupp"
+      "placement-group": "Grupp",
+
+      "leftPage": "Vänster sida",
+      "rightPage": "Höger sida"
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nDet verkar som om bilden är för liten...",
