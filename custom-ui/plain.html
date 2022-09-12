@@ -85,10 +85,6 @@
       currentLayoutSnippets = layoutSnippets;
       currentTabs = tabs;
 
-
-      const layoutSnippetsDiv = document.getElementById("layoutSnippets");
-      layoutSnippetsDiv.innerHTML = "";
-      layoutSnippetsDiv.appendChild(uiHelper.renderLayoutSnippets(printess, layoutSnippets));
       document.querySelector(".show-layouts-button").style.visibility = layoutSnippets.length ? "visible" : "hidden";
 
     }

@@ -6,7 +6,6 @@ declare const bootstrap: any;
 
 (function () {
   (<any>window).uiHelper = {
-    renderLayoutSnippets: renderLayoutSnippets,
     getOverlay: getOverlay,
     renderMobileUi: renderMobileUi,
     renderMobileNavBar: renderMobileNavBar,
@@ -199,10 +198,12 @@ declare const bootstrap: any;
         // switch to mobile
         renderMobileUi(printess);
         renderMobileNavBar(printess);
+        removeExternalSnippetsContainer();
       }
       if (!mobile && uih_currentRender !== "desktop") {
         // switch to desktop
         renderDesktopUi(printess);
+        removeExternalSnippetsContainer();
       }
     }
   }
@@ -497,7 +498,7 @@ declare const bootstrap: any;
     }
 
     // tab lists and icons bring their own navigation buttons .. steps are not displayed in title
-    if (!isStepTabsList && !isStepBadgeList && !isDocTabs) {
+    if (!isPageIconsNavigation && !isStepTabsList && !isStepBadgeList && !isDocTabs) {
       if (printess.hasSteps()) {
         // if document has steps, display current step:
         const desktopStepsUi = getDesktopStepsUi(printess);
@@ -573,10 +574,15 @@ declare const bootstrap: any;
       toggleChangeLayoutButtonHint();
     }
 
-    // external layout snippets container
-    let layoutsDiv = document.getElementById("external-layouts-container");
-    if (layoutsDiv) {
-      layoutsDiv.style.display = "none";
+    // hide external layout snippets container
+    const externalLayoutsContainer = document.getElementById("external-layouts-container");
+    if (externalLayoutsContainer && (uih_currentTabId !== "#LAYOUTS" || uih_currentLayoutSnippets.length === 0)) {
+      externalLayoutsContainer.style.display = "none";
+    }
+
+    // handle Offcanvas for Layout Snippets
+    if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+      handleOffcanvasLayoutsContainer(printess, false);
     }
 
     if (printess.hasPreviewBackButton()) {
@@ -768,7 +774,24 @@ declare const bootstrap: any;
     return t;
   }
 
-  function getExternalSnippetsContainer(printess: iPrintessApi): void {
+  function handleOffcanvasLayoutsContainer(printess: iPrintessApi, forMobile: boolean): void {
+    const layoutsDiv = document.getElementById("layoutSnippets");
+
+    const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+    const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+    const snippetsChanged = currentSnippets !== previousSnippets;
+
+    if (layoutsDiv && snippetsChanged) {
+      layoutsDiv.innerHTML = "";
+      layoutsDiv.scrollTop = 0;
+      layoutsDiv.appendChild(renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false));
+    }
+
+    const showLayoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
+    if (showLayoutsButton) showLayoutsButton.style.visibility = "visible";
+  }
+
+  function getExternalSnippetsContainer(printess: iPrintessApi, forMobile: boolean): void {
     let layoutsDiv = document.getElementById("external-layouts-container");
 
     const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
@@ -782,9 +805,9 @@ declare const bootstrap: any;
       layoutsDiv.id = "external-layouts-container";
 
       const titleDiv = getPropertiesTitle(printess, true);
-      const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
+      const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false);
 
-      layoutsDiv.appendChild(titleDiv);
+      if (!forMobile) layoutsDiv.appendChild(titleDiv);
       layoutsDiv.appendChild(content);
       document.body.appendChild(layoutsDiv);
 
@@ -793,15 +816,15 @@ declare const bootstrap: any;
 
       layoutsDiv.innerHTML = "";
       const titleDiv = getPropertiesTitle(printess, true);
-      const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
+      const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false);
 
-      layoutsDiv.appendChild(titleDiv);
+      if (!forMobile) layoutsDiv.appendChild(titleDiv);
       layoutsDiv.appendChild(content);
     }
 
     if (uih_currentLayoutSnippets.length === 0) {
       layoutsDiv.style.display = "none";
-    } else {
+    } else if (!forMobile) {
       layoutsDiv.style.display = "block";
     }
   }
@@ -1061,6 +1084,16 @@ declare const bootstrap: any;
         } else { // if (t.id !== "#PHOTOS") {
           printess.clearSelection(); // triggers complete redraw with new tab selected 
         }
+
+        const externalLayoutsContainer = document.getElementById("external-layouts-container");
+        if (externalLayoutsContainer && forMobile) {
+          externalLayoutsContainer.classList.remove("open-external-layouts-container");
+          if (t.id === "#LAYOUTS") {
+            externalLayoutsContainer.classList.add("show-external-layouts-container");
+          } else {
+            externalLayoutsContainer.classList.remove("show-external-layouts-container");
+          }
+        }
       }
 
       const tabIcon = printess.getIcon(t.icon);
@@ -1088,7 +1121,6 @@ declare const bootstrap: any;
   // Show properties depending on selected tab
   function renderTabNavigationProperties(printess: iPrintessApi, container: HTMLElement, forMobile: boolean): void {
 
-
     switch (uih_currentTabId) {
 
       case "#PHOTOS": {
@@ -1107,13 +1139,8 @@ declare const bootstrap: any;
         break;
       }
       case "#LAYOUTS": {
-        // render layout snippets and hide them until relevant to display
-        //const tabsAndSnippetsLoaded = uih_currentLayoutSnippets.length > 0 && uih_currentTabs.length > 0;
-
-        if ((<any>window).uiHelper.customLayoutSnippetRenderCallback && !forMobile) {
-
-          getExternalSnippetsContainer(printess);
-
+        if ((<any>window).uiHelper.customLayoutSnippetRenderCallback) {
+          getExternalSnippetsContainer(printess, forMobile);
         } else {
           removeExternalSnippetsContainer();
 
@@ -2908,7 +2935,14 @@ declare const bootstrap: any;
     const label = document.createElement("div");
     label.classList.add("dropdown-list-label");
     label.innerText = printess.gl(entry.label);
+
+    const priceBadge = document.createElement("div");
+    priceBadge.className = "badge bg-primary";
+    priceBadge.style.marginLeft = "auto";
+    priceBadge.textContent = printess.gl(entry.tag);
+
     div.appendChild(label);
+    //if (entry.tag) div.appendChild(priceBadge);
 
     return div;
   }
@@ -4443,7 +4477,7 @@ declare const bootstrap: any;
       if (!cornerTools) miniBar.appendChild(btnZoomIn);
 
       const dropdownItems = getItemsForZoomDropdown(printess);
-      miniBar.appendChild(getDropdownMenu(printess, "", dropdownItems, false, "search-light"));
+      miniBar.appendChild(getZoomOptionsMenu(printess, "", dropdownItems, false, "search-light"));
 
       const btnZoomOut = document.createElement("button");
       btnZoomOut.className = "btn btn-sm btn-outline-secondary me-2";
@@ -4468,7 +4502,7 @@ declare const bootstrap: any;
     return miniBar;
   }
 
-  function getDropdownMenu(printess: iPrintessApi, title: string, dropdownItems: iDropdownItems[], showDropdownTriangle: boolean = true, icon?: iconName): HTMLElement {
+  function getZoomOptionsMenu(printess: iPrintessApi, title: string, dropdownItems: iDropdownItems[], showDropdownTriangle: boolean = true, icon?: iconName): HTMLElement {
     const cornerTools = printess.pageNavigationDisplay() === "icons";
     const dropdown = document.createElement("div");
     dropdown.className = "dropdown d-flex me-1";
@@ -5820,6 +5854,8 @@ declare const bootstrap: any;
       container?.classList.remove("show-image-list");
       container?.classList.add("hide-image-list");
 
+      closeMobileExternalLayoutsContainer();
+
       if (id === "CROPMODAL" || id === "PRICE-INFO") {
         window.setTimeout(() => hideModal(id), 1000);
       }
@@ -5873,16 +5909,43 @@ declare const bootstrap: any;
       fullscreenContainer.classList.remove("hide-image-list");
       fullscreenContainer.classList.add("show-image-list");
     }
+
+    const externalLayoutsContainer = document.getElementById("external-layouts-container");
+    if (externalLayoutsContainer) {
+      externalLayoutsContainer.classList.remove("hide-external-layouts-container");
+
+      if (uih_currentTabId !== "#LAYOUTS") {
+        externalLayoutsContainer.style.display = "none";
+      } else {
+        externalLayoutsContainer.classList.add("show-external-layouts-container");
+        externalLayoutsContainer.classList.add("open-external-layouts-container");
+      }
+    }
+  }
+
+  function closeMobileExternalLayoutsContainer(): void {
+    const externalLayoutsContainer = document.getElementById("external-layouts-container");
+    if (externalLayoutsContainer) {
+      externalLayoutsContainer.classList.remove("show-external-layouts-container");
+      externalLayoutsContainer.classList.remove("open-external-layouts-container");
+      externalLayoutsContainer.classList.add("hide-external-layouts-container");
+    }
   }
 
   function closeMobileFullscreenContainer(): void {
+    closeMobileExternalLayoutsContainer();
+
     const fullscreenContainer = document.querySelector(".fullscreen-add-properties.show-image-list") || document.querySelector(".image-list-fullscreen.show-image-list");
 
-    fullscreenContainer?.classList.remove("show-image-list");
-    fullscreenContainer?.classList.add("hide-image-list");
+    if (fullscreenContainer) {
+      fullscreenContainer.classList.remove("show-image-list");
+      fullscreenContainer.classList.add("hide-image-list");
+    }
   }
 
   function removeMobileFullscreenContainer(): void {
+    closeMobileExternalLayoutsContainer();
+
     const fullscreenContainer = document.querySelector(".fullscreen-add-properties");
     const imageListContainer = document.querySelector(".image-list-fullscreen");
 
@@ -6100,7 +6163,7 @@ declare const bootstrap: any;
           };
 
           const priceBox = document.createElement("span");
-          priceBox.className = "badge bg-primary"; //"snippet-price-box";
+          priceBox.className = "badge bg-primary";
           priceBox.textContent = printess.gl(snippet.priceLabel);
           if (snippet.priceLabel) thumbDiv.appendChild(priceBox);
 
@@ -6143,7 +6206,7 @@ declare const bootstrap: any;
   }
 
   // Handle external layout snippets display and return a HTMLDivElement which replaces the internal layout-snippet-list
-  function getExternalSnippetDiv(printess: iPrintessApi, layoutSnippets: iExternalSnippetCluster[], modalId: string, forMobile: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
+  function getExternalSnippetDiv(printess: iPrintessApi, layoutSnippets: iExternalSnippetCluster[], forMobile: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
     /**
      * customLayoutSnippetRenderCallback will be called with those parameters and expects 
      * a HTMLDivElement as return value.
@@ -6167,6 +6230,8 @@ declare const bootstrap: any;
       // cancel callback => close dialogs / offcanvas
       closeLayoutOverlays(printess, forMobile);
     });
+
+    modalHtml.id = "external-layouts-content";
 
     return modalHtml;
   }
@@ -6199,15 +6264,15 @@ declare const bootstrap: any;
     const layoutsDialog = document.getElementById("layoutSnippetsSelection");
     if (layoutsDialog) layoutsDialog.remove();
 
-    if (forMobile && printess.showTabNavigation()) {
+    if (printess.showTabNavigation()) {
       closeMobileFullscreenContainer();
     }
   }
 
   function renderLayoutSnippets(printess: iPrintessApi, layoutSnippets: Array<iExternalSnippetCluster>, forMobile?: boolean, forLayoutDialog: boolean = false): HTMLDivElement {
 
-    if ((<any>window).uiHelper.customLayoutSnippetRenderCallback) {
-      const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, "layoutSnippetsSelection", forMobile ?? uih_currentRender === "mobile", forLayoutDialog);
+    if ((<any>window).uiHelper.customLayoutSnippetRenderCallback && layoutSnippets) {
+      const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, forMobile ?? uih_currentRender === "mobile", forLayoutDialog);
       if (externalSnippetContainer && externalSnippetContainer.nodeType) { // && externalSnippetContainer instanceof Element) {
         return externalSnippetContainer;
       }
@@ -6766,12 +6831,18 @@ declare const bootstrap: any;
     // translate change Layout button text
     const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
     if (layoutsButton && printess.showTabNavigation()) {
-      layoutsButton.textContent = printess.gl("ui.changeLayout");
       layoutsButton.style.visibility = "hidden";
+    } else if (layoutsButton && layoutSnippets.length > 0) {
+      layoutsButton.textContent = printess.gl("ui.changeLayout");
+      layoutsButton.style.visibility = "visible";
     }
     const closeLayoutsButton = <HTMLButtonElement>document.getElementById("closeLayoutOffCanvas");
     if (closeLayoutsButton && printess.showTabNavigation()) {
       closeLayoutsButton.click();
+    }
+    // handle Offcanvas for Layout Snippets
+    if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+      handleOffcanvasLayoutsContainer(printess, true);
     }
 
     // add editable frames hint to session storage if frame has been selected
