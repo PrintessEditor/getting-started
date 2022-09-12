@@ -128,6 +128,59 @@ body {
   border-right: 1px solid #6c757d;
   padding: 10px;
 }
+#external-layouts-content {
+  height: calc(100% - 70px);
+}
+
+@media screen and (max-width: 896px) {
+  #external-layouts-container {
+    display: none;
+    left: 0px;
+    top: 60px;
+    bottom: 80px;
+    width: 100%;
+    height: calc(100% - 140px);
+    background: white;
+    border: none;
+    padding: 10px;
+    z-index: 9999;
+  }
+  #external-layouts-content {
+    height: 100%;
+  }
+  .show-external-layouts-container {
+    display: block!important;
+  }
+  .open-external-layouts-container {
+    top: 60px;
+    animation: external-expand 1s ease;
+  }
+  .hide-external-layouts-container {
+    top: 100%;
+    animation: external-compress 1s ease;
+    display: none!important;
+  }
+
+  @keyframes external-expand {
+    0% {
+      top: calc(100% + 60px);
+    }
+    
+    100% {
+      top: 60px;
+    }
+  }
+
+  @keyframes external-compress {
+    0% {
+      top: 60px;
+    }
+    
+    100% {
+      top: calc(100% + 60px);
+    }
+  }
+}
  
 
 #desktop-pagebar.tabs {
@@ -1341,6 +1394,10 @@ li.spread-separator {
   position: absolute;
   bottom: -4px;
   right: -4px;
+}
+
+button.dropdown-toggle .badge.bg-primary {
+  margin-right: 15px;
 }
 
 .show-layouts-button {

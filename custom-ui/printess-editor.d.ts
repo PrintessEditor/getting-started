@@ -1505,7 +1505,8 @@ export type iExternalFieldListEntry = {
   key: string,
   label: string, // multi-language??
   description: string,
-  imageUrl: string
+  imageUrl: string,
+  tag: string
 }
 export interface iExternalTableMeta {
   columns: Array<iExternalTableColumn>;

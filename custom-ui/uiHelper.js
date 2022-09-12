@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 (function () {
     window.uiHelper = {
-        renderLayoutSnippets: renderLayoutSnippets,
         getOverlay: getOverlay,
         renderMobileUi: renderMobileUi,
         renderMobileNavBar: renderMobileNavBar,
@@ -179,9 +178,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (mobile && uih_currentRender !== "mobile") {
                 renderMobileUi(printess);
                 renderMobileNavBar(printess);
+                removeExternalSnippetsContainer();
             }
             if (!mobile && uih_currentRender !== "desktop") {
                 renderDesktopUi(printess);
+                removeExternalSnippetsContainer();
             }
         }
     }
@@ -421,7 +422,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             desktopTitleOrSteps.innerHTML = "";
         }
-        if (!isStepTabsList && !isStepBadgeList && !isDocTabs) {
+        if (!isPageIconsNavigation && !isStepTabsList && !isStepBadgeList && !isDocTabs) {
             if (printess.hasSteps()) {
                 const desktopStepsUi = getDesktopStepsUi(printess);
                 if (printess.showTabNavigation()) {
@@ -484,9 +485,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout") && !printess.showTabNavigation()) {
             toggleChangeLayoutButtonHint();
         }
-        let layoutsDiv = document.getElementById("external-layouts-container");
-        if (layoutsDiv) {
-            layoutsDiv.style.display = "none";
+        const externalLayoutsContainer = document.getElementById("external-layouts-container");
+        if (externalLayoutsContainer && (uih_currentTabId !== "#LAYOUTS" || uih_currentLayoutSnippets.length === 0)) {
+            externalLayoutsContainer.style.display = "none";
+        }
+        if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+            handleOffcanvasLayoutsContainer(printess, false);
         }
         if (printess.hasPreviewBackButton()) {
         }
@@ -644,7 +648,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return t;
     }
-    function getExternalSnippetsContainer(printess) {
+    function handleOffcanvasLayoutsContainer(printess, forMobile) {
+        const layoutsDiv = document.getElementById("layoutSnippets");
+        const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+        const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+        const snippetsChanged = currentSnippets !== previousSnippets;
+        if (layoutsDiv && snippetsChanged) {
+            layoutsDiv.innerHTML = "";
+            layoutsDiv.scrollTop = 0;
+            layoutsDiv.appendChild(renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false));
+        }
+        const showLayoutsButton = document.querySelector(".show-layouts-button");
+        if (showLayoutsButton)
+            showLayoutsButton.style.visibility = "visible";
+    }
+    function getExternalSnippetsContainer(printess, forMobile) {
         let layoutsDiv = document.getElementById("external-layouts-container");
         const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
         const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
@@ -654,8 +672,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             layoutsDiv = document.createElement("div");
             layoutsDiv.id = "external-layouts-container";
             const titleDiv = getPropertiesTitle(printess, true);
-            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
-            layoutsDiv.appendChild(titleDiv);
+            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false);
+            if (!forMobile)
+                layoutsDiv.appendChild(titleDiv);
             layoutsDiv.appendChild(content);
             document.body.appendChild(layoutsDiv);
         }
@@ -663,14 +682,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             uih_previousLayoutSnippets = uih_currentLayoutSnippets;
             layoutsDiv.innerHTML = "";
             const titleDiv = getPropertiesTitle(printess, true);
-            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, false, false);
-            layoutsDiv.appendChild(titleDiv);
+            const content = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile, false);
+            if (!forMobile)
+                layoutsDiv.appendChild(titleDiv);
             layoutsDiv.appendChild(content);
         }
         if (uih_currentLayoutSnippets.length === 0) {
             layoutsDiv.style.display = "none";
         }
-        else {
+        else if (!forMobile) {
             layoutsDiv.style.display = "block";
         }
     }
@@ -905,6 +925,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 else {
                     printess.clearSelection();
                 }
+                const externalLayoutsContainer = document.getElementById("external-layouts-container");
+                if (externalLayoutsContainer && forMobile) {
+                    externalLayoutsContainer.classList.remove("open-external-layouts-container");
+                    if (t.id === "#LAYOUTS") {
+                        externalLayoutsContainer.classList.add("show-external-layouts-container");
+                    }
+                    else {
+                        externalLayoutsContainer.classList.remove("show-external-layouts-container");
+                    }
+                }
             };
             const tabIcon = printess.getIcon(t.icon);
             tabIcon.classList.add("desktop-tab-icon");
@@ -938,8 +968,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 break;
             }
             case "#LAYOUTS": {
-                if (window.uiHelper.customLayoutSnippetRenderCallback && !forMobile) {
-                    getExternalSnippetsContainer(printess);
+                if (window.uiHelper.customLayoutSnippetRenderCallback) {
+                    getExternalSnippetsContainer(printess, forMobile);
                 }
                 else {
                     removeExternalSnippetsContainer();
@@ -2440,6 +2470,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const label = document.createElement("div");
         label.classList.add("dropdown-list-label");
         label.innerText = printess.gl(entry.label);
+        const priceBadge = document.createElement("div");
+        priceBadge.className = "badge bg-primary";
+        priceBadge.style.marginLeft = "auto";
+        priceBadge.textContent = printess.gl(entry.tag);
         div.appendChild(label);
         return div;
     }
@@ -3738,7 +3772,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (!cornerTools)
                 miniBar.appendChild(btnZoomIn);
             const dropdownItems = getItemsForZoomDropdown(printess);
-            miniBar.appendChild(getDropdownMenu(printess, "", dropdownItems, false, "search-light"));
+            miniBar.appendChild(getZoomOptionsMenu(printess, "", dropdownItems, false, "search-light"));
             const btnZoomOut = document.createElement("button");
             btnZoomOut.className = "btn btn-sm btn-outline-secondary me-2";
             const iconZoomOut = printess.getIcon("minus-light");
@@ -3758,7 +3792,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return miniBar;
     }
-    function getDropdownMenu(printess, title, dropdownItems, showDropdownTriangle = true, icon) {
+    function getZoomOptionsMenu(printess, title, dropdownItems, showDropdownTriangle = true, icon) {
         const cornerTools = printess.pageNavigationDisplay() === "icons";
         const dropdown = document.createElement("div");
         dropdown.className = "dropdown d-flex me-1";
@@ -4897,6 +4931,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         exitBtn.onclick = () => {
             container === null || container === void 0 ? void 0 : container.classList.remove("show-image-list");
             container === null || container === void 0 ? void 0 : container.classList.add("hide-image-list");
+            closeMobileExternalLayoutsContainer();
             if (id === "CROPMODAL" || id === "PRICE-INFO") {
                 window.setTimeout(() => hideModal(id), 1000);
             }
@@ -4946,13 +4981,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             fullscreenContainer.classList.remove("hide-image-list");
             fullscreenContainer.classList.add("show-image-list");
         }
+        const externalLayoutsContainer = document.getElementById("external-layouts-container");
+        if (externalLayoutsContainer) {
+            externalLayoutsContainer.classList.remove("hide-external-layouts-container");
+            if (uih_currentTabId !== "#LAYOUTS") {
+                externalLayoutsContainer.style.display = "none";
+            }
+            else {
+                externalLayoutsContainer.classList.add("show-external-layouts-container");
+                externalLayoutsContainer.classList.add("open-external-layouts-container");
+            }
+        }
+    }
+    function closeMobileExternalLayoutsContainer() {
+        const externalLayoutsContainer = document.getElementById("external-layouts-container");
+        if (externalLayoutsContainer) {
+            externalLayoutsContainer.classList.remove("show-external-layouts-container");
+            externalLayoutsContainer.classList.remove("open-external-layouts-container");
+            externalLayoutsContainer.classList.add("hide-external-layouts-container");
+        }
     }
     function closeMobileFullscreenContainer() {
+        closeMobileExternalLayoutsContainer();
         const fullscreenContainer = document.querySelector(".fullscreen-add-properties.show-image-list") || document.querySelector(".image-list-fullscreen.show-image-list");
-        fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.remove("show-image-list");
-        fullscreenContainer === null || fullscreenContainer === void 0 ? void 0 : fullscreenContainer.classList.add("hide-image-list");
+        if (fullscreenContainer) {
+            fullscreenContainer.classList.remove("show-image-list");
+            fullscreenContainer.classList.add("hide-image-list");
+        }
     }
     function removeMobileFullscreenContainer() {
+        closeMobileExternalLayoutsContainer();
         const fullscreenContainer = document.querySelector(".fullscreen-add-properties");
         const imageListContainer = document.querySelector(".image-list-fullscreen");
         if (fullscreenContainer)
@@ -5161,13 +5219,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getExternalSnippetDiv(printess, layoutSnippets, modalId, forMobile, forLayoutDialog = false) {
+    function getExternalSnippetDiv(printess, layoutSnippets, forMobile, forLayoutDialog = false) {
         const modalHtml = window.uiHelper.customLayoutSnippetRenderCallback(printess, layoutSnippets, forMobile, forLayoutDialog, (templateName, templateVersion, documentName, mode = "layout") => {
             printess.insertTemplateAsLayoutSnippet(templateName, templateVersion, documentName, mode);
             closeLayoutOverlays(printess, forMobile);
         }, () => {
             closeLayoutOverlays(printess, forMobile);
         });
+        modalHtml.id = "external-layouts-content";
         return modalHtml;
     }
     function renderLayoutSelectionDialog(printess, layoutSnippets, forMobile) {
@@ -5192,13 +5251,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const layoutsDialog = document.getElementById("layoutSnippetsSelection");
         if (layoutsDialog)
             layoutsDialog.remove();
-        if (forMobile && printess.showTabNavigation()) {
+        if (printess.showTabNavigation()) {
             closeMobileFullscreenContainer();
         }
     }
     function renderLayoutSnippets(printess, layoutSnippets, forMobile, forLayoutDialog = false) {
-        if (window.uiHelper.customLayoutSnippetRenderCallback) {
-            const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, "layoutSnippetsSelection", forMobile !== null && forMobile !== void 0 ? forMobile : uih_currentRender === "mobile", forLayoutDialog);
+        if (window.uiHelper.customLayoutSnippetRenderCallback && layoutSnippets) {
+            const externalSnippetContainer = getExternalSnippetDiv(printess, layoutSnippets, forMobile !== null && forMobile !== void 0 ? forMobile : uih_currentRender === "mobile", forLayoutDialog);
             if (externalSnippetContainer && externalSnippetContainer.nodeType) {
                 return externalSnippetContainer;
             }
@@ -5667,12 +5726,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const layoutsButton = document.querySelector(".show-layouts-button");
         if (layoutsButton && printess.showTabNavigation()) {
-            layoutsButton.textContent = printess.gl("ui.changeLayout");
             layoutsButton.style.visibility = "hidden";
+        }
+        else if (layoutsButton && layoutSnippets.length > 0) {
+            layoutsButton.textContent = printess.gl("ui.changeLayout");
+            layoutsButton.style.visibility = "visible";
         }
         const closeLayoutsButton = document.getElementById("closeLayoutOffCanvas");
         if (closeLayoutsButton && printess.showTabNavigation()) {
             closeLayoutsButton.click();
+        }
+        if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+            handleOffcanvasLayoutsContainer(printess, true);
         }
         if (printess.hasSelection()) {
             sessionStorage.setItem("editableFrames", "hint closed");
