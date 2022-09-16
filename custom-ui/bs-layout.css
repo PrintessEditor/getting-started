@@ -342,11 +342,17 @@ body {
 .corner-tools .allow-zoom-and-pan.undo-redo-bar {
   grid-template-columns: auto auto auto auto auto;
 }
-.corner-tools.expert-mode .undo-redo-bar {
+.corner-tools.expert-mode .undo-redo-bar, .corner-tools.save-mode .undo-redo-bar {
   grid-template-columns: auto auto auto 1fr auto;
 }
-.corner-tools.expert-mode .allow-zoom-and-pan.undo-redo-bar {
+.corner-tools.expert-mode.save-mode .undo-redo-bar {
+  grid-template-columns: auto auto auto 1fr 1fr auto;
+}
+.corner-tools.expert-mode .allow-zoom-and-pan.undo-redo-bar, .corner-tools.save-mode .allow-zoom-and-pan.undo-redo-bar {
   grid-template-columns: auto auto auto auto auto auto;
+}
+.corner-tools.expert-mode.save-mode .allow-zoom-and-pan.undo-redo-bar {
+  grid-template-columns: auto auto auto auto auto auto auto;
 }
 
 .modify-page-buttons {
@@ -1398,6 +1404,13 @@ li.spread-separator {
 
 button.dropdown-toggle .badge.bg-primary {
   margin-right: 15px;
+}
+
+.image-select-list .badge.bg-primary {
+  margin-left: auto;
+  position: absolute;
+  bottom: -9px;
+  right: -9px;
 }
 
 .show-layouts-button {
