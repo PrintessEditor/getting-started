@@ -70,8 +70,8 @@ declare const bootstrap: any;
 
   //console.log("Printess ui-helper loaded");
 
-  function validateAllInputs(printess: iPrintessApi): boolean {
-    const errors = printess.validate("all");
+  async function validateAllInputs(printess: iPrintessApi): Promise<boolean> {
+    const errors = await printess.validateAsync("all");
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
@@ -125,7 +125,8 @@ declare const bootstrap: any;
   }
 
   async function addToBasket(printess: iPrintessApi) {
-    if (validateAllInputs(printess) === false) {
+    const validation = await validateAllInputs(printess);
+    if (!validation) {
       return;
     }
 
@@ -161,8 +162,8 @@ declare const bootstrap: any;
     }
   }
 
-  function gotoNextStep(printess: iPrintessApi) {
-    const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
+  async function gotoNextStep(printess: iPrintessApi): Promise<void> {
+    const errors = await printess.validateAsync(printess.hasNextStep() ? "until-current-step" : "all");
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
@@ -176,7 +177,7 @@ declare const bootstrap: any;
     }
   }
   async function gotoStep(printess: iPrintessApi, stepIndex: number): Promise<void> {
-    const errors = printess.validate("until-current-step");
+    const errors = await printess.validateAsync("until-current-step");
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
@@ -1455,8 +1456,8 @@ declare const bootstrap: any;
       next: {
         name: "next",
         text: printess.gl("ui.buttonNext"),
-        task: () => {
-          gotoNextStep(printess);
+        task: async () => {
+          await gotoNextStep(printess);
           getCurrentTab(printess, (Number(printess.getStep()?.index) + 1), true);
         }
       },
@@ -1739,7 +1740,8 @@ declare const bootstrap: any;
       }
       previewBtn.innerText = printess.gl("ui.buttonPreview");
       previewBtn.onclick = async () => {
-        if (validateAllInputs(printess) === true) {
+        const validation = await validateAllInputs(printess);
+        if (validation) {
           await printess.gotoNextPreviewDocument(0);
           if (printess.showTabNavigation()) {
             printess.resizePrintess();
@@ -1887,7 +1889,7 @@ declare const bootstrap: any;
     }
     const btnClass = forMobile ? "btn-outline-light" : "btn-outline-primary";
     btn.classList.add(btnClass);
-    const svg = printess.getIcon("save-light");
+    const svg = printess.getIcon("cloud-upload-light");
     btn.appendChild(svg);
     const txt = document.createElement("div");
     txt.textContent = printess.gl("ui.buttonSave");
@@ -1947,11 +1949,12 @@ declare const bootstrap: any;
       }
 
       if (stepIndex && buttonType === "next") {
-        gotoStep(printess, stepIndex);
+        await gotoStep(printess, stepIndex);
       } else if (printess.hasNextStep() && buttonType === "next") {
-        gotoNextStep(printess);
+        await gotoNextStep(printess);
       } else if (printess.getBasketButtonBehaviour() === "go-to-preview") {
-        if (validateAllInputs(printess) === true) {
+        const validation = await validateAllInputs(printess);
+        if (validation) {
           await printess.gotoNextPreviewDocument(0);
           if (printess.showTabNavigation()) {
             printess.resizePrintess();
@@ -2169,7 +2172,7 @@ declare const bootstrap: any;
       const nextStep = document.createElement("button");
       nextStep.className = "btn btn-outline-primary";
       if (printess.isNextStepPreview()) {
-        nextStep.innerText = printess.gl("ui.buttonPreview")
+        nextStep.innerText = printess.gl("ui.buttonPreview");
       } else {
         const svg = printess.getIcon("arrow-right");
         svg.style.width = "18px";
@@ -2177,7 +2180,7 @@ declare const bootstrap: any;
         nextStep.appendChild(svg);
       }
       // nextStep.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
-      nextStep.onclick = () => gotoNextStep(printess);
+      nextStep.onclick = async () => await gotoNextStep(printess);
       wrapper.appendChild(nextStep);
 
       // if applicable render save and close button
@@ -2441,7 +2444,7 @@ declare const bootstrap: any;
       nextBadge.style.paddingLeft = "2px";
       nextBadge.appendChild(printess.getIcon("carret-right-solid"));
       if (printess.hasNextStep()) {
-        nextBadge.onclick = () => gotoNextStep(printess);
+        nextBadge.onclick = async () => await gotoNextStep(printess);
         nextBadge.classList.add("selectable");
       } else {
         nextBadge.classList.add("disabled");
@@ -4896,7 +4899,8 @@ declare const bootstrap: any;
           previewBtn.classList.add("ms-2");
           previewBtn.innerText = printess.gl("ui.buttonPreview");
           previewBtn.onclick = async () => {
-            if (validateAllInputs(printess) === true) {
+            const validation = await validateAllInputs(printess);
+            if (validation) {
               await printess.gotoNextPreviewDocument(0);
               if (printess.showTabNavigation()) {
                 printess.resizePrintess();
@@ -5722,7 +5726,17 @@ declare const bootstrap: any;
 
         container.appendChild(accordion);
 
+        if (p && p.imageMeta?.canSetDefaultImage && p.validation?.defaultValue !== "fallback") {
+          const resetButton = getDefaultImageButton(printess, p, "button");
+          container.appendChild(resetButton);
+        }
+
       } else {
+
+        if (p && p.imageMeta?.canSetDefaultImage && p.validation?.defaultValue !== "fallback") {
+          const defaultThumb = getDefaultImageButton(printess, p, "div");
+          imageList.appendChild(defaultThumb);
+        }
 
         for (const im of images) {
           imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
@@ -5735,6 +5749,46 @@ declare const bootstrap: any;
     if (images.length === 0 && !p?.id.startsWith("FF_")) container.appendChild(multipleImagesHint);
 
     return container;
+  }
+
+  // Buttons for Resetting to Default Image
+  function getDefaultImageButton(printess: iPrintessApi, p: iExternalProperty, type: "div" | "button"): HTMLElement {
+    const resetButton = document.createElement(type);
+
+    if (type === "button") {
+      resetButton.className = "btn btn-secondary w-100";
+      resetButton.textContent = printess.gl("ui.resetToDefaultImage");
+    } else {
+      resetButton.className = "default-img-thumb";
+
+      if (p.validation?.defaultValue === p.value) {
+        resetButton.style.border = "2px solid var(--bs-primary)";
+        resetButton.style.outline = "3px solid var(--bs-primary)";
+      }
+
+      const icon = printess.getIcon("camera-slash");
+      icon.style.width = "55px";
+      icon.style.height = "55px";
+      resetButton.appendChild(icon);
+    }
+
+    resetButton.onclick = async () => {
+      if (p && p.validation && p.imageMeta) {
+        const imgId = p.validation.defaultValue;
+        await printess.setProperty(p.id, imgId);
+        p.value = imgId;
+        if (p.imageMeta) {
+          p.imageMeta.canScale = false;
+        }
+
+        const propsDiv = document.getElementById("tabs-panel-" + p.id);
+        if (propsDiv) {
+          propsDiv.replaceWith(getPropertyControl(printess, p));
+        }
+      }
+    }
+
+    return resetButton;
   }
 
   // get image thumb for image preview
@@ -7302,8 +7356,8 @@ declare const bootstrap: any;
       next: {
         name: "next",
         icon: printess.getIcon("arrow-right"),
-        task: () => {
-          gotoNextStep(printess);
+        task: async () => {
+          await gotoNextStep(printess);
           getCurrentTab(printess, (Number(printess.getStep()?.index) + 1), true);
         }
       },
@@ -7678,8 +7732,9 @@ declare const bootstrap: any;
       btn.classList.add("btn-outline-light");
       btn.innerText = printess.gl("ui.buttonPreview");
 
-      btn.onclick = () => {
-        if (validateAllInputs(printess) === true) {
+      btn.onclick = async () => {
+        const validation = await validateAllInputs(printess);
+        if (validation) {
           printess.gotoNextPreviewDocument();
         }
       }
@@ -7781,7 +7836,7 @@ declare const bootstrap: any;
       }, {
         id: "save",
         title: "ui.mobileMenuSave",
-        icon: "save-light",
+        icon: "cloud-upload-light",
         show: (printess.showSaveButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || (noStepsMenu && printess.showSaveButton()),
         disabled: false,
         task: () => {
@@ -7846,8 +7901,8 @@ declare const bootstrap: any;
         icon: "arrow-right",
         disabled: !printess.hasNextStep(),
         show: printess.hasSteps(),
-        task: () => {
-          gotoNextStep(printess);
+        task: async () => {
+          await gotoNextStep(printess);
           getCurrentTab(printess, (Number(printess.getStep()?.index) + 1), true);
         }
       }, {
@@ -7866,8 +7921,9 @@ declare const bootstrap: any;
         icon: printess.previewStepsCount() > 0 ? "preview-doc" : "angle-double-right",
         disabled: !printess.hasNextStep(),
         show: printess.hasSteps(),
-        task: () => {
-          if (validateAllInputs(printess) === true) {
+        task: async () => {
+          const validation = await validateAllInputs(printess);
+          if (validation) {
             if (printess.previewStepsCount() > 0) {
               printess.gotoPreviewStep();
             } else {
@@ -7917,18 +7973,13 @@ declare const bootstrap: any;
 
         if (mi.icon) {
           const icon = printess.getIcon(mi.icon);
-          icon.style.width = "15px";
-          icon.style.height = "15px";
+          icon.style.width = "20px";
+          icon.style.height = "20px";
           icon.style.marginRight = "10px";
 
           if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
             icon.style.marginLeft = "10px";
             icon.style.marginRight = "0px";
-          }
-
-          if (printess.previewStepsCount() === 0 && (mi.id === "firstStep" || mi.id === "lastStep")) {
-            icon.style.width = "20px";
-            icon.style.height = "20px";
           }
 
           item.appendChild(icon);

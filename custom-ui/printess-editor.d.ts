@@ -462,7 +462,11 @@ export interface iPrintessApi {
    */
   getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
 
-
+  /**
+   * Returns the name of a form field if property-id points to an existing form field  
+   * @param properyId External Property ID
+   */
+  getFormFieldNameByExternalPropertyId(properyId: string): string | null
 
   /**
    * Returns a list of all available properties on a specific spread
@@ -1602,6 +1606,7 @@ export interface iExternalimageMeta {
   */
   canScale: boolean;
   canSetPlacement: boolean;
+  canSetDefaultImage: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate" | "invert">;
   filterTags: ReadonlyArray<string> | Array<string>;
   isHandwriting: boolean;
@@ -2123,4 +2128,5 @@ export type iconName =
   | "handwriting"
   | "burger-menu"
   | "grid-lines"
-  | "info-circle";
+  | "info-circle"
+  | "camera-slash";

@@ -60,14 +60,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_layoutSelectionDialogHasBeenRendered = false;
     let uih_lastDragTarget;
     function validateAllInputs(printess) {
-        const errors = printess.validate("all");
-        const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
-        if (filteredErrors.length > 0) {
-            printess.bringErrorIntoView(filteredErrors[0]);
-            getValidationOverlay(printess, filteredErrors, "validateAll");
-            return false;
-        }
-        return true;
+        return __awaiter(this, void 0, void 0, function* () {
+            const errors = yield printess.validateAsync("all");
+            const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+            if (filteredErrors.length > 0) {
+                printess.bringErrorIntoView(filteredErrors[0]);
+                getValidationOverlay(printess, filteredErrors, "validateAll");
+                return false;
+            }
+            return true;
+        });
     }
     function handleBackButtonCallback(printess, callback) {
         if (printess.isInDesignerMode()) {
@@ -108,7 +110,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function addToBasket(printess) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (validateAllInputs(printess) === false) {
+            const validation = yield validateAllInputs(printess);
+            if (!validation) {
                 return;
             }
             const callback = printess.getAddToBasketCallback();
@@ -147,23 +150,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         });
     }
     function gotoNextStep(printess) {
-        const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
-        const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
-        if (filteredErrors.length > 0) {
-            printess.bringErrorIntoView(filteredErrors[0]);
-            getValidationOverlay(printess, filteredErrors, "next");
-            return;
-        }
-        if (printess.hasNextStep()) {
-            printess.nextStep();
-        }
-        else {
-            addToBasket(printess);
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const errors = yield printess.validateAsync(printess.hasNextStep() ? "until-current-step" : "all");
+            const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+            if (filteredErrors.length > 0) {
+                printess.bringErrorIntoView(filteredErrors[0]);
+                getValidationOverlay(printess, filteredErrors, "next");
+                return;
+            }
+            if (printess.hasNextStep()) {
+                printess.nextStep();
+            }
+            else {
+                addToBasket(printess);
+            }
+        });
     }
     function gotoStep(printess, stepIndex) {
         return __awaiter(this, void 0, void 0, function* () {
-            const errors = printess.validate("until-current-step");
+            const errors = yield printess.validateAsync("until-current-step");
             const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
             if (filteredErrors.length > 0) {
                 printess.bringErrorIntoView(filteredErrors[0]);
@@ -1223,11 +1228,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             next: {
                 name: "next",
                 text: printess.gl("ui.buttonNext"),
-                task: () => {
+                task: () => __awaiter(this, void 0, void 0, function* () {
                     var _a;
-                    gotoNextStep(printess);
+                    yield gotoNextStep(printess);
                     getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
-                }
+                })
             },
             done: {
                 name: "done",
@@ -1450,7 +1455,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             previewBtn.innerText = printess.gl("ui.buttonPreview");
             previewBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
-                if (validateAllInputs(printess) === true) {
+                const validation = yield validateAllInputs(printess);
+                if (validation) {
                     yield printess.gotoNextPreviewDocument(0);
                     if (printess.showTabNavigation()) {
                         printess.resizePrintess();
@@ -1594,7 +1600,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const btnClass = forMobile ? "btn-outline-light" : "btn-outline-primary";
         btn.classList.add(btnClass);
-        const svg = printess.getIcon("save-light");
+        const svg = printess.getIcon("cloud-upload-light");
         btn.appendChild(svg);
         const txt = document.createElement("div");
         txt.textContent = printess.gl("ui.buttonSave");
@@ -1641,13 +1647,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 return;
             }
             if (stepIndex && buttonType === "next") {
-                gotoStep(printess, stepIndex);
+                yield gotoStep(printess, stepIndex);
             }
             else if (printess.hasNextStep() && buttonType === "next") {
-                gotoNextStep(printess);
+                yield gotoNextStep(printess);
             }
             else if (printess.getBasketButtonBehaviour() === "go-to-preview") {
-                if (validateAllInputs(printess) === true) {
+                const validation = yield validateAllInputs(printess);
+                if (validation) {
                     yield printess.gotoNextPreviewDocument(0);
                     if (printess.showTabNavigation()) {
                         printess.resizePrintess();
@@ -1836,7 +1843,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 svg.style.verticalAlign = "sub";
                 nextStep.appendChild(svg);
             }
-            nextStep.onclick = () => gotoNextStep(printess);
+            nextStep.onclick = () => __awaiter(this, void 0, void 0, function* () { return yield gotoNextStep(printess); });
             wrapper.appendChild(nextStep);
             if (printess.showSaveAndCloseButton()) {
                 const saveAndQuitButton = document.createElement("button");
@@ -4120,7 +4127,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     previewBtn.classList.add("ms-2");
                     previewBtn.innerText = printess.gl("ui.buttonPreview");
                     previewBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
-                        if (validateAllInputs(printess) === true) {
+                        const validation = yield validateAllInputs(printess);
+                        if (validation) {
                             yield printess.gotoNextPreviewDocument(0);
                             if (printess.showTabNavigation()) {
                                 printess.resizePrintess();
@@ -4740,7 +4748,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         showModal(printess, "pageAddedInfoDialog", content, title, footer);
     }
     function renderMyImagesTab(printess, forMobile, p, images, imagesContainer, showSearchIcon = true, showMobileImagesUploadBtn = false) {
-        var _a, _b;
+        var _a, _b, _c, _d, _e, _f;
         const container = imagesContainer || document.createElement("div");
         container.id = "image-tab-container";
         container.innerHTML = "";
@@ -4824,8 +4832,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 });
                 container.appendChild(accordion);
+                if (p && ((_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.canSetDefaultImage) && ((_d = p.validation) === null || _d === void 0 ? void 0 : _d.defaultValue) !== "fallback") {
+                    const resetButton = getDefaultImageButton(printess, p, "button");
+                    container.appendChild(resetButton);
+                }
             }
             else {
+                if (p && ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canSetDefaultImage) && ((_f = p.validation) === null || _f === void 0 ? void 0 : _f.defaultValue) !== "fallback") {
+                    const defaultThumb = getDefaultImageButton(printess, p, "div");
+                    imageList.appendChild(defaultThumb);
+                }
                 for (const im of images) {
                     imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
                 }
@@ -4837,6 +4853,40 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (images.length === 0 && !(p === null || p === void 0 ? void 0 : p.id.startsWith("FF_")))
             container.appendChild(multipleImagesHint);
         return container;
+    }
+    function getDefaultImageButton(printess, p, type) {
+        var _a;
+        const resetButton = document.createElement(type);
+        if (type === "button") {
+            resetButton.className = "btn btn-secondary w-100";
+            resetButton.textContent = printess.gl("ui.resetToDefaultImage");
+        }
+        else {
+            resetButton.className = "default-img-thumb";
+            if (((_a = p.validation) === null || _a === void 0 ? void 0 : _a.defaultValue) === p.value) {
+                resetButton.style.border = "2px solid var(--bs-primary)";
+                resetButton.style.outline = "3px solid var(--bs-primary)";
+            }
+            const icon = printess.getIcon("camera-slash");
+            icon.style.width = "55px";
+            icon.style.height = "55px";
+            resetButton.appendChild(icon);
+        }
+        resetButton.onclick = () => __awaiter(this, void 0, void 0, function* () {
+            if (p && p.validation && p.imageMeta) {
+                const imgId = p.validation.defaultValue;
+                yield printess.setProperty(p.id, imgId);
+                p.value = imgId;
+                if (p.imageMeta) {
+                    p.imageMeta.canScale = false;
+                }
+                const propsDiv = document.getElementById("tabs-panel-" + p.id);
+                if (propsDiv) {
+                    propsDiv.replaceWith(getPropertyControl(printess, p));
+                }
+            }
+        });
+        return resetButton;
     }
     function getImageThumb(printess, p, im, container, imageList, forMobile) {
         var _a;
@@ -6137,11 +6187,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             next: {
                 name: "next",
                 icon: printess.getIcon("arrow-right"),
-                task: () => {
+                task: () => __awaiter(this, void 0, void 0, function* () {
                     var _a;
-                    gotoNextStep(printess);
+                    yield gotoNextStep(printess);
                     getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
-                }
+                })
             },
             basket: {
                 name: "basket",
@@ -6396,11 +6446,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             btn.className = "btn btn-sm ms-2 main-button";
             btn.classList.add("btn-outline-light");
             btn.innerText = printess.gl("ui.buttonPreview");
-            btn.onclick = () => {
-                if (validateAllInputs(printess) === true) {
+            btn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                const validation = yield validateAllInputs(printess);
+                if (validation) {
                     printess.gotoNextPreviewDocument();
                 }
-            };
+            });
             wrapper.appendChild(btn);
         }
         {
@@ -6454,7 +6505,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }, {
                 id: "save",
                 title: "ui.mobileMenuSave",
-                icon: "save-light",
+                icon: "cloud-upload-light",
                 show: (printess.showSaveButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || (noStepsMenu && printess.showSaveButton()),
                 disabled: false,
                 task: () => {
@@ -6522,11 +6573,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon: "arrow-right",
                 disabled: !printess.hasNextStep(),
                 show: printess.hasSteps(),
-                task: () => {
+                task: () => __awaiter(this, void 0, void 0, function* () {
                     var _a;
-                    gotoNextStep(printess);
+                    yield gotoNextStep(printess);
                     getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
-                }
+                })
             },
             {
                 id: "firstStep",
@@ -6545,18 +6596,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon: printess.previewStepsCount() > 0 ? "preview-doc" : "angle-double-right",
                 disabled: !printess.hasNextStep(),
                 show: printess.hasSteps(),
-                task: () => {
-                    var _a, _b;
-                    if (validateAllInputs(printess) === true) {
+                task: () => __awaiter(this, void 0, void 0, function* () {
+                    var _b, _c;
+                    const validation = yield validateAllInputs(printess);
+                    if (validation) {
                         if (printess.previewStepsCount() > 0) {
                             printess.gotoPreviewStep();
                         }
                         else {
                             printess.gotoLastStep();
-                            getCurrentTab(printess, (_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0, true);
+                            getCurrentTab(printess, (_c = (_b = printess.lastStep()) === null || _b === void 0 ? void 0 : _b.index) !== null && _c !== void 0 ? _c : 0, true);
                         }
                     }
-                }
+                })
             }
         ];
         menuItems.forEach((mi, idx) => {
@@ -6597,16 +6649,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 if (mi.icon) {
                     const icon = printess.getIcon(mi.icon);
-                    icon.style.width = "15px";
-                    icon.style.height = "15px";
+                    icon.style.width = "20px";
+                    icon.style.height = "20px";
                     icon.style.marginRight = "10px";
                     if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
                         icon.style.marginLeft = "10px";
                         icon.style.marginRight = "0px";
-                    }
-                    if (printess.previewStepsCount() === 0 && (mi.id === "firstStep" || mi.id === "lastStep")) {
-                        icon.style.width = "20px";
-                        icon.style.height = "20px";
                     }
                     item.appendChild(icon);
                 }
