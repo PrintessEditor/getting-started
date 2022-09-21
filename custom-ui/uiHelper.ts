@@ -70,8 +70,8 @@ declare const bootstrap: any;
 
   //console.log("Printess ui-helper loaded");
 
-  function validateAllInputs(printess: iPrintessApi): boolean {
-    const errors = printess.validate("all");
+  async function validateAllInputs(printess: iPrintessApi): Promise<boolean> {
+    const errors = await printess.validateAsync("all");
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
@@ -125,7 +125,8 @@ declare const bootstrap: any;
   }
 
   async function addToBasket(printess: iPrintessApi) {
-    if (validateAllInputs(printess) === false) {
+    const validation = await validateAllInputs(printess);
+    if (!validation) {
       return;
     }
 
@@ -141,12 +142,28 @@ declare const bootstrap: any;
       callback(saveToken, url);
       printess.hideOverlay();
     } else {
-      alert(printess.gl("ui.addToBasketCallback"))
+      alert(printess.gl("ui.addToBasketCallback"));
     }
   }
 
-  function gotoNextStep(printess: iPrintessApi) {
-    const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
+  async function saveTemplate(printess: iPrintessApi, type: "save" | "close") {
+    const callback = printess.getSaveTemplateCallback();
+    const saveButton = document.getElementById("printess-save-button");
+
+    if (callback) {
+      await printess.clearSelection();
+      if (saveButton) saveButton.classList.add("disabled");
+      printess.showOverlay(printess.gl("ui.saveProgress"));
+      const saveToken = await printess.save();
+      callback(saveToken, type);
+      printess.hideOverlay();
+    } else {
+      alert(printess.gl("ui.saveTemplateCallback"))
+    }
+  }
+
+  async function gotoNextStep(printess: iPrintessApi): Promise<void> {
+    const errors = await printess.validateAsync(printess.hasNextStep() ? "until-current-step" : "all");
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
@@ -160,7 +177,7 @@ declare const bootstrap: any;
     }
   }
   async function gotoStep(printess: iPrintessApi, stepIndex: number): Promise<void> {
-    const errors = printess.validate("until-current-step");
+    const errors = await printess.validateAsync("until-current-step");
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
@@ -1439,8 +1456,8 @@ declare const bootstrap: any;
       next: {
         name: "next",
         text: printess.gl("ui.buttonNext"),
-        task: () => {
-          gotoNextStep(printess);
+        task: async () => {
+          await gotoNextStep(printess);
           getCurrentTab(printess, (Number(printess.getStep()?.index) + 1), true);
         }
       },
@@ -1717,14 +1734,14 @@ declare const bootstrap: any;
     } else if (basketBtnBehaviour === "go-to-preview") {
       const previewBtn = document.createElement("button");
       previewBtn.className = "btn btn-outline-primary";
+      previewBtn.classList.add("me-1");
       if (printess.showTabNavigation() && printess.pageNavigationDisplay() !== "icons") {
         previewBtn.classList.add("ms-1");
-      } else {
-        previewBtn.classList.add("me-1");
       }
       previewBtn.innerText = printess.gl("ui.buttonPreview");
       previewBtn.onclick = async () => {
-        if (validateAllInputs(printess) === true) {
+        const validation = await validateAllInputs(printess);
+        if (validation) {
           await printess.gotoNextPreviewDocument(0);
           if (printess.showTabNavigation()) {
             printess.resizePrintess();
@@ -1736,13 +1753,33 @@ declare const bootstrap: any;
       inner.appendChild(document.createElement("div"));
     }
 
+    const hasSaveAndCloseBtnInPageIconView = printess.pageNavigationDisplay() === "icons" && printess.showSaveAndCloseButton();
+    const wrapper = document.createElement("div");
+    wrapper.style.display = "flex";
+    wrapper.style.flexDirection = "row";
+
+    // if applicable render save and close button
+    if (printess.showSaveAndCloseButton()) {
+      const saveAndQuitButton = document.createElement("button");
+      saveAndQuitButton.className = "btn btn-primary me-2";
+      saveAndQuitButton.style.flex = "1 1 0";
+      saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+
+      saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+      wrapper.appendChild(saveAndQuitButton);
+    }
+
     const basketBtn = document.createElement("button");
-    const caption = printess.gl("ui.buttonBasket");
+    const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.gl("ui.buttonBasket");
     basketBtn.className = "btn btn-primary";
     basketBtn.style.whiteSpace = "nowrap";
+    if (!hasSaveAndCloseBtnInPageIconView && printess.pageNavigationDisplay() === "icons") {
+      basketBtn.style.flex = "1 1 0";
+    }
+
     basketBtn.innerText = caption;
 
-    const icon = <iconName>printess.gl("ui.buttonBasketIcon");
+    const icon = hasSaveAndCloseBtnInPageIconView ? "shopping-cart" : <iconName>printess.gl("ui.buttonBasketIcon");
     if (icon) {
       const svg = printess.getIcon(icon);
       svg.style.height = "24px";
@@ -1752,8 +1789,14 @@ declare const bootstrap: any;
     }
 
     basketBtn.onclick = () => addToBasket(printess);
-    inner.appendChild(basketBtn);
 
+    if (!printess.showAddToBasketButton()) {
+      wrapper.appendChild(document.createElement("div"));
+    } else {
+      wrapper.appendChild(basketBtn);
+    }
+
+    inner.appendChild(wrapper);
 
     container.appendChild(inner);
 
@@ -1790,7 +1833,7 @@ declare const bootstrap: any;
   }
   function getExpertModeButton(printess: iPrintessApi, forMobile: boolean): HTMLElement {
     const btn = document.createElement("button");
-    btn.id = "expert-button";
+    btn.id = "printess-expert-button";
     if (printess.pageNavigationDisplay() === "icons") {
       btn.className = "btn me-1 button-with-caption";
     } else if (forMobile) {
@@ -1830,6 +1873,31 @@ declare const bootstrap: any;
           btn.classList.remove("btn-outline-primary");
         }
       }
+    }
+
+    return btn;
+  }
+  function getSaveButton(printess: iPrintessApi, forMobile: boolean): HTMLElement {
+    const btn = document.createElement("button");
+    btn.id = "printess-save-button";
+    if (printess.pageNavigationDisplay() === "icons") {
+      btn.className = "btn me-1 button-with-caption";
+    } else if (forMobile) {
+      btn.className = "btn me-2 button-mobile-with-caption";
+    } else {
+      btn.className = "btn me-2 button-with-caption";
+    }
+    const btnClass = forMobile ? "btn-outline-light" : "btn-outline-primary";
+    btn.classList.add(btnClass);
+    const svg = printess.getIcon("cloud-upload-light");
+    btn.appendChild(svg);
+    const txt = document.createElement("div");
+    txt.textContent = printess.gl("ui.buttonSave");
+    btn.appendChild(txt);
+    btn.onclick = async () => {
+      btn.classList.add("disabled");
+      saveTemplate(printess, "save");
+      window.setTimeout(() => btn.classList.remove("disabled"), 1500);
     }
 
     return btn;
@@ -1881,11 +1949,12 @@ declare const bootstrap: any;
       }
 
       if (stepIndex && buttonType === "next") {
-        gotoStep(printess, stepIndex);
+        await gotoStep(printess, stepIndex);
       } else if (printess.hasNextStep() && buttonType === "next") {
-        gotoNextStep(printess);
+        await gotoNextStep(printess);
       } else if (printess.getBasketButtonBehaviour() === "go-to-preview") {
-        if (validateAllInputs(printess) === true) {
+        const validation = await validateAllInputs(printess);
+        if (validation) {
           await printess.gotoNextPreviewDocument(0);
           if (printess.showTabNavigation()) {
             printess.resizePrintess();
@@ -2096,10 +2165,14 @@ declare const bootstrap: any;
     }
 
     if (printess.hasNextStep()) {
+      const wrapper = document.createElement("div");
+      wrapper.style.display = "flex";
+      wrapper.style.flexDirection = "row";
+
       const nextStep = document.createElement("button");
       nextStep.className = "btn btn-outline-primary";
       if (printess.isNextStepPreview()) {
-        nextStep.innerText = printess.gl("ui.buttonPreview")
+        nextStep.innerText = printess.gl("ui.buttonPreview");
       } else {
         const svg = printess.getIcon("arrow-right");
         svg.style.width = "18px";
@@ -2107,12 +2180,44 @@ declare const bootstrap: any;
         nextStep.appendChild(svg);
       }
       // nextStep.innerText = printess.isNextStepPreview() ? printess.gl("ui.buttonPreview") : printess.gl("ui.buttonNext");
-      nextStep.onclick = () => gotoNextStep(printess);
-      grid.appendChild(nextStep);
+      nextStep.onclick = async () => await gotoNextStep(printess);
+      wrapper.appendChild(nextStep);
+
+      // if applicable render save and close button
+      if (printess.showSaveAndCloseButton()) {
+        const saveAndQuitButton = document.createElement("button");
+        saveAndQuitButton.className = "btn btn-primary ms-2 me-2";
+        saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+
+        saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+        wrapper.appendChild(saveAndQuitButton);
+      }
+
+      grid.appendChild(wrapper);
 
     } else {
-      //instead pf next step render basket button
-      grid.appendChild(getStepsPutToBasketButton(printess));
+      const wrapper = document.createElement("div");
+      wrapper.style.display = "flex";
+      wrapper.style.flexDirection = "row";
+
+      // if applicable render save and close button
+      if (printess.showSaveAndCloseButton()) {
+        const saveAndQuitButton = document.createElement("button");
+        saveAndQuitButton.className = "btn btn-primary me-2";
+        saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+
+        saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+        wrapper.appendChild(saveAndQuitButton);
+      }
+
+      //instead of next step render basket button
+      if (!printess.showAddToBasketButton()) {
+        wrapper.appendChild(document.createElement("div"));
+      } else {
+        wrapper.appendChild(getStepsPutToBasketButton(printess));
+      }
+
+      grid.appendChild(wrapper);
     }
 
 
@@ -2339,7 +2444,7 @@ declare const bootstrap: any;
       nextBadge.style.paddingLeft = "2px";
       nextBadge.appendChild(printess.getIcon("carret-right-solid"));
       if (printess.hasNextStep()) {
-        nextBadge.onclick = () => gotoNextStep(printess);
+        nextBadge.onclick = async () => await gotoNextStep(printess);
         nextBadge.classList.add("selectable");
       } else {
         nextBadge.classList.add("disabled");
@@ -2590,6 +2695,7 @@ declare const bootstrap: any;
       for (const entry of p.listMeta.list) {
         const thumb = document.createElement("div");
         thumb.className = "no-selection image" + cssId;
+        thumb.style.position = "relative";
         //thumb.title = printess.gl(entry.label);
 
         if (entry.imageUrl) {
@@ -2613,6 +2719,15 @@ declare const bootstrap: any;
           }
 
         }
+
+        const priceLabel = printess.getFormFieldPriceLabelByTag(entry.tag);
+        if (priceLabel) {
+          const priceBadge = document.createElement("div");
+          priceBadge.className = "badge bg-primary";
+          priceBadge.textContent = printess.gl(priceLabel);
+          thumb.appendChild(priceBadge);
+        }
+
         imageList.appendChild(thumb);
       }
       container.appendChild(imageList);
@@ -2936,13 +3051,16 @@ declare const bootstrap: any;
     label.classList.add("dropdown-list-label");
     label.innerText = printess.gl(entry.label);
 
-    const priceBadge = document.createElement("div");
-    priceBadge.className = "badge bg-primary";
-    priceBadge.style.marginLeft = "auto";
-    priceBadge.textContent = printess.gl(entry.tag);
-
     div.appendChild(label);
-    //if (entry.tag) div.appendChild(priceBadge);
+
+    const priceLabel = printess.getFormFieldPriceLabelByTag(entry.tag);
+    if (priceLabel) {
+      const priceBadge = document.createElement("div");
+      priceBadge.className = "badge bg-primary";
+      priceBadge.style.marginLeft = "auto";
+      priceBadge.textContent = printess.gl(priceLabel);
+      div.appendChild(priceBadge);
+    }
 
     return div;
   }
@@ -4491,6 +4609,9 @@ declare const bootstrap: any;
     if (printess.hasExpertButton()) {
       miniBar.appendChild(getExpertModeButton(printess, false));
     }
+    if (printess.showSaveButton()) {
+      miniBar.appendChild(getSaveButton(printess, false));
+    }
 
     miniBar.classList.add("undo-redo-bar");
 
@@ -4778,7 +4899,8 @@ declare const bootstrap: any;
           previewBtn.classList.add("ms-2");
           previewBtn.innerText = printess.gl("ui.buttonPreview");
           previewBtn.onclick = async () => {
-            if (validateAllInputs(printess) === true) {
+            const validation = await validateAllInputs(printess);
+            if (validation) {
               await printess.gotoNextPreviewDocument(0);
               if (printess.showTabNavigation()) {
                 printess.resizePrintess();
@@ -4792,6 +4914,16 @@ declare const bootstrap: any;
           wrapper.appendChild(previewBackButton);
         }
 
+        // Save & Quit Button
+        if (printess.showSaveAndCloseButton()) {
+          const saveAndQuitButton = document.createElement("button");
+          saveAndQuitButton.className = "btn btn-primary ms-2";
+          saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+
+          saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+          wrapper.appendChild(saveAndQuitButton);
+        }
+
         // Mini-Cart Button
         const button = document.createElement("button");
         button.className = "btn btn-primary ms-2";
@@ -4801,7 +4933,12 @@ declare const bootstrap: any;
 
         button.onclick = () => addToBasket(printess);
         button.appendChild(icon);
-        wrapper.appendChild(button);
+
+        if (!printess.showAddToBasketButton()) {
+          wrapper.appendChild(document.createElement("div"));
+        } else {
+          wrapper.appendChild(button);
+        }
 
         if (isStepTabsList || isDocTabs) pages.appendChild(wrapper);
 
@@ -5021,6 +5158,9 @@ declare const bootstrap: any;
         cornerTools.className = "corner-tools";
         if (printess.hasExpertButton()) {
           cornerTools.classList.add("expert-mode");
+        }
+        if (printess.showSaveButton()) {
+          cornerTools.classList.add("save-mode");
         }
 
         cornerTools.appendChild(getBackUndoMiniBar(printess));
@@ -5586,7 +5726,17 @@ declare const bootstrap: any;
 
         container.appendChild(accordion);
 
+        if (p && p.imageMeta?.canSetDefaultImage && p.validation?.defaultValue !== "fallback") {
+          const resetButton = getDefaultImageButton(printess, p, "button");
+          container.appendChild(resetButton);
+        }
+
       } else {
+
+        if (p && p.imageMeta?.canSetDefaultImage && p.validation?.defaultValue !== "fallback") {
+          const defaultThumb = getDefaultImageButton(printess, p, "div");
+          imageList.appendChild(defaultThumb);
+        }
 
         for (const im of images) {
           imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
@@ -5599,6 +5749,46 @@ declare const bootstrap: any;
     if (images.length === 0 && !p?.id.startsWith("FF_")) container.appendChild(multipleImagesHint);
 
     return container;
+  }
+
+  // Buttons for Resetting to Default Image
+  function getDefaultImageButton(printess: iPrintessApi, p: iExternalProperty, type: "div" | "button"): HTMLElement {
+    const resetButton = document.createElement(type);
+
+    if (type === "button") {
+      resetButton.className = "btn btn-secondary w-100";
+      resetButton.textContent = printess.gl("ui.resetToDefaultImage");
+    } else {
+      resetButton.className = "default-img-thumb";
+
+      if (p.validation?.defaultValue === p.value) {
+        resetButton.style.border = "2px solid var(--bs-primary)";
+        resetButton.style.outline = "3px solid var(--bs-primary)";
+      }
+
+      const icon = printess.getIcon("camera-slash");
+      icon.style.width = "55px";
+      icon.style.height = "55px";
+      resetButton.appendChild(icon);
+    }
+
+    resetButton.onclick = async () => {
+      if (p && p.validation && p.imageMeta) {
+        const imgId = p.validation.defaultValue;
+        await printess.setProperty(p.id, imgId);
+        p.value = imgId;
+        if (p.imageMeta) {
+          p.imageMeta.canScale = false;
+        }
+
+        const propsDiv = document.getElementById("tabs-panel-" + p.id);
+        if (propsDiv) {
+          propsDiv.replaceWith(getPropertyControl(printess, p));
+        }
+      }
+    }
+
+    return resetButton;
   }
 
   // get image thumb for image preview
@@ -6921,7 +7111,7 @@ declare const bootstrap: any;
   // render ui hint for editable frames
   let renderEditableFramesHintTimer: number = 0;
   function renderEditableFramesHint(printess: iPrintessApi): void {
-    const showEditableFramesHint = printess.uiHintsDisplay().includes("editableFrames") && !sessionStorage.getItem("editableFrames");
+    const showEditableFramesHint = false; // printess.uiHintsDisplay().includes("editableFrames") && !sessionStorage.getItem("editableFrames");
     if (showEditableFramesHint) {
       renderEditableFramesHintTimer = window.setTimeout(() => {
         renderEditableFramesHintTimer = 0;
@@ -6960,7 +7150,7 @@ declare const bootstrap: any;
       color: "danger",
       show: printess.uiHintsDisplay().includes("expertMode") && !sessionStorage.getItem("expertMode") && printess.hasExpertButton(),
       task: () => {
-        const expertBtn = document.getElementById("expert-button");
+        const expertBtn = document.getElementById("printess-expert-button");
         if (expertBtn) {
           if (forMobile) {
             expertBtn.classList.add("btn-light");
@@ -7166,8 +7356,8 @@ declare const bootstrap: any;
       next: {
         name: "next",
         icon: printess.getIcon("arrow-right"),
-        task: () => {
-          gotoNextStep(printess);
+        task: async () => {
+          await gotoNextStep(printess);
           getCurrentTab(printess, (Number(printess.getStep()?.index) + 1), true);
         }
       },
@@ -7315,11 +7505,13 @@ declare const bootstrap: any;
     const hasSteps = printess.hasSteps();
     const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
     const isBookMode = printess.canAddSpreads() || printess.canRemoveSpreads();
-    const noStepsMenu = printess.showUndoRedo() && !hasSteps && printess.hasExpertButton() && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0);
+    const noStepsMenu = printess.showUndoRedo() && !hasSteps && (printess.hasExpertButton() || printess.showSaveButton()) && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0 || isDocTabs);
     const showUndoRedo = printess.showUndoRedo() && !hasSteps && !printess.hasPreviewBackButton() && !isDocTabs;
-    const hideCloseBtn = hasSteps || (isDocTabs && printess.showUndoRedo());
-    const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps;
-    const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never";
+    const noCloseBtn = hasSteps || (isDocTabs && printess.showUndoRedo());
+    const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps && !printess.showSaveButton();
+    const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never" && !printess.showSaveButton();
+    const showSaveBtn = printess.showSaveButton() && !noStepsMenu && !hasSteps && !printess.hasExpertButton();
+    const showSaveBtnWithSteps = printess.showSaveButton() && hasSteps && printess.stepHeaderDisplay() === "never" && !printess.hasExpertButton();
 
 
     // Back Button 
@@ -7340,7 +7532,7 @@ declare const bootstrap: any;
         btn.onclick = () => printess.gotoPreviousPreviewDocument();
         nav.appendChild(btn);
       } else {
-        if (!noStepsMenu && !hideCloseBtn) {
+        if (!noStepsMenu && !noCloseBtn) {
           const callback = printess.getBackButtonCallback();
 
           btn.className = "btn btn-sm text-white me-2 ms-2"; // border border-white";
@@ -7392,6 +7584,13 @@ declare const bootstrap: any;
 
           container.appendChild(btn);
           container.appendChild(expertBtn);
+
+          nav.appendChild(container);
+        } else if (showSaveBtn || showSaveBtnWithSteps) {
+          const saveBtn = getSaveButton(printess, true);
+
+          container.appendChild(btn);
+          container.appendChild(saveBtn);
 
           nav.appendChild(container);
         } else {
@@ -7533,8 +7732,9 @@ declare const bootstrap: any;
       btn.classList.add("btn-outline-light");
       btn.innerText = printess.gl("ui.buttonPreview");
 
-      btn.onclick = () => {
-        if (validateAllInputs(printess) === true) {
+      btn.onclick = async () => {
+        const validation = await validateAllInputs(printess);
+        if (validation) {
           printess.gotoNextPreviewDocument();
         }
       }
@@ -7604,7 +7804,8 @@ declare const bootstrap: any;
 
   function getMobileMenuList(printess: iPrintessApi): HTMLDivElement {
     const isBookMode = printess.canAddSpreads() || printess.canRemoveSpreads();
-    const noStepsMenu = printess.showUndoRedo() && !printess.hasSteps() && printess.hasExpertButton() && (printess.getBasketButtonBehaviour() === "go-to-preview" || isBookMode > 0);
+    const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+    const noStepsMenu = printess.showUndoRedo() && !printess.hasSteps() && (printess.hasExpertButton() || printess.showSaveButton()) && (printess.getBasketButtonBehaviour() === "go-to-preview" || isBookMode > 0 || isDocTabs);
     const listWrapper = document.createElement("div");
     listWrapper.id = "mobile-menu-list";
     const menuList = document.createElement("div");
@@ -7633,10 +7834,19 @@ declare const bootstrap: any;
           }
         }
       }, {
+        id: "save",
+        title: "ui.mobileMenuSave",
+        icon: "cloud-upload-light",
+        show: (printess.showSaveButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || (noStepsMenu && printess.showSaveButton()),
+        disabled: false,
+        task: () => {
+          saveTemplate(printess, "save");
+        }
+      }, {
         id: "expert",
         title: "ui.expertMode",
         icon: "pen-swirl",
-        show: (printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || noStepsMenu,
+        show: (printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || (noStepsMenu && printess.hasExpertButton()),
         disabled: false,
         task: () => {
           if (printess.isInExpertMode()) {
@@ -7691,8 +7901,8 @@ declare const bootstrap: any;
         icon: "arrow-right",
         disabled: !printess.hasNextStep(),
         show: printess.hasSteps(),
-        task: () => {
-          gotoNextStep(printess);
+        task: async () => {
+          await gotoNextStep(printess);
           getCurrentTab(printess, (Number(printess.getStep()?.index) + 1), true);
         }
       }, {
@@ -7711,8 +7921,9 @@ declare const bootstrap: any;
         icon: printess.previewStepsCount() > 0 ? "preview-doc" : "angle-double-right",
         disabled: !printess.hasNextStep(),
         show: printess.hasSteps(),
-        task: () => {
-          if (validateAllInputs(printess) === true) {
+        task: async () => {
+          const validation = await validateAllInputs(printess);
+          if (validation) {
             if (printess.previewStepsCount() > 0) {
               printess.gotoPreviewStep();
             } else {
@@ -7730,9 +7941,11 @@ declare const bootstrap: any;
         const item = document.createElement("li");
         item.className = "btn btn-primary d-flex w-25 justify-content-center align-items-center";
         if (mi.disabled) item.classList.add("disabled");
-        if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) item.classList.add("reverse-menu-btn-content");
+        if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
+          item.classList.add("reverse-menu-btn-content");
+        }
         item.style.border = "1px solid rgba(0,0,0,.125)";
-        if (hasExpertButton || noStepsMenu) {
+        if (hasExpertButton || noStepsMenu || printess.showSaveButton()) {
           item.style.minWidth = "50%";
         } else {
           if (idx < 4) item.style.minWidth = "33%";
@@ -7744,25 +7957,29 @@ declare const bootstrap: any;
           item.classList.add("btn-light");
         }
 
-        if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu) item.style.minWidth = "100%";
+        if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu && !printess.showSaveButton()) {
+          item.style.minWidth = "100%";
+        }
 
         const span = document.createElement("span");
         span.textContent = printess.gl(mi.title);
 
+        if (printess.hasExpertButton() && printess.showSaveButton()) {
+          if (idx < 4) item.style.minWidth = "33%";
+          if (mi.id === "expert") {
+            span.textContent = "Expert";
+          }
+        }
+
         if (mi.icon) {
           const icon = printess.getIcon(mi.icon);
-          icon.style.width = "15px";
-          icon.style.height = "15px";
+          icon.style.width = "20px";
+          icon.style.height = "20px";
           icon.style.marginRight = "10px";
 
           if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
             icon.style.marginLeft = "10px";
             icon.style.marginRight = "0px";
-          }
-
-          if (printess.previewStepsCount() === 0 && (mi.id === "firstStep" || mi.id === "lastStep")) {
-            icon.style.width = "20px";
-            icon.style.height = "20px";
           }
 
           item.appendChild(icon);

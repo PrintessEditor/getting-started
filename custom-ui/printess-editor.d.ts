@@ -193,6 +193,12 @@ export interface printessAttachParameters {
   backButtonCallback?: (saveToken: string) => void,
 
   /**
+   * Provide a callback function which is called when the buyer presses the [Save] button
+   * Design is automtically saved and function gets a [token] to load or print this design
+   */
+  saveTemplateCallback?: (saveToken: string, type: "save" | "close") => void,
+
+  /**
    * Provide a callback function which is called whenever the buyer-image-list changed or an image is assigned to a frame
    * Use it, to redraw your buyer-image list if you have one.
    */
@@ -225,6 +231,15 @@ export interface printessAttachParameters {
    * e.g. ["1,50€","2,50€","3,50€","4,50€","5,50€"]
    */
   snippetPriceCategoryLabels?: Array<string>
+
+  /**
+   * Labels displayed at form-fields which have a price tag set
+   * e.g. {
+          "mug-front": "+ 2.10 €",
+          "mug-back": "+ 2.10 €",
+        }
+   */
+  priceCategoryLabels?: Record<string, string>
 
 }
 
@@ -313,6 +328,11 @@ export interface iPrintessApi {
    * Returns the back button callback you have set in `attachPrintess()`
    */
   getBackButtonCallback(): null | ((saveToken: string) => void);
+
+  /**
+   * Returns the save button callback you have set in `attachPrintess()`
+   */
+  getSaveTemplateCallback(): null | ((saveToken: string, type: "save" | "close") => void);
 
   /**
    * Clears current printess frames selection and shows document-wide properties like form fields.
@@ -442,7 +462,11 @@ export interface iPrintessApi {
    */
   getAllProperties(): Promise<Array<Array<iExternalProperty>>>;
 
-
+  /**
+   * Returns the name of a form field if property-id points to an existing form field  
+   * @param properyId External Property ID
+   */
+  getFormFieldNameByExternalPropertyId(properyId: string): string | null
 
   /**
    * Returns a list of all available properties on a specific spread
@@ -1291,6 +1315,21 @@ export interface iPrintessApi {
    */
   hasExpertButton(): boolean
 
+  /**
+   * Returns if UI should display a button to save the current work in the buyer side
+   */
+  showSaveButton(): boolean
+
+  /**
+   * Returns if UI should display a button to save and close the current work in the buyer side
+   */
+  showSaveAndCloseButton(): boolean
+
+  /**
+   * Returns if UI should display a button to add current work into the basket
+   */
+  showAddToBasketButton(): boolean
+
   /** 
    * Indicates if UI should show an alert prompt when user attempts to leave the buyer-side 
    */
@@ -1310,6 +1349,12 @@ export interface iPrintessApi {
    * Or just use the frame-count to determine if the user had made changes at all. 
    */
   getBuyerFrameCountAndMarkers(): Array<iFrameCountAndMarkers>
+
+  /**
+   * Get price labels for form-field badges from price-tags
+   * @param tag
+   */
+  getFormFieldPriceLabelByTag(tag: string): string
 }
 
 export interface iBuyerStep {
@@ -1561,6 +1606,7 @@ export interface iExternalimageMeta {
   */
   canScale: boolean;
   canSetPlacement: boolean;
+  canSetDefaultImage: boolean;
   allows: Array<"sepia" | "brightness" | "contrast" | "vivid" | "hueRotate" | "invert">;
   filterTags: ReadonlyArray<string> | Array<string>;
   isHandwriting: boolean;
@@ -1686,7 +1732,7 @@ export interface iMobileUiState {
 export type MobileUiState = "document" | "frames" | "add" | "details" | "text";
 
 export interface MobileUiMenuItems {
-  id: "back" | "expert" | "undo" | "redo" | "addPages" | "arrangePages" | "previous" | "next" | "firstStep" | "lastStep",
+  id: "back" | "save" | "expert" | "undo" | "redo" | "addPages" | "arrangePages" | "previous" | "next" | "firstStep" | "lastStep",
   title: string,
   icon?: iconName,
   disabled: boolean,
@@ -1931,6 +1977,7 @@ export type iconName =
   | "search-minus"
   | "search-light"
   | "save"
+  | "save-light"
   | "slash"
   | "empty"
   | "cloud-upload-alt"
@@ -2081,4 +2128,5 @@ export type iconName =
   | "handwriting"
   | "burger-menu"
   | "grid-lines"
-  | "info-circle";
+  | "info-circle"
+  | "camera-slash";
