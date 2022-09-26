@@ -5154,7 +5154,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const externalLayoutsContainer = document.getElementById("external-layouts-container");
         if (externalLayoutsContainer) {
             externalLayoutsContainer.classList.remove("hide-external-layouts-container");
-            if (uih_currentTabId !== "#LAYOUTS") {
+            if (uih_currentTabId !== "#LAYOUTS" || type === "image-list") {
                 externalLayoutsContainer.style.display = "none";
             }
             else {

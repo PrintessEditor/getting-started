@@ -6104,7 +6104,7 @@ declare const bootstrap: any;
     if (externalLayoutsContainer) {
       externalLayoutsContainer.classList.remove("hide-external-layouts-container");
 
-      if (uih_currentTabId !== "#LAYOUTS") {
+      if (uih_currentTabId !== "#LAYOUTS" || type === "image-list") {
         externalLayoutsContainer.style.display = "none";
       } else {
         externalLayoutsContainer.classList.add("show-external-layouts-container");
