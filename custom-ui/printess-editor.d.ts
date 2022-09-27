@@ -176,6 +176,11 @@ export interface printessAttachParameters {
   refreshPaginationCallback?: refreshPaginationCallback;
 
   /**
+   * Is called when the undo state has changed (and needs redraw of buttons) 
+   */
+   refreshUndoRedoCallback?: refreshUndoRedoCallback;
+
+  /**
    * Is called when the page thumbnail has been updated to allow buyer-ui to refresh a particular thumbnail only
    */
   updatePageThumbnailCallback?: updatePageThumbnailCallback;
@@ -1675,6 +1680,7 @@ export declare type externalSelectionChangeCallback = (properties: Array<iExtern
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>, width: number, height: number) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
+export declare type refreshUndoRedoCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
 
