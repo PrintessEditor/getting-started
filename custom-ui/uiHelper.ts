@@ -22,6 +22,33 @@ declare const bootstrap: any;
     customLayoutSnippetRenderCallback: undefined
   }
 
+  const canUseStorage = (function () {
+    try {
+      sessionStorage.setItem("test", "value");
+      return true;
+    } catch (error) {
+      return false;
+    }
+  })();
+
+  const fallbackStorage: Record<string, string> = {};
+
+  function setStorageItemSafe(key: string, value: string) {
+    if (canUseStorage) {
+      sessionStorage.setItem(key, value);
+    } else {
+      fallbackStorage[key] = value;
+    }
+  }
+
+  function getStorageItemSafe(key: string): string | null {
+    if (canUseStorage) {
+      return sessionStorage.getItem(key);
+    } else {
+      return fallbackStorage[key] ?? null;
+    }
+  }
+
   function resetUi(): void {
     // called before toggle to buyer side in design mode
     uih_currentTabId = "LOADING";
@@ -550,7 +577,7 @@ declare const bootstrap: any;
 
     // add editable frames hint to session storage if frame has been selected
     if (printess.hasSelection()) {
-      sessionStorage.setItem("editableFrames", "hint closed");
+      setStorageItemSafe("editableFrames", "hint closed");
       const framePulse = document.getElementById("frame-pulse");
       if (framePulse) framePulse.parentElement?.removeChild(framePulse);
     }
@@ -581,13 +608,14 @@ declare const bootstrap: any;
     }
 
     // open dialog with layout snippets
-    if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
+    const snippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
+    if (!uih_layoutSelectionDialogHasBeenRendered && snippetAmount > 0 && printess.showLayoutsDialog()) {
       uih_layoutSelectionDialogHasBeenRendered = true;
       renderLayoutSelectionDialog(printess, layoutSnippets, false);
     }
 
     // attach/remove shadow pulse animation to/from "change layout" button
-    if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout") && !printess.showTabNavigation()) {
+    if (state === "document" && printess.hasLayoutSnippets() && !getStorageItemSafe("changeLayout") && !printess.showTabNavigation()) {
       toggleChangeLayoutButtonHint();
     }
 
@@ -2472,6 +2500,7 @@ declare const bootstrap: any;
     inp.value = p.value.toString();
     inp.autocomplete = "off";
     inp.rows = 6;
+    inp.placeholder = printess.gl("errors.enterText");
 
     inp.oninput = async () => {
       await printess.setProperty(p.id, inp.value).then(() => setPropertyVisibilities(printess));
@@ -5774,9 +5803,9 @@ declare const bootstrap: any;
 
     resetButton.onclick = async () => {
       if (p && p.validation && p.imageMeta) {
-        const imgId = p.validation.defaultValue;
-        await printess.setProperty(p.id, imgId);
-        p.value = imgId;
+        const pValue = p.validation.defaultValue;
+        await printess.setProperty(p.id, pValue);
+        p.value = pValue;
         if (p.imageMeta) {
           p.imageMeta.canScale = false;
         }
@@ -7037,7 +7066,7 @@ declare const bootstrap: any;
 
     // add editable frames hint to session storage if frame has been selected
     if (printess.hasSelection()) {
-      sessionStorage.setItem("editableFrames", "hint closed");
+      setStorageItemSafe("editableFrames", "hint closed");
       const framePulse = document.getElementById("frame-pulse");
       if (framePulse) framePulse.parentElement?.removeChild(framePulse);
     }
@@ -7047,13 +7076,14 @@ declare const bootstrap: any;
     renderEditableFramesHint(printess);
 
     // open dialog with layout snippets
-    if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
+    const snippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
+    if (!uih_layoutSelectionDialogHasBeenRendered && snippetAmount > 0 && printess.showLayoutsDialog()) {
       uih_layoutSelectionDialogHasBeenRendered = true;
       renderLayoutSelectionDialog(printess, layoutSnippets, true);
     }
 
     // attach/remove shadow pulse animation to/from "change layout" button
-    if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
+    if (state === "document" && printess.hasLayoutSnippets() && !getStorageItemSafe("changeLayout")) {
       toggleChangeLayoutButtonHint();
     }
 
@@ -7102,7 +7132,7 @@ declare const bootstrap: any;
         uiHintAlert?.parentElement?.removeChild(uiHintAlert);
         // remove shadow pulse animation after button has been clicked
         layoutsButton.classList.remove("layouts-button-pulse");
-        sessionStorage.setItem("changeLayout", "hint closed");
+        setStorageItemSafe("changeLayout", "hint closed");
         layoutsButton.onclick = null;
       }
     }
@@ -7111,7 +7141,7 @@ declare const bootstrap: any;
   // render ui hint for editable frames
   let renderEditableFramesHintTimer: number = 0;
   function renderEditableFramesHint(printess: iPrintessApi): void {
-    const showEditableFramesHint = false; // printess.uiHintsDisplay().includes("editableFrames") && !sessionStorage.getItem("editableFrames");
+    const showEditableFramesHint = false; // printess.uiHintsDisplay().includes("editableFrames") && !getStorageItemSafe("editableFrames");
     if (showEditableFramesHint) {
       renderEditableFramesHintTimer = window.setTimeout(() => {
         renderEditableFramesHintTimer = 0;
@@ -7148,7 +7178,7 @@ declare const bootstrap: any;
       top: !forMobile && printess.pageNavigationDisplay() === "icons" ? "50px" : "calc(var(--editor-pagebar-height) + 5px)",
       left: !forMobile && printess.pageNavigationDisplay() === "icons" ? "calc(100% - 450px)" : "30px",
       color: "danger",
-      show: printess.uiHintsDisplay().includes("expertMode") && !sessionStorage.getItem("expertMode") && printess.hasExpertButton(),
+      show: printess.uiHintsDisplay().includes("expertMode") && !getStorageItemSafe("expertMode") && printess.hasExpertButton(),
       task: () => {
         const expertBtn = document.getElementById("printess-expert-button");
         if (expertBtn) {
@@ -7169,9 +7199,9 @@ declare const bootstrap: any;
       top: printess.showTabNavigation() ? "-170px" : "-150px",
       left: "30px",
       color: "success",
-      show: printess.uiHintsDisplay().includes("groupSnippets") && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
+      show: printess.uiHintsDisplay().includes("groupSnippets") && !getStorageItemSafe("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
       task: () => {
-        sessionStorage.setItem("addDesign", "hint closed");
+        setStorageItemSafe("addDesign", "hint closed");
         renderMobilePropertiesFullscreen(printess, "add-design", "open");
       }
     }, {
@@ -7181,7 +7211,7 @@ declare const bootstrap: any;
       top: printess.hasExpertButton() && forMobile ? "calc(50% - 100px)" : "calc(50% - 150px)",
       left: "55px",
       color: "primary",
-      show: printess.uiHintsDisplay().includes("layoutSnippets") && !sessionStorage.getItem("changeLayout") && printess.hasLayoutSnippets() && showLayoutsHint && !forMobile,
+      show: printess.uiHintsDisplay().includes("layoutSnippets") && !getStorageItemSafe("changeLayout") && printess.hasLayoutSnippets() && showLayoutsHint && !forMobile,
       task: () => {
         const layoutBtn: HTMLButtonElement | null = document.querySelector(".show-layouts-button");
         if (layoutBtn) {
@@ -7234,7 +7264,7 @@ declare const bootstrap: any;
         const close = printess.getIcon("close");
         close.classList.add("close-info-alert-icon");
         close.onclick = () => {
-          sessionStorage.setItem(hint.header, "hint closed");
+          setStorageItemSafe(hint.header, "hint closed");
           alert?.parentElement?.removeChild(alert);
           if (hint.header === "changeLayout") {
             const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
@@ -7254,7 +7284,7 @@ declare const bootstrap: any;
         open.className = "layout-hint-open";
         open.textContent = hint.header === "expertMode" ? printess.gl("ui.turnOn") : printess.gl("ui.showMe");
         open.onclick = () => {
-          sessionStorage.setItem(hint.header, "hint closed");
+          setStorageItemSafe(hint.header, "hint closed");
           alert?.parentElement?.removeChild(alert);
           hint.task();
         }
@@ -7277,12 +7307,12 @@ declare const bootstrap: any;
     const circle = document.createElement("div");
     circle.className = "mobile-property-circle";
     circle.onclick = () => {
-      sessionStorage.setItem("addDesign", "hint closed");
+      setStorageItemSafe("addDesign", "hint closed");
       //renderMobileUi(printess, undefined, "add", undefined);
       renderMobilePropertiesFullscreen(printess, "add-design", "open");
     }
 
-    if (!sessionStorage.getItem("addDesign")) {
+    if (!getStorageItemSafe("addDesign")) {
       circle.classList.add("mobile-property-plus-pulse");
     } else {
       circle.classList.remove("mobile-property-plus-pulse");
@@ -8879,7 +8909,7 @@ declare const bootstrap: any;
           caption += p.label + " ";
         }
       } else {
-        caption = b.caption;
+        caption = printess.gl(b.caption);
       }
 
       const buttonText = document.createElement("div");
