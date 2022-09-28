@@ -24,6 +24,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         resetUi: resetUi,
         customLayoutSnippetRenderCallback: undefined
     };
+    const canUseStorage = (function () {
+        try {
+            sessionStorage.setItem("test", "value");
+            return true;
+        }
+        catch (error) {
+            return false;
+        }
+    })();
+    const fallbackStorage = {};
+    function setStorageItemSafe(key, value) {
+        if (canUseStorage) {
+            sessionStorage.setItem(key, value);
+        }
+        else {
+            fallbackStorage[key] = value;
+        }
+    }
+    function getStorageItemSafe(key) {
+        var _a;
+        if (canUseStorage) {
+            return sessionStorage.getItem(key);
+        }
+        else {
+            return (_a = fallbackStorage[key]) !== null && _a !== void 0 ? _a : null;
+        }
+    }
     function resetUi() {
         uih_currentTabId = "LOADING";
         uih_currentPriceDisplay = undefined;
@@ -60,14 +87,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_layoutSelectionDialogHasBeenRendered = false;
     let uih_lastDragTarget;
     function validateAllInputs(printess) {
-        const errors = printess.validate("all");
-        const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
-        if (filteredErrors.length > 0) {
-            printess.bringErrorIntoView(filteredErrors[0]);
-            getValidationOverlay(printess, filteredErrors, "validateAll");
-            return false;
-        }
-        return true;
+        return __awaiter(this, void 0, void 0, function* () {
+            const errors = yield printess.validateAsync("all");
+            const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+            if (filteredErrors.length > 0) {
+                printess.bringErrorIntoView(filteredErrors[0]);
+                getValidationOverlay(printess, filteredErrors, "validateAll");
+                return false;
+            }
+            return true;
+        });
     }
     function handleBackButtonCallback(printess, callback) {
         if (printess.isInDesignerMode()) {
@@ -108,7 +137,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function addToBasket(printess) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (validateAllInputs(printess) === false) {
+            const validation = yield validateAllInputs(printess);
+            if (!validation) {
                 return;
             }
             const callback = printess.getAddToBasketCallback();
@@ -128,24 +158,44 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         });
     }
+    function saveTemplate(printess, type) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const callback = printess.getSaveTemplateCallback();
+            const saveButton = document.getElementById("printess-save-button");
+            if (callback) {
+                yield printess.clearSelection();
+                if (saveButton)
+                    saveButton.classList.add("disabled");
+                printess.showOverlay(printess.gl("ui.saveProgress"));
+                const saveToken = yield printess.save();
+                callback(saveToken, type);
+                printess.hideOverlay();
+            }
+            else {
+                alert(printess.gl("ui.saveTemplateCallback"));
+            }
+        });
+    }
     function gotoNextStep(printess) {
-        const errors = printess.validate(printess.hasNextStep() ? "until-current-step" : "all");
-        const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
-        if (filteredErrors.length > 0) {
-            printess.bringErrorIntoView(filteredErrors[0]);
-            getValidationOverlay(printess, filteredErrors, "next");
-            return;
-        }
-        if (printess.hasNextStep()) {
-            printess.nextStep();
-        }
-        else {
-            addToBasket(printess);
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const errors = yield printess.validateAsync(printess.hasNextStep() ? "until-current-step" : "all");
+            const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+            if (filteredErrors.length > 0) {
+                printess.bringErrorIntoView(filteredErrors[0]);
+                getValidationOverlay(printess, filteredErrors, "next");
+                return;
+            }
+            if (printess.hasNextStep()) {
+                printess.nextStep();
+            }
+            else {
+                addToBasket(printess);
+            }
+        });
     }
     function gotoStep(printess, stepIndex) {
         return __awaiter(this, void 0, void 0, function* () {
-            const errors = printess.validate("until-current-step");
+            const errors = yield printess.validateAsync("until-current-step");
             const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
             if (filteredErrors.length > 0) {
                 printess.bringErrorIntoView(filteredErrors[0]);
@@ -452,7 +502,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         adjustDesktopView(printess, desktopTitleOrSteps, container, printessDiv, state);
         if (printess.hasSelection()) {
-            sessionStorage.setItem("editableFrames", "hint closed");
+            setStorageItemSafe("editableFrames", "hint closed");
             const framePulse = document.getElementById("frame-pulse");
             if (framePulse)
                 (_b = framePulse.parentElement) === null || _b === void 0 ? void 0 : _b.removeChild(framePulse);
@@ -478,11 +528,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 printessBuyerPropertiesButton.style.display = "block";
             }
         }
-        if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
+        const snippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
+        if (!uih_layoutSelectionDialogHasBeenRendered && snippetAmount > 0 && printess.showLayoutsDialog()) {
             uih_layoutSelectionDialogHasBeenRendered = true;
             renderLayoutSelectionDialog(printess, layoutSnippets, false);
         }
-        if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout") && !printess.showTabNavigation()) {
+        if (state === "document" && printess.hasLayoutSnippets() && !getStorageItemSafe("changeLayout") && !printess.showTabNavigation()) {
             toggleChangeLayoutButtonHint();
         }
         const externalLayoutsContainer = document.getElementById("external-layouts-container");
@@ -1205,11 +1256,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             next: {
                 name: "next",
                 text: printess.gl("ui.buttonNext"),
-                task: () => {
+                task: () => __awaiter(this, void 0, void 0, function* () {
                     var _a;
-                    gotoNextStep(printess);
+                    yield gotoNextStep(printess);
                     getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
-                }
+                })
             },
             done: {
                 name: "done",
@@ -1426,15 +1477,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else if (basketBtnBehaviour === "go-to-preview") {
             const previewBtn = document.createElement("button");
             previewBtn.className = "btn btn-outline-primary";
+            previewBtn.classList.add("me-1");
             if (printess.showTabNavigation() && printess.pageNavigationDisplay() !== "icons") {
                 previewBtn.classList.add("ms-1");
             }
-            else {
-                previewBtn.classList.add("me-1");
-            }
             previewBtn.innerText = printess.gl("ui.buttonPreview");
             previewBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
-                if (validateAllInputs(printess) === true) {
+                const validation = yield validateAllInputs(printess);
+                if (validation) {
                     yield printess.gotoNextPreviewDocument(0);
                     if (printess.showTabNavigation()) {
                         printess.resizePrintess();
@@ -1446,12 +1496,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             inner.appendChild(document.createElement("div"));
         }
+        const hasSaveAndCloseBtnInPageIconView = printess.pageNavigationDisplay() === "icons" && printess.showSaveAndCloseButton();
+        const wrapper = document.createElement("div");
+        wrapper.style.display = "flex";
+        wrapper.style.flexDirection = "row";
+        if (printess.showSaveAndCloseButton()) {
+            const saveAndQuitButton = document.createElement("button");
+            saveAndQuitButton.className = "btn btn-primary me-2";
+            saveAndQuitButton.style.flex = "1 1 0";
+            saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+            saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+            wrapper.appendChild(saveAndQuitButton);
+        }
         const basketBtn = document.createElement("button");
-        const caption = printess.gl("ui.buttonBasket");
+        const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.gl("ui.buttonBasket");
         basketBtn.className = "btn btn-primary";
         basketBtn.style.whiteSpace = "nowrap";
+        if (!hasSaveAndCloseBtnInPageIconView && printess.pageNavigationDisplay() === "icons") {
+            basketBtn.style.flex = "1 1 0";
+        }
         basketBtn.innerText = caption;
-        const icon = printess.gl("ui.buttonBasketIcon");
+        const icon = hasSaveAndCloseBtnInPageIconView ? "shopping-cart" : printess.gl("ui.buttonBasketIcon");
         if (icon) {
             const svg = printess.getIcon(icon);
             svg.style.height = "24px";
@@ -1460,7 +1525,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             basketBtn.appendChild(svg);
         }
         basketBtn.onclick = () => addToBasket(printess);
-        inner.appendChild(basketBtn);
+        if (!printess.showAddToBasketButton()) {
+            wrapper.appendChild(document.createElement("div"));
+        }
+        else {
+            wrapper.appendChild(basketBtn);
+        }
+        inner.appendChild(wrapper);
         container.appendChild(inner);
         if (!forCornerTools && !printess.showTabNavigation() && !printess.hasPreviewBackButton()) {
             const hr = document.createElement("hr");
@@ -1494,7 +1565,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getExpertModeButton(printess, forMobile) {
         const btn = document.createElement("button");
-        btn.id = "expert-button";
+        btn.id = "printess-expert-button";
         if (printess.pageNavigationDisplay() === "icons") {
             btn.className = "btn me-1 button-with-caption";
         }
@@ -1543,6 +1614,32 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         };
         return btn;
     }
+    function getSaveButton(printess, forMobile) {
+        const btn = document.createElement("button");
+        btn.id = "printess-save-button";
+        if (printess.pageNavigationDisplay() === "icons") {
+            btn.className = "btn me-1 button-with-caption";
+        }
+        else if (forMobile) {
+            btn.className = "btn me-2 button-mobile-with-caption";
+        }
+        else {
+            btn.className = "btn me-2 button-with-caption";
+        }
+        const btnClass = forMobile ? "btn-outline-light" : "btn-outline-primary";
+        btn.classList.add(btnClass);
+        const svg = printess.getIcon("cloud-upload-light");
+        btn.appendChild(svg);
+        const txt = document.createElement("div");
+        txt.textContent = printess.gl("ui.buttonSave");
+        btn.appendChild(txt);
+        btn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+            btn.classList.add("disabled");
+            saveTemplate(printess, "save");
+            window.setTimeout(() => btn.classList.remove("disabled"), 1500);
+        });
+        return btn;
+    }
     function getValidationOverlay(printess, errors, buttonType, stepIndex) {
         const error = errors[0];
         const modal = document.createElement("div");
@@ -1578,13 +1675,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 return;
             }
             if (stepIndex && buttonType === "next") {
-                gotoStep(printess, stepIndex);
+                yield gotoStep(printess, stepIndex);
             }
             else if (printess.hasNextStep() && buttonType === "next") {
-                gotoNextStep(printess);
+                yield gotoNextStep(printess);
             }
             else if (printess.getBasketButtonBehaviour() === "go-to-preview") {
-                if (validateAllInputs(printess) === true) {
+                const validation = yield validateAllInputs(printess);
+                if (validation) {
                     yield printess.gotoNextPreviewDocument(0);
                     if (printess.showTabNavigation()) {
                         printess.resizePrintess();
@@ -1759,6 +1857,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             grid.appendChild(document.createElement("div"));
         }
         if (printess.hasNextStep()) {
+            const wrapper = document.createElement("div");
+            wrapper.style.display = "flex";
+            wrapper.style.flexDirection = "row";
             const nextStep = document.createElement("button");
             nextStep.className = "btn btn-outline-primary";
             if (printess.isNextStepPreview()) {
@@ -1770,11 +1871,35 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 svg.style.verticalAlign = "sub";
                 nextStep.appendChild(svg);
             }
-            nextStep.onclick = () => gotoNextStep(printess);
-            grid.appendChild(nextStep);
+            nextStep.onclick = () => __awaiter(this, void 0, void 0, function* () { return yield gotoNextStep(printess); });
+            wrapper.appendChild(nextStep);
+            if (printess.showSaveAndCloseButton()) {
+                const saveAndQuitButton = document.createElement("button");
+                saveAndQuitButton.className = "btn btn-primary ms-2 me-2";
+                saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+                saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+                wrapper.appendChild(saveAndQuitButton);
+            }
+            grid.appendChild(wrapper);
         }
         else {
-            grid.appendChild(getStepsPutToBasketButton(printess));
+            const wrapper = document.createElement("div");
+            wrapper.style.display = "flex";
+            wrapper.style.flexDirection = "row";
+            if (printess.showSaveAndCloseButton()) {
+                const saveAndQuitButton = document.createElement("button");
+                saveAndQuitButton.className = "btn btn-primary me-2";
+                saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+                saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+                wrapper.appendChild(saveAndQuitButton);
+            }
+            if (!printess.showAddToBasketButton()) {
+                wrapper.appendChild(document.createElement("div"));
+            }
+            else {
+                wrapper.appendChild(getStepsPutToBasketButton(printess));
+            }
+            grid.appendChild(wrapper);
         }
         container.appendChild(grid);
         if (!printess.showTabNavigation() && !printess.hasPreviewBackButton()) {
@@ -1962,6 +2087,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.value = p.value.toString();
         inp.autocomplete = "off";
         inp.rows = 6;
+        inp.placeholder = printess.gl("errors.enterText");
         inp.oninput = () => __awaiter(this, void 0, void 0, function* () {
             yield printess.setProperty(p.id, inp.value).then(() => setPropertyVisibilities(printess));
             p.value = inp.value;
@@ -2156,6 +2282,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             for (const entry of p.listMeta.list) {
                 const thumb = document.createElement("div");
                 thumb.className = "no-selection image" + cssId;
+                thumb.style.position = "relative";
                 if (entry.imageUrl) {
                     thumb.style.backgroundImage = "url('" + entry.imageUrl + "')";
                 }
@@ -2176,6 +2303,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                     }
                 };
+                const priceLabel = printess.getFormFieldPriceLabelByTag(entry.tag);
+                if (priceLabel) {
+                    const priceBadge = document.createElement("div");
+                    priceBadge.className = "badge bg-primary";
+                    priceBadge.textContent = printess.gl(priceLabel);
+                    thumb.appendChild(priceBadge);
+                }
                 imageList.appendChild(thumb);
             }
             container.appendChild(imageList);
@@ -2470,11 +2604,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const label = document.createElement("div");
         label.classList.add("dropdown-list-label");
         label.innerText = printess.gl(entry.label);
-        const priceBadge = document.createElement("div");
-        priceBadge.className = "badge bg-primary";
-        priceBadge.style.marginLeft = "auto";
-        priceBadge.textContent = printess.gl(entry.tag);
         div.appendChild(label);
+        const priceLabel = printess.getFormFieldPriceLabelByTag(entry.tag);
+        if (priceLabel) {
+            const priceBadge = document.createElement("div");
+            priceBadge.className = "badge bg-primary";
+            priceBadge.style.marginLeft = "auto";
+            priceBadge.textContent = printess.gl(priceLabel);
+            div.appendChild(priceBadge);
+        }
         return div;
     }
     function getTabPanel(tabs, id) {
@@ -3785,6 +3923,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (printess.hasExpertButton()) {
             miniBar.appendChild(getExpertModeButton(printess, false));
         }
+        if (printess.showSaveButton()) {
+            miniBar.appendChild(getSaveButton(printess, false));
+        }
         miniBar.classList.add("undo-redo-bar");
         if (cornerTools) {
             miniBar.appendChild(document.createElement("div"));
@@ -4015,7 +4156,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     previewBtn.classList.add("ms-2");
                     previewBtn.innerText = printess.gl("ui.buttonPreview");
                     previewBtn.onclick = () => __awaiter(this, void 0, void 0, function* () {
-                        if (validateAllInputs(printess) === true) {
+                        const validation = yield validateAllInputs(printess);
+                        if (validation) {
                             yield printess.gotoNextPreviewDocument(0);
                             if (printess.showTabNavigation()) {
                                 printess.resizePrintess();
@@ -4029,6 +4171,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     const previewBackButton = getPreviewBackButton(printess);
                     wrapper.appendChild(previewBackButton);
                 }
+                if (printess.showSaveAndCloseButton()) {
+                    const saveAndQuitButton = document.createElement("button");
+                    saveAndQuitButton.className = "btn btn-primary ms-2";
+                    saveAndQuitButton.textContent = printess.gl("ui.buttonSaveAndClose");
+                    saveAndQuitButton.onclick = () => saveTemplate(printess, "close");
+                    wrapper.appendChild(saveAndQuitButton);
+                }
                 const button = document.createElement("button");
                 button.className = "btn btn-primary ms-2";
                 const icon = printess.getIcon("shopping-cart-add");
@@ -4036,7 +4185,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon.style.height = "25px";
                 button.onclick = () => addToBasket(printess);
                 button.appendChild(icon);
-                wrapper.appendChild(button);
+                if (!printess.showAddToBasketButton()) {
+                    wrapper.appendChild(document.createElement("div"));
+                }
+                else {
+                    wrapper.appendChild(button);
+                }
                 if (isStepTabsList || isDocTabs)
                     pages.appendChild(wrapper);
                 return;
@@ -4212,6 +4366,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 cornerTools.className = "corner-tools";
                 if (printess.hasExpertButton()) {
                     cornerTools.classList.add("expert-mode");
+                }
+                if (printess.showSaveButton()) {
+                    cornerTools.classList.add("save-mode");
                 }
                 cornerTools.appendChild(getBackUndoMiniBar(printess));
                 const priceDiv = document.createElement("div");
@@ -4620,7 +4777,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         showModal(printess, "pageAddedInfoDialog", content, title, footer);
     }
     function renderMyImagesTab(printess, forMobile, p, images, imagesContainer, showSearchIcon = true, showMobileImagesUploadBtn = false) {
-        var _a, _b;
+        var _a, _b, _c, _d, _e, _f;
         const container = imagesContainer || document.createElement("div");
         container.id = "image-tab-container";
         container.innerHTML = "";
@@ -4704,8 +4861,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 });
                 container.appendChild(accordion);
+                if (p && ((_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.canSetDefaultImage) && ((_d = p.validation) === null || _d === void 0 ? void 0 : _d.defaultValue) !== "fallback") {
+                    const resetButton = getDefaultImageButton(printess, p, "button");
+                    container.appendChild(resetButton);
+                }
             }
             else {
+                if (p && ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canSetDefaultImage) && ((_f = p.validation) === null || _f === void 0 ? void 0 : _f.defaultValue) !== "fallback") {
+                    const defaultThumb = getDefaultImageButton(printess, p, "div");
+                    imageList.appendChild(defaultThumb);
+                }
                 for (const im of images) {
                     imageList.appendChild(getImageThumb(printess, p, im, container, imageList, forMobile));
                 }
@@ -4717,6 +4882,40 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (images.length === 0 && !(p === null || p === void 0 ? void 0 : p.id.startsWith("FF_")))
             container.appendChild(multipleImagesHint);
         return container;
+    }
+    function getDefaultImageButton(printess, p, type) {
+        var _a;
+        const resetButton = document.createElement(type);
+        if (type === "button") {
+            resetButton.className = "btn btn-secondary w-100";
+            resetButton.textContent = printess.gl("ui.resetToDefaultImage");
+        }
+        else {
+            resetButton.className = "default-img-thumb";
+            if (((_a = p.validation) === null || _a === void 0 ? void 0 : _a.defaultValue) === p.value) {
+                resetButton.style.border = "2px solid var(--bs-primary)";
+                resetButton.style.outline = "3px solid var(--bs-primary)";
+            }
+            const icon = printess.getIcon("camera-slash");
+            icon.style.width = "55px";
+            icon.style.height = "55px";
+            resetButton.appendChild(icon);
+        }
+        resetButton.onclick = () => __awaiter(this, void 0, void 0, function* () {
+            if (p && p.validation && p.imageMeta) {
+                const pValue = p.validation.defaultValue;
+                yield printess.setProperty(p.id, pValue);
+                p.value = pValue;
+                if (p.imageMeta) {
+                    p.imageMeta.canScale = false;
+                }
+                const propsDiv = document.getElementById("tabs-panel-" + p.id);
+                if (propsDiv) {
+                    propsDiv.replaceWith(getPropertyControl(printess, p));
+                }
+            }
+        });
+        return resetButton;
     }
     function getImageThumb(printess, p, im, container, imageList, forMobile) {
         var _a;
@@ -4984,7 +5183,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const externalLayoutsContainer = document.getElementById("external-layouts-container");
         if (externalLayoutsContainer) {
             externalLayoutsContainer.classList.remove("hide-external-layouts-container");
-            if (uih_currentTabId !== "#LAYOUTS") {
+            if (uih_currentTabId !== "#LAYOUTS" || type === "image-list") {
                 externalLayoutsContainer.style.display = "none";
             }
             else {
@@ -5740,18 +5939,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             handleOffcanvasLayoutsContainer(printess, true);
         }
         if (printess.hasSelection()) {
-            sessionStorage.setItem("editableFrames", "hint closed");
+            setStorageItemSafe("editableFrames", "hint closed");
             const framePulse = document.getElementById("frame-pulse");
             if (framePulse)
                 (_a = framePulse.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(framePulse);
         }
         renderUiButtonHints(printess, mobileUi, state, true);
         renderEditableFramesHint(printess);
-        if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippets.length > 0 && printess.showLayoutsDialog()) {
+        const snippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
+        if (!uih_layoutSelectionDialogHasBeenRendered && snippetAmount > 0 && printess.showLayoutsDialog()) {
             uih_layoutSelectionDialogHasBeenRendered = true;
             renderLayoutSelectionDialog(printess, layoutSnippets, true);
         }
-        if (state === "document" && printess.hasLayoutSnippets() && !sessionStorage.getItem("changeLayout")) {
+        if (state === "document" && printess.hasLayoutSnippets() && !getStorageItemSafe("changeLayout")) {
             toggleChangeLayoutButtonHint();
         }
         if ((groupSnippets.length > 0 || (layoutSnippets.length > 0 && printess.showTabNavigation())) && state !== "add") {
@@ -5787,7 +5987,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const uiHintAlert = document.getElementById("ui-hint-changeLayout");
                 (_a = uiHintAlert === null || uiHintAlert === void 0 ? void 0 : uiHintAlert.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(uiHintAlert);
                 layoutsButton.classList.remove("layouts-button-pulse");
-                sessionStorage.setItem("changeLayout", "hint closed");
+                setStorageItemSafe("changeLayout", "hint closed");
                 layoutsButton.onclick = null;
             };
         }
@@ -5826,9 +6026,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 top: !forMobile && printess.pageNavigationDisplay() === "icons" ? "50px" : "calc(var(--editor-pagebar-height) + 5px)",
                 left: !forMobile && printess.pageNavigationDisplay() === "icons" ? "calc(100% - 450px)" : "30px",
                 color: "danger",
-                show: printess.uiHintsDisplay().includes("expertMode") && !sessionStorage.getItem("expertMode") && printess.hasExpertButton(),
+                show: printess.uiHintsDisplay().includes("expertMode") && !getStorageItemSafe("expertMode") && printess.hasExpertButton(),
                 task: () => {
-                    const expertBtn = document.getElementById("expert-button");
+                    const expertBtn = document.getElementById("printess-expert-button");
                     if (expertBtn) {
                         if (forMobile) {
                             expertBtn.classList.add("btn-light");
@@ -5848,9 +6048,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 top: printess.showTabNavigation() ? "-170px" : "-150px",
                 left: "30px",
                 color: "success",
-                show: printess.uiHintsDisplay().includes("groupSnippets") && !sessionStorage.getItem("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
+                show: printess.uiHintsDisplay().includes("groupSnippets") && !getStorageItemSafe("addDesign") && uih_currentGroupSnippets.length > 0 && forMobile,
                 task: () => {
-                    sessionStorage.setItem("addDesign", "hint closed");
+                    setStorageItemSafe("addDesign", "hint closed");
                     renderMobilePropertiesFullscreen(printess, "add-design", "open");
                 }
             }, {
@@ -5860,7 +6060,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 top: printess.hasExpertButton() && forMobile ? "calc(50% - 100px)" : "calc(50% - 150px)",
                 left: "55px",
                 color: "primary",
-                show: printess.uiHintsDisplay().includes("layoutSnippets") && !sessionStorage.getItem("changeLayout") && printess.hasLayoutSnippets() && showLayoutsHint && !forMobile,
+                show: printess.uiHintsDisplay().includes("layoutSnippets") && !getStorageItemSafe("changeLayout") && printess.hasLayoutSnippets() && showLayoutsHint && !forMobile,
                 task: () => {
                     const layoutBtn = document.querySelector(".show-layouts-button");
                     if (layoutBtn) {
@@ -5908,7 +6108,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 close.classList.add("close-info-alert-icon");
                 close.onclick = () => {
                     var _a;
-                    sessionStorage.setItem(hint.header, "hint closed");
+                    setStorageItemSafe(hint.header, "hint closed");
                     (_a = alert === null || alert === void 0 ? void 0 : alert.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(alert);
                     if (hint.header === "changeLayout") {
                         const layoutsButton = document.querySelector(".show-layouts-button");
@@ -5928,7 +6128,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 open.textContent = hint.header === "expertMode" ? printess.gl("ui.turnOn") : printess.gl("ui.showMe");
                 open.onclick = () => {
                     var _a;
-                    sessionStorage.setItem(hint.header, "hint closed");
+                    setStorageItemSafe(hint.header, "hint closed");
                     (_a = alert === null || alert === void 0 ? void 0 : alert.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(alert);
                     hint.task();
                 };
@@ -5947,10 +6147,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const circle = document.createElement("div");
         circle.className = "mobile-property-circle";
         circle.onclick = () => {
-            sessionStorage.setItem("addDesign", "hint closed");
+            setStorageItemSafe("addDesign", "hint closed");
             renderMobilePropertiesFullscreen(printess, "add-design", "open");
         };
-        if (!sessionStorage.getItem("addDesign")) {
+        if (!getStorageItemSafe("addDesign")) {
             circle.classList.add("mobile-property-plus-pulse");
         }
         else {
@@ -6017,11 +6217,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             next: {
                 name: "next",
                 icon: printess.getIcon("arrow-right"),
-                task: () => {
+                task: () => __awaiter(this, void 0, void 0, function* () {
                     var _a;
-                    gotoNextStep(printess);
+                    yield gotoNextStep(printess);
                     getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
-                }
+                })
             },
             basket: {
                 name: "basket",
@@ -6094,11 +6294,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const hasSteps = printess.hasSteps();
         const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
         const isBookMode = printess.canAddSpreads() || printess.canRemoveSpreads();
-        const noStepsMenu = printess.showUndoRedo() && !hasSteps && printess.hasExpertButton() && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0);
+        const noStepsMenu = printess.showUndoRedo() && !hasSteps && (printess.hasExpertButton() || printess.showSaveButton()) && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0 || isDocTabs);
         const showUndoRedo = printess.showUndoRedo() && !hasSteps && !printess.hasPreviewBackButton() && !isDocTabs;
-        const hideCloseBtn = hasSteps || (isDocTabs && printess.showUndoRedo());
-        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps;
-        const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never";
+        const noCloseBtn = hasSteps || (isDocTabs && printess.showUndoRedo());
+        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps && !printess.showSaveButton();
+        const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never" && !printess.showSaveButton();
+        const showSaveBtn = printess.showSaveButton() && !noStepsMenu && !hasSteps && !printess.hasExpertButton();
+        const showSaveBtnWithSteps = printess.showSaveButton() && hasSteps && printess.stepHeaderDisplay() === "never" && !printess.hasExpertButton();
         {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm ms-2 me-2 main-button";
@@ -6115,7 +6317,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 nav.appendChild(btn);
             }
             else {
-                if (!noStepsMenu && !hideCloseBtn) {
+                if (!noStepsMenu && !noCloseBtn) {
                     const callback = printess.getBackButtonCallback();
                     btn.className = "btn btn-sm text-white me-2 ms-2";
                     btn.textContent = printess.gl("ui.buttonBack");
@@ -6161,6 +6363,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     const expertBtn = getExpertModeButton(printess, true);
                     container.appendChild(btn);
                     container.appendChild(expertBtn);
+                    nav.appendChild(container);
+                }
+                else if (showSaveBtn || showSaveBtnWithSteps) {
+                    const saveBtn = getSaveButton(printess, true);
+                    container.appendChild(btn);
+                    container.appendChild(saveBtn);
                     nav.appendChild(container);
                 }
                 else {
@@ -6268,11 +6476,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             btn.className = "btn btn-sm ms-2 main-button";
             btn.classList.add("btn-outline-light");
             btn.innerText = printess.gl("ui.buttonPreview");
-            btn.onclick = () => {
-                if (validateAllInputs(printess) === true) {
+            btn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                const validation = yield validateAllInputs(printess);
+                if (validation) {
                     printess.gotoNextPreviewDocument();
                 }
-            };
+            });
             wrapper.appendChild(btn);
         }
         {
@@ -6294,7 +6503,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getMobileMenuList(printess) {
         const isBookMode = printess.canAddSpreads() || printess.canRemoveSpreads();
-        const noStepsMenu = printess.showUndoRedo() && !printess.hasSteps() && printess.hasExpertButton() && (printess.getBasketButtonBehaviour() === "go-to-preview" || isBookMode > 0);
+        const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
+        const noStepsMenu = printess.showUndoRedo() && !printess.hasSteps() && (printess.hasExpertButton() || printess.showSaveButton()) && (printess.getBasketButtonBehaviour() === "go-to-preview" || isBookMode > 0 || isDocTabs);
         const listWrapper = document.createElement("div");
         listWrapper.id = "mobile-menu-list";
         const menuList = document.createElement("div");
@@ -6323,10 +6533,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
             }, {
+                id: "save",
+                title: "ui.mobileMenuSave",
+                icon: "cloud-upload-light",
+                show: (printess.showSaveButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || (noStepsMenu && printess.showSaveButton()),
+                disabled: false,
+                task: () => {
+                    saveTemplate(printess, "save");
+                }
+            }, {
                 id: "expert",
                 title: "ui.expertMode",
                 icon: "pen-swirl",
-                show: (printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || noStepsMenu,
+                show: (printess.hasExpertButton() && printess.hasSteps() && printess.stepHeaderDisplay() !== "never") || (noStepsMenu && printess.hasExpertButton()),
                 disabled: false,
                 task: () => {
                     if (printess.isInExpertMode()) {
@@ -6384,11 +6603,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon: "arrow-right",
                 disabled: !printess.hasNextStep(),
                 show: printess.hasSteps(),
-                task: () => {
+                task: () => __awaiter(this, void 0, void 0, function* () {
                     var _a;
-                    gotoNextStep(printess);
+                    yield gotoNextStep(printess);
                     getCurrentTab(printess, (Number((_a = printess.getStep()) === null || _a === void 0 ? void 0 : _a.index) + 1), true);
-                }
+                })
             },
             {
                 id: "firstStep",
@@ -6407,18 +6626,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 icon: printess.previewStepsCount() > 0 ? "preview-doc" : "angle-double-right",
                 disabled: !printess.hasNextStep(),
                 show: printess.hasSteps(),
-                task: () => {
-                    var _a, _b;
-                    if (validateAllInputs(printess) === true) {
+                task: () => __awaiter(this, void 0, void 0, function* () {
+                    var _b, _c;
+                    const validation = yield validateAllInputs(printess);
+                    if (validation) {
                         if (printess.previewStepsCount() > 0) {
                             printess.gotoPreviewStep();
                         }
                         else {
                             printess.gotoLastStep();
-                            getCurrentTab(printess, (_b = (_a = printess.lastStep()) === null || _a === void 0 ? void 0 : _a.index) !== null && _b !== void 0 ? _b : 0, true);
+                            getCurrentTab(printess, (_c = (_b = printess.lastStep()) === null || _b === void 0 ? void 0 : _b.index) !== null && _c !== void 0 ? _c : 0, true);
                         }
                     }
-                }
+                })
             }
         ];
         menuItems.forEach((mi, idx) => {
@@ -6428,10 +6648,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 item.className = "btn btn-primary d-flex w-25 justify-content-center align-items-center";
                 if (mi.disabled)
                     item.classList.add("disabled");
-                if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep"))
+                if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
                     item.classList.add("reverse-menu-btn-content");
+                }
                 item.style.border = "1px solid rgba(0,0,0,.125)";
-                if (hasExpertButton || noStepsMenu) {
+                if (hasExpertButton || noStepsMenu || printess.showSaveButton()) {
                     item.style.minWidth = "50%";
                 }
                 else {
@@ -6444,22 +6665,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     item.classList.remove("btn-primary");
                     item.classList.add("btn-light");
                 }
-                if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu)
+                if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu && !printess.showSaveButton()) {
                     item.style.minWidth = "100%";
+                }
                 const span = document.createElement("span");
                 span.textContent = printess.gl(mi.title);
+                if (printess.hasExpertButton() && printess.showSaveButton()) {
+                    if (idx < 4)
+                        item.style.minWidth = "33%";
+                    if (mi.id === "expert") {
+                        span.textContent = "Expert";
+                    }
+                }
                 if (mi.icon) {
                     const icon = printess.getIcon(mi.icon);
-                    icon.style.width = "15px";
-                    icon.style.height = "15px";
+                    icon.style.width = "20px";
+                    icon.style.height = "20px";
                     icon.style.marginRight = "10px";
                     if (mi.id === "next" || (printess.previewStepsCount() === 0 && mi.id === "lastStep")) {
                         icon.style.marginLeft = "10px";
                         icon.style.marginRight = "0px";
-                    }
-                    if (printess.previewStepsCount() === 0 && (mi.id === "firstStep" || mi.id === "lastStep")) {
-                        icon.style.width = "20px";
-                        icon.style.height = "20px";
                     }
                     item.appendChild(icon);
                 }
@@ -7157,7 +7382,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
             else {
-                caption = b.caption;
+                caption = printess.gl(b.caption);
             }
             const buttonText = document.createElement("div");
             buttonText.className = "text";
