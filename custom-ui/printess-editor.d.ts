@@ -48,6 +48,16 @@ export interface printessAttachParameters {
   allowZoomAndPan?: boolean;
 
   /**
+   * Auto scale document view. 
+   * Mostly useful on iOS devices which tend to crash when using big document sizes.
+   * "auto" will automatically check for Safari on iOS devices.
+   * Please set it to "always" when using Printess in iOS apps!
+   * Default: "auto"
+   */
+  scaleDocumentView?: "auto" | "always";
+
+
+  /**
    * When zooming to a selected page, Printess uses a viewport transition. You can either set the transition duration in seconds or pass **0** to 
    * turn animation of completely.
    */
@@ -178,7 +188,7 @@ export interface printessAttachParameters {
   /**
    * Is called when the undo state has changed (and needs redraw of buttons) 
    */
-   refreshUndoRedoCallback?: refreshUndoRedoCallback;
+  refreshUndoRedoCallback?: refreshUndoRedoCallback;
 
   /**
    * Is called when the page thumbnail has been updated to allow buyer-ui to refresh a particular thumbnail only
@@ -1294,6 +1304,11 @@ export interface iPrintessApi {
   gl(translationKey: string, ...params: Array<string | number>): string
 
   /**
+   * Returns current global scale factor, should be !== 1 only on iOS devices to avoid safari-crashes
+   */
+  globalScaleFactor(): number
+
+  /**
    * Returns if LayoutSnippets are available
    */
   hasLayoutSnippets(): boolean,
@@ -1509,7 +1524,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
