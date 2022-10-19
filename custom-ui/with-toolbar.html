@@ -338,7 +338,8 @@
       currentLayoutSnippets = layoutSnippets;
       currentTabs = tabs;
 
-      document.querySelector(".show-layouts-button").style.visibility = layoutSnippets.length ? "visible" : "hidden";
+      const hasLayoutSnippets = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
+      document.querySelector(".show-layouts-button").style.visibility = hasLayoutSnippets ? "visible" : "hidden";
 
     }
 
