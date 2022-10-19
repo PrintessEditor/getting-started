@@ -97,12 +97,13 @@ declare const bootstrap: any;
 
   //console.log("Printess ui-helper loaded");
 
-  async function validateAllInputs(printess: iPrintessApi): Promise<boolean> {
+  async function validateAllInputs(printess: iPrintessApi, buttonType: "preview" | "validateAll"): Promise<boolean> {
     const errors = await printess.validateAsync("all");
-    const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
+    const filteredErrors = errors.filter(e => e.errorCode !== "imageResolutionLow");
+    filteredErrors.push(...errors.filter(e => e.errorCode === "imageResolutionLow" && !uih_ignoredLowResolutionErrors.includes(e.boxIds[0])));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
-      getValidationOverlay(printess, filteredErrors, "validateAll");
+      getValidationOverlay(printess, filteredErrors, buttonType);
       return false;
     }
     return true;
@@ -152,7 +153,7 @@ declare const bootstrap: any;
   }
 
   async function addToBasket(printess: iPrintessApi) {
-    const validation = await validateAllInputs(printess);
+    const validation = await validateAllInputs(printess, "validateAll");
     if (!validation) {
       return;
     }
@@ -190,11 +191,12 @@ declare const bootstrap: any;
   }
 
   async function gotoNextStep(printess: iPrintessApi): Promise<void> {
+    const buttonType = printess.isNextStepPreview() ? "preview" : "next";
     const errors = await printess.validateAsync(printess.hasNextStep() ? "until-current-step" : "all");
     const filteredErrors = errors.filter(e => !uih_ignoredLowResolutionErrors.includes(e.boxIds[0]));
     if (filteredErrors.length > 0) {
       printess.bringErrorIntoView(filteredErrors[0]);
-      getValidationOverlay(printess, filteredErrors, "next");
+      getValidationOverlay(printess, filteredErrors, buttonType);
       return;
     }
     if (printess.hasNextStep()) {
@@ -583,12 +585,13 @@ declare const bootstrap: any;
     }
 
     // translate change Layout button text
+    const layoutSnippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
     const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
     if (layoutsButton) {
       layoutsButton.textContent = printess.gl("ui.changeLayout");
       if (printess.showTabNavigation()) {
         layoutsButton.style.visibility = "hidden";
-      } else if (layoutSnippets.length > 0) {
+      } else if (layoutSnippetAmount > 0) {
         layoutsButton.style.visibility = "visible";
       }
     }
@@ -608,8 +611,7 @@ declare const bootstrap: any;
     }
 
     // open dialog with layout snippets
-    const snippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
-    if (!uih_layoutSelectionDialogHasBeenRendered && snippetAmount > 0 && printess.showLayoutsDialog()) {
+    if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippetAmount > 0 && printess.showLayoutsDialog()) {
       uih_layoutSelectionDialogHasBeenRendered = true;
       renderLayoutSelectionDialog(printess, layoutSnippets, false);
     }
@@ -621,12 +623,12 @@ declare const bootstrap: any;
 
     // hide external layout snippets container
     const externalLayoutsContainer = document.getElementById("external-layouts-container");
-    if (externalLayoutsContainer && (uih_currentTabId !== "#LAYOUTS" || uih_currentLayoutSnippets.length === 0)) {
+    if (externalLayoutsContainer && (uih_currentTabId !== "#LAYOUTS" || layoutSnippetAmount === 0)) {
       externalLayoutsContainer.style.display = "none";
     }
 
     // handle Offcanvas for Layout Snippets
-    if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+    if (!printess.showTabNavigation() && layoutSnippetAmount > 0) {
       handleOffcanvasLayoutsContainer(printess, false);
     }
 
@@ -647,7 +649,7 @@ declare const bootstrap: any;
           container.appendChild(getPropertiesTitle(printess));
           if (uih_currentTabId === "#FORMFIELDS") {
             container.appendChild(propsDiv);
-          } else if (uih_currentTabId === "#LAYOUTS" && uih_currentLayoutSnippets.length === 0) {
+          } else if (uih_currentTabId === "#LAYOUTS" && layoutSnippetAmount === 0) {
             uih_currentTabId = printess.getInitialTabId();
             renderTabNavigationProperties(printess, container, false);
           } else {
@@ -734,7 +736,7 @@ declare const bootstrap: any;
         t = t.concat(props);
       }
 
-      if (properties.length === 0) {
+      if (properties.length === 0 && state !== "text") {
         // render Group Snippets in case there is no property associated with the current selection
         if (!printess.showTabNavigation()) {
           container.appendChild(renderGroupSnippets(printess, groupSnippets, false));
@@ -867,7 +869,8 @@ declare const bootstrap: any;
       layoutsDiv.appendChild(content);
     }
 
-    if (uih_currentLayoutSnippets.length === 0) {
+    const layoutSnippetAmount = uih_currentLayoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
+    if (layoutSnippetAmount === 0) {
       layoutsDiv.style.display = "none";
     } else if (!forMobile) {
       layoutsDiv.style.display = "block";
@@ -1229,6 +1232,9 @@ declare const bootstrap: any;
 
         return getSimpleLabel(p.label, p.controlGroup > 0);
 
+      case "checkbox":
+        return getSwitchControl(printess, p, forMobile);
+
       case "single-line-text":
         return getSingleLineTextBox(printess, p, forMobile);
 
@@ -1271,7 +1277,7 @@ declare const bootstrap: any;
 
 
       case "color":
-        if (forMobile === false && uih_currentProperties.length <= 3 && uih_currentProperties.filter(p => p.kind === "color").length <= 1) {
+        if (!forMobile && uih_currentProperties.length <= 3 && uih_currentProperties.filter(p => p.kind === "color").length <= 1) {
           // render large version (mobile-version) of control
           return getTextPropertyScrollContainer(getColorDropDown(printess, p, undefined, true));
         } else if (!forMobile && uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors()) {
@@ -1322,7 +1328,9 @@ declare const bootstrap: any;
               tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false, !forMobile) });
             }
           }
-          return getTabPanel(tabs, p.id);
+          const tabPanel = getTabPanel(tabs, p.id);
+          tabPanel.style.display = printess.isPropertyVisible(p.id) ? "block" : "none";
+          return tabPanel;
         }
 
       case "image": {
@@ -1449,6 +1457,41 @@ declare const bootstrap: any;
     }
   }
 
+  function getSwitchControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
+    const switchControl = document.createElement("div");
+    switchControl.className = "form-check form-switch mb-3";
+
+    const input = document.createElement("input");
+    input.className = "form-check-input";
+    input.id = p.id + "_switch";
+    input.type = "checkbox";
+    input.setAttribute("role", "switch");
+    input.checked = p.value === "true";
+
+    const label = document.createElement("label");
+    label.className = "form-check-label";
+    label.setAttribute("for", p.id + "_switch");
+    label.textContent = printess.gl(p.label);
+
+    switchControl.appendChild(input);
+
+    if (!forMobile) {
+      switchControl.appendChild(label);
+    }
+
+    switchControl.onchange = () => {
+      printess.setProperty(p.id, input.checked ? "true" : "false").then(() => setPropertyVisibilities(printess));
+      p.value = input.checked ? "true" : "false";
+
+      const mobileButtonDiv = document.getElementById(p.id + ":");
+      if (mobileButtonDiv) {
+        drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
+      }
+    }
+
+    return switchControl;
+  }
+
   function getChangeBackgroundButton(printess: iPrintessApi): HTMLElement {
     const ok = document.createElement("button");
     ok.className = "btn btn-primary w-100 align-self-start mb-3";
@@ -1563,16 +1606,25 @@ declare const bootstrap: any;
     group1.className = "input-group mb-3";
     const pre1 = document.createElement("div");
     pre1.className = "input-group-prepend";
-    if (p.textStyle.allows.indexOf("color") >= 0) {
+
+    const hasColor = p.textStyle.allows.indexOf("color") >= 0;
+    const hasSize = p.textStyle.allows.indexOf("size") >= 0;
+    const hasFont = p.textStyle.allows.indexOf("font") >= 0;
+    const hasVerticalAlign = p.textStyle.allows.indexOf("verticalAlignment") >= 0;
+    const hasHorizontalAlign = p.textStyle.allows.indexOf("horizontalAlignment") >= 0;
+
+    const displayColorControl = hasColor && (hasSize || hasFont || hasVerticalAlign || hasHorizontalAlign);
+
+    if (displayColorControl) {
       getColorDropDown(printess, p, "color", false, pre1);
     }
-    if (p.textStyle.allows.indexOf("size") >= 0) {
+    if (hasSize) {
       getFontSizeDropDown(printess, p, false, pre1, false);
     }
 
     group1.appendChild(pre1);
 
-    if (p.textStyle.allows.indexOf("font") >= 0) {
+    if (hasFont) {
       getFontDropDown(printess, p, false, group1, false);
     }
 
@@ -1635,7 +1687,7 @@ declare const bootstrap: any;
 
   function getTextAlignmentControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
     const group2 = document.createElement("div");
-    if (p.textStyle && (p.textStyle.allows.indexOf("horizontalAlignment") >= 0 || p.textStyle.allows.indexOf("verticalAlignment"))) {
+    if (p.textStyle && (p.textStyle.allows.indexOf("horizontalAlignment") >= 0 || p.textStyle.allows.indexOf("verticalAlignment") >= 0)) {
 
       group2.className = "input-group mb-3";
       group2.style.padding = "1px";
@@ -1768,7 +1820,7 @@ declare const bootstrap: any;
       }
       previewBtn.innerText = printess.gl("ui.buttonPreview");
       previewBtn.onclick = async () => {
-        const validation = await validateAllInputs(printess);
+        const validation = await validateAllInputs(printess, "preview");
         if (validation) {
           await printess.gotoNextPreviewDocument(0);
           if (printess.showTabNavigation()) {
@@ -1799,7 +1851,7 @@ declare const bootstrap: any;
 
     const basketBtn = document.createElement("button");
     const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.gl("ui.buttonBasket");
-    basketBtn.className = "btn btn-primary";
+    basketBtn.className = "btn btn-primary d-flex justify-content-center";
     basketBtn.style.whiteSpace = "nowrap";
     if (!hasSaveAndCloseBtnInPageIconView && printess.pageNavigationDisplay() === "icons") {
       basketBtn.style.flex = "1 1 0";
@@ -1807,12 +1859,16 @@ declare const bootstrap: any;
 
     basketBtn.innerText = caption;
 
-    const icon = hasSaveAndCloseBtnInPageIconView ? "shopping-cart" : <iconName>printess.gl("ui.buttonBasketIcon");
+    const basketIcon = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+    const icon = hasSaveAndCloseBtnInPageIconView ? basketIcon : <iconName>printess.gl("ui.buttonBasketIcon");
     if (icon) {
       const svg = printess.getIcon(icon);
       svg.style.height = "24px";
       svg.style.float = "left";
-      svg.style.marginRight = caption ? "10px" : "0px";
+      svg.style.fill = "var(--bs-light)";
+
+      // was "margin-right" but should be "margin-left" to have some distance to the icon. 
+      svg.style.marginLeft = caption ? "10px" : "0px";
       basketBtn.appendChild(svg);
     }
 
@@ -1932,8 +1988,9 @@ declare const bootstrap: any;
   }
 
   // get validation modal that displays external property errors
-  function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>, buttonType: "done" | "next" | "validateAll", stepIndex?: number): void {
+  function getValidationOverlay(printess: iPrintessApi, errors: Array<iExternalError>, buttonType: "done" | "next" | "preview" | "validateAll", stepIndex?: number): void {
     const error = errors[0];
+    const imageResolutionErrors = errors.filter(e => e.errorCode === "imageResolutionLow");
     const modal = document.createElement("div");
     modal.id = "validation-modal";
     modal.className = "modal show align-items-center";
@@ -1980,8 +2037,8 @@ declare const bootstrap: any;
         await gotoStep(printess, stepIndex);
       } else if (printess.hasNextStep() && buttonType === "next") {
         await gotoNextStep(printess);
-      } else if (printess.getBasketButtonBehaviour() === "go-to-preview") {
-        const validation = await validateAllInputs(printess);
+      } else if (printess.getBasketButtonBehaviour() === "go-to-preview" && buttonType === "preview") {
+        const validation = await validateAllInputs(printess, "preview");
         if (validation) {
           await printess.gotoNextPreviewDocument(0);
           if (printess.showTabNavigation()) {
@@ -1992,6 +2049,34 @@ declare const bootstrap: any;
         addToBasket(printess);
       } else {
         printess.clearSelection();
+      }
+    }
+
+    // For low resolution errors when clicking on preview or basket button
+    const ignoreAll = document.createElement("button");
+    ignoreAll.className = "btn btn-outline-primary";
+    ignoreAll.textContent = printess.gl("ui.buttonIgnoreAll");
+    ignoreAll.onclick = async () => {
+      modal.style.display = "none";
+      imageResolutionErrors.forEach(err => uih_ignoredLowResolutionErrors.push(err.boxIds[0]));
+      modal.remove();
+
+      errors = errors.filter(err => err.errorCode !== "imageResolutionLow");
+      if (errors.length > 0) {
+        getValidationOverlay(printess, errors, buttonType, stepIndex);
+        return;
+      }
+
+      if (buttonType === "preview") {
+        const validation = await validateAllInputs(printess, "preview");
+        if (validation) {
+          await printess.gotoNextPreviewDocument(0);
+          if (printess.showTabNavigation()) {
+            printess.resizePrintess();
+          }
+        }
+      } else if (buttonType === "validateAll") {
+        addToBasket(printess);
       }
     }
 
@@ -2063,8 +2148,13 @@ declare const bootstrap: any;
       }
     }
 
+    const validateAllLowResolution = buttonType === "preview" || buttonType === "validateAll";
+
     if (error.errorCode === "imageResolutionLow" || error.errorCode === "emptyBookPage") {
       footer.appendChild(ignore);
+    }
+    if (error.errorCode === "imageResolutionLow" && validateAllLowResolution && imageResolutionErrors.length > 1) {
+      footer.appendChild(ignoreAll);
     }
     footer.appendChild(ok);
     content.appendChild(modalHeader);
@@ -2539,7 +2629,7 @@ declare const bootstrap: any;
     !forMobile && container.classList.add("mb-3");
     container.id = "cnt_" + id;
 
-    container.style.display = printess.isPropertyVisible(id) ? "block" : "none";
+    container.style.display = printess.isPropertyVisible(id) || kind === "image" ? "block" : "none";
 
     if (label) {
       if (label.trim() === "") label = "&nbsp;";
@@ -2670,7 +2760,7 @@ declare const bootstrap: any;
     // check if the change of one property influences the visibilities of other properties: 
     for (const p of uih_currentProperties) {
       if (p.validation && p.validation.visibility !== "always") {
-        const div = document.getElementById("cnt_" + p.id);
+        const div = document.getElementById("tabs-panel-" + p.id) || document.getElementById("cnt_" + p.id);
         if (div) {
           const v = printess.isPropertyVisible(p.id);
           if (v) {
@@ -4549,9 +4639,11 @@ declare const bootstrap: any;
       btnBack.style.marginRight = "5px";
     }
 
-    const icon = cornerTools ? "close" : <iconName>printess.gl("ui.buttonBackIcon");
+    const closeIcon = <iconName>printess.gl("ui.buttonBackIcon") || "close";
+    const icon = cornerTools ? closeIcon : <iconName>printess.gl("ui.buttonBackIcon");
     if (icon) {
       const svg = printess.getIcon(icon);
+      svg.style.fill = "var(--bs-secondary)";
 
       if (!cornerTools) {
         svg.style.height = "24px";
@@ -4928,7 +5020,7 @@ declare const bootstrap: any;
           previewBtn.classList.add("ms-2");
           previewBtn.innerText = printess.gl("ui.buttonPreview");
           previewBtn.onclick = async () => {
-            const validation = await validateAllInputs(printess);
+            const validation = await validateAllInputs(printess, "preview");
             if (validation) {
               await printess.gotoNextPreviewDocument(0);
               if (printess.showTabNavigation()) {
@@ -4956,9 +5048,11 @@ declare const bootstrap: any;
         // Mini-Cart Button
         const button = document.createElement("button");
         button.className = "btn btn-primary ms-2";
-        const icon = printess.getIcon("shopping-cart-add");
+        const iconName = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+        const icon = printess.getIcon(iconName);
         icon.style.width = "25px";
         icon.style.height = "25px";
+        icon.style.fill = "var(--bs-light)";
 
         button.onclick = () => addToBasket(printess);
         button.appendChild(icon);
@@ -5665,11 +5759,6 @@ declare const bootstrap: any;
     dragDropHint.style.marginTop = "10px";
     dragDropHint.textContent = printess.gl("ui.dragDropHint");
 
-    const multipleImagesHint = document.createElement("p");
-    multipleImagesHint.id = "multiple-images-hint";
-    multipleImagesHint.style.fontFamily = "var(--bs-font-sans-serif)";
-    multipleImagesHint.textContent = printess.gl("ui.uploadMultipleImagesInfo");
-
     // Wenn keine Property gesetzt ist, dann rendern wir den globel My-Images Tab
     if (!p || p?.imageMeta?.canUpload) {
       const distributeBtn = document.createElement("button");
@@ -5696,6 +5785,13 @@ declare const bootstrap: any;
 
       if (!forMobile || showMobileImagesUploadBtn) container.appendChild(twoButtons);
     }
+
+    const multipleImagesHint = document.createElement("p");
+    multipleImagesHint.id = "multiple-images-hint";
+    multipleImagesHint.style.fontFamily = "var(--bs-font-sans-serif)";
+    multipleImagesHint.textContent = printess.gl("ui.uploadMultipleImagesInfo");
+    if (forMobile) multipleImagesHint.style.textAlign = "center";
+    if (images.length <= 12 && !p?.id.startsWith("FF_")) container.appendChild(multipleImagesHint);
 
     if (printess.showSearchBar()) { // && images.length > 5 => searchBar gone after search, if result has 5 or less items only
       container.appendChild(getSearchBar(printess, p, container, forMobile, showSearchIcon));
@@ -5775,7 +5871,6 @@ declare const bootstrap: any;
       }
     }
     if (!forMobile && images.length > 0 && p?.kind !== "image-id") container.appendChild(dragDropHint);
-    if (images.length === 0 && !p?.id.startsWith("FF_")) container.appendChild(multipleImagesHint);
 
     return container;
   }
@@ -7048,10 +7143,11 @@ declare const bootstrap: any;
     } */
 
     // translate change Layout button text
+    const layoutSnippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
     const layoutsButton = <HTMLButtonElement>document.querySelector(".show-layouts-button");
     if (layoutsButton && printess.showTabNavigation()) {
       layoutsButton.style.visibility = "hidden";
-    } else if (layoutsButton && layoutSnippets.length > 0) {
+    } else if (layoutsButton && layoutSnippetAmount > 0) {
       layoutsButton.textContent = printess.gl("ui.changeLayout");
       layoutsButton.style.visibility = "visible";
     }
@@ -7060,7 +7156,7 @@ declare const bootstrap: any;
       closeLayoutsButton.click();
     }
     // handle Offcanvas for Layout Snippets
-    if (!printess.showTabNavigation() && uih_currentLayoutSnippets.length > 0) {
+    if (!printess.showTabNavigation() && layoutSnippetAmount > 0) {
       handleOffcanvasLayoutsContainer(printess, true);
     }
 
@@ -7076,8 +7172,7 @@ declare const bootstrap: any;
     renderEditableFramesHint(printess);
 
     // open dialog with layout snippets
-    const snippetAmount = layoutSnippets.map(ls => ls.snippets.length).reduce((prev, curr) => prev + curr, 0);
-    if (!uih_layoutSelectionDialogHasBeenRendered && snippetAmount > 0 && printess.showLayoutsDialog()) {
+    if (!uih_layoutSelectionDialogHasBeenRendered && layoutSnippetAmount > 0 && printess.showLayoutsDialog()) {
       uih_layoutSelectionDialogHasBeenRendered = true;
       renderLayoutSelectionDialog(printess, layoutSnippets, true);
     }
@@ -7088,7 +7183,13 @@ declare const bootstrap: any;
     }
 
     // Buttons for "add" & "previous/next step" & "basket" & "done"
-    if ((groupSnippets.length > 0 || (layoutSnippets.length > 0 && printess.showTabNavigation())) && state !== "add") {
+    const hasGroupSnippets = groupSnippets.length > 0;
+    const hastLayoutSnippets = layoutSnippetAmount > 0 && printess.showTabNavigation();
+    const showPhotoTab = !hasGroupSnippets && !hastLayoutSnippets && printess.showPhotoTab() && printess.showTabNavigation();
+    if (showPhotoTab) {
+      uih_currentTabId = "#PHOTOS";
+    }
+    if ((hasGroupSnippets || hastLayoutSnippets || showPhotoTab) && state !== "add") {
       mobileUi.appendChild(getMobilePlusButton(printess));
     }
     if (state !== "document") {
@@ -7115,7 +7216,8 @@ declare const bootstrap: any;
     }
     // const inTextStyle = (properties.length && properties[0].kind === "selection-text-style");
 
-    printess.setZoomMode(printess.isTextEditorOpen() ? "frame" : "spread");
+    // set Zoom Mode to frame if state is text to zoom into text box when error message is "missing text"
+    printess.setZoomMode(printess.isTextEditorOpen() || state === "text" ? "frame" : "spread");
     resizeMobileUi(printess);
   }
 
@@ -7317,8 +7419,8 @@ declare const bootstrap: any;
     } else {
       circle.classList.remove("mobile-property-plus-pulse");
     }
-
-    const icon = printess.getIcon("plus");
+    const ico = <iconName>printess.gl("ui.addDesignIcon") || "plus";
+    const icon = printess.getIcon(ico);
     circle.appendChild(icon);
 
     button.appendChild(circle);
@@ -7353,6 +7455,9 @@ declare const bootstrap: any;
       container.id = "mobile-nav-buttons-container";
       container.className = "mobile-property-button-container";
     }
+
+    const iconName = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+    const basketIcon = printess.getIcon(iconName);
 
     const buttons = {
       add: {
@@ -7393,7 +7498,7 @@ declare const bootstrap: any;
       },
       basket: {
         name: "basket",
-        icon: printess.getIcon("shopping-cart-add"),
+        icon: basketIcon,
         task: () => addToBasket(printess)
       }
     }
@@ -7572,7 +7677,7 @@ declare const bootstrap: any;
           const icon = <iconName>printess.gl("ui.buttonBackIcon");
           if (icon) {
             const svg = printess.getIcon(icon);
-
+            svg.style.fill = "var(--bs-light)";
             svg.style.height = "24px";
             if (caption) {
               svg.style.float = "left";
@@ -7763,7 +7868,7 @@ declare const bootstrap: any;
       btn.innerText = printess.gl("ui.buttonPreview");
 
       btn.onclick = async () => {
-        const validation = await validateAllInputs(printess);
+        const validation = await validateAllInputs(printess, "preview");
         if (validation) {
           printess.gotoNextPreviewDocument();
         }
@@ -7779,10 +7884,22 @@ declare const bootstrap: any;
         btn.classList.add("main-button-pulse");
       }
 
-      const icon = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
-      const ico = printess.getIcon(icon);
-      ico.classList.add("big-icon");
-      btn.appendChild(ico);
+      const caption = printess.gl("ui.buttonBasketMobile");
+
+      if (caption) {
+        btn.textContent = caption;
+        btn.style.color = "white";
+        btn.style.whiteSpace = "nowrap";
+        btn.style.border = "1px solid var(--bs-light)";
+      } else {
+        const icon = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+        const ico = printess.getIcon(icon);
+        ico.classList.add("big-icon");
+        ico.style.fill = "var(--bs-light)";
+        btn.appendChild(ico);
+      }
+
+
       btn.onclick = () => addToBasket(printess);
       wrapper.appendChild(btn);
     }
@@ -7952,7 +8069,7 @@ declare const bootstrap: any;
         disabled: !printess.hasNextStep(),
         show: printess.hasSteps(),
         task: async () => {
-          const validation = await validateAllInputs(printess);
+          const validation = await validateAllInputs(printess, printess.previewStepsCount() > 0 ? "preview" : "validateAll");
           if (validation) {
             if (printess.previewStepsCount() > 0) {
               printess.gotoPreviewStep();
