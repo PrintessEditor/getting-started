@@ -7272,6 +7272,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
         }
+        else if (b.newState.externalProperty && b.newState.externalProperty.kind === "checkbox") {
+            const id = b.newState.externalProperty.id;
+            const value = b.newState.externalProperty.value;
+            printess.setProperty(id, value === "true" ? "false" : "true").then(() => setPropertyVisibilities(printess));
+            b.newState.externalProperty.value = value === "true" ? "false" : "true";
+            drawButtonContent(printess, buttonDiv, [b.newState.externalProperty], b.newState.externalProperty.controlGroup);
+            printess.setZoomMode("spread");
+            collapseControlHost();
+            resizeMobileUi(printess);
+            const sels = document.querySelectorAll(".mobile-property-button.selected");
+            sels.forEach((ele) => ele.classList.remove("selected"));
+            document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+            buttonDiv.classList.toggle("selected");
+            centerMobileButton(buttonDiv);
+            return;
+        }
         else {
             const sels = document.querySelectorAll(".mobile-property-button.selected");
             hadSelectedButtons = sels.length > 0;
