@@ -130,6 +130,7 @@
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
         getOverlayCallback: getOverlayCallback,
+        updatePageThumbnailCallback: (spreadId, pageId, url) => uiHelper.updatePageThumbnail(spreadId, pageId, url),
         refreshPaginationCallback: () => uiHelper.refreshPagination(printess),
         refreshUndoRedoCallback: () => uiHelper.refreshUndoRedoState(printess),
 

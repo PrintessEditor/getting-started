@@ -378,6 +378,17 @@ export interface iPrintessApi {
   bringErrorIntoView(err: iExternalError): Promise<void>
 
   /**
+   * Indicates if a selected image frame can be splitted in certain directions
+   */
+  hasScissorMenu(): "never" | "horizontical" | "vertical" | "both"
+
+  /**
+   * Split an image frame that has splitter option turned on
+   * @param direction is either horizontal or vertical depending on how an image should be splitted
+   */
+  splitFrame(direction: "horizontal" | "vertical"): Promise<void>
+
+  /**
    * Selects all frames which are marked as **background**
    */
   selectBackground(): Promise<void>;
@@ -526,6 +537,11 @@ export interface iPrintessApi {
    * Returns change background button if available
    */
   getMobileUiBackgroundButton(): Array<iMobileUIButton>
+
+  /**
+   * Returns horizontal and vertical scissor buttons if available
+   */
+  getMobileUiScissorsButtons(): Array<iMobileUIButton>
 
   /**
    * Mobile UI helper method to get model to draw a circle button including icons, gauge, etc.
@@ -892,6 +908,11 @@ export interface iPrintessApi {
   insertGroupSnippet(snippetUrl: string): Promise<void>;
 
   /**
+   * Load a list of layout snippets which can be used during photo-book spread insertion
+   */
+  getInsertSpreadSnippets(): Promise<Array<iExternalSnippet>>
+
+  /**
    * Get a list of all image-filter-snippets having any of the provided tags
    */
   getImageFilterSnippets(tags: Array<string> | ReadonlyArray<string>): Promise<Array<iExternalSnippet>>
@@ -994,9 +1015,9 @@ export interface iPrintessApi {
    * Photo-Book only feature:
    * re arranges all spreads by a given array of ids or `newSpread` 
    * Handle with care, this can destroy your photo-book document
-   * @param newSpreadIds Array of spread ids in correct order
+   * @param newSpreadIds Array of spread id and optional snippetUrls in correct order
    */
-  reArrangeSpreads(newSpreadIds: Array<string | "newSpread">): Promise<boolean>
+  reArrangeSpreads(newSpreadIds: Array<{id: string | "newSpread", snippetUrl: string}>): Promise<boolean>
 
   /**
    * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
@@ -1148,6 +1169,11 @@ export interface iPrintessApi {
    * Tells if the current selection can be moved around by the user 
    */
   canMoveSelectedFrames(): boolean
+
+  /**
+   * Tells if the current selection is part of a collage and accordingly influences the size of other images and own size when changing
+   */
+  canSplitSelectedFrames(): boolean
 
   /**
    * Returns `true` if either rich- or simple-text-editor is currently active
@@ -1355,6 +1381,23 @@ export interface iPrintessApi {
    */
   showAlertOnClose(): boolean
 
+
+  /**
+   * Sets the selected index of the primary data-source if the propertyId refers to
+   * a table form-field which is set as data-source in the template
+   * @param propertyId id of a table property
+   * @param index current row-index to select
+   */
+  setTableRowIndex(propertyId: string, index: number): void
+
+  /**
+   * Retrieves the current row index for a table-property 
+   * if table is set to be data-source of template the call returns current data-index 
+   * @param propertyId  id of a table property
+   */
+  getTableRowIndex(propertyId: string):  number
+
+
   /**
    * @deprecated 
    * This call is no longer supported, use `getBuyerFrameCountAndMarkers()` instead.
@@ -1524,7 +1567,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
@@ -1541,6 +1584,7 @@ export interface iExternalProperty {
   imageMeta?: iExternalimageMeta;
   listMeta?: iExternalListMeta;
   tableMeta?: iExternalTableMeta;
+  tabId?: string;
 }
 export interface iExternalTextStyle {
   size: string;
@@ -1645,6 +1689,7 @@ export interface iExternalError {
   errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
+  errorValue3?: string | number
 }
 
 export interface iExternalFrame {
@@ -1708,6 +1753,7 @@ export interface iExternalImage {
   height: number;
   fileHash: string;
   inUse: boolean;
+  useCount: number;
   group: string;
 }
 
