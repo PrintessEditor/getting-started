@@ -1017,7 +1017,7 @@ export interface iPrintessApi {
    * Handle with care, this can destroy your photo-book document
    * @param newSpreadIds Array of spread id and optional snippetUrls in correct order
    */
-  reArrangeSpreads(newSpreadIds: Array<{id: string | "newSpread", snippetUrl: string}>): Promise<boolean>
+  reArrangeSpreads(newSpreadIds: Array<{ id: string | "newSpread", snippetUrl: string }>): Promise<boolean>
 
   /**
    * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
@@ -1395,7 +1395,7 @@ export interface iPrintessApi {
    * if table is set to be data-source of template the call returns current data-index 
    * @param propertyId  id of a table property
    */
-  getTableRowIndex(propertyId: string):  number
+  getTableRowIndex(propertyId: string): number
 
 
   /**
@@ -1573,11 +1573,16 @@ export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
   "image-scale" | "image-placement" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
 
+export type FFInfoStyle = string;
+export type FFInfoDisplayStyle = "text" | "bullets" | "numbers" | "html" | "panel" | "card";
+
 export interface iExternalProperty {
   id: string;
   value: string | number;
   kind: iExternalPropertyKind;
   label: string;
+  info: string;
+  infoStyle: FFInfoStyle;
   controlGroup: number;
   validation?: iExternalValidation;
   textStyle?: iExternalTextStyle;
@@ -1597,6 +1602,8 @@ export interface iExternalTextStyle {
 }
 export interface iExternalValidation {
   maxChars: number;
+  regExp: string;
+  regExpMessage: string;
   defaultValue: string;
   isMandatory: boolean;
   clearOnFocus: boolean;

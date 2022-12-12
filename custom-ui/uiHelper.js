@@ -322,14 +322,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         subline.innerHTML = getLegalNoticeText(printess, legalNotice, forMobile);
         priceDiv.appendChild(subline);
     }
-    function getLegalNoticeText(printess, legalNotice, forMobile) {
+    function getLegalNoticeText(printess, legalNotice, forMobile, label) {
         const regex = /\[([^)]*)\]\(([^\]]*)\)/gm;
         const listOfLinks = legalNotice.match(regex) || "";
         if (listOfLinks) {
             for (let i = 0; i < listOfLinks.length; i++) {
                 const text = listOfLinks[i].split("](")[0].replace("[", "");
                 const link = listOfLinks[i].split("](")[1].replace(")", "");
-                const id = "legal-notice-link-" + i;
+                const id = label ? label.replace(" ", "") : "legal-notice-link-" + i;
                 const a = `<span id=${id} style="color: var(--bs-primary); cursor: pointer;">${text}</span>`;
                 legalNotice = legalNotice.replace(listOfLinks[i], a);
                 window.setTimeout(() => {
@@ -811,6 +811,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const isColor = properties.filter(p => p.kind === "color").length > 0;
         const isStory = properties.filter(p => p.kind === "multi-line-text" || p.kind === "selection-text-style").length > 0;
         const hasFont = properties.filter(p => p.kind === "font").length > 0;
+        const isLabel = properties.filter(p => p.kind === "label").length > 0;
         const isText = hasFont || isSingleLineText || isStory || properties.length === 0;
         if (isText && isImage) {
             return printess.gl("ui.tabStickers");
@@ -823,6 +824,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else if (isColor) {
             return printess.gl("ui.color");
+        }
+        else if (isLabel) {
+            return printess.gl("ui.infoFrame");
         }
         return "Sticker";
     }
@@ -974,12 +978,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return titleDiv;
     }
     function renderTabsNavigation(printess, tabsContainer, forMobile) {
-        const tabs = uih_currentTabs;
+        let tabs = uih_currentTabs;
         tabsContainer.innerHTML = "";
         const selected = getSelectedTab();
         const tabsToolbar = document.createElement("ul");
         tabsToolbar.className = "nav";
-        if (!forMobile && tabsContainer.clientHeight - (120 * tabs.length) < 100) {
+        if (tabs.findIndex(t => t.id === "#PHOTOS") >= 0 && !printess.showPhotoTab()) {
+            tabs = tabs.filter(t => t.id !== "#PHOTOS");
+        }
+        if (tabs.length > 2 && !forMobile && tabsContainer.clientHeight - (120 * tabs.length) < 100) {
             tabsToolbar.style.height = "100%";
             tabsToolbar.style.justifyContent = "space-between";
         }
@@ -1089,7 +1096,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         switch (p.kind) {
             case "label":
-                return getSimpleLabel(p.label, p.controlGroup > 0);
+                return getSimpleLabel(printess, p, p.label, p.controlGroup > 0, forMobile);
             case "checkbox":
                 return getSwitchControl(printess, p, forMobile);
             case "single-line-text":
@@ -1247,9 +1254,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         div.innerText = printess.gl("ui.missingProperty", p.kind);
         return div;
     }
-    function getSimpleLabel(text, forControlGroup = false) {
+    function getInfoStyle(p) {
+        const s = p.infoStyle.split(" ");
+        const style = s[0] || "text";
+        const size = s[1] || "medium";
+        const color = s[2] || "default";
+        return { color, size, style };
+    }
+    function getSimpleLabel(printess, p, text, forControlGroup = false, forMobile = false) {
+        const ls = getInfoStyle(p);
         if (forControlGroup) {
-            const para = document.createElement("para");
+            const para = document.createElement("span");
             para.style.marginTop = "38px";
             para.style.marginBottom = "0";
             para.style.marginLeft = "5px";
@@ -1257,12 +1272,140 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             para.textContent = text;
             return para;
         }
+        else if (p.info) {
+            if (ls.style === "card") {
+                const card = getBootstrapCardLabel(printess, p, text, ls.color, ls.size, forMobile);
+                return card;
+            }
+            else if (ls.style === "panel") {
+                const alert = getBootstrapPanelLabel(printess, p, text, ls.color, ls.size, forMobile);
+                return alert;
+            }
+            const container = document.createElement("div");
+            container.className = "mb-1";
+            if (ls.style !== "html") {
+                let el = "h4";
+                if (ls.size === "large") {
+                    el = "h3";
+                }
+                else if (ls.size === "small") {
+                    el = "h5";
+                }
+                const header = document.createElement(el);
+                header.textContent = text;
+                if (ls.color !== "default") {
+                    header.classList.add("text-" + ls.color);
+                }
+                container.appendChild(header);
+            }
+            if (ls.style === "html") {
+                const div = document.createElement("div");
+                div.innerHTML = p.info;
+                container.appendChild(div);
+            }
+            else if (ls.style === "bullets" || ls.style === "numbers") {
+                const items = p.info.split("\n");
+                const list = document.createElement(ls.style === "numbers" ? "ol" : "ul");
+                for (const item of items) {
+                    const li = document.createElement("li");
+                    li.innerHTML = getLegalNoticeText(printess, item, forMobile, text);
+                    if (ls.size === "large") {
+                        li.style.fontSize = "18px";
+                    }
+                    else if (ls.size === "small") {
+                        li.style.fontSize = "14px";
+                    }
+                    list.appendChild(li);
+                }
+                container.appendChild(list);
+            }
+            else {
+                const para = document.createElement("p");
+                para.innerHTML = getLegalNoticeText(printess, p.info, forMobile, text);
+                para.style.whiteSpace = "pre-line";
+                container.appendChild(para);
+                if (ls.size === "large") {
+                    para.style.fontSize = "1.125rem";
+                }
+                else if (ls.size === "small") {
+                    para.style.fontSize = "0.875rem";
+                }
+            }
+            return container;
+        }
         else {
-            const para = document.createElement("p");
+            const para = document.createElement("h4");
             para.className = "mb-1";
-            para.textContent = text;
+            para.innerHTML = text;
+            if (ls.color !== "default") {
+                para.style.color = `var(--bs-${ls.color})`;
+            }
+            if (forMobile) {
+                para.style.fontSize = "0.85em";
+            }
+            else if (ls.size === "large") {
+                para.style.fontSize = "28px";
+            }
+            else if (ls.size === "small") {
+                para.style.fontSize = "20px";
+            }
             return para;
         }
+    }
+    function getBootstrapCardLabel(printess, p, text, color, size, forMobile = false) {
+        const container = document.createElement("div");
+        const headerColor = color === "default" ? "" : "text-" + color;
+        container.className = "card mb-4 ";
+        const header = document.createElement("div");
+        header.className = "card-header " + headerColor;
+        header.textContent = text;
+        if (size === "large") {
+            header.style.fontSize = "18px";
+        }
+        else if (size === "small") {
+            header.style.fontSize = "14px";
+        }
+        const body = document.createElement("div");
+        body.className = "card-body";
+        const para = document.createElement("p");
+        para.className = "mb-0";
+        para.innerHTML = getLegalNoticeText(printess, p.info, forMobile);
+        body.appendChild(para);
+        if (size === "large") {
+            para.style.fontSize = "18px";
+        }
+        else if (size === "small") {
+            para.style.fontSize = "14px";
+        }
+        container.appendChild(header);
+        container.appendChild(body);
+        return container;
+    }
+    function getBootstrapPanelLabel(printess, p, text, color, size, forMobile = false) {
+        const container = document.createElement("div");
+        const bgColor = color === "default" ? "secondary" : color;
+        container.className = "alert alert-" + bgColor + " mb-4 ";
+        const h4 = document.createElement("h4");
+        h4.className = "alert-heading";
+        h4.textContent = text;
+        if (size === "large") {
+            h4.style.fontSize = "28px";
+        }
+        else if (size === "small") {
+            h4.style.fontSize = "20px";
+        }
+        const para = document.createElement("p");
+        para.classList.add("mb-0");
+        para.innerHTML = getLegalNoticeText(printess, p.info, forMobile);
+        if (size === "large") {
+            para.style.fontSize = "18px";
+        }
+        else if (size === "small") {
+            para.style.fontSize = "14px";
+        }
+        container.appendChild(h4);
+        container.appendChild(para);
+        return container;
     }
     function getSwitchControl(printess, p, forMobile) {
         const switchControl = document.createElement("div");
@@ -1431,7 +1574,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         textPropertiesDiv.appendChild(getTextAlignmentControl(printess, p));
         if (p.kind === "selection-text-style" && p.textStyle.allows.indexOf("handWriting") >= 0) {
-            const upload = getImageUploadButton(printess, p.id, false, true, "ui.uploadHandwriting");
+            const upload = getImageUploadButton(printess, p, p.id, false, true, "ui.uploadHandwriting");
             textPropertiesDiv.appendChild(upload);
         }
         return textPropertiesDiv;
@@ -1510,7 +1653,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.onblur = () => {
             printess.setZoomMode("spread");
         };
-        const r = addLabel(printess, inp, p.id, forMobile, p.kind, p.label, !!((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) && p.controlGroup === 0, p.controlGroup > 0);
+        const r = addLabel(printess, p, inp, p.id, forMobile, p.kind, p.label, !!((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) && p.controlGroup === 0, p.controlGroup > 0);
         return r;
     }
     function getDesktopTitle(printess) {
@@ -2245,14 +2388,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         };
         if (forMobile) {
             inp.className = "mobile-text-area";
-            return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
+            return addLabel(printess, p, inp, p.id, forMobile, p.kind, p.label);
         }
         else {
             inp.className = "desktop-text-area";
-            return addLabel(printess, inp, p.id, forMobile, p.kind, p.label);
+            return addLabel(printess, p, inp, p.id, forMobile, p.kind, p.label);
         }
     }
-    function addLabel(printess, input, id, forMobile, kind, label, hasMaxChars = false, inControlGroup = false) {
+    function addLabel(printess, p, input, id, forMobile, kind, label, hasMaxChars = false, inControlGroup = false) {
         input.classList.add("form-control");
         const container = document.createElement("div");
         !forMobile && container.classList.add("mb-3");
@@ -2307,6 +2450,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.appendChild(validation);
         if (hasMaxChars)
             getCharValidationLabel(printess, id, container);
+        if (p === null || p === void 0 ? void 0 : p.info) {
+            const inf = document.createElement("p");
+            inf.innerText = p.info;
+            inf.style.fontSize = "0.875rem";
+            inf.style.marginTop = "0.25rem";
+            container.appendChild(inf);
+        }
         return container;
     }
     function getCharValidationLabel(printess, id, container) {
@@ -2360,6 +2510,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         validation.innerText = printess.gl("errors.textOverflowShort");
                         return;
                     }
+                }
+                try {
+                    let pattern = p.validation.regExp;
+                    let flag = undefined;
+                    const fidx = pattern.indexOf("/");
+                    const lidx = pattern.lastIndexOf("/");
+                    if (fidx !== -1 && lidx !== -1) {
+                        flag = pattern.slice(lidx + 1);
+                        pattern = pattern.slice(fidx + 1, lidx);
+                    }
+                    const regex = new RegExp(pattern, flag);
+                    if (!regex.test(p.value.toString())) {
+                        input.classList.add("is-invalid");
+                        validation.innerText = printess.gl(p.validation.regExpMessage);
+                        return;
+                    }
+                }
+                catch (_a) {
                 }
                 input.classList.remove("is-invalid");
             }
@@ -2456,7 +2624,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return container;
         }
         else {
-            return addLabel(printess, container, p.id, forMobile, p.kind, p.label);
+            return addLabel(printess, p, container, p.id, forMobile, p.kind, p.label);
         }
     }
     function hexToRgb(hexColor) {
@@ -2717,7 +2885,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return ddContent;
         }
         else {
-            return addLabel(printess, dropdown, p.id, false, p.kind, p.label, false, p.controlGroup > 0);
+            return addLabel(printess, p, dropdown, p.id, false, p.kind, p.label, false, p.controlGroup > 0);
         }
     }
     function getDropdownItemContent(printess, meta, entry) {
@@ -3083,7 +3251,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else {
             if ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canUpload) {
-                container.appendChild(getImageUploadButton(printess, p.id, forMobile, true));
+                container.appendChild(getImageUploadButton(printess, p, p.id, forMobile, true));
             }
             const imageListWrapper = document.createElement("div");
             imageListWrapper.classList.add("image-list-wrapper");
@@ -3140,7 +3308,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getImageUploadButton(printess, id, forMobile = false, assignToFrameOrNewFrame = true, label = "") {
+    function getImageUploadButton(printess, p, id, forMobile = false, assignToFrameOrNewFrame = true, label = "") {
         const container = document.createElement("div");
         const progressDiv = document.createElement("div");
         progressDiv.className = "progress";
@@ -3153,7 +3321,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.type = "file";
         inp.id = "inp_" + id.replace("#", "-HASH-");
         inp.className = "form-control";
-        inp.accept = `image/png,image/jpg,image/jpeg${printess.allowPdfUpload() ? ",application/pdf" : ""}`;
+        inp.accept = `image/png,image/jpg,image/webp,image/heic,image/heif,image/jpeg${printess.allowPdfUpload() ? ",application/pdf" : ""}`;
         inp.multiple = !id.startsWith("FF_");
         inp.style.display = "none";
         inp.onchange = () => __awaiter(this, void 0, void 0, function* () {
@@ -3221,7 +3389,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         });
         container.appendChild(progressDiv);
-        container.appendChild(addLabel(printess, inp, id, forMobile, "image", label || "ui.changeImage"));
+        container.appendChild(addLabel(printess, p, inp, id, forMobile, "image", label || "ui.changeImage"));
         return container;
     }
     function getImagePlacementControl(printess, p, forMobile, container) {
@@ -4983,7 +5151,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const twoButtons = document.createElement("div");
             twoButtons.id = "two-buttons";
             twoButtons.style.display = "grid";
-            twoButtons.appendChild(getImageUploadButton(printess, (_b = p === null || p === void 0 ? void 0 : p.id) !== null && _b !== void 0 ? _b : "", false, p !== undefined));
+            twoButtons.appendChild(getImageUploadButton(printess, p, (_b = p === null || p === void 0 ? void 0 : p.id) !== null && _b !== void 0 ? _b : "", false, p !== undefined));
             if (printess.showImageDistributionButton()) {
                 twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
                 twoButtons.appendChild(document.createElement("div"));
@@ -5327,7 +5495,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container === null || container === void 0 ? void 0 : container.classList.remove("show-image-list");
             container === null || container === void 0 ? void 0 : container.classList.add("hide-image-list");
             closeMobileExternalLayoutsContainer();
-            if (id === "CROPMODAL" || id === "PRICE-INFO") {
+            if (id === "CROPMODAL" || id === "PRICE-INFO" || id.startsWith("FF_")) {
                 window.setTimeout(() => hideModal(id), 1000);
             }
         };
@@ -5433,7 +5601,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         changeIcon.style.height = "50px";
         change.appendChild(changeIcon);
         const handwritingCaption = forHandwriting ? printess.gl("ui.uploadHandwriting") : "";
-        container.appendChild(getImageUploadButton(printess, (p === null || p === void 0 ? void 0 : p.id) || "images", true, true, handwritingCaption));
+        container.appendChild(getImageUploadButton(printess, p, (p === null || p === void 0 ? void 0 : p.id) || "images", true, true, handwritingCaption));
         if (images.length > 0 && !forHandwriting) {
             container.appendChild(change);
         }
@@ -6018,7 +6186,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return ddContent;
         }
         else {
-            return addLabel(printess, dropdown, p.id, false, p.kind, col.label || col.name);
+            return addLabel(printess, p, dropdown, p.id, false, p.kind, col.label || col.name);
         }
     }
     function getTableDropdownItemContent(printess, value) {
@@ -6045,7 +6213,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return inp;
         }
         else {
-            const r = addLabel(printess, inp, p.id, forMobile, p.kind, col.label || col.name);
+            const r = addLabel(printess, p, inp, p.id, forMobile, p.kind, col.label || col.name);
             return r;
         }
     }
@@ -7193,6 +7361,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const buttonDiv = document.createElement("div");
                 buttonDiv.className = "no-selection";
                 const properties = [];
+                if (b.newState.externalProperty && b.newState.externalProperty.kind === "label" && !b.newState.externalProperty.info) {
+                    continue;
+                }
                 if (b.newState.externalProperty && b.newState.externalProperty.controlGroup > 0 && b.newState.externalProperty.controlGroup === controlGroup) {
                     continue;
                 }
@@ -7321,7 +7492,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return { div: container, autoSelectButton: autoSelect };
     }
     function mobileUiButtonClick(printess, b, buttonDiv, container, fromAutoSelect, properties) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
         return __awaiter(this, void 0, void 0, function* () {
             printess.setZoomMode("spread");
             let hadSelectedButtons = false;
@@ -7329,7 +7500,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (((_g = b.newState.externalProperty) === null || _g === void 0 ? void 0 : _g.kind) === "background-button") {
                 printess.selectBackground();
             }
-            else if (((_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.kind) === "horizontal-scissor") {
+            else if (((_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.kind) === "label" && b.newState.externalProperty.info) {
+                collapseControlHost();
+                const sels = document.querySelectorAll(".mobile-property-button.selected");
+                sels.forEach((ele) => ele.classList.remove("selected"));
+                document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+                buttonDiv.classList.toggle("selected");
+                const content = document.createElement("div");
+                content.appendChild(getPropertyControl(printess, b.newState.externalProperty, undefined, true));
+                renderMobileDialogFullscreen(printess, b.newState.externalProperty.id, "ui.infoFrame", content, false);
+                return;
+            }
+            else if (((_j = b.newState.externalProperty) === null || _j === void 0 ? void 0 : _j.kind) === "horizontal-scissor") {
                 collapseControlHost();
                 const sels = document.querySelectorAll(".mobile-property-button.selected");
                 sels.forEach((ele) => ele.classList.remove("selected"));
@@ -7341,7 +7523,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 return;
             }
-            else if (((_j = b.newState.externalProperty) === null || _j === void 0 ? void 0 : _j.kind) === "vertical-scissor") {
+            else if (((_k = b.newState.externalProperty) === null || _k === void 0 ? void 0 : _k.kind) === "vertical-scissor") {
                 collapseControlHost();
                 const sels = document.querySelectorAll(".mobile-property-button.selected");
                 sels.forEach((ele) => ele.classList.remove("selected"));
@@ -7353,7 +7535,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 return;
             }
-            else if (((_k = b.newState.externalProperty) === null || _k === void 0 ? void 0 : _k.kind) === "image" && b.newState.metaProperty === "handwriting-image") {
+            else if (((_l = b.newState.externalProperty) === null || _l === void 0 ? void 0 : _l.kind) === "image" && b.newState.metaProperty === "handwriting-image") {
                 printess.removeHandwritingImage();
                 return;
             }
@@ -7376,7 +7558,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             else if (b.newState.state === "table-edit") {
                 const p = b.newState.externalProperty;
-                const rowIndex = (_l = b.newState.tableRowIndex) !== null && _l !== void 0 ? _l : -1;
+                const rowIndex = (_m = b.newState.tableRowIndex) !== null && _m !== void 0 ? _m : -1;
                 document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
                 buttonDiv.classList.toggle("selected");
                 centerMobileButton(buttonDiv);
@@ -7402,11 +7584,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     getMobileButtons(printess, container, b.newState.externalProperty.id);
                     const backButton = document.querySelector(".mobile-property-back-button");
                     if (backButton) {
-                        (_m = backButton.parentElement) === null || _m === void 0 ? void 0 : _m.removeChild(backButton);
+                        (_o = backButton.parentElement) === null || _o === void 0 ? void 0 : _o.removeChild(backButton);
                     }
                     const mobilePlusButton = document.querySelector(".mobile-property-plus-button");
                     if (mobilePlusButton) {
-                        (_o = mobilePlusButton.parentElement) === null || _o === void 0 ? void 0 : _o.removeChild(mobilePlusButton);
+                        (_p = mobilePlusButton.parentElement) === null || _p === void 0 ? void 0 : _p.removeChild(mobilePlusButton);
                     }
                     getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "details", fromAutoSelect, willHaveControlHost(b.newState)));
                     if (!fromAutoSelect) {
@@ -7466,9 +7648,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 else {
                     properties = uih_currentProperties;
                 }
-                drawButtonContent(printess, buttonDiv, properties, ((_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.controlGroup) || 0);
+                drawButtonContent(printess, buttonDiv, properties, ((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.controlGroup) || 0);
                 centerMobileButton(buttonDiv);
-                if (((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.kind) === "image" && (printess.canMoveSelectedFrames() || printess.canSplitSelectedFrames())) {
+                if (((_r = b.newState.externalProperty) === null || _r === void 0 ? void 0 : _r.kind) === "image" && (printess.canMoveSelectedFrames() || printess.canSplitSelectedFrames())) {
                     printess.setZoomMode("spread");
                 }
                 else {
@@ -7476,10 +7658,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 const backButton = document.querySelector(".mobile-property-back-button");
                 if (backButton) {
-                    (_r = backButton.parentElement) === null || _r === void 0 ? void 0 : _r.removeChild(backButton);
+                    (_s = backButton.parentElement) === null || _s === void 0 ? void 0 : _s.removeChild(backButton);
                 }
                 getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, uih_currentState, fromAutoSelect, willHaveControlHost(b.newState)));
-                if (((_s = b.newState.externalProperty) === null || _s === void 0 ? void 0 : _s.kind) === "selection-text-style" && !hadSelectedButtons) {
+                if (((_t = b.newState.externalProperty) === null || _t === void 0 ? void 0 : _t.kind) === "selection-text-style" && !hadSelectedButtons) {
                     window.setTimeout(() => {
                         renderMobileControlHost(printess, b.newState);
                     }, 500);
@@ -7516,6 +7698,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     controlHost.appendChild(control);
                 }
                 else {
+                    if (properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
+                        const idx = uih_currentProperties.findIndex(p => p.id === properties[0].id);
+                        const property = idx ? uih_currentProperties[idx - 1] : undefined;
+                        if (property && property.kind === "label" && !property.info) {
+                            const label = getPropertyControl(printess, property, undefined, true);
+                            controlHost.appendChild(label);
+                        }
+                    }
                     if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
                         controlHost.style.overflow = "auto";
                         getProperties(printess, uih_currentState, properties, controlHost);
@@ -7612,6 +7802,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 else {
                     return "mobile-control-sm";
                 }
+            case "label":
+                if (property.info) {
+                    return "mobile-control-lg";
+                }
+                else {
+                    return "mobile-control-sm";
+                }
         }
         return "mobile-control-sm";
     }
@@ -7653,12 +7850,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         buttonDiv.innerHTML = "";
         if (printess.isTextButton(b) || controlGroup > 0) {
             let caption = "";
-            if (controlGroup > 0) {
+            if (properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
+                const idx = uih_currentProperties.findIndex(p => p.id === properties[0].id);
+                const property = idx ? uih_currentProperties[idx - 1] : undefined;
+                if (property && property.kind === "label" && !property.info) {
+                    caption = property.label;
+                }
+            }
+            if (controlGroup > 0 && !caption) {
                 for (const p of properties) {
                     caption += p.label + " ";
                 }
             }
-            else {
+            else if (!caption) {
                 caption = printess.gl(b.caption);
             }
             const buttonText = document.createElement("div");
