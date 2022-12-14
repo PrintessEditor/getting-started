@@ -371,9 +371,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             printess.resizePrintess();
                         }
                         else {
-                            const height = desktopGrid.offsetHeight || window.innerHeight;
+                            const height = uih_viewportHeight || window.innerHeight;
                             const calcHeight = "calc(" + Math.floor(height) + "px - var(--editor-pagebar-height) - var(--editor-margin-top) - var(--editor-margin-bottom))";
                             printessDiv.style.height = calcHeight;
+                            desktopGrid.style.height = height + "px";
                             const desktopProperties = document.getElementById("desktop-properties");
                             const tabsContainer = document.querySelector(".tabs-navigation");
                             if (printess.showTabNavigation() && desktopProperties) {
@@ -2511,23 +2512,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         return;
                     }
                 }
-                try {
-                    let pattern = p.validation.regExp;
-                    let flag = undefined;
-                    const fidx = pattern.indexOf("/");
-                    const lidx = pattern.lastIndexOf("/");
-                    if (fidx !== -1 && lidx !== -1) {
-                        flag = pattern.slice(lidx + 1);
-                        pattern = pattern.slice(fidx + 1, lidx);
+                if (p.validation.regExp) {
+                    try {
+                        let pattern = p.validation.regExp;
+                        let flag = undefined;
+                        const fidx = pattern.indexOf("/");
+                        const lidx = pattern.lastIndexOf("/");
+                        if (fidx !== -1 && lidx !== -1) {
+                            flag = pattern.slice(lidx + 1);
+                            pattern = pattern.slice(fidx + 1, lidx);
+                        }
+                        const regex = new RegExp(pattern, flag);
+                        if (!regex.test(p.value.toString())) {
+                            input.classList.add("is-invalid");
+                            validation.innerText = printess.gl(p.validation.regExpMessage);
+                            return;
+                        }
                     }
-                    const regex = new RegExp(pattern, flag);
-                    if (!regex.test(p.value.toString())) {
-                        input.classList.add("is-invalid");
-                        validation.innerText = printess.gl(p.validation.regExpMessage);
-                        return;
+                    catch (_a) {
                     }
-                }
-                catch (_a) {
                 }
                 input.classList.remove("is-invalid");
             }
@@ -2639,7 +2642,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const colors = printess.getColors(p.id);
         const button = document.createElement("button");
         const curColor = (metaProperty === "color" && p.textStyle) ? p.textStyle.color : p.value.toString();
-        const curColorRgb = hexToRgb(curColor);
+        const curColorSwatch = colors.filter(c => c.name === curColor)[0];
+        const curColorRgb = curColorSwatch ? curColorSwatch.color : hexToRgb(curColor);
         if (!forMobile) {
             button.className = "btn btn-light dropdown-toggle btn-color-select";
             button.dataset.bsToggle = "dropdown";
@@ -2673,8 +2677,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             color.className = "color-picker-color dropdown-item";
             color.style.backgroundColor = f.color;
             color.dataset.color = f.name;
-            color.title = f.name.includes("custom color") ? "custom color" : f.name;
-            if (f.color === curColorRgb) {
+            const isCustom = f.name.includes("custom color");
+            color.title = isCustom ? "custom color" : f.name;
+            if (f.color === curColorRgb && (!isCustom || !curColorSwatch)) {
                 color.classList.add("selected");
             }
             if (f.color.toLowerCase() === "transparent") {
@@ -2710,7 +2715,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             colorList.appendChild(color);
         }
         if (printess.enableCustomColors()) {
-            colorList.appendChild(getCustomColorPicker(printess, p, forMobile, colorList, button, curColor, metaProperty));
+            colorList.appendChild(getCustomColorPicker(printess, p, forMobile, colorList, button, curColorSwatch ? curColorSwatch.color : curColor, metaProperty));
         }
         if (forMobile) {
             return colorList;
@@ -3796,11 +3801,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             dropdown.appendChild(ddContent);
         }
-        if (asList) {
-            return ddContent;
+        if (p.id.startsWith("FF_")) {
+            if (asList) {
+                return ddContent;
+            }
+            else {
+                return addLabel(printess, p, dropdown, p.id, false, p.kind, p.label);
+            }
         }
         else {
-            return dropdown;
+            if (asList) {
+                return ddContent;
+            }
+            else {
+                return dropdown;
+            }
         }
     }
     function getParagraphStyleDropDown(printess, p, asList, dropdown, fullWidth = true) {
@@ -7698,14 +7713,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     controlHost.appendChild(control);
                 }
                 else {
-                    if (properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
-                        const idx = uih_currentProperties.findIndex(p => p.id === properties[0].id);
-                        const property = idx ? uih_currentProperties[idx - 1] : undefined;
-                        if (property && property.kind === "label" && !property.info) {
-                            const label = getPropertyControl(printess, property, undefined, true);
-                            controlHost.appendChild(label);
-                        }
-                    }
                     if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
                         controlHost.style.overflow = "auto";
                         getProperties(printess, uih_currentState, properties, controlHost);
@@ -7776,7 +7783,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 break;
             case "select-list":
                 if (property.controlGroup > 0) {
-                    return "mobile-control-sm";
+                    return "mobile-control-md";
                 }
                 else {
                     return "mobile-control-lg";
@@ -7796,7 +7803,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             case "table":
                 return "mobile-control-xl";
             case "single-line-text":
-                if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
+                if (property.controlGroup > 0) {
+                    return "mobile-control-md";
+                }
+                else if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
                     return "mobile-control-sm";
                 }
                 else {
@@ -7850,11 +7860,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         buttonDiv.innerHTML = "";
         if (printess.isTextButton(b) || controlGroup > 0) {
             let caption = "";
-            if (properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
+            if (property.controlGroup > 0 && properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
                 const idx = uih_currentProperties.findIndex(p => p.id === properties[0].id);
-                const property = idx ? uih_currentProperties[idx - 1] : undefined;
-                if (property && property.kind === "label" && !property.info) {
-                    caption = property.label;
+                const prevProperty = idx ? uih_currentProperties[idx - 1] : undefined;
+                if (prevProperty && prevProperty.kind === "label" && !prevProperty.info) {
+                    caption = prevProperty.label;
                 }
             }
             if (controlGroup > 0 && !caption) {

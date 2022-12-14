@@ -416,9 +416,10 @@ declare const bootstrap: any;
               printessDiv.style.width = Math.floor(printess.autoScaleDetails().width - 1) + "px";
               printess.resizePrintess();
             } else {
-              const height = desktopGrid.offsetHeight || window.innerHeight; // fallback when running inside printess-editor
+              const height = uih_viewportHeight || window.innerHeight; // fallback when running inside printess-editor
               const calcHeight = "calc(" + Math.floor(height) + "px - var(--editor-pagebar-height) - var(--editor-margin-top) - var(--editor-margin-bottom))";
               printessDiv.style.height = calcHeight;
+              desktopGrid.style.height = height + "px"; // set desktopGrid height to available viewportHeight to determine 1fr properly on safari
 
               const desktopProperties = document.getElementById("desktop-properties");
               const tabsContainer = <HTMLDivElement>document.querySelector(".tabs-navigation");
@@ -3002,26 +3003,29 @@ declare const bootstrap: any;
           }
         }
 
-        try {
-          let pattern = p.validation.regExp;
-          let flag: string | undefined = undefined;
-          const fidx = pattern.indexOf("/");
-          const lidx = pattern.lastIndexOf("/");
+        if (p.validation.regExp) {
+          try {
+            let pattern = p.validation.regExp;
+            let flag: string | undefined = undefined;
+            const fidx = pattern.indexOf("/");
+            const lidx = pattern.lastIndexOf("/");
 
-          if (fidx !== -1 && lidx !== -1) {
-            flag = pattern.slice(lidx + 1);
-            pattern = pattern.slice(fidx + 1, lidx);
-          }
+            if (fidx !== -1 && lidx !== -1) {
+              flag = pattern.slice(lidx + 1);
+              pattern = pattern.slice(fidx + 1, lidx);
+            }
 
-          const regex = new RegExp(pattern, flag);
-          if (!regex.test(p.value.toString())) {
-            input.classList.add("is-invalid");
-            validation.innerText = printess.gl(p.validation.regExpMessage);
-            return;
+            const regex = new RegExp(pattern, flag);
+            if (!regex.test(p.value.toString())) {
+              input.classList.add("is-invalid");
+              validation.innerText = printess.gl(p.validation.regExpMessage);
+              return;
+            }
+          } catch {
+            // no validation of invalid regex
           }
-        } catch {
-          // no validation of invalid regex
         }
+
 
 
         // container.classList.add("was-validated"); // add to activate BS-green-marker
@@ -3153,7 +3157,9 @@ declare const bootstrap: any;
     const button = document.createElement("button");
 
     const curColor = (metaProperty === "color" && p.textStyle) ? p.textStyle.color : p.value.toString();
-    const curColorRgb = hexToRgb(curColor);
+    const curColorSwatch: undefined | { color: string, name: string } = colors.filter(c => c.name === curColor)[0];
+
+    const curColorRgb = curColorSwatch ? curColorSwatch.color : hexToRgb(curColor);
 
     if (!forMobile) {
 
@@ -3189,6 +3195,7 @@ declare const bootstrap: any;
       colorList.style.paddingRight = "30px";
     }
 
+
     if (printess.enableCustomColors()) {
       colors.unshift({ name: "custom color_" + p.id, color: curColorRgb });
     }
@@ -3198,8 +3205,9 @@ declare const bootstrap: any;
       color.className = "color-picker-color dropdown-item";
       color.style.backgroundColor = f.color;
       color.dataset.color = f.name;
-      color.title = f.name.includes("custom color") ? "custom color" : f.name;
-      if (f.color === curColorRgb) {
+      const isCustom = f.name.includes("custom color");
+      color.title = isCustom ? "custom color" : f.name;
+      if (f.color === curColorRgb && (!isCustom || !curColorSwatch)) {
         color.classList.add("selected");
       }
       if (f.color.toLowerCase() === "transparent") {
@@ -3236,7 +3244,7 @@ declare const bootstrap: any;
     }
 
     if (printess.enableCustomColors()) {
-      colorList.appendChild(getCustomColorPicker(printess, p, forMobile, colorList, button, curColor, metaProperty));
+      colorList.appendChild(getCustomColorPicker(printess, p, forMobile, colorList, button, curColorSwatch ? curColorSwatch.color : curColor, metaProperty));
     }
 
     if (forMobile) {
@@ -4502,10 +4510,18 @@ declare const bootstrap: any;
       }
       dropdown.appendChild(ddContent);
     }
-    if (asList) {
-      return ddContent;
+    if (p.id.startsWith("FF_")) {
+      if (asList) {
+        return ddContent;
+      } else {
+        return addLabel(printess, p, dropdown, p.id, false, p.kind, p.label);
+      }
     } else {
-      return dropdown
+      if (asList) {
+        return ddContent;
+      } else {
+        return dropdown
+      }
     }
 
 
@@ -9282,14 +9298,15 @@ declare const bootstrap: any;
           const control = renderTableDetails(printess, state.externalProperty, true);
           controlHost.appendChild(control);
         } else {
-          if (properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
+          /* const p = state.externalProperty;
+          if (p.controlGroup > 0 && properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
             const idx = uih_currentProperties.findIndex(p => p.id === properties[0].id);
-            const property = idx ? uih_currentProperties[idx - 1] : undefined;
-            if (property && property.kind === "label" && !property.info) {
-              const label = getPropertyControl(printess, property, undefined, true);
+            const prevProperty = idx ? uih_currentProperties[idx - 1] : undefined;
+            if (prevProperty && prevProperty.kind === "label" && !prevProperty.info) {
+              const label = getPropertyControl(printess, prevProperty, undefined, true);
               controlHost.appendChild(label);
             }
-          }
+          } */
           if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
             // render control grouped input fields together
             controlHost.style.overflow = "auto";
@@ -9382,7 +9399,7 @@ declare const bootstrap: any;
         break;
       case "select-list":
         if (property.controlGroup > 0) {
-          return "mobile-control-sm";
+          return "mobile-control-md";
         } else {
           return "mobile-control-lg";
         }
@@ -9400,7 +9417,9 @@ declare const bootstrap: any;
       case "table":
         return "mobile-control-xl"
       case "single-line-text":
-        if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
+        if (property.controlGroup > 0) {
+          return "mobile-control-md";
+        } else if (window.navigator.appVersion.match(/iP(ad|od|hone).*15_0/)) {
           //console.log(window.navigator.appVersion);
           return "mobile-control-sm"
         } else {
@@ -9459,11 +9478,11 @@ declare const bootstrap: any;
     if (printess.isTextButton(b) || controlGroup > 0) {
       let caption: string = "";
 
-      if (properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
+      if (property.controlGroup > 0 && properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
         const idx = uih_currentProperties.findIndex(p => p.id === properties[0].id);
-        const property = idx ? uih_currentProperties[idx - 1] : undefined;
-        if (property && property.kind === "label" && !property.info) {
-          caption = property.label;
+        const prevProperty = idx ? uih_currentProperties[idx - 1] : undefined;
+        if (prevProperty && prevProperty.kind === "label" && !prevProperty.info) {
+          caption = prevProperty.label;
         }
       }
       if (controlGroup > 0 && !caption) {
