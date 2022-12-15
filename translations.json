@@ -130,6 +130,7 @@
       "buttonCrop": "Crop Image",
       "buttonResetFilter": "Reset Filter",
       "imageTabSelect": "Select Image",
+      "fontSelectText": "Select Font ...",
       "imageTabHandwriting": "Handwriting Image",
       "uploadHandwriting": "Upload Handwriting Image",
       "redo": "Redo",
@@ -160,6 +161,7 @@
       "applyChanges": "Apply Changes",
       "apply": "Apply",
       "arrangePagesInfoText": "Click and drag a page box to move pages to different positions. Add and remove pages by clicking the plus and delete buttons.",
+      "arrangePagesShortText": "hold + drag to move",
       "spreadSizeWarning": "Invalid Number of Pages: Please add or remove pages to be able to apply changes!",
       "oneSpreadWarning": "Your book needs 1 more page to be printable!",
       "twoSpreadWarning": "Your book needs 2 more pages to be printable!",
@@ -168,13 +170,11 @@
       "twoPagesAddedTitle": "Pages Added",
       "twoPagesAddedInfo": "Two pages were added to your book!",
       "productOverview": "Product Overview",
-
       "editText": "Edit Text",
       "closeTextEditing": "Close Text Editing",
       "applyImageZoom": "Apply Image Zoom",
       "contextMenu": "Menu",
       "arrange": "Arrange",
-
       "align": "Align",
       "left": "Left",
       "center": "Center",
@@ -188,17 +188,13 @@
       "group": "Group Frames",
       "ungroup": "Ungroup Frames",
       "delete": "Delete",
-
       "pages": "Pages",
       "placement-fit": "Fit",
       "placement-fill": "Fill",
       "placement-face": "Face",
       "placement-group": "Group",
-
       "leftPage": "Left Page",
       "rightPage": "Right Page"
-
-
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
@@ -219,10 +215,10 @@
       "imageMissingInline": "Please upload an image",
       "imageMissing": "Please add a photo before you continue!",
       "maxCharsExceededTitle": "Oops!\nLooks like you exceeded the maximum number of characters ...",
-      "maxCharsExceededShort": "Maximum number of characters exceeded",
+      "maxCharsExceededShort": "Maximum number of characters exceeded ($1)",
       "maxCharsExceededInline": "Maximum number of chars exceeded ($1)",
       "maxCharsLeftInline": "($1 chars remaining)",
-      "maxCharsExceeded": "Maximum number of chars: $1. Please edit the text before you continue!",
+      "maxCharsExceeded": "Please edit the text before you continue!",
       "offensiveLanguageDetectedTitle": "Oops!\nLooks like you used offensive language ...",
       "offensiveLanguageDetectedShort": "Offensive language detected",
       "offensiveLanguageDetected": "Please edit the text before you continue!",
@@ -242,8 +238,6 @@
       "pasteBrowser": "Your browser doesn't allow us to read from clipboard."
     }
   },
-
-
   "de": {
     "ui": {
       "saveProgress": "Design wird gespeichert ...",
@@ -375,6 +369,7 @@
       "buttonCrop": "Bild zuschneiden",
       "buttonResetFilter": "Filter zurücksetzen",
       "imageTabSelect": "Bild auswählen",
+      "fontSelectText": "Select Font ...",
       "imageTabHandwriting": "Handschrift Bild",
       "uploadHandwriting": "Handschrift Bild Hochladen",
       "redo": "Wiederholen",
@@ -405,6 +400,7 @@
       "applyChanges": "Änderungen übernehmen",
       "apply": "Übernehmen",
       "arrangePagesInfoText": "Klicken Sie auf ein Seitenfeld und ziehen Sie es, um Seiten an andere Positionen zu verschieben. Fügen Sie Seiten hinzu oder entfernen Sie sie, indem Sie auf die Plus- und Löschschaltflächen klicken.",
+      "arrangePagesShortText": "Halten + Ziehen um zu Bewegen",
       "spreadSizeWarning": "Ungültige Anzahl von Seiten: Bitte fügen Sie Seiten hinzu oder entfernen Sie Seiten, um fortfahren zu können!",
       "oneSpreadWarning": "Ihr Buch braucht noch 1 Seite, um druckbar zu sein!",
       "twoSpreadWarning": "Ihr Buch benötigt 2 weitere Seiten, um druckbar zu sein!",
@@ -413,13 +409,11 @@
       "twoPagesAddedTitle": "Seiten hinzugefügt",
       "twoPagesAddedInfo": "Ihrem Buch wurden zwei Seiten hinzugefügt!",
       "productOverview": "Produktübersicht",
-
       "editText": "Text bearbeiten",
       "closeTextEditing": "Textbearbeitung schließen",
       "applyImageZoom": "Bildzoom anwenden",
       "contextMenu": "Menü",
       "arrange": "Anordnen",
-
       "align": "Ausrichten",
       "left": "Links",
       "center": "Center",
@@ -433,18 +427,13 @@
       "group": " Rahmen gruppieren",
       "ungroup": "Gruppierung der Rahmen aufheben",
       "delete": "Löschen",
-
       "pages": "Seiten",
       "placement-fit": "Einpassen",
       "placement-fill": "Ausfüllen",
       "placement-face": "Gesicht",
       "placement-group": "Gruppe",
-
       "leftPage": "Linke Seite",
       "rightPage": "Rechte Seite"
-
-
-
     },
     "errors": {
       "imageResolutionLowTitle": "Uups!\nSieht so aus, als ob Ihr Bild zu klein ist...",
@@ -619,6 +608,7 @@
       "buttonCrop": "Recortar la imagen",
       "buttonResetFilter": "Restablecer filtro",
       "imageTabSelect": "Seleccionar imagen",
+      "fontSelectText": "Select Font ...",
       "imageTabHandwriting": "Imagen de escritura a mano",
       "uploadHandwriting": "Cargar la imagen de la escritura a mano",
       "redo": "Rehacer",
@@ -649,6 +639,7 @@
       "applyChanges": "Aplicar cambios",
       "apply": "Aplicar",
       "arrangePagesInfoText": "Haz clic y arrastra un cuadro de página para mover las páginas a diferentes posiciones. Añade y elimina páginas haciendo clic en los botones de más y de menos.",
+      "arrangePagesShortText": "mantener + arrastrar para desplazarse",
       "spreadSizeWarning": "Número de páginas no válido: Por favor, añada o elimine páginas para poder aplicar los cambios.",
       "oneSpreadWarning": "¡Su libro necesita 1 página más para ser imprimible!",
       "twoSpreadWarning": "¡Su libro necesita 2 páginas más para ser imprimible!",
@@ -657,13 +648,11 @@
       "twoPagesAddedTitle": "Páginas añadidas",
       "twoPagesAddedInfo": "Se han añadido dos páginas a su libro.",
       "productOverview": "Resumen del producto",
-
       "editText": "Editar texto",
       "closeTextEditing": "Cerrar la edición de texto",
       "applyImageZoom": "Aplicar zoom a la imagen",
       "contextMenu": "Menú",
       "arrange": "Organizar",
-
       "align": "Alinear",
       "left": "Izquierda",
       "center": "Centro",
@@ -677,16 +666,13 @@
       "group": "Agrupar marcos",
       "ungroup": "Desagrupar cuadros",
       "delete": "Borrar",
-
       "pages": "Páginas",
       "placement-fit": "Adaptación",
       "placement-fill": "Rellenar",
       "placement-face": "Cara",
       "placement-group": "Grupo",
-
       "leftPage": "Página izquierda",
       "rightPage": "Página derecha"
-
     },
     "errors": {
       "imageResolutionLowTitle": "Vaya!\nParece que tu foto es demasiado pequeña ...",
@@ -861,6 +847,7 @@
       "buttonCrop": "Kuvan leikkaaminen",
       "buttonResetFilter": "Suodattimen nollaus",
       "imageTabSelect": "Valitse kuva",
+      "fontSelectText": "Select Font ...",
       "imageTabHandwriting": "Käsialan kuva",
       "uploadHandwriting": "Lataa käsialan kuva",
       "redo": "Uudelleen",
@@ -891,6 +878,7 @@
       "applyChanges": "Käytä muutoksia",
       "apply": "Käytä",
       "arrangePagesInfoText": "Voit siirtää sivuja eri kohtiin napsauttamalla ja vetämällä sivulaatikkoa. Lisää ja poista sivuja napsauttamalla plus- ja poistopainikkeita.",
+      "arrangePagesShortText": "pidä alhaalla + vedä siirtääksesi",
       "spreadSizeWarning": "Virheellinen Sivujen määrä: Lisää tai poista sivuja voidaksesi soveltaa muutoksia!",
       "oneSpreadWarning": "Kirjasi tarvitsee vielä 1 sivun tulostettavaksi!",
       "twoSpreadWarning": "Kirjasi tarvitsee vielä 2 sivua ollakseen tulostettavissa!",
@@ -899,13 +887,11 @@
       "twoPagesAddedTitle": "Lisätty sivuja",
       "twoPagesAddedInfo": "Kirjallesi lisättiin kaksi sivua!",
       "productOverview": "Tuotteen yleiskatsaus",
-
       "editText": "Muokkaa tekstiä",
       "closeTextEditing": "Sulje tekstin muokkaus",
       "applyImageZoom": "Kuvan zoomaus",
       "contextMenu": "Valikko",
       "arrange": "Järjestä",
-
       "align": "Kohdista",
       "left": "Vasen",
       "center": "Keskusta",
@@ -919,13 +905,11 @@
       "group": "Ryhmäkehykset",
       "ungroup": "Ryhmittämättömät kehykset",
       "delete": "Poista",
-
       "pages": "Sivut",
       "placement-fit": "Sovittaminen",
       "placement-fill": "Täytä",
       "placement-face": "Kasvot",
       "placement-group": "Ryhmä",
-
       "leftPage": "Vasen sivu",
       "rightPage": "Oikea sivu"
     },
@@ -1102,6 +1086,7 @@
       "buttonCrop": "Découpage de l'image",
       "buttonResetFilter": "Réinitialiser le filtre",
       "imageTabSelect": "Sélectionner l'image",
+      "fontSelectText": "Select Font ...",
       "imageTabHandwriting": "Image manuscrite",
       "uploadHandwriting": "Télécharger l'image manuscrite",
       "redo": "Refaire",
@@ -1132,6 +1117,7 @@
       "applyChanges": "Appliquer les modifications",
       "apply": "Appliquer",
       "arrangePagesInfoText": "Cliquez et faites glisser une case de page pour déplacer les pages vers différentes positions. Ajoutez et supprimez des pages en cliquant sur les boutons plus et moins.",
+      "arrangePagesShortText": "Maintenir + faire glisser pour déplacer",
       "spreadSizeWarning": "Nombre de pages invalide: Veuillez ajouter ou supprimer des pages pour pouvoir appliquer les modifications !",
       "oneSpreadWarning": "Votre livre a besoin d'une page supplémentaire pour être imprimable !",
       "twoSpreadWarning": "Votre livre a besoin de 2 pages supplémentaires pour être imprimable !",
@@ -1140,13 +1126,11 @@
       "twoPagesAddedTitle": "Pages ajoutées",
       "twoPagesAddedInfo": "Deux pages ont été ajoutées à votre livre !",
       "productOverview": "Aperçu du produit",
-
       "editText": "Modifier le texte",
       "closeTextEditing": "Fermer l'édition du texte",
       "applyImageZoom": "Appliquer le zoom sur l'image",
       "contextMenu": "Menu",
       "arrange": "Organiser",
-
       "align": "Aligner",
       "left": "Gauche",
       "center": "Centre",
@@ -1160,13 +1144,11 @@
       "group": "Grouper les images",
       "ungroup": "Dégrouper les cadres",
       "delete": "Supprimer",
-
       "pages": "Pages",
       "placement-fit": "Ajuster",
       "placement-fill": "Remplir",
       "placement-face": "Visage",
       "placement-group": "Groupe",
-
       "leftPage": "Page de gauche",
       "rightPage": "Page de droite"
     },
@@ -1343,6 +1325,7 @@
       "buttonCrop": "Обрезать Изображение",
       "buttonResetFilter": "Сброс фильтра",
       "imageTabSelect": "Выберите Изображение",
+      "fontSelectText": "Select Font ...",
       "imageTabHandwriting": "Изображение почерка",
       "uploadHandwriting": "Загрузить изображение почерка",
       "redo": "Переделать",
@@ -1373,6 +1356,7 @@
       "applyChanges": "Применить изменения",
       "apply": "Применить",
       "arrangePagesInfoText": "Щелкните и перетащите поле страницы, чтобы переместить страницы в разные позиции. Добавляйте и удаляйте страницы, нажимая кнопки плюс и удалить.",
+      "arrangePagesShortText": "удерживать + перетащить для перемещения",
       "spreadSizeWarning": "Неверное количество страниц: Пожалуйста, добавьте или удалите страницы, чтобы можно было применить изменения!",
       "oneSpreadWarning": "Вашей книге нужна еще 1 страница для печати!",
       "twoSpreadWarning": "Вашей книге нужно еще 2 страницы для печати!",
@@ -1381,13 +1365,11 @@
       "twoPagesAddedTitle": "Страницы добавлены",
       "twoPagesAddedInfo": "Две страницы были добавлены в вашу книгу!",
       "productOverview": "Обзор продукции",
-
       "editText": "Редактирование текста",
       "closeTextEditing": "Закрыть редактирование текста",
       "applyImageZoom": "Применить масштаб изображения",
       "contextMenu": "Меню",
       "arrange": "Упорядочить",
-
       "align": "Выравнивание",
       "left": "Слева",
       "center": "Центр",
@@ -1401,13 +1383,11 @@
       "group": "Группировать кадры",
       "ungroup": "Разгруппировать кадры",
       "delete": "Удалить",
-
       "pages": "Страницы",
       "placement-fit": "Приспособление",
       "placement-fill": "Заполнить",
       "placement-face": "Лицо",
       "placement-group": "Группа",
-
       "leftPage": "Левая страница",
       "rightPage": "Правая страница"
     },
@@ -1584,6 +1564,7 @@
       "buttonCrop": "Beskära bilden",
       "buttonResetFilter": "Återställ filter",
       "imageTabSelect": "Välj bild",
+      "fontSelectText": "Select Font ...",
       "imageTabHandwriting": "Handskriftsbild",
       "uploadHandwriting": "Ladda upp handskriftsbilden",
       "redo": "Gör om",
@@ -1614,6 +1595,7 @@
       "applyChanges": "Tillämpa ändringar",
       "apply": "Använd",
       "arrangePagesInfoText": "Klicka och dra en sidbox för att flytta sidor till olika positioner. Lägg till och ta bort sidor genom att klicka på plus- och ta bort-knapparna.",
+      "arrangePagesShortText": "Håll ner + dra för att flytta",
       "spreadSizeWarning": "Ogiltig Antal sidor: Lägg till eller ta bort sidor för att kunna göra ändringar!",
       "oneSpreadWarning": "Din bok behöver 1 sida till för att kunna skrivas ut!",
       "twoSpreadWarning": "Din bok behöver ytterligare 2 sidor för att kunna skrivas ut!",
@@ -1622,13 +1604,11 @@
       "twoPagesAddedTitle": "Sidor som lagts till",
       "twoPagesAddedInfo": "Två sidor har lagts till i din bok!",
       "productOverview": "Produktöversikt",
-
       "editText": "Redigera text",
       "closeTextEditing": "Stänga textredigering",
       "applyImageZoom": "Använd bildzoom",
       "contextMenu": "Meny",
       "arrange": "Ordna",
-
       "align": "Anpassa",
       "left": "Vänster",
       "center": "Centrum",
@@ -1642,13 +1622,11 @@
       "group": "Gruppera ramar",
       "ungroup": "Avlägsna gruppering av ramar",
       "delete": "Ta bort",
-
       "pages": "Sidor",
       "placement-fit": "Passa in",
       "placement-fill": "Fyll i",
       "placement-face": "Ansikte",
       "placement-group": "Grupp",
-
       "leftPage": "Vänster sida",
       "rightPage": "Höger sida"
     },
