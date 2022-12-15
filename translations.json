@@ -170,11 +170,13 @@
       "twoPagesAddedTitle": "Pages Added",
       "twoPagesAddedInfo": "Two pages were added to your book!",
       "productOverview": "Product Overview",
+
       "editText": "Edit Text",
       "closeTextEditing": "Close Text Editing",
       "applyImageZoom": "Apply Image Zoom",
       "contextMenu": "Menu",
       "arrange": "Arrange",
+
       "align": "Align",
       "left": "Left",
       "center": "Center",
@@ -188,13 +190,17 @@
       "group": "Group Frames",
       "ungroup": "Ungroup Frames",
       "delete": "Delete",
+
       "pages": "Pages",
       "placement-fit": "Fit",
       "placement-fill": "Fill",
       "placement-face": "Face",
       "placement-group": "Group",
+
       "leftPage": "Left Page",
       "rightPage": "Right Page"
+
+
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
@@ -218,6 +224,7 @@
       "maxCharsExceededShort": "Maximum number of characters exceeded ($1)",
       "maxCharsExceededInline": "Maximum number of chars exceeded ($1)",
       "maxCharsLeftInline": "($1 chars remaining)",
+      // "maxCharsExceeded": "Maximum number of chars: $1. Please edit the text before you continue!",
       "maxCharsExceeded": "Please edit the text before you continue!",
       "offensiveLanguageDetectedTitle": "Oops!\nLooks like you used offensive language ...",
       "offensiveLanguageDetectedShort": "Offensive language detected",
@@ -238,6 +245,8 @@
       "pasteBrowser": "Your browser doesn't allow us to read from clipboard."
     }
   },
+
+
   "de": {
     "ui": {
       "saveProgress": "Design wird gespeichert ...",
@@ -409,11 +418,13 @@
       "twoPagesAddedTitle": "Seiten hinzugefügt",
       "twoPagesAddedInfo": "Ihrem Buch wurden zwei Seiten hinzugefügt!",
       "productOverview": "Produktübersicht",
+
       "editText": "Text bearbeiten",
       "closeTextEditing": "Textbearbeitung schließen",
       "applyImageZoom": "Bildzoom anwenden",
       "contextMenu": "Menü",
       "arrange": "Anordnen",
+
       "align": "Ausrichten",
       "left": "Links",
       "center": "Center",
@@ -427,13 +438,18 @@
       "group": " Rahmen gruppieren",
       "ungroup": "Gruppierung der Rahmen aufheben",
       "delete": "Löschen",
+
       "pages": "Seiten",
       "placement-fit": "Einpassen",
       "placement-fill": "Ausfüllen",
       "placement-face": "Gesicht",
       "placement-group": "Gruppe",
+
       "leftPage": "Linke Seite",
       "rightPage": "Rechte Seite"
+
+
+
     },
     "errors": {
       "imageResolutionLowTitle": "Uups!\nSieht so aus, als ob Ihr Bild zu klein ist...",
@@ -648,11 +664,13 @@
       "twoPagesAddedTitle": "Páginas añadidas",
       "twoPagesAddedInfo": "Se han añadido dos páginas a su libro.",
       "productOverview": "Resumen del producto",
+
       "editText": "Editar texto",
       "closeTextEditing": "Cerrar la edición de texto",
       "applyImageZoom": "Aplicar zoom a la imagen",
       "contextMenu": "Menú",
       "arrange": "Organizar",
+
       "align": "Alinear",
       "left": "Izquierda",
       "center": "Centro",
@@ -666,13 +684,16 @@
       "group": "Agrupar marcos",
       "ungroup": "Desagrupar cuadros",
       "delete": "Borrar",
+
       "pages": "Páginas",
       "placement-fit": "Adaptación",
       "placement-fill": "Rellenar",
       "placement-face": "Cara",
       "placement-group": "Grupo",
+
       "leftPage": "Página izquierda",
       "rightPage": "Página derecha"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Vaya!\nParece que tu foto es demasiado pequeña ...",
@@ -887,11 +908,13 @@
       "twoPagesAddedTitle": "Lisätty sivuja",
       "twoPagesAddedInfo": "Kirjallesi lisättiin kaksi sivua!",
       "productOverview": "Tuotteen yleiskatsaus",
+
       "editText": "Muokkaa tekstiä",
       "closeTextEditing": "Sulje tekstin muokkaus",
       "applyImageZoom": "Kuvan zoomaus",
       "contextMenu": "Valikko",
       "arrange": "Järjestä",
+
       "align": "Kohdista",
       "left": "Vasen",
       "center": "Keskusta",
@@ -905,11 +928,13 @@
       "group": "Ryhmäkehykset",
       "ungroup": "Ryhmittämättömät kehykset",
       "delete": "Poista",
+
       "pages": "Sivut",
       "placement-fit": "Sovittaminen",
       "placement-fill": "Täytä",
       "placement-face": "Kasvot",
       "placement-group": "Ryhmä",
+
       "leftPage": "Vasen sivu",
       "rightPage": "Oikea sivu"
     },
@@ -1126,11 +1151,13 @@
       "twoPagesAddedTitle": "Pages ajoutées",
       "twoPagesAddedInfo": "Deux pages ont été ajoutées à votre livre !",
       "productOverview": "Aperçu du produit",
+
       "editText": "Modifier le texte",
       "closeTextEditing": "Fermer l'édition du texte",
       "applyImageZoom": "Appliquer le zoom sur l'image",
       "contextMenu": "Menu",
       "arrange": "Organiser",
+
       "align": "Aligner",
       "left": "Gauche",
       "center": "Centre",
@@ -1144,11 +1171,13 @@
       "group": "Grouper les images",
       "ungroup": "Dégrouper les cadres",
       "delete": "Supprimer",
+
       "pages": "Pages",
       "placement-fit": "Ajuster",
       "placement-fill": "Remplir",
       "placement-face": "Visage",
       "placement-group": "Groupe",
+
       "leftPage": "Page de gauche",
       "rightPage": "Page de droite"
     },
@@ -1365,11 +1394,13 @@
       "twoPagesAddedTitle": "Страницы добавлены",
       "twoPagesAddedInfo": "Две страницы были добавлены в вашу книгу!",
       "productOverview": "Обзор продукции",
+
       "editText": "Редактирование текста",
       "closeTextEditing": "Закрыть редактирование текста",
       "applyImageZoom": "Применить масштаб изображения",
       "contextMenu": "Меню",
       "arrange": "Упорядочить",
+
       "align": "Выравнивание",
       "left": "Слева",
       "center": "Центр",
@@ -1383,11 +1414,13 @@
       "group": "Группировать кадры",
       "ungroup": "Разгруппировать кадры",
       "delete": "Удалить",
+
       "pages": "Страницы",
       "placement-fit": "Приспособление",
       "placement-fill": "Заполнить",
       "placement-face": "Лицо",
       "placement-group": "Группа",
+
       "leftPage": "Левая страница",
       "rightPage": "Правая страница"
     },
@@ -1604,11 +1637,13 @@
       "twoPagesAddedTitle": "Sidor som lagts till",
       "twoPagesAddedInfo": "Två sidor har lagts till i din bok!",
       "productOverview": "Produktöversikt",
+
       "editText": "Redigera text",
       "closeTextEditing": "Stänga textredigering",
       "applyImageZoom": "Använd bildzoom",
       "contextMenu": "Meny",
       "arrange": "Ordna",
+
       "align": "Anpassa",
       "left": "Vänster",
       "center": "Centrum",
@@ -1622,11 +1657,13 @@
       "group": "Gruppera ramar",
       "ungroup": "Avlägsna gruppering av ramar",
       "delete": "Ta bort",
+
       "pages": "Sidor",
       "placement-fit": "Passa in",
       "placement-fill": "Fyll i",
       "placement-face": "Ansikte",
       "placement-group": "Grupp",
+
       "leftPage": "Vänster sida",
       "rightPage": "Höger sida"
     },
