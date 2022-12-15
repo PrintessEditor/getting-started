@@ -3774,7 +3774,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         li.classList.add("active");
                     }
                 }
-                li.onclick = () => {
+                li.onclick = () => __awaiter(this, void 0, void 0, function* () {
                     if (p.textStyle) {
                         printess.setTextStyleProperty(p.id, "font", entry.name);
                         p.textStyle.font = entry.name;
@@ -3786,7 +3786,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (asList) {
                         ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
                         li.classList.add("active");
-                        const mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
+                        let mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
+                        if (p.id.startsWith("FF_") && (yield printess.isFontFormField(p.id))) {
+                            mobileButtonDiv = document.getElementById(p.id + ":");
+                        }
                         if (mobileButtonDiv) {
                             drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                         }
@@ -3795,7 +3798,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         button.innerHTML = "";
                         button.appendChild(getDropdownImageContent(entry.thumbUrl));
                     }
-                };
+                });
                 li.appendChild(getDropdownImageContent(entry.thumbUrl));
                 ddContent.appendChild(li);
             }
@@ -7320,7 +7323,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getMobileButtons(printess, barContainer, propertyIdFilter, skipAutoSelect = false, fromImageSelection = false) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
         const container = barContainer || document.createElement("div");
         container.className = "mobile-buttons-container";
         const scrollContainer = document.createElement("div");
@@ -7412,6 +7415,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 else {
                     buttonDiv.classList.add("mobile-property-button");
+                    if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "font") {
+                        buttonDiv.classList.add("mobile-font-button");
+                    }
                 }
                 if (!firstButton) {
                     firstButton = buttonDiv;
@@ -7419,7 +7425,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 buttonDiv.onclick = () => {
                     mobileUiButtonClick(printess, b, buttonDiv, container, false, properties);
                 };
-                if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "background-button" || ((_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.kind) === "horizontal-scissor" || ((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.kind) === "vertical-scissor") {
+                if (((_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.kind) === "background-button" || ((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.kind) === "horizontal-scissor" || ((_r = b.newState.externalProperty) === null || _r === void 0 ? void 0 : _r.kind) === "vertical-scissor") {
                     drawButtonContent(printess, buttonDiv, [b.newState.externalProperty], controlGroup);
                 }
                 else if (controlGroup > 0) {
@@ -7431,7 +7437,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 buttonContainer.appendChild(buttonDiv);
             }
         }
-        if (((_r = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _r === void 0 ? void 0 : _r.kind) === "selection-text-style") {
+        if (((_s = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _s === void 0 ? void 0 : _s.kind) === "selection-text-style") {
             const meta = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.metaProperty;
             if (meta && !printess.isSoftwareKeyBoardExpanded()) {
                 for (const b of buttons) {

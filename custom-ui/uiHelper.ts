@@ -4480,7 +4480,7 @@ declare const bootstrap: any;
           }
         }
 
-        li.onclick = () => {
+        li.onclick = async () => {
 
           if (p.textStyle) {
             printess.setTextStyleProperty(p.id, "font", entry.name);
@@ -4493,10 +4493,14 @@ declare const bootstrap: any;
             ddContent.querySelectorAll("li").forEach(li => li.classList.remove("active"));
             li.classList.add("active");
             // update button 
-            const mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
-            if (mobileButtonDiv) {
-              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup)
+            let mobileButtonDiv = document.getElementById(p.id + ":text-style-font");
+            if (p.id.startsWith("FF_") && await printess.isFontFormField(p.id)) {
+              mobileButtonDiv = document.getElementById(p.id + ":");
             }
+            if (mobileButtonDiv) {
+              drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
+            }
+
           } else {
             button.innerHTML = "";
             button.appendChild(getDropdownImageContent(entry.thumbUrl));
@@ -4520,7 +4524,7 @@ declare const bootstrap: any;
       if (asList) {
         return ddContent;
       } else {
-        return dropdown
+        return dropdown;
       }
     }
 
@@ -8940,6 +8944,9 @@ declare const bootstrap: any;
           buttonDiv.classList.add("mobile-property-text");
         } else {
           buttonDiv.classList.add("mobile-property-button");
+          if (b.newState.externalProperty?.kind === "font") {
+            buttonDiv.classList.add("mobile-font-button");
+          }
         }
 
         if (!firstButton) {
@@ -9298,15 +9305,6 @@ declare const bootstrap: any;
           const control = renderTableDetails(printess, state.externalProperty, true);
           controlHost.appendChild(control);
         } else {
-          /* const p = state.externalProperty;
-          if (p.controlGroup > 0 && properties && properties.length > 0 && properties[0].id.startsWith("FF")) {
-            const idx = uih_currentProperties.findIndex(p => p.id === properties[0].id);
-            const prevProperty = idx ? uih_currentProperties[idx - 1] : undefined;
-            if (prevProperty && prevProperty.kind === "label" && !prevProperty.info) {
-              const label = getPropertyControl(printess, prevProperty, undefined, true);
-              controlHost.appendChild(label);
-            }
-          } */
           if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
             // render control grouped input fields together
             controlHost.style.overflow = "auto";

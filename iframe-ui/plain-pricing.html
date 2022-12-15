@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>Printess iFrame Pricing Example</title>
+
+  <meta charset="utf-8">
+
+  <!--Please always add the correct viewport to ensure Printess works fine on mobile devices-->
+  <meta name="viewport" content="width=device-width">
+
+  <style>
+    /* Counter act the Safari viewport-height bug */
+    html {
+      height: -webkit-fill-available;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      height: -webkit-fill-available;
+    }
+
+    iframe {
+      width: 100vw;
+      height: 100%;
+      border: none;
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+  </style>
+
+</head>
+
+<body">
+
+  <script>
+
+    function loadPrintess() {
+      const iframe = document.getElementById("printess");
+
+      /* **************************** */
+      /* listen to printess callbacks */
+      /* **************************** */
+      window.addEventListener("message", () => {
+        switch (event.data.cmd) {
+
+          case "back":
+            alert("Back to catalog. save-token:" + event.data.token);
+            break;
+
+          case "basket":
+            prompt("Proceed to checkout.\n\nsave-token:\n" + event.data.token + "\n\nThumbnailUrl:", event.data.thumbnailUrl);
+            break;
+
+          case "priceChanged":
+
+            /*
+             ** set price based on priceInfo **
+             ** Prices for snippets and price categories need to come from your shop
+             */
+            const sampleData = {
+              "snippetPrices": [
+                1.5,
+                2.5,
+                3.5,
+                4.5,
+                5.5
+              ],
+              "priceCategories": {
+                "mug-front": 2.1,
+                "mug-back": 2.1,
+                "t-shirt-front": 3.3,
+                "t-shirt-back": 3.3,
+                "t-shirt-sleave-left": 1.2,
+                "t-shirt-sleave-right": 1.2,
+                "inside": 0.64,
+                "back-side-a4": 1,
+                "back-side-a3": 2
+              },
+              "basePrice": 1,
+              "oldPrice": 0,
+              "legalNotice": "Inkl. VAT plus shipping",
+              "infoUrl": "https://editor.printess.com/v/nightly/printess-editor/product-overview-sample.html",
+              "priceTestModeEnabled": false
+            };
+
+            // ** calculate snippet prices
+            const snippetPrice = event.data.priceInfo.snippetPriceCategories.map(pc => (sampleData.snippetPrices[pc.priceCategory] || 0) * pc.amount).reduce((p, c) => p + c, 0)
+
+            // ** calculate price categories
+            const categoriesPrice = event.data.priceInfo.priceCategories.map(dc => (sampleData.priceCategories[dc] || 0)).reduce((p, c) => p + c, 0);
+
+            // ** get base Price
+            const basePrice = sampleData.basePrice;
+
+            const r = {
+              price: (sampleData.basePrice + categoriesPrice + snippetPrice).toFixed(2) + "€*",
+              legalNotice: sampleData.legalNotice,
+              productName: event.data.priceInfo.priceCategories.indexOf("expensive") >= 0 ? "Expensive Product" : "",
+              oldPrice: sampleData.oldPrice > 0 ? sampleData.oldPrice.toFixed(2) + "€" : "",
+              infoUrl: sampleData.infoUrl
+            }
+
+            // ** Set price display in printess
+            iframe.contentWindow.postMessage({
+              cmd: "refreshPriceDisplay", priceDisplay: r
+            }, "*");
+            break;
+        }
+      });
+
+      /* *************************** */
+      /*    load Printess editor     */
+      /* *************************** */
+      iframe.contentWindow.postMessage({
+        cmd: "attach", properties: {
+
+          /* Paste your Printess shop-token here */
+          token: "", // 
+
+          /* Name of the template to load. You can also pass a save-token from "basket" or "back" callback here to load previously saved work. */
+          templateName: "Greeting Card",
+
+          /* A unique ID to identify this session, can later be used to connect to a UserID once the user has logged in or createdan account */
+          basketId: "Some-Unique-Basket-Or-Session-Id",
+
+          /* Optional if available: the ID of the current shop-user to keep all uploaded resources together and display for reccuring users */
+          shopUserId: "",
+
+          snippetPriceCategoryLabels: [
+            "1,50€",
+            "2,50€",
+            "3,50€",
+            "4,50€",
+            "5,50€"
+          ],
+
+          priceCategoryLabels: {
+            "mug-front": "2.10€",
+            "mug-back": "2.10€",
+            "t-shirt-front": "3.30€",
+            "t-shirt-back": "3.30€",
+            "t-shirt-sleave-left": "1.20€",
+            "t-shirt-sleave-right": "1.20€",
+            "inside": "0.64€",
+            "back-side-a4": "1.00€",
+            "back-side-a3": "2.00€"
+          }
+        }
+      }, "*");
+    }
+
+    /* *************************** */
+    /*   Forward Visual Viewport   */
+    /* *************************** */
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("scroll", () => {
+        // unfortunately an iframe on iOS is not able to receive the correct visual-viewport, so we forward it. 
+        iframe.contentWindow.postMessage({ cmd: "viewportScroll", height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop }, "*");
+      })
+    }
+
+  </script>
+
+  <iframe id="printess" src="https://editor.printess.com/v/nightly/printess-editor/embed.html" onload="loadPrintess()"></iframe>
+
+  </body>
+
+</html>

@@ -3126,6 +3126,10 @@ input#invert-image-checker {
   border: 1px solid var(--mobile-button-border);
 }
 
+.mobile-font-button .form-field-caption {
+  line-height: 1;
+}
+
 .mobile-property-button.selected .form-field-caption {
   /* background-color: var(--mobile-button-square-bg-selected); */
   border: 1px solid var(--bs-primary);

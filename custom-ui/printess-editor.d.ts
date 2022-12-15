@@ -572,6 +572,13 @@ export interface iPrintessApi {
 
 
   /**
+   * Returns if property is a form field of type font
+   * @param propertyId 
+   */
+  isFontFormField(propertyId: string): Promise<boolean>;
+
+
+  /**
    * Sets the value of any top-level property passed to the external UI
    * @param propertyId 
    * @param propertyValue Must be string and will be converted if neccessary
