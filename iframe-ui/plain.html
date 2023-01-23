@@ -59,10 +59,9 @@
 
           case "formFieldChanged":
             /* You can react to changes of price-relevant form fields here */
-            const msg = document.getElementById("message");
-            msg.style.display = "flex";
-            msg.textContent = "Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'";
-            setTimeout(() => document.getElementById("message").style.display = "none", 2000);
+            console.log("Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'");
+            console.log("label: [" + event.data.label + "]");
+            console.log("tag: [" + event.data.tag + "]");
         }
       });
 

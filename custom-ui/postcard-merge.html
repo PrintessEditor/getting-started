@@ -135,6 +135,7 @@
         getOverlayCallback: getOverlayCallback,
         updatePageThumbnailCallback: (spreadId, pageId, url) => uiHelper.updatePageThumbnail(spreadId, pageId, url),
         refreshPaginationCallback: () => uiHelper.refreshPagination(printess),
+        receiveMessageCallback: (topic, data) => uiHelper.receiveMessage(printess, topic, data),
         refreshUndoRedoCallback: () => uiHelper.refreshUndoRedoState(printess),
 
 

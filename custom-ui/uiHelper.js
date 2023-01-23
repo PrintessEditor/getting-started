@@ -15,6 +15,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         renderDesktopUi: renderDesktopUi,
         refreshUndoRedoState: refreshUndoRedoState,
         refreshPagination: refreshPagination,
+        receiveMessage: receiveMessage,
         refreshPriceDisplay: refreshPriceDisplay,
         updatePageThumbnail: updatePageThumbnail,
         viewPortScroll: viewPortScroll,
@@ -55,6 +56,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         uih_currentTabId = "LOADING";
         uih_currentPriceDisplay = undefined;
         uih_mobilePriceDisplay = "none";
+        tableDragRowIndex = -1;
+        tableEditRow = {};
+        tableEditRowIndex = -1;
     }
     let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     let uih_viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
@@ -86,6 +90,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_ignoredLowResolutionErrors = [];
     let uih_layoutSelectionDialogHasBeenRendered = false;
     let uih_lastDragTarget;
+    let uih_oneTimeShowSplitterLayoutSelection = false;
+    function receiveMessage(printess, topic, data) {
+        switch (topic) {
+            case "ShowAlert":
+                alert("New Message: " + data.text);
+                break;
+            case "SplitterFrameToText":
+                uih_oneTimeShowSplitterLayoutSelection = true;
+                break;
+            case "OpenImageUpload": {
+                const ele = document.querySelector('input[type="file"].form-control');
+                if (ele)
+                    ele.click();
+                break;
+            }
+        }
+    }
     function validateAllInputs(printess, buttonType) {
         return __awaiter(this, void 0, void 0, function* () {
             const errors = yield printess.validateAsync("all");
@@ -421,6 +442,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else if (uih_currentRender === "mobile" && printess.autoScaleDetails().enabled) {
             printess.resizePrintess();
         }
+        tableEditRowIndex = -1;
+        tableEditRow = {};
         uih_currentTabs = tabs;
         uih_currentGroupSnippets = groupSnippets;
         uih_currentLayoutSnippets = layoutSnippets;
@@ -590,6 +613,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
         else {
+            const isTextSplitterMenu = printess.hasSplitterMenu() && properties.length && properties[0].kind !== "image";
             const renderPhotoTabForEmptyImage = false;
             if (printess.showTabNavigation() && uih_currentTabId === "#PHOTOS") {
                 if (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image") {
@@ -598,7 +622,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
             }
-            if (renderPhotoTabForEmptyImage) {
+            if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu()) {
+                showSplitterGuide(printess, properties[0], false);
+                setStorageItemSafe("splitter-frame-hint", "hint displayed");
+            }
+            if (isTextSplitterMenu) {
+                const tabsDiv = document.createElement("div");
+                const tabs = [];
+                const propsDiv = document.createElement("div");
+                getProperties(printess, state, properties, propsDiv);
+                tabs.push({ id: "printess-splitter-props", title: printess.gl("ui.tabTextAndColor"), content: propsDiv });
+                tabs.push({ id: "printess-splitter-layouts", title: printess.gl("ui.changeLayout"), content: getSplitterSnippetsControl(printess, properties[0]) });
+                const tabPanel = getTabPanel(printess, tabs, "printess-splitter");
+                tabsDiv.appendChild(tabPanel);
+                if (printess.showTabNavigation()) {
+                    container.appendChild(getPropertiesTitle(printess));
+                }
+                container.appendChild(tabsDiv);
+            }
+            else if (renderPhotoTabForEmptyImage) {
                 container.appendChild(getPropertiesTitle(printess));
                 renderTabNavigationProperties(printess, container, false);
             }
@@ -648,6 +690,107 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return t;
     }
+    function showSplitterGuide(printess, p, forMobile) {
+        const content = document.createElement("div");
+        content.className = "carousel carousel-dark slide";
+        content.id = "splitterGuideCarousel";
+        content.setAttribute("data-bs-interval", "false");
+        const steps = [{
+                idx: 0,
+                label: printess.gl("ui.removeImages"),
+                img: "../printess-editor/img/gifs/Splitter-Join-Gif.gif",
+                text: printess.gl("ui.removeSplitterImageInfo")
+            }, {
+                idx: 1,
+                label: printess.gl("ui.createImages"),
+                img: "../printess-editor/img/gifs/Splitter-Cut-Gif.gif",
+                text: printess.gl("ui.createSplitterImagesInfo"),
+            }, {
+                idx: 2,
+                label: printess.gl("ui.adjustGap"),
+                img: "../printess-editor/img/gifs/Splitter-Gap-Gif.gif",
+                text: printess.gl("ui.adjustGapInfo")
+            }, {
+                idx: 3,
+                label: printess.gl("ui.addText"),
+                img: "../printess-editor/img/gifs/Splitter-Text-Gif.gif",
+                text: printess.gl("ui.addSplitterTextInfo")
+            }];
+        const indicatorsDiv = document.createElement("div");
+        indicatorsDiv.className = "carousel-indicators";
+        steps.forEach(step => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.setAttribute("data-bs-target", "#splitterGuideCarousel");
+            btn.setAttribute("data-bs-slide-to", step.idx.toString());
+            btn.ariaLabel = "Slide " + step.idx;
+            if (step.idx === 0) {
+                btn.classList.add("active");
+                btn.ariaCurrent = "true";
+            }
+            indicatorsDiv.appendChild(btn);
+        });
+        content.appendChild(indicatorsDiv);
+        const slidesDiv = document.createElement("div");
+        ;
+        slidesDiv.className = "carousel-inner";
+        steps.forEach(step => {
+            const item = document.createElement("div");
+            item.className = "carousel-item";
+            item.setAttribute("data-bs-interval", "false");
+            item.setAttribute("data-pause", "true");
+            if (step.idx === 0) {
+                item.classList.add("active");
+            }
+            const img = document.createElement("img");
+            img.src = step.img;
+            img.className = "d-block";
+            img.alt = step.label;
+            const text = document.createElement("div");
+            text.className = "carousel-caption d-md-block";
+            const header = document.createElement("h3");
+            const badge = document.createElement("span");
+            badge.className = "badge rounded-pill bg-primary";
+            badge.style.verticalAlign = "bottom";
+            badge.style.marginRight = "10px";
+            badge.textContent = (step.idx + 1).toString();
+            header.appendChild(badge);
+            header.appendChild(document.createTextNode(step.label));
+            const subheader = document.createElement("p");
+            subheader.textContent = step.text;
+            text.appendChild(header);
+            text.appendChild(subheader);
+            item.appendChild(img);
+            item.appendChild(text);
+            slidesDiv.appendChild(item);
+        });
+        content.appendChild(slidesDiv);
+        const prevBtn = getCarouselControlButton(printess, "prev");
+        const nextBtn = getCarouselControlButton(printess, "next");
+        content.appendChild(prevBtn);
+        content.appendChild(nextBtn);
+        if (forMobile) {
+            renderMobileDialogFullscreen(printess, p.id, "ui.photoGridHeader", content, false);
+        }
+        else {
+            showModal(printess, "splitter-guide-overlay", content, printess.gl("ui.photoGridHeader"));
+        }
+    }
+    function getCarouselControlButton(printess, type) {
+        const btn = document.createElement("button");
+        btn.className = "carousel-control-" + type;
+        btn.setAttribute("data-bs-target", "#splitterGuideCarousel");
+        btn.setAttribute("data-bs-slide", type);
+        const icon = document.createElement("span");
+        icon.className = "carousel-control-" + type + "-icon";
+        icon.ariaHidden = "true";
+        const text = document.createElement("span");
+        text.className = "visually-hidden";
+        text.textContent = type === "prev" ? printess.gl("ui.previous") : printess.gl("ui.next");
+        btn.appendChild(icon);
+        btn.appendChild(text);
+        return btn;
+    }
     function getFormFieldTab(properties) {
         if (!uih_currentTabId.startsWith("#FORMFIELDS") && !uih_currentTabId.startsWith("#NONE")) {
             return null;
@@ -687,7 +830,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const twoColorProps = uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors();
                 if (!colorsContainer) {
                     colorsContainer = document.createElement("div");
-                    colorsContainer.className = "color-drop-down-list";
+                    colorsContainer.className = "color-drop-down-list mb-3";
                     if (twoColorProps) {
                         colorsContainer.style.flexDirection = "column";
                     }
@@ -861,6 +1004,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (uih_currentTabId === "LOADING" || (uih_currentTabId === "#PHOTOS" && !printess.showPhotoTab())) {
                 uih_currentTabId = printess.getInitialTabId();
             }
+            if (uih_currentTabId === "#LAYOUTS") {
+                setStorageItemSafe("changeLayout", "hint closed");
+            }
             const printessDesktopGrid = document.getElementById("printess-desktop-grid");
             if (printessDesktopGrid) {
                 printessDesktopGrid.classList.add("main-tabs");
@@ -945,21 +1091,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const hasFormFieldTab = uih_currentTabs.filter(t => t.id === "#FORMFIELDS").length > 0;
         const titleDiv = document.createElement("div");
         titleDiv.className = "properties-title";
-        if (!hasFormFieldTab && !uih_currentTabId.startsWith("#FORMFIELDS") && printess.hasFormFields()) {
-            const icon = printess.getIcon("arrow-left");
-            const backButton = document.createElement("button");
-            backButton.className = "btn btn-sm btn-outline-primary";
-            backButton.onclick = () => {
-                selectTab(printess, "#FORMFIELDS");
-                printess.clearSelection();
-            };
-            backButton.appendChild(icon);
-            titleDiv.appendChild(backButton);
-            titleDiv.classList.remove("only-title");
-        }
-        else {
-            titleDiv.classList.add("only-title");
-        }
+        titleDiv.classList.add("only-title");
         const title = document.createElement("h3");
         let caption = "";
         if (forExternalLayoutsContainer) {
@@ -976,6 +1108,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         title.textContent = caption.replace(/\\n/g, "");
         titleDiv.appendChild(title);
+        if (printess.hasSplitterMenu()) {
+            const icon = printess.getIcon("info-circle");
+            icon.style.width = "25px";
+            icon.style.height = "25px";
+            icon.style.color = "var(--bs-primary)";
+            icon.style.cursor = "pointer";
+            icon.onclick = () => {
+                showSplitterGuide(printess, uih_currentProperties[0], uih_currentRender === "mobile");
+            };
+            titleDiv.appendChild(icon);
+            titleDiv.style.display = "flex";
+        }
         return titleDiv;
     }
     function renderTabsNavigation(printess, tabsContainer, forMobile) {
@@ -1031,7 +1175,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
             };
-            const tabIcon = printess.getIcon(t.icon);
+            const iconName = printess.gl(t.icon);
+            const tabIcon = printess.getIcon(iconName);
             tabIcon.classList.add("desktop-tab-icon");
             const tabLink = document.createElement("a");
             tabLink.className = "nav-link " + ((selected === null || selected === void 0 ? void 0 : selected.id) === t.id ? "active" : "");
@@ -1054,7 +1199,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const groupSnippets = uih_currentGroupSnippets.filter(gs => gs.tabId === "#PHOTOS");
                 if (groupSnippets.length) {
                     tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, forMobile) });
-                    container.appendChild(getTabPanel(tabs, "photo-frames"));
+                    container.appendChild(getTabPanel(printess, tabs, "photo-frames"));
                     container.scrollTop = uih_snippetsScrollPosition;
                 }
                 else {
@@ -1176,7 +1321,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false, !forMobile) });
                         }
                     }
-                    const tabPanel = getTabPanel(tabs, p.id);
+                    const tabPanel = getTabPanel(printess, tabs, p.id);
                     tabPanel.style.display = printess.isPropertyVisible(p.id) ? "block" : "none";
                     return tabPanel;
                 }
@@ -1213,7 +1358,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             case "image-filter":
                                 {
                                     const tags = (_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.filterTags;
-                                    if (tags && tags.length > 0) {
+                                    if (tags && tags.length > 0 && !printess.hasSplitterMenu()) {
                                         return getImageFilterButtons(printess, p, tags);
                                     }
                                 }
@@ -1241,7 +1386,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                     tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p, forMobile) });
                 }
-                return getTabPanel(tabs, p.id);
+                return getTabPanel(printess, tabs, p.id);
             }
             case "select-list":
                 return getDropDown(printess, p, forMobile);
@@ -1250,6 +1395,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 return getImageSelectList(printess, p, forMobile);
             case "table":
                 return getTableControl(printess, p, forMobile);
+            case "grid-gap-button":
+                return getGridGapControl(printess, p);
         }
         const div = document.createElement("div");
         div.innerText = printess.gl("ui.missingProperty", p.kind);
@@ -2398,6 +2545,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function addLabel(printess, p, input, id, forMobile, kind, label, hasMaxChars = false, inControlGroup = false) {
         input.classList.add("form-control");
+        if (label === "Single Line Text") {
+            label = "";
+        }
         const container = document.createElement("div");
         !forMobile && container.classList.add("mb-3");
         container.id = "cnt_" + id;
@@ -2451,7 +2601,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.appendChild(validation);
         if (hasMaxChars)
             getCharValidationLabel(printess, id, container);
-        if (p === null || p === void 0 ? void 0 : p.info) {
+        if ((p === null || p === void 0 ? void 0 : p.info) && p.kind !== "table") {
             const inf = document.createElement("p");
             inf.innerText = p.info;
             inf.style.fontSize = "0.875rem";
@@ -2542,7 +2692,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (p.validation && p.validation.visibility !== "always") {
                 const div = document.getElementById("tabs-panel-" + p.id) || document.getElementById("cnt_" + p.id);
                 if (div) {
-                    const v = printess.isPropertyVisible(p.id);
+                    const v = printess.isPropertyVisible(p.id, div.style.display === "block");
                     if (v) {
                         if (div.style.display === "none") {
                             div.style.display = "block";
@@ -2637,7 +2787,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
         if (!dropdown) {
             dropdown = document.createElement("div");
-            dropdown.classList.add("btn-group");
+            dropdown.className = "btn-group mb-3 me-1";
         }
         const colors = printess.getColors(p.id);
         const button = document.createElement("button");
@@ -2649,7 +2799,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             button.dataset.bsToggle = "dropdown";
             button.dataset.bsAutoClose = "true";
             button.setAttribute("aria-expanded", "false");
-            button.style.backgroundColor = curColor;
+            button.style.backgroundColor = curColorRgb;
             if (p.value === "transparent") {
                 const redLine = document.createElement("div");
                 redLine.id = "red-line-" + p.id;
@@ -2926,7 +3076,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return div;
     }
-    function getTabPanel(tabs, id) {
+    function getTabPanel(printess, tabs, id) {
         const panel = document.createElement("div");
         panel.id = "tabs-panel-" + id;
         const ul = document.createElement("ul");
@@ -2941,7 +3091,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             a.innerText = t.title;
             a.dataset.bsToggle = "tab";
             a.dataset.bsTarget = "#tab-" + t.id;
-            if (t === tabs[0]) {
+            if (uih_oneTimeShowSplitterLayoutSelection && printess.hasSplitterMenu() && tabs.length > 1 && tabs[1].id === "printess-splitter-layouts") {
+                if (t.id === "printess-splitter-layouts") {
+                    a.classList.add("active");
+                }
+            }
+            else if (t === tabs[0]) {
                 a.classList.add("active");
             }
             li.appendChild(a);
@@ -2955,13 +3110,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             pane.id = "tab-" + t.id;
             pane.className = "tab-pane card-body fade";
             pane.setAttribute("role", "tabpanel");
-            if (t === tabs[0]) {
+            if (uih_oneTimeShowSplitterLayoutSelection && printess.hasSplitterMenu() && tabs.length > 1 && tabs[1].id === "printess-splitter-layouts") {
+                if (t.id === "printess-splitter-layouts") {
+                    pane.classList.add("show");
+                    pane.classList.add("active");
+                }
+            }
+            else if (t === tabs[0]) {
                 pane.classList.add("show");
                 pane.classList.add("active");
             }
             pane.appendChild(t.content);
             content.appendChild(pane);
         }
+        uih_oneTimeShowSplitterLayoutSelection = false;
         panel.appendChild(ul);
         panel.appendChild(content);
         return panel;
@@ -2988,11 +3150,76 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         });
         return div;
     }
+    let lastSelectedGripSize;
+    function getGridGapControl(printess, p) {
+        const div = document.createElement("div");
+        div.className = "d-flex h-100 justify-content-center align-items-center";
+        const btnGroup = document.createElement("div");
+        btnGroup.className = "btn-group btn-group-lg";
+        btnGroup.setAttribute("role", "group");
+        btnGroup.ariaLabel = "Basic radio toggle button group";
+        const gaps = [{
+                label: "XS", size: 0.3
+            }, {
+                label: "S", size: 0.6
+            }, {
+                label: "M", size: 1.1
+            }, {
+                label: "XL", size: 1.6
+            }];
+        gaps.forEach(g => {
+            const input = document.createElement("input");
+            input.className = "btn-check";
+            input.id = "btnradio" + g.label;
+            input.name = "btnradio";
+            input.type = "radio";
+            input.autocomplete = "off";
+            const label = document.createElement("label");
+            label.className = "btn btn-outline-primary";
+            label.setAttribute("for", "btnradio" + g.label);
+            label.textContent = g.label;
+            if (lastSelectedGripSize === g.label) {
+                input.checked = true;
+            }
+            label.onclick = () => {
+                lastSelectedGripSize = g.label;
+                printess.setSplitterGaps(g.size);
+            };
+            btnGroup.appendChild(input);
+            btnGroup.appendChild(label);
+        });
+        div.appendChild(btnGroup);
+        return div;
+    }
+    function getSplitterSnippets(printess, p) {
+        const div = document.createElement("div");
+        printess.getSplitterSnippets().then((snippets) => {
+            const splittersDiv = document.createElement("div");
+            splittersDiv.className = "d-flex flex-wrap mb-3";
+            if (uih_currentRender === "mobile") {
+                splittersDiv.classList.add("justify-content-center");
+            }
+            for (const sn of snippets) {
+                const img = document.createElement("div");
+                img.className = "image-filter-snippet m-1 position-relative border border-dark text-center";
+                img.style.backgroundImage = "url('" + sn.thumbUrl + "')";
+                img.onclick = () => {
+                    printess.applySplitterCellSnippet(sn.snippetUrl);
+                    if (uih_currentRender === "mobile") {
+                        hideModal(p.id);
+                    }
+                };
+                splittersDiv.append(img);
+            }
+            div.appendChild(splittersDiv);
+        });
+        return div;
+    }
     function getImageFilterControl(printess, p, filterDiv, hasReset = true) {
         var _a, _b;
         const container = filterDiv || document.createElement("div");
         const tags = (_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.filterTags;
-        if (tags && tags.length > 0) {
+        if (tags && tags.length > 0 && !printess.hasSplitterMenu()) {
             container.appendChild(getImageFilterButtons(printess, p, tags));
         }
         (_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.allows.forEach(metaProperty => {
@@ -3048,6 +3275,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             });
             container.appendChild(filterBtn);
         }
+        return container;
+    }
+    function getSplitterSnippetsControl(printess, p, splitterDiv, hasReset = true) {
+        const container = splitterDiv || document.createElement("div");
+        container.appendChild(getSplitterSnippets(printess, p));
         return container;
     }
     function getImageRotateControl(printess, p, forMobile) {
@@ -3232,22 +3464,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(scaleControl);
                 }
             }
-            if (((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.isHandwriting) === true) {
+            if (((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.isHandwriting) === true && !forMobile) {
                 const b = document.createElement("button");
-                b.className = "btn btn-primary";
-                b.innerText = "Back to text editing";
+                b.className = "btn btn-secondary w-100 mb-3";
+                b.innerText = printess.gl("ui.buttonBackToTextEditing");
                 b.onclick = () => {
                     printess.removeHandwritingImage();
                 };
                 imagePanel.appendChild(b);
             }
+            if (forMobile) {
+                imagePanel.appendChild(renderImageControlButtons(printess, images, p));
+            }
             else {
-                if (forMobile) {
-                    imagePanel.appendChild(renderImageControlButtons(printess, images, p));
-                }
-                else {
-                    imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
-                }
+                imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
             }
             imagePanel.style.gridTemplateRows = "auto";
             imagePanel.style.gridTemplateColumns = "1fr";
@@ -3453,7 +3683,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return container;
     }
     function getImageScaleControl(printess, p, forMobile = false, element) {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         if (!((_a = p.imageMeta) === null || _a === void 0 ? void 0 : _a.canScale) || ((_b = p.validation) === null || _b === void 0 ? void 0 : _b.defaultValue) === p.value) {
             return null;
         }
@@ -3467,16 +3697,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         rangeLabel.id = "range-label";
         const range = document.createElement("input");
         range.className = "form-range";
-        if (forMobile)
+        if (forMobile || ((_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.isHandwriting))
             range.style.marginLeft = "0px";
         if (printess.isIPhone()) {
             range.classList.add("slider-catch-radius");
         }
         range.type = "range";
-        range.min = (_d = (_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.scaleHints.min.toString()) !== null && _d !== void 0 ? _d : "0";
-        range.max = (_f = (_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.scaleHints.max.toString()) !== null && _f !== void 0 ? _f : "0";
+        range.min = (_e = (_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.scaleHints.min.toString()) !== null && _e !== void 0 ? _e : "0";
+        range.max = (_g = (_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.scaleHints.max.toString()) !== null && _g !== void 0 ? _g : "0";
         range.step = "0.01";
-        range.value = (_h = (_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.scale.toString()) !== null && _h !== void 0 ? _h : "0";
+        range.value = (_j = (_h = p.imageMeta) === null || _h === void 0 ? void 0 : _h.scale.toString()) !== null && _j !== void 0 ? _j : "0";
         const span = document.createElement("span");
         span.textContent = forMobile ? "" : printess.gl("ui.imageScale", Math.floor(p.imageMeta.scaleHints.dpiAtScale1 / p.imageMeta.scale));
         if (p.imageMeta) {
@@ -4736,7 +4966,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getPageItem(printess, pageNo, pageIndex, spread, prevSpreadId, forMobile) {
+    function getPageItem(printess, pageNo, pageIndex, spread, prevSpreadId, forMobile, facingPages, isLastSpread) {
         var _a, _b, _c, _d;
         const page = pageIndex === 0 ? "left-page" : "right-page";
         const pageItem = document.createElement("div");
@@ -4755,9 +4985,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             thumb.style.backgroundPosition = page === "right-page" ? "right" : "left";
         }
         const spreadForWidth = spread || printess.getAllSpreads()[1];
-        if (forMobile) {
-            thumb.style.height = ((spreadForWidth.height / spreadForWidth.width * (window.innerWidth - 40) * 0.5) * spreadForWidth.pages * 0.42) + "px";
-            thumb.style.width = ((window.innerWidth - 40) * 0.5 * 0.42) + "px";
+        if (forMobile && !facingPages) {
+            thumb.style.height = ((spreadForWidth.height / spreadForWidth.width * (window.innerWidth - 40) * 0.5) * spreadForWidth.pages * 0.84) + "px";
+            thumb.style.width = ((window.innerWidth - 40) * 0.5 * 0.84) + "px";
+        }
+        else if (forMobile) {
+            thumb.style.height = ((spreadForWidth.height / spreadForWidth.width * (window.innerWidth - 40) * 0.5) * spreadForWidth.pages * 0.46) + "px";
+            thumb.style.width = ((window.innerWidth - 40) * 0.5 * 0.46) + "px";
         }
         else {
             thumb.style.width = (spreadForWidth.width / spreadForWidth.pages / spreadForWidth.height * 150) + "px";
@@ -4770,44 +5004,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         pageItem.ondragenter = (ev) => {
             ev.stopPropagation();
             ev.preventDefault();
-            let marker;
-            if (page === "right-page") {
-                marker = document.querySelector(`[data-after=${spread.spreadId}]`);
-            }
-            else {
-                marker = document.querySelector(`[data-before=${spread.spreadId}]`);
-            }
-            uih_lastDragTarget = page === "right-page" ? spread.spreadId : prevSpreadId;
-            if (marker)
-                marker.style.background = "var(--bs-primary)";
+            handlePageDragEvents(ev, spread, prevSpreadId, page, facingPages, isLastSpread);
         };
         pageItem.ondragover = (ev) => {
             ev.stopPropagation();
             ev.preventDefault();
-            let marker;
-            if (page === "right-page") {
-                marker = document.querySelector(`[data-after=${spread.spreadId}]`);
-            }
-            else {
-                marker = document.querySelector(`[data-before=${spread.spreadId}]`);
-            }
-            uih_lastDragTarget = page === "right-page" ? spread.spreadId : prevSpreadId;
-            if (marker)
-                marker.style.background = "var(--bs-primary)";
+            handlePageDragEvents(ev, spread, prevSpreadId, page, facingPages, isLastSpread);
         };
         pageItem.ondragleave = (ev) => {
             ev.stopPropagation();
             ev.preventDefault();
-            let marker;
-            if (page === "right-page") {
-                marker = document.querySelector(`[data-after=${spread.spreadId}]`);
-            }
-            else {
-                marker = document.querySelector(`[data-before=${spread.spreadId}]`);
+            const markers = document.querySelectorAll(".spread-drop-marker");
+            markers.forEach(m => m.style.background = "transparent");
+            if (spread.index === 0 && !facingPages) {
+                const firstPageSeparator = document.getElementById("first-page_separator");
+                if (firstPageSeparator)
+                    firstPageSeparator.style.display = "none";
             }
             uih_lastDragTarget = undefined;
-            if (marker)
-                marker.style.background = "transparent";
         };
         pageItem.ondrop = (ev) => {
             ev.stopPropagation();
@@ -4815,10 +5029,52 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         };
         return pageItem;
     }
-    function getSpreadSeparator(spreadId, nextSpreadId) {
+    function handlePageDragEvents(ev, spread, prevSpreadId, page, facingPages, isLastSpread) {
+        let marker;
+        let spreadId = spread.spreadId;
+        if (!facingPages) {
+            const markers = document.querySelectorAll(".spread-drop-marker");
+            markers.forEach(m => m.style.background = "transparent");
+        }
+        const firstPage = spread.index === 0 && !facingPages;
+        const lastPage = isLastSpread && !facingPages;
+        const rightPage = page === "right-page" || (!facingPages && ev.offsetX > (ev.currentTarget).clientWidth / 2);
+        if (rightPage) {
+            if (lastPage) {
+                marker = document.querySelector(`[data-after="last-page"]`);
+                uih_lastDragTarget = "last-page";
+                const separator = marker === null || marker === void 0 ? void 0 : marker.closest("li.spread-separator");
+                if (separator)
+                    separator.style.display = "grid";
+            }
+            else {
+                marker = document.querySelector(`[data-after=${spreadId}]`);
+                uih_lastDragTarget = spreadId;
+            }
+        }
+        else {
+            if (firstPage) {
+                marker = document.querySelector(`[data-after="first-page"]`);
+                uih_lastDragTarget = "first-page";
+                const separator = marker === null || marker === void 0 ? void 0 : marker.closest("li.spread-separator");
+                if (separator)
+                    separator.style.display = "grid";
+            }
+            else {
+                marker = document.querySelector(`[data-before=${spreadId}]`);
+                uih_lastDragTarget = prevSpreadId;
+            }
+        }
+        if (marker)
+            marker.style.background = "var(--bs-primary)";
+    }
+    function getSpreadSeparator(spreadId, nextSpreadId, forMobile, facingPages) {
         const separator = document.createElement("li");
         separator.className = "spread-separator";
         separator.id = spreadId + "_separator";
+        if (forMobile && !facingPages) {
+            separator.style.width = "20px";
+        }
         const marker = document.createElement("div");
         marker.className = "spread-drop-marker";
         marker.setAttribute("data-before", nextSpreadId);
@@ -4850,14 +5106,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return separator;
     }
     function getSpreadItem(printess, pageNo, forMobile, spread, spreads, snippets, facingPages) {
-        const canAddRemoveSpread = spread.index !== 0 && spread.index !== spreads.length - 1;
+        const canAddRemoveSpread = (spread.index !== 0 && spread.index !== spreads.length - 1) || !facingPages;
         const addSpreads = printess.isNoOfPagesValid(spreads.length) ? printess.canAddSpreads(spreads.length) : 1;
         const removeSpreads = printess.canRemoveSpreads(spreads.length);
         const spreadItem = document.createElement("li");
         spreadItem.className = "spread-item";
         spreadItem.id = spread.spreadId;
         if (!facingPages && forMobile) {
-            spreadItem.style.width = "21%";
+            spreadItem.style.width = "42%";
         }
         spreadItem.dataset.snippet = spread.snippetUrl;
         spreadItem.draggable = canAddRemoveSpread;
@@ -4868,13 +5124,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         spreadItem.ondragend = (ev) => {
             ev.stopPropagation();
             ev.preventDefault();
-            const marker = document.querySelectorAll(".spread-drop-marker");
-            marker.forEach(m => m.style.background = "transparent");
+            const markers = document.querySelectorAll(".spread-drop-marker");
+            markers.forEach(m => m.style.background = "transparent");
             const modalBody = document.querySelector("div.modal-body");
             if (modalBody && spreads && spread && uih_lastDragTarget && uih_lastDragTarget !== spread.spreadId) {
                 const lastScrollPosition = modalBody.scrollTop;
                 const filteredSpreads = spreads.filter(s => s.spreadId !== spread.spreadId);
-                const idx = filteredSpreads.findIndex(s => s.spreadId === uih_lastDragTarget);
+                let idx = -1;
+                if (uih_lastDragTarget === "last-page") {
+                    idx = spreads.length - 1;
+                }
+                else if (uih_lastDragTarget !== "first-page") {
+                    idx = filteredSpreads.findIndex(s => s.spreadId === uih_lastDragTarget);
+                }
                 filteredSpreads.splice(idx + 1, 0, spread);
                 filteredSpreads.forEach((s, i) => s.index = i);
                 modalBody.innerHTML = "";
@@ -4888,6 +5150,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             ev.preventDefault();
         };
         spreadItem.onmousedown = () => {
+            if (!canAddRemoveSpread)
+                return;
             const hint = document.createElement("div");
             hint.innerText = printess.gl("ui.arrangePagesShortText");
             hint.className = "spread-drag-hint";
@@ -4897,6 +5161,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }, 2000);
         };
         spreadItem.ontouchstart = () => {
+            if (!canAddRemoveSpread)
+                return;
             const hint = document.createElement("div");
             hint.innerText = printess.gl("ui.arrangePagesShortText");
             hint.className = "spread-drag-hint";
@@ -4908,7 +5174,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
             pageNo++;
             const prevSpreadId = spread.index === 0 ? spread.spreadId : spreads[spread.index - 1].spreadId;
-            spreadItem.appendChild(getPageItem(printess, pageNo, pageIndex, spread, prevSpreadId, forMobile));
+            const pageItem = getPageItem(printess, pageNo, pageIndex, spread, prevSpreadId, forMobile, facingPages, spread.index === spreads.length - 1);
+            spreadItem.appendChild(pageItem);
         }
         if (addSpreads && canAddRemoveSpread) {
             const plusBtn = document.createElement("div");
@@ -5043,6 +5310,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         let pageNo = 0;
         for (const spread of spreads) {
+            if (spread.index === 0 && !doc.facingPages) {
+                const spreadSeparator = getSpreadSeparator("first-page", spread.spreadId, forMobile, doc.facingPages);
+                spreadSeparator.style.display = "none";
+                pagesContainer.appendChild(spreadSeparator);
+            }
             const spreadItem = getSpreadItem(printess, pageNo, forMobile, spread, spreads, snippets, doc.facingPages);
             pagesContainer.appendChild(spreadItem);
             if (newSpreadIds && newSpreadIds.map(x => x.id).includes(spread.spreadId)) {
@@ -5054,7 +5326,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (spreads[spreads.length - 1] !== spread) {
                 const spreadId = spread.spreadId;
                 const nextSpreadId = spreads[spread.index + 1].spreadId;
-                pagesContainer.appendChild(getSpreadSeparator(spreadId, nextSpreadId));
+                pagesContainer.appendChild(getSpreadSeparator(spreadId, nextSpreadId, forMobile, doc.facingPages));
+            }
+            else if (spreads[spreads.length - 1] === spread && !doc.facingPages) {
+                const spreadSeparator = getSpreadSeparator("last-page", spread.spreadId, forMobile, doc.facingPages);
+                spreadSeparator.style.display = "none";
+                pagesContainer.appendChild(spreadSeparator);
             }
             pageNo += spread.pages;
         }
@@ -5147,7 +5424,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         showModal(printess, "pageAddedInfoDialog", content, title, footer);
     }
     function renderMyImagesTab(printess, forMobile, p, images, imagesContainer, showSearchIcon = true, showMobileImagesUploadBtn = false) {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e, _f, _g;
         const container = imagesContainer || document.createElement("div");
         container.id = "image-tab-container";
         container.innerHTML = "";
@@ -5158,7 +5435,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         dragDropHint.style.fontFamily = "var(--bs-font-sans-serif)";
         dragDropHint.style.marginTop = "10px";
         dragDropHint.textContent = printess.gl("ui.dragDropHint");
-        if (!p || ((_a = p === null || p === void 0 ? void 0 : p.imageMeta) === null || _a === void 0 ? void 0 : _a.canUpload)) {
+        if (!p || ((_a = p === null || p === void 0 ? void 0 : p.imageMeta) === null || _a === void 0 ? void 0 : _a.canUpload) || ((_b = p.imageMeta) === null || _b === void 0 ? void 0 : _b.isHandwriting)) {
             const distributeBtn = document.createElement("button");
             distributeBtn.id = "distribute-button";
             distributeBtn.className = "btn btn-secondary mb-3";
@@ -5169,7 +5446,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const twoButtons = document.createElement("div");
             twoButtons.id = "two-buttons";
             twoButtons.style.display = "grid";
-            twoButtons.appendChild(getImageUploadButton(printess, p, (_b = p === null || p === void 0 ? void 0 : p.id) !== null && _b !== void 0 ? _b : "", false, p !== undefined));
+            twoButtons.appendChild(getImageUploadButton(printess, p, (_c = p === null || p === void 0 ? void 0 : p.id) !== null && _c !== void 0 ? _c : "", false, p !== undefined));
             if (printess.showImageDistributionButton()) {
                 twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
                 twoButtons.appendChild(document.createElement("div"));
@@ -5235,13 +5512,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 });
                 container.appendChild(accordion);
-                if (p && ((_c = p.imageMeta) === null || _c === void 0 ? void 0 : _c.canSetDefaultImage) && ((_d = p.validation) === null || _d === void 0 ? void 0 : _d.defaultValue) !== "fallback") {
+                if (p && ((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.canSetDefaultImage) && ((_e = p.validation) === null || _e === void 0 ? void 0 : _e.defaultValue) !== "fallback") {
                     const resetButton = getDefaultImageButton(printess, p, "button");
                     container.appendChild(resetButton);
                 }
             }
             else {
-                if (p && ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canSetDefaultImage) && ((_f = p.validation) === null || _f === void 0 ? void 0 : _f.defaultValue) !== "fallback") {
+                if (p && ((_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.canSetDefaultImage) && ((_g = p.validation) === null || _g === void 0 ? void 0 : _g.defaultValue) !== "fallback") {
                     const defaultThumb = getDefaultImageButton(printess, p, "div");
                     imageList.appendChild(defaultThumb);
                 }
@@ -5516,6 +5793,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (id === "CROPMODAL" || id === "PRICE-INFO" || id.startsWith("FF_")) {
                 window.setTimeout(() => hideModal(id), 1000);
             }
+            if (id.startsWith("FF_")) {
+                const tr = document.querySelector("tr.table-active");
+                if (tr && tr.dataset.rowNumber) {
+                    tableEditRowIndex = parseInt(tr.dataset.rowNumber);
+                }
+                const badge = document.getElementById("table-record-badge");
+                if (badge) {
+                    badge.textContent = (tableEditRowIndex + 1).toString();
+                }
+            }
         };
         header.appendChild(exitBtn);
         const content = document.createElement("div");
@@ -5593,9 +5880,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function removeMobileFullscreenContainer() {
         closeMobileExternalLayoutsContainer();
         const fullscreenContainer = document.querySelector(".fullscreen-add-properties");
+        const fullscreenDialog = document.querySelector(".fullscreen-mobile-dialog");
         const imageListContainer = document.querySelector(".image-list-fullscreen");
         if (fullscreenContainer)
             fullscreenContainer.remove();
+        if (fullscreenDialog)
+            fullscreenDialog.remove();
         if (imageListContainer)
             imageListContainer.remove();
     }
@@ -5902,30 +6192,62 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     let tableEditRow = {};
     let tableEditRowIndex = -1;
-    function getTableControl(printess, p, _forMobile) {
-        var _a, _b;
+    let tableDragRowIndex = -1;
+    let lastClickedTableRow = -1;
+    let addButtonForTableDataClicked = false;
+    function getTableControl(printess, p, forMobile, data = []) {
+        var _a, _b, _c;
         const container = document.createElement("div");
+        container.id = "printess-table-control";
         let hasRow = false;
         if (p.tableMeta) {
-            let data = [];
-            try {
-                data = JSON.parse(p.value.toString() || "[]");
-            }
-            catch (error) {
-                data = [];
+            if (data.length === 0) {
+                try {
+                    data = JSON.parse(p.value.toString() || "[]");
+                }
+                catch (error) {
+                    data = [];
+                }
             }
             if (data.length > 0) {
                 const table = document.createElement("table");
                 table.className = "table mb-3";
                 const thead = document.createElement("thead");
                 let tr = document.createElement("tr");
+                let colCount = 0;
+                const thDrag = document.createElement("th");
+                thDrag.scope = "col";
+                tr.appendChild(thDrag);
                 for (const col of p.tableMeta.columns) {
-                    if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
+                    if (!col.hide && (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event"))) {
+                        colCount++;
                         const th = document.createElement("th");
                         th.scope = "col";
+                        th.style.cursor = printess.isDataSource(p.id) ? "pointer" : "default";
                         th.innerText = col.label && printess.gl(col.label) || printess.gl(col.name);
+                        th.onclick = () => {
+                            if (!printess.isDataSource(p.id))
+                                return;
+                            data = data.sort((a, b) => {
+                                if (col.data === "number") {
+                                    return a[col.name] - b[col.name];
+                                }
+                                else {
+                                    return a[col.name].localeCompare(b[col.name]);
+                                }
+                            });
+                            const dataString = JSON.stringify(data);
+                            p.value = dataString;
+                            printess.setProperty(p.id, dataString);
+                        };
                         tr.appendChild(th);
                     }
+                }
+                if (colCount > 3) {
+                    container.classList.add("small");
+                }
+                if (colCount === 4) {
+                    container.classList.add("col4");
                 }
                 const th = document.createElement("th");
                 th.scope = "col";
@@ -5938,41 +6260,136 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 for (const row of data) {
                     if (p.tableMeta.tableType !== "calendar-events" || row.month == p.tableMeta.month) {
                         tr = document.createElement("tr");
-                        if (selectedRowNumber == rowNumber) {
+                        tr.style.cursor = "pointer";
+                        tr.draggable = true;
+                        if (selectedRowNumber == rowNumber && lastClickedTableRow === -1) {
                             tr.classList.add("table-active");
                         }
                         tr.dataset.rowNumber = rowNumber.toString();
+                        const tdDrag = document.createElement("td");
+                        const dragIcon = printess.getIcon("ellipsis-v");
+                        tdDrag.classList.add("table-drag-icon");
+                        tdDrag.appendChild(dragIcon);
+                        tr.appendChild(tdDrag);
                         for (const col of p.tableMeta.columns) {
+                            if (col.hide === true) {
+                                continue;
+                            }
                             if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
                                 const td = document.createElement("td");
-                                td.innerText = printess.gl((_b = (_a = row[col.name]) === null || _a === void 0 ? void 0 : _a.toString()) !== null && _b !== void 0 ? _b : "");
+                                td.id = "cell" + rowNumber + "_" + col.name;
+                                td.style.whiteSpace = "no-wrap";
+                                let t = printess.gl((_b = (_a = row[col.name]) === null || _a === void 0 ? void 0 : _a.toString()) !== null && _b !== void 0 ? _b : "");
+                                if (t.length > 20) {
+                                    t = t.substring(0, 20) + "...";
+                                    td.style.fontSize = "0.7rem";
+                                }
+                                td.innerText = t;
                                 tr.appendChild(td);
                             }
                         }
-                        const td = document.createElement("td");
-                        td.style.width = "30px";
-                        const icon = printess.getIcon("pen");
-                        icon.style.padding = "0";
-                        icon.style.width = "25px";
-                        icon.style.height = "25px";
-                        icon.style.cursor = "pointer";
-                        td.appendChild(icon);
-                        tr.appendChild(td);
-                        tr.onclick = (ele) => {
+                        tr.ondragstart = (ele) => {
+                            var _a;
+                            (_a = ele.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData('text/plain', p.id);
                             const rowIndex = parseInt(ele.currentTarget.dataset.rowNumber);
+                            closeTableEditControl();
+                            tableDragRowIndex = rowIndex;
                             if (rowIndex >= 0) {
                                 for (const row of ele.currentTarget.parentElement.children) {
                                     row.classList.remove("table-active");
                                     ele.currentTarget.classList.add("table-active");
                                 }
                             }
+                        };
+                        tr.ondragenter = (ev) => handleRowDragDropEvents(ev, "dragenter");
+                        tr.ondragover = (ev) => handleRowDragDropEvents(ev, "dragover");
+                        tr.ondragleave = (ev) => handleRowDragDropEvents(ev, "dragleave");
+                        tr.ondrop = (ev) => {
+                            var _a;
+                            handleRowDragDropEvents(ev, "drop");
+                            const target = ev.currentTarget;
+                            if (!target)
+                                return;
+                            const tableDropRowIndex = parseInt((_a = target.dataset.rowNumber) !== null && _a !== void 0 ? _a : "-1");
+                            if (!(tableDropRowIndex >= 0)) {
+                                return;
+                            }
+                            if (tableDropRowIndex === tableDragRowIndex) {
+                                return;
+                            }
+                            const ele = data[tableDragRowIndex];
+                            if (!ele) {
+                                return;
+                            }
+                            const above = ev.offsetY < target.offsetHeight / 2;
+                            const newData = [];
+                            for (let i = 0; i < data.length; i++) {
+                                if (i !== tableDragRowIndex) {
+                                    if (above && i === tableDropRowIndex) {
+                                        newData.push(ele);
+                                    }
+                                    newData.push(data[i]);
+                                    if (!above && i === tableDropRowIndex) {
+                                        newData.push(ele);
+                                    }
+                                }
+                            }
+                            data = newData;
+                            tableDragRowIndex = -1;
+                            p.value = JSON.stringify(data);
+                            printess.setProperty(p.id, p.value);
+                        };
+                        const td = document.createElement("td");
+                        td.style.width = "30px";
+                        const deleteIcon = printess.getIcon("trash");
+                        deleteIcon.classList.add("table-delete-icon");
+                        td.appendChild(deleteIcon);
+                        tr.appendChild(td);
+                        deleteIcon.onclick = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const rowIndex = parseInt(e.currentTarget.closest("tr").dataset.rowNumber);
                             tableEditRow = data[rowIndex];
                             tableEditRowIndex = rowIndex;
-                            printess.setTableRowIndex(p.id, rowIndex);
-                            renderTableDetails(printess, p, false);
+                            if (tableEditRowIndex === -1)
+                                return;
+                            lastClickedTableRow = -1;
+                            data.splice(tableEditRowIndex, 1);
+                            p.value = JSON.stringify(data);
+                            printess.setProperty(p.id, p.value);
+                            if (data.length === 0)
+                                tableEditRowIndex = -1;
+                            const table = document.getElementById("printess-table-control");
+                            if (table && forMobile) {
+                                table.replaceWith(getTableControl(printess, p, forMobile));
+                            }
+                        };
+                        tr.onclick = (ele) => {
+                            var _a, _b;
+                            closeTableEditControl();
+                            const rowIndex = parseInt(ele.currentTarget.dataset.rowNumber);
+                            if (rowIndex >= 0) {
+                                for (const row of ele.currentTarget.parentElement.children) {
+                                    row.classList.remove("table-active");
+                                }
+                                ele.currentTarget.classList.add("table-active");
+                            }
+                            if (!((_b = (_a = ele.target) === null || _a === void 0 ? void 0 : _a.classList) === null || _b === void 0 ? void 0 : _b.contains("table-drag-icon"))) {
+                                const tableEditControl = renderTableEditControl(printess, p, data, rowIndex, forMobile);
+                                ele.currentTarget.insertAdjacentElement("afterend", tableEditControl);
+                                ele.currentTarget.style.display = "none";
+                            }
+                            lastClickedTableRow = rowIndex;
                         };
                         tbody.appendChild(tr);
                         hasRow = true;
+                        if (lastClickedTableRow === rowNumber) {
+                            const rowIndex = parseInt(tr.dataset.rowNumber);
+                            tr.classList.add("table-active");
+                            tr.style.display = "none";
+                            const tableEditControl = renderTableEditControl(printess, p, data, rowIndex, forMobile);
+                            tbody.appendChild(tableEditControl);
+                        }
                     }
                     rowNumber++;
                 }
@@ -5984,32 +6401,148 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             addButton.className = "btn btn-primary mb-3";
             addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
             addButton.onclick = () => {
-                if (p.tableMeta) {
-                    tableEditRowIndex = -1;
-                    tableEditRow = {};
-                    for (const col of p.tableMeta.columns) {
-                        tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
-                    }
-                    if (p.tableMeta.tableType === "calendar-events") {
-                        tableEditRow.month = p.tableMeta.month || 1;
-                        tableEditRow.event = "Birthday";
-                    }
+                var _a;
+                if (lastClickedTableRow > -1) {
+                    const error = validateTableInput(printess, p);
+                    if (error)
+                        return;
                 }
-                renderTableDetails(printess, p, false);
+                lastClickedTableRow = (_a = printess.addTableRow(p.id)) !== null && _a !== void 0 ? _a : -1;
             };
             container.appendChild(addButton);
+            if (data.length === ((_c = p.tableMeta) === null || _c === void 0 ? void 0 : _c.maxTableEntries) && p.tableMeta.maxTableEntries !== 0) {
+                addButton.style.display = "none";
+                const alert = document.createElement("div");
+                alert.className = "alert alert-primary";
+                alert.setAttribute("role", "alert");
+                alert.textContent = printess.gl("ui.maxEntriesInfo");
+                container.appendChild(alert);
+            }
+            else {
+                addButton.style.display = "inline-block";
+            }
         }
         const details = document.createElement("div");
         details.id = "tableDetails_" + p.id;
         details.className = "container-fluid border";
+        if (addButtonForTableDataClicked) {
+            if (p.tableMeta) {
+                tableEditRowIndex = -1;
+                tableEditRow = {};
+                for (const col of p.tableMeta.columns) {
+                    tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
+                }
+                if (p.tableMeta.tableType === "calendar-events") {
+                    tableEditRow.month = p.tableMeta.month || 1;
+                    tableEditRow.event = "Birthday";
+                }
+            }
+            const editBox = renderTableDetails(printess, p, forMobile);
+            details.appendChild(editBox);
+            addButtonForTableDataClicked = false;
+        }
         container.appendChild(details);
+        if (p.info) {
+            const inf = document.createElement("p");
+            inf.innerText = p.info;
+            inf.style.fontSize = "0.875rem";
+            inf.style.marginTop = "0.25rem";
+            container.appendChild(inf);
+        }
         return container;
+    }
+    function handleRowDragDropEvents(ev, type) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        closeTableEditControl();
+        tableEditRow = {};
+        if (type === "dragenter" || type === "dragover") {
+            const targetDiv = document.elementFromPoint(ev.clientX, ev.clientY);
+            const tableRow = targetDiv === null || targetDiv === void 0 ? void 0 : targetDiv.parentElement;
+            if (tableRow && tableRow.draggable && !tableRow.classList.contains("table-active") && targetDiv) {
+                const target = targetDiv.parentElement;
+                const above = ev.offsetY < target.offsetHeight / 2;
+                if (above) {
+                    target.style.borderTop = "10px solid var(--bs-primary)";
+                    target.style.borderBottom = "1px solid #ccc";
+                }
+                else {
+                    target.style.borderBottom = "10px solid var(--bs-primary)";
+                    target.style.borderTop = "0px solid #ccc";
+                }
+            }
+        }
+        else {
+            const targetDivs = document.querySelectorAll("tr");
+            targetDivs.forEach((div) => {
+                if (div && div.draggable) {
+                    div.style.borderBottom = "1px solid #ccc";
+                    div.style.borderTop = "0px solid #ccc";
+                }
+            });
+        }
+    }
+    function closeTableEditControl() {
+        var _a;
+        const details = document.getElementById("tableDetailsRow");
+        tableEditRowIndex = -1;
+        lastClickedTableRow = -1;
+        if (details && details.parentElement) {
+            const pRow = details.previousElementSibling;
+            if (pRow) {
+                pRow.style.display = "table-row";
+            }
+            (_a = details.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(details);
+        }
+    }
+    function renderTableEditControl(printess, p, data, rowIndex, forMobile) {
+        tableEditRow = data[rowIndex];
+        tableEditRowIndex = rowIndex;
+        printess.setTableRowIndex(p.id, rowIndex);
+        const tableRow = document.createElement("tr");
+        tableRow.id = "tableDetailsRow";
+        tableRow.style.border = "1px solid #ccc";
+        tableRow.style.background = "var(--bs-table-active-bg)";
+        const tableCell = document.createElement("td");
+        tableCell.style.position = "relative";
+        tableCell.colSpan = 100;
+        const tableDetails = renderTableDetails(printess, p, forMobile);
+        const closeButton = document.createElement("div");
+        closeButton.className = "table-edit-close-button";
+        const closeIcon = printess.getIcon("close");
+        closeIcon.style.width = "20px";
+        closeIcon.style.height = "20px";
+        closeButton.onclick = () => {
+            const error = validateTableInput(printess, p);
+            if (error)
+                return;
+            closeTableEditControl();
+            const deleteIcons = document.querySelectorAll("svg.table-delete-icon");
+            deleteIcons.forEach(i => {
+                const icon = i;
+                icon.style.pointerEvents = "none";
+                icon.style.color = "var(--bs-gray)";
+            });
+            window.setTimeout(() => {
+                const deleteIcons = document.querySelectorAll("svg.table-delete-icon");
+                deleteIcons.forEach(i => {
+                    const icon = i;
+                    icon.style.pointerEvents = "auto";
+                    icon.style.color = "var(--bs-primary)";
+                });
+            }, 1000);
+        };
+        closeButton.appendChild(closeIcon);
+        tableCell.appendChild(closeButton);
+        tableCell.appendChild(tableDetails);
+        tableRow.appendChild(tableCell);
+        return tableRow;
     }
     function renderTableDetails(printess, p, forMobile) {
         var _a, _b;
-        const details = forMobile ? document.createElement("div") : document.getElementById("tableDetails_" + p.id);
-        if (!details || !p.tableMeta)
-            return document.createElement("div");
+        const details = document.createElement("div");
+        if (!p.tableMeta)
+            return details;
         details.innerHTML = "";
         if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events") {
             const group = document.createElement("div");
@@ -6032,92 +6565,120 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             details.appendChild(group);
         }
         else {
+            let prevRow = p.tableMeta.columns[0].row;
+            const detailsWrapper = document.createElement("div");
+            detailsWrapper.className = "d-flex flex-wrap";
             for (const col of p.tableMeta.columns) {
                 if ((_b = col.list) === null || _b === void 0 ? void 0 : _b.length) {
-                    details.appendChild(getTableDetailsDropDown(printess, p, tableEditRowIndex, tableEditRow, col, false, true));
+                    if (col.listMode === "auto-complete") {
+                        const tableDetailsAutocomplete = getTableDetailsAutocomplete(printess, p, tableEditRow, col);
+                        renderTableDetailsColumn(detailsWrapper, tableDetailsAutocomplete, col, prevRow);
+                    }
+                    else {
+                        const tableDetailsDropDown = getTableDetailsDropDown(printess, p, tableEditRowIndex, tableEditRow, col, false, true);
+                        renderTableDetailsColumn(detailsWrapper, tableDetailsDropDown, col, prevRow);
+                    }
                 }
                 else {
-                    details.appendChild(getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false));
+                    const tableTextBox = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
+                    renderTableDetailsColumn(detailsWrapper, tableTextBox, col, prevRow);
                 }
+                prevRow = col.row;
+            }
+            details.appendChild(detailsWrapper);
+        }
+        window.setTimeout(() => {
+            const input = details.querySelector("input");
+            if (input)
+                input.focus();
+        }, 100);
+        return details;
+    }
+    function validateTableInput(printess, p) {
+        var _a, _b;
+        if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
+            getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done");
+            return true;
+        }
+        if (((_b = p.tableMeta) === null || _b === void 0 ? void 0 : _b.tableType) === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
+            if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done");
+                return true;
+            }
+            else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done");
+                return true;
+            }
+            else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done");
+                return true;
+            }
+            else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done");
+                return true;
             }
         }
-        const submitButton = document.createElement("button");
-        submitButton.className = "btn btn-primary mb-3 float-left";
-        if (tableEditRowIndex === -1) {
-            submitButton.innerText = printess.gl("ui.buttonAdd");
+        return false;
+    }
+    function submitTableData(printess, p, details, forMobile) {
+        var _a, _b;
+        lastClickedTableRow = -1;
+        if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
+            getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done");
+            return;
         }
-        else {
-            submitButton.innerText = printess.gl("ui.buttonSubmit");
-        }
-        submitButton.onclick = () => {
-            var _a, _b;
-            if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done");
+        if (((_b = p.tableMeta) === null || _b === void 0 ? void 0 : _b.tableType) === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
+            if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done");
                 return;
             }
-            if (((_b = p.tableMeta) === null || _b === void 0 ? void 0 : _b.tableType) === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
-                if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
-                    getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done");
-                    return;
-                }
-                else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
-                    getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done");
-                    return;
-                }
-                else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
-                    getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done");
-                    return;
-                }
-                else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
-                    getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done");
-                    return;
-                }
+            else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done");
+                return;
             }
-            let data = [];
-            try {
-                data = JSON.parse(p.value.toString()) || [];
-                if (!Array.isArray(data)) {
-                    data = [];
-                }
+            else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done");
+                return;
             }
-            catch (error) {
+            else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
+                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done");
+                return;
+            }
+        }
+        let data = [];
+        try {
+            data = JSON.parse(p.value.toString()) || [];
+            if (!Array.isArray(data)) {
                 data = [];
             }
-            if (tableEditRowIndex === -1) {
-                data.push(tableEditRow);
-            }
-            else {
-                data[tableEditRowIndex] = tableEditRow;
-            }
-            p.value = JSON.stringify(data);
-            printess.setProperty(p.id, p.value);
-            details.innerHTML = "";
-        };
-        details.appendChild(submitButton);
-        const cancelButton = document.createElement("button");
-        cancelButton.className = "btn btn-secondary mb-3 ml-3";
-        cancelButton.style.marginLeft = "20px";
-        cancelButton.innerText = printess.gl("ui.buttonCancel");
-        cancelButton.onclick = () => {
-            details.innerHTML = "";
-            tableEditRowIndex = -1;
-        };
-        details.appendChild(cancelButton);
-        if (tableEditRowIndex !== -1) {
-            const deleteButton = document.createElement("button");
-            deleteButton.className = "btn btn-danger mb-3 ml-3";
-            deleteButton.style.marginLeft = "20px";
-            deleteButton.innerText = printess.gl("ui.buttonRemove");
-            deleteButton.onclick = () => {
-                const data = JSON.parse(p.value.toString()) || [];
-                data.splice(tableEditRowIndex, 1);
-                p.value = JSON.stringify(data);
-                printess.setProperty(p.id, p.value);
-                details.innerHTML = "";
-            };
-            details.appendChild(deleteButton);
         }
-        return details;
+        catch (error) {
+            data = [];
+        }
+        if (tableEditRowIndex === -1) {
+            data.push(tableEditRow);
+        }
+        else {
+            data[tableEditRowIndex] = tableEditRow;
+        }
+        p.value = JSON.stringify(data);
+        printess.setProperty(p.id, p.value);
+        details.innerHTML = "";
+        const table = document.getElementById("printess-table-control");
+        if (table && forMobile) {
+            table.replaceWith(getTableControl(printess, p, forMobile));
+        }
+    }
+    function renderTableDetailsColumn(detailsWrapper, tableDetailsDiv, col, prevRow) {
+        if (prevRow !== col.row || col.row === "auto" || col.row === "new") {
+            const flexBreak = document.createElement("div");
+            flexBreak.style.flexBasis = "100%";
+            flexBreak.style.height = "0";
+            detailsWrapper.appendChild(flexBreak);
+        }
+        tableDetailsDiv.style.marginRight = "4px";
+        tableDetailsDiv.style.flex = "1 1 0";
+        detailsWrapper.appendChild(tableDetailsDiv);
     }
     function getTableDetailsShortList(printess, p, rowIndex, row, col) {
         const ddContent = document.createElement("div");
@@ -6135,7 +6696,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 a.classList.add("active");
             }
             a.onclick = () => {
-                setTableValue(col, f);
+                setTableValue(printess, p, col, f);
                 if (col.list) {
                     list.querySelectorAll("a").forEach(a => a.classList.remove("active"));
                     a.classList.add("active");
@@ -6145,10 +6706,40 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return list;
     }
+    function getTableDetailsAutocomplete(printess, p, row, col) {
+        const formGroup = document.createElement("div");
+        formGroup.className = "form-group mb-3";
+        const label = document.createElement("label");
+        label.className = "mb-2";
+        label.setAttribute("for", "input-datalist");
+        label.textContent = p.label;
+        const input = document.createElement("input");
+        input.className = "form-control bg-light";
+        input.id = "input-datalist";
+        input.setAttribute("list", "list-" + p.label);
+        input.value = row[col.name];
+        input.oninput = () => {
+            setTableValue(printess, p, col, input.value);
+        };
+        if (col.list) {
+            const datalist = document.createElement("datalist");
+            datalist.id = "list-" + p.label;
+            for (const entry of col.list) {
+                const option = document.createElement("option");
+                option.value = entry.toString();
+                datalist.appendChild(option);
+            }
+            formGroup.appendChild(label);
+            formGroup.appendChild(input);
+            formGroup.appendChild(datalist);
+        }
+        return formGroup;
+    }
     function getTableDetailsDropDown(printess, p, rowIndex, row, col, asList, fullWidth = true) {
         var _a;
         const dropdown = document.createElement("div");
         dropdown.classList.add("btn-group");
+        dropdown.style.padding = "0";
         const ddContent = document.createElement("ul");
         const value = row[col.name];
         if (col.list) {
@@ -6184,7 +6775,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const a = document.createElement("a");
                 a.classList.add("dropdown-item");
                 a.onclick = () => {
-                    setTableValue(col, entry);
+                    setTableValue(printess, p, col, entry);
                     if (col.list) {
                         button.innerHTML = "";
                         button.appendChild(getTableDropdownItemContent(printess, entry));
@@ -6224,7 +6815,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.autocapitalize = "off";
         inp.spellcheck = false;
         inp.oninput = () => {
-            setTableValue(col, inp.value);
+            setTableValue(printess, p, col, inp.value);
         };
         if (forMobile) {
             inp.classList.add("form-control");
@@ -6235,8 +6826,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return r;
         }
     }
-    function setTableValue(col, newValue) {
-        tableEditRow[col.name];
+    function setTableValue(printess, p, col, newValue) {
         if (col.data === "number" && typeof newValue !== "number") {
             tableEditRow[col.name] = isNaN(+newValue) ? 0 : +newValue;
         }
@@ -6245,6 +6835,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else {
             tableEditRow[col.name] = newValue;
+        }
+        printess.setTableCell(p.id, tableEditRowIndex, col.name, tableEditRow[col.name]);
+        const cell = document.getElementById("cell" + tableEditRowIndex + "_" + col.name);
+        if (cell) {
+            cell.innerText = printess.gl(tableEditRow[col.name].toString());
+        }
+        try {
+            const a = JSON.parse(p.value);
+            if (Array.isArray(a)) {
+                a[tableEditRowIndex][col.name] = tableEditRow[col.name];
+                p.value = JSON.stringify(a);
+            }
+        }
+        catch (error) {
+            console.error("Can not upate table cell [" + col.name + "] or row " + tableEditRowIndex, error);
         }
     }
     function getMobileUiDiv() {
@@ -6362,6 +6967,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         if (state !== "document") {
             mobileUi.appendChild(getMobilePropertyNavButtons(printess, state, false));
+            if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu()) {
+                showSplitterGuide(printess, properties[0], true);
+                setStorageItemSafe("splitter-frame-hint", "hint displayed");
+            }
         }
         else {
             if (uih_viewportOffsetTop) {
@@ -6374,6 +6983,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             return;
                         }
                     }
+                }
+            }
+        }
+        for (const p of properties) {
+            if (p.kind === "table") {
+                const table = document.getElementById("printess-table-control");
+                if (table) {
+                    table.replaceWith(getTableControl(printess, p, true));
                 }
             }
         }
@@ -6421,7 +7038,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function renderUiButtonHints(printess, container, state = uih_currentState, forMobile) {
-        const showLayoutsHint = printess.showTabNavigation() && forMobile || !printess.showTabNavigation();
+        const showLayoutsHint = (printess.showTabNavigation() && forMobile) || (!forMobile && uih_currentTabId !== "#LAYOUTS");
         const uiHints = [{
                 header: "expertMode",
                 msg: printess.gl("ui.expertModeHint"),
@@ -6460,23 +7077,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 header: "changeLayout",
                 msg: printess.gl("ui.changeLayoutHint"),
                 position: "fixed",
-                top: printess.hasExpertButton() && forMobile ? "calc(50% - 100px)" : "calc(50% - 150px)",
-                left: "55px",
+                top: printess.hasExpertButton() && forMobile ? "calc(50% - 100px)" : printess.showTabNavigation() && !forMobile ? "calc(50% - 300px)" : "calc(50% - 150px)",
+                left: printess.showTabNavigation() && !forMobile ? "75px" : "55px",
                 color: "primary",
                 show: printess.uiHintsDisplay().includes("layoutSnippets") && !getStorageItemSafe("changeLayout") && printess.hasLayoutSnippets() && showLayoutsHint && !forMobile,
                 task: () => {
-                    const layoutBtn = document.querySelector(".show-layouts-button");
-                    if (layoutBtn) {
-                        layoutBtn.classList.remove("layouts-button-pulse");
+                    if (printess.showTabNavigation() && !forMobile) {
+                        selectTab(printess, "#LAYOUTS");
+                        printess.clearSelection();
                     }
-                    const offCanvas = document.querySelector("div#layoutOffcanvas");
-                    if (offCanvas) {
-                        offCanvas.style.visibility = "visible";
-                        offCanvas.classList.add("show");
-                    }
-                    const offCanvasButton = document.querySelector("button#closeLayoutOffCanvas");
-                    if (offCanvasButton && offCanvas) {
-                        offCanvasButton.onclick = () => offCanvas.classList.remove("show");
+                    else {
+                        const layoutBtn = document.querySelector(".show-layouts-button");
+                        if (layoutBtn) {
+                            layoutBtn.classList.remove("layouts-button-pulse");
+                        }
+                        const offCanvas = document.querySelector("div#layoutOffcanvas");
+                        if (offCanvas) {
+                            offCanvas.style.visibility = "visible";
+                            offCanvas.classList.add("show");
+                        }
+                        const offCanvasButton = document.querySelector("button#closeLayoutOffCanvas");
+                        if (offCanvasButton && offCanvas) {
+                            offCanvasButton.onclick = () => offCanvas.classList.remove("show");
+                        }
                     }
                 }
             }];
@@ -6551,6 +7174,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         circle.className = "mobile-property-circle";
         circle.onclick = () => {
             setStorageItemSafe("addDesign", "hint closed");
+            circle.classList.remove("mobile-property-plus-pulse");
             renderMobilePropertiesFullscreen(printess, "add-design", "open");
         };
         if (!getStorageItemSafe("addDesign")) {
@@ -7323,7 +7947,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getMobileButtons(printess, barContainer, propertyIdFilter, skipAutoSelect = false, fromImageSelection = false) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v;
         const container = barContainer || document.createElement("div");
         container.className = "mobile-buttons-container";
         const scrollContainer = document.createElement("div");
@@ -7334,8 +7958,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (uih_currentState === "document") {
             buttons.unshift(...printess.getMobileUiBackgroundButton());
         }
-        if (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image") {
-            buttons.push(...printess.getMobileUiScissorsButtons());
+        if (printess.hasSplitterMenu()) {
+            if (((_a = uih_currentProperties[0]) === null || _a === void 0 ? void 0 : _a.kind) !== "image") {
+                buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
+            }
+            if ((buttons.length === 1 && uih_currentProperties[0].kind === "image") || ((_b = uih_currentProperties[0]) === null || _b === void 0 ? void 0 : _b.kind) !== "image") {
+                buttons.push(...printess.getMobileUiScissorsButtons());
+                buttons.push(...printess.getMobileUiSplitterGapButton());
+                const isImageProperty = uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image";
+                const convertButton = isImageProperty ? printess.getMobileUiSplitterToTextButton() : printess.getMobileUiSplitterToImageButton();
+                buttons.push(...convertButton);
+            }
+        }
+        const dataTableIdx = buttons.findIndex(b => b.newState.state === "table-edit");
+        const pid = (_e = (_d = (_c = buttons[dataTableIdx]) === null || _c === void 0 ? void 0 : _c.newState) === null || _d === void 0 ? void 0 : _d.externalProperty) === null || _e === void 0 ? void 0 : _e.id;
+        if (dataTableIdx !== -1 && pid && printess.isDataSource(pid)) {
+            const recordNavigationArrows = printess.getMobileUiRecordNavigationArrows();
+            buttons.splice(dataTableIdx, 0, recordNavigationArrows[0]);
+            buttons.splice(dataTableIdx + 2, 0, recordNavigationArrows[1]);
         }
         const hasButtons = buttons.length > 0;
         if ((printess.spreadCount() > 1 && printess.pageNavigationDisplay() === "numbers") || (printess.pageNavigationDisplay() === "icons")) {
@@ -7356,7 +7996,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         let autoSelect = null;
         let autoSelectHasMeta = false;
         let firstButton = null;
-        const ep = (_b = (_a = buttons[0]) === null || _a === void 0 ? void 0 : _a.newState) === null || _b === void 0 ? void 0 : _b.externalProperty;
+        const ep = (_g = (_f = buttons[0]) === null || _f === void 0 ? void 0 : _f.newState) === null || _g === void 0 ? void 0 : _g.externalProperty;
         if (ep && buttons.length === 1 && skipAutoSelect !== true) {
             if (ep.kind === "image") {
                 autoSelect = buttons[0];
@@ -7375,9 +8015,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (hasButtons && (!autoSelect || autoSelectHasMeta === true)) {
             let controlGroup = 0;
             for (const b of buttons.filter(b => !b.hide)) {
-                const selectScaleButton = b.newState.metaProperty === "image-scale" && ((_d = (_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.imageMeta) === null || _d === void 0 ? void 0 : _d.canScale) && ((_e = b.newState.externalProperty) === null || _e === void 0 ? void 0 : _e.value) !== ((_g = (_f = b.newState.externalProperty) === null || _f === void 0 ? void 0 : _f.validation) === null || _g === void 0 ? void 0 : _g.defaultValue);
+                const selectScaleButton = b.newState.metaProperty === "image-scale" && ((_j = (_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.imageMeta) === null || _j === void 0 ? void 0 : _j.canScale) && ((_k = b.newState.externalProperty) === null || _k === void 0 ? void 0 : _k.value) !== ((_m = (_l = b.newState.externalProperty) === null || _l === void 0 ? void 0 : _l.validation) === null || _m === void 0 ? void 0 : _m.defaultValue);
                 const buttonDiv = document.createElement("div");
                 buttonDiv.className = "no-selection";
+                if (pid && printess.isDataSource(pid)) {
+                    if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "record-left-button" || b.newState.state === "table-edit") {
+                        buttonDiv.style.marginRight = "10px";
+                    }
+                }
                 const properties = [];
                 if (b.newState.externalProperty && b.newState.externalProperty.kind === "label" && !b.newState.externalProperty.info) {
                     continue;
@@ -7405,17 +8050,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     buttonDiv.classList.add("selected");
                 }
                 if (b.newState.tableRowIndex !== undefined) {
-                    buttonDiv.id = ((_j = (_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.id) !== null && _j !== void 0 ? _j : "") + "$$$" + b.newState.tableRowIndex;
+                    buttonDiv.id = ((_q = (_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.id) !== null && _q !== void 0 ? _q : "") + "$$$" + b.newState.tableRowIndex;
                 }
                 else {
-                    buttonDiv.id = ((_l = (_k = b.newState.externalProperty) === null || _k === void 0 ? void 0 : _k.id) !== null && _l !== void 0 ? _l : "") + ":" + ((_m = b.newState.metaProperty) !== null && _m !== void 0 ? _m : "");
+                    buttonDiv.id = ((_s = (_r = b.newState.externalProperty) === null || _r === void 0 ? void 0 : _r.id) !== null && _s !== void 0 ? _s : "") + ":" + ((_t = b.newState.metaProperty) !== null && _t !== void 0 ? _t : "");
                 }
                 if (printess.isTextButton(b) || controlGroup > 0) {
                     buttonDiv.classList.add("mobile-property-text");
                 }
                 else {
                     buttonDiv.classList.add("mobile-property-button");
-                    if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "font") {
+                    if (((_u = b.newState.externalProperty) === null || _u === void 0 ? void 0 : _u.kind) === "font") {
                         buttonDiv.classList.add("mobile-font-button");
                     }
                 }
@@ -7425,7 +8070,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 buttonDiv.onclick = () => {
                     mobileUiButtonClick(printess, b, buttonDiv, container, false, properties);
                 };
-                if (((_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.kind) === "background-button" || ((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.kind) === "horizontal-scissor" || ((_r = b.newState.externalProperty) === null || _r === void 0 ? void 0 : _r.kind) === "vertical-scissor") {
+                const externalPropertyKinds = ["background-button", "record-left-button", "record-right-button", "horizontal-scissor", "vertical-scissor", "splitter-layouts-button", "grid-gap-button", "convert-to-image", "convert-to-text"];
+                if (b.newState.externalProperty && externalPropertyKinds.includes(b.newState.externalProperty.kind)) {
                     drawButtonContent(printess, buttonDiv, [b.newState.externalProperty], controlGroup);
                 }
                 else if (controlGroup > 0) {
@@ -7437,7 +8083,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 buttonContainer.appendChild(buttonDiv);
             }
         }
-        if (((_s = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _s === void 0 ? void 0 : _s.kind) === "selection-text-style") {
+        if (((_v = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _v === void 0 ? void 0 : _v.kind) === "selection-text-style") {
             const meta = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.metaProperty;
             if (meta && !printess.isSoftwareKeyBoardExpanded()) {
                 for (const b of buttons) {
@@ -7489,10 +8135,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             firstButton.style.transition = "none";
         }
         window.setTimeout(() => {
+            var _a, _b, _c;
             if (firstButton) {
                 const containerWidth = container.offsetWidth;
                 const buttonsWidth = buttonContainer.offsetWidth + 15 - (containerWidth * 1.45);
-                if (buttonsWidth > containerWidth) {
+                const space = (containerWidth - buttonsWidth) / 2;
+                if (buttonsWidth > containerWidth || space < 15) {
                     firstButton.style.marginLeft = "15px";
                     container.classList.add("scroll-right");
                     scrollContainer.onscroll = () => {
@@ -7505,15 +8153,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     };
                 }
                 else {
-                    const space = (containerWidth - buttonsWidth) / 2;
                     firstButton.style.marginLeft = space + "px";
+                }
+                const b = buttons.filter(b => { var _a; return ((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "image"; })[0];
+                if (b && ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.validation) === null || _b === void 0 ? void 0 : _b.defaultValue) === ((_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.value) && printess.hasSplitterMenu()) {
+                    if (firstButton) {
+                        mobileUiButtonClick(printess, b, firstButton, container, false, uih_currentProperties, true);
+                    }
                 }
             }
         }, 50);
         return { div: container, autoSelectButton: autoSelect };
     }
-    function mobileUiButtonClick(printess, b, buttonDiv, container, fromAutoSelect, properties) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
+    function selectButtonDiv(buttonDiv) {
+        document.querySelectorAll(".mobile-property-button.selected").forEach((ele) => ele.classList.remove("selected"));
+        document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+        buttonDiv.classList.toggle("selected");
+    }
+    function mobileUiButtonClick(printess, b, buttonDiv, container, fromAutoSelect, properties, fromSplitterImageButton = false) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1;
         return __awaiter(this, void 0, void 0, function* () {
             printess.setZoomMode("spread");
             let hadSelectedButtons = false;
@@ -7521,65 +8179,108 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (((_g = b.newState.externalProperty) === null || _g === void 0 ? void 0 : _g.kind) === "background-button") {
                 printess.selectBackground();
             }
-            else if (((_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.kind) === "label" && b.newState.externalProperty.info) {
+            else if (((_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.kind) === "record-left-button" || ((_j = b.newState.externalProperty) === null || _j === void 0 ? void 0 : _j.kind) === "record-right-button") {
+                const prop = b.newState.externalProperty;
+                const tableProp = uih_currentProperties.filter(p => p.kind === "table")[0];
+                let data = [];
+                try {
+                    data = JSON.parse(tableProp.value.toString()) || [];
+                    if (!Array.isArray(data)) {
+                        data = [];
+                    }
+                }
+                catch (error) {
+                    data = [];
+                }
+                if (data.length > 0) {
+                    tableEditRowIndex = tableEditRowIndex === -1 ? printess.getTableRowIndex(prop.id) : tableEditRowIndex;
+                    if (prop.kind === "record-left-button" && tableEditRowIndex > 0) {
+                        tableEditRowIndex--;
+                        printess.setTableRowIndex(tableProp.id, tableEditRowIndex);
+                    }
+                    else if (prop.kind === "record-right-button" && tableEditRowIndex < data.length - 1) {
+                        tableEditRowIndex++;
+                        printess.setTableRowIndex(tableProp.id, tableEditRowIndex);
+                    }
+                }
+                const badge = document.getElementById("table-record-badge");
+                if (badge) {
+                    badge.textContent = (tableEditRowIndex + 1).toString();
+                }
+                selectButtonDiv(buttonDiv);
+                return;
+            }
+            else if (((_k = b.newState.externalProperty) === null || _k === void 0 ? void 0 : _k.kind) === "table") {
+                printess.clearSelection();
+                const prop = uih_currentProperties.filter(p => b.newState.externalProperty && p.id === b.newState.externalProperty.id)[0];
+                selectButtonDiv(buttonDiv);
+                const content = document.createElement("div");
+                content.id = "mobileTableDialog";
+                content.appendChild(getPropertyControl(printess, prop, undefined, true));
+                const caption = ((_l = uih_currentTabs.filter(t => t.id === prop.tabId)[0]) === null || _l === void 0 ? void 0 : _l.caption) || prop.label;
+                renderMobileDialogFullscreen(printess, prop.id, caption || "table", content, false);
+                return;
+            }
+            else if (((_m = b.newState.externalProperty) === null || _m === void 0 ? void 0 : _m.kind) === "label" && b.newState.externalProperty.info) {
                 collapseControlHost();
-                const sels = document.querySelectorAll(".mobile-property-button.selected");
-                sels.forEach((ele) => ele.classList.remove("selected"));
-                document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-                buttonDiv.classList.toggle("selected");
+                resizeMobileUi(printess);
+                selectButtonDiv(buttonDiv);
                 const content = document.createElement("div");
                 content.appendChild(getPropertyControl(printess, b.newState.externalProperty, undefined, true));
                 renderMobileDialogFullscreen(printess, b.newState.externalProperty.id, "ui.infoFrame", content, false);
                 return;
             }
-            else if (((_j = b.newState.externalProperty) === null || _j === void 0 ? void 0 : _j.kind) === "horizontal-scissor") {
+            else if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "convert-to-text" || ((_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.kind) === "convert-to-image") {
                 collapseControlHost();
-                const sels = document.querySelectorAll(".mobile-property-button.selected");
-                sels.forEach((ele) => ele.classList.remove("selected"));
-                document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-                buttonDiv.classList.toggle("selected");
+                resizeMobileUi(printess);
+                selectButtonDiv(buttonDiv);
+                if (b.newState.externalProperty.kind === "convert-to-image") {
+                    printess.convertSplitterCellToImage();
+                }
+                else {
+                    printess.convertSplitterCellToText();
+                    const prop = uih_currentProperties[0];
+                    const content = getSplitterSnippetsControl(printess, prop);
+                    renderMobileDialogFullscreen(printess, prop.id, "ui.changeLayout", content, false);
+                }
+                return;
+            }
+            else if (((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.kind) === "splitter-layouts-button") {
+                collapseControlHost();
+                resizeMobileUi(printess);
+                selectButtonDiv(buttonDiv);
+                const prop = uih_currentProperties[0];
+                const content = getSplitterSnippetsControl(printess, prop);
+                renderMobileDialogFullscreen(printess, prop.id, "ui.changeLayout", content, false);
+                return;
+            }
+            else if (((_r = b.newState.externalProperty) === null || _r === void 0 ? void 0 : _r.kind) === "horizontal-scissor") {
+                collapseControlHost();
+                resizeMobileUi(printess);
+                selectButtonDiv(buttonDiv);
                 yield printess.splitFrame("vertical");
                 if (printess.hasScissorMenu() === "never" || printess.hasScissorMenu() === "horizontical") {
                     buttonDiv.remove();
                 }
                 return;
             }
-            else if (((_k = b.newState.externalProperty) === null || _k === void 0 ? void 0 : _k.kind) === "vertical-scissor") {
+            else if (((_s = b.newState.externalProperty) === null || _s === void 0 ? void 0 : _s.kind) === "vertical-scissor") {
                 collapseControlHost();
-                const sels = document.querySelectorAll(".mobile-property-button.selected");
-                sels.forEach((ele) => ele.classList.remove("selected"));
-                document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-                buttonDiv.classList.toggle("selected");
+                resizeMobileUi(printess);
+                selectButtonDiv(buttonDiv);
                 yield printess.splitFrame("horizontal");
                 if (printess.hasScissorMenu() === "never" || printess.hasScissorMenu() === "vertical") {
                     buttonDiv.remove();
                 }
                 return;
             }
-            else if (((_l = b.newState.externalProperty) === null || _l === void 0 ? void 0 : _l.kind) === "image" && b.newState.metaProperty === "handwriting-image") {
+            else if (((_t = b.newState.externalProperty) === null || _t === void 0 ? void 0 : _t.kind) === "image" && b.newState.metaProperty === "handwriting-image") {
                 printess.removeHandwritingImage();
                 return;
             }
-            else if (b.newState.state === "table-add") {
-                const p = b.newState.externalProperty;
-                document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
-                if (p === null || p === void 0 ? void 0 : p.tableMeta) {
-                    tableEditRowIndex = -1;
-                    tableEditRow = {};
-                    for (const col of p.tableMeta.columns) {
-                        tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
-                    }
-                    if (p.tableMeta.tableType === "calendar-events") {
-                        tableEditRow.month = p.tableMeta.month || 1;
-                        tableEditRow.event = "Birthday";
-                    }
-                    renderMobileControlHost(printess, b.newState);
-                    getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "document", fromAutoSelect));
-                }
-            }
             else if (b.newState.state === "table-edit") {
                 const p = b.newState.externalProperty;
-                const rowIndex = (_m = b.newState.tableRowIndex) !== null && _m !== void 0 ? _m : -1;
+                const rowIndex = (_u = b.newState.tableRowIndex) !== null && _u !== void 0 ? _u : -1;
                 document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
                 buttonDiv.classList.toggle("selected");
                 centerMobileButton(buttonDiv);
@@ -7605,11 +8306,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     getMobileButtons(printess, container, b.newState.externalProperty.id);
                     const backButton = document.querySelector(".mobile-property-back-button");
                     if (backButton) {
-                        (_o = backButton.parentElement) === null || _o === void 0 ? void 0 : _o.removeChild(backButton);
+                        (_v = backButton.parentElement) === null || _v === void 0 ? void 0 : _v.removeChild(backButton);
                     }
                     const mobilePlusButton = document.querySelector(".mobile-property-plus-button");
                     if (mobilePlusButton) {
-                        (_p = mobilePlusButton.parentElement) === null || _p === void 0 ? void 0 : _p.removeChild(mobilePlusButton);
+                        (_w = mobilePlusButton.parentElement) === null || _w === void 0 ? void 0 : _w.removeChild(mobilePlusButton);
                     }
                     getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "details", fromAutoSelect, willHaveControlHost(b.newState)));
                     if (!fromAutoSelect) {
@@ -7669,9 +8370,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 else {
                     properties = uih_currentProperties;
                 }
-                drawButtonContent(printess, buttonDiv, properties, ((_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.controlGroup) || 0);
-                centerMobileButton(buttonDiv);
-                if (((_r = b.newState.externalProperty) === null || _r === void 0 ? void 0 : _r.kind) === "image" && (printess.canMoveSelectedFrames() || printess.canSplitSelectedFrames())) {
+                drawButtonContent(printess, buttonDiv, properties, ((_x = b.newState.externalProperty) === null || _x === void 0 ? void 0 : _x.controlGroup) || 0);
+                if (!fromSplitterImageButton) {
+                    centerMobileButton(buttonDiv);
+                }
+                if (((_y = b.newState.externalProperty) === null || _y === void 0 ? void 0 : _y.kind) === "image" && (printess.canMoveSelectedFrames() || printess.canSplitSelectedFrames()) || ((_z = b.newState.externalProperty) === null || _z === void 0 ? void 0 : _z.kind) === "grid-gap-button") {
                     printess.setZoomMode("spread");
                 }
                 else {
@@ -7679,10 +8382,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 const backButton = document.querySelector(".mobile-property-back-button");
                 if (backButton) {
-                    (_s = backButton.parentElement) === null || _s === void 0 ? void 0 : _s.removeChild(backButton);
+                    (_0 = backButton.parentElement) === null || _0 === void 0 ? void 0 : _0.removeChild(backButton);
                 }
                 getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, uih_currentState, fromAutoSelect, willHaveControlHost(b.newState)));
-                if (((_t = b.newState.externalProperty) === null || _t === void 0 ? void 0 : _t.kind) === "selection-text-style" && !hadSelectedButtons) {
+                if (((_1 = b.newState.externalProperty) === null || _1 === void 0 ? void 0 : _1.kind) === "selection-text-style" && !hadSelectedButtons) {
                     window.setTimeout(() => {
                         renderMobileControlHost(printess, b.newState);
                     }, 500);
@@ -7714,9 +8417,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             else if (state.externalProperty) {
                 controlHost.classList.add(getMobileControlHeightClass(printess, state.externalProperty, state.metaProperty));
-                if (state.state === "table-add" || state.state === "table-edit") {
-                    const control = renderTableDetails(printess, state.externalProperty, true);
-                    controlHost.appendChild(control);
+                if (state.state === "table-edit") {
+                    return;
                 }
                 else {
                     if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
@@ -7724,6 +8426,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         getProperties(printess, uih_currentState, properties, controlHost);
                     }
                     else {
+                        if (state.externalProperty.kind === "image" && state.metaProperty === "handwriting-image")
+                            return;
                         const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
                         controlHost.appendChild(control);
                     }
@@ -7829,7 +8533,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return "mobile-control-sm";
     }
     function drawButtonContent(printess, buttonDiv, properties, controlGroup) {
-        var _a, _b;
+        var _a, _b, _c;
         const id = buttonDiv.id.split(":");
         let propertyId = id[0];
         let rowIndex = undefined;
@@ -7879,7 +8583,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
             else if (!caption) {
-                caption = printess.gl(b.caption);
+                if (printess.hasSplitterMenu()) {
+                    caption = ((_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.value.toString()) || printess.gl("ui.text");
+                }
+                else {
+                    caption = printess.gl(b.caption);
+                }
             }
             const buttonText = document.createElement("div");
             buttonText.className = "text";
@@ -7898,13 +8607,31 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             buttonDiv.appendChild(buttonCircle);
             buttonDiv.appendChild(buttonText);
         }
+        if (b.newState.state === "table-edit" && printess.isDataSource(propertyId)) {
+            const tableProp = uih_currentProperties.filter(p => (b === null || b === void 0 ? void 0 : b.newState.externalProperty) && p.id === b.newState.externalProperty.id)[0];
+            let data = [];
+            try {
+                data = JSON.parse(tableProp.value.toString()) || [];
+                if (!Array.isArray(data)) {
+                    data = [];
+                }
+            }
+            catch (error) {
+                data = [];
+            }
+            const badge = document.createElement("div");
+            badge.id = "table-record-badge";
+            badge.className = "position-absolute badge rounded-pill bg-primary";
+            badge.textContent = tableEditRowIndex === -1 && data.length > 0 ? "1" : (tableEditRowIndex + 1).toString();
+            buttonDiv.appendChild(badge);
+        }
     }
     function getButtonCircle(printess, m, isSelected) {
-        var _a, _b;
         const c = printess.getButtonCircleModel(m, isSelected);
+        const p = m.newState.externalProperty;
         const circle = document.createElement("div");
         circle.className = "circle-button-graphic";
-        if (c.hasSvgCircle) {
+        if (c.hasSvgCircle && (p === null || p === void 0 ? void 0 : p.kind) !== "record-left-button" && (p === null || p === void 0 ? void 0 : p.kind) !== "record-right-button" && (p === null || p === void 0 ? void 0 : p.kind) !== "splitter-layouts-button" && (p === null || p === void 0 ? void 0 : p.kind) !== "convert-to-image" && (p === null || p === void 0 ? void 0 : p.kind) !== "convert-to-text" && m.newState.metaProperty !== "handwriting-image") {
             circle.appendChild(getSvgCircle(c.displayGauge, c.gaugeValue));
         }
         if (c.hasImage) {
@@ -7941,16 +8668,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (c.hasIcon && c.icon !== "none") {
             const icon = printess.getIcon(c.icon);
             icon.classList.add("circle-button-icon");
-            if (((_a = m.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "vertical-scissor") {
+            if ((p === null || p === void 0 ? void 0 : p.kind) === "vertical-scissor") {
                 const scissorsLine = document.createElement("div");
                 scissorsLine.className = "vertical-scissor-button";
                 circle.appendChild(scissorsLine);
                 icon.style.transform = "rotateZ(-90deg)";
             }
-            if (((_b = m.newState.externalProperty) === null || _b === void 0 ? void 0 : _b.kind) === "horizontal-scissor") {
+            if ((p === null || p === void 0 ? void 0 : p.kind) === "horizontal-scissor") {
                 const scissorsLine = document.createElement("div");
                 scissorsLine.className = "horizontal-scissor-button";
                 circle.appendChild(scissorsLine);
+            }
+            if ((p === null || p === void 0 ? void 0 : p.kind) === "record-left-button" || (p === null || p === void 0 ? void 0 : p.kind) === "record-right-button") {
+                icon.style.width = "25px";
+                icon.style.height = "25px";
+            }
+            if ((p === null || p === void 0 ? void 0 : p.kind) === "splitter-layouts-button") {
+                icon.classList.add("mobile-splitter-button");
+            }
+            if ((p === null || p === void 0 ? void 0 : p.kind) === "convert-to-image" || (p === null || p === void 0 ? void 0 : p.kind) === "convert-to-text" || m.newState.metaProperty === "handwriting-image") {
+                circle.classList.add("circular-toggle-button");
             }
             circle.appendChild(icon);
         }

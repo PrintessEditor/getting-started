@@ -181,6 +181,14 @@ export interface printessAttachParameters {
   getOverlayCallback?: externalGetOverlayCallback;
 
   /**
+   * Arbitary method used to send messages from printess to the web-ui.
+   * Current usages:
+   *    `topic="SplitterFrameToText" data={}` Indicates that the user has converted a splitter image to a text frame
+   *    `topic="ShowAlert",  data.text="The text to display"`  Asks for an alert box to be shown to the user.
+  */
+  receiveMessageCallback?: receiveMessageCallback;
+
+  /**
    * Is called when the page navigation has changed (and needs redraw) but selection has stayed the same.
    */
   refreshPaginationCallback?: refreshPaginationCallback;
@@ -269,12 +277,24 @@ export interface iPrintessApi {
 
   /**
    * Load a template to the Printess editor.
+   * Supports 'exchangeId' on document level. Docs with matching exchange-id's will transfer all user changes.
    * @param templateNameOrToken can be either the name of a template (case sensitive) or the save-token received as a result of a user design save. 
    * @param mergeTemplates optional parameter to pass other templates to merge 
    * @param takeOverFormFieldValues optional parameter to transfer global form field values from previous to next document
    */
   loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
 
+
+
+  /**
+   * Load a template to the Printess editor and sets form fields.
+   * Supports 'exchangeId' on document level. Docs with matching exchange-id's will transfer all user changes.
+   * @param templateNameOrToken can be either the name of a template (case sensitive) or the save-token received as a result of a user design save. 
+   * @param mergeTemplates optional parameter to pass other templates to merge 
+   * @param formFields optional parameter to pass global form field values  
+   * @param snippetPriceCategoryLabels optional parameter to pass snippetPriceCategoryLabels  
+   */
+  loadTemplateAndFormFields(templateName: string, mergeTemplates?: iMergeTemplate[], formFields?: { name: string, value: string }[] | null, snippetPriceCategoryLabels?: string[] | null): Promise<void>
 
 
   /**
@@ -383,6 +403,11 @@ export interface iPrintessApi {
   hasScissorMenu(): "never" | "horizontical" | "vertical" | "both"
 
   /**
+   * Indicates if a splitter cell is selected
+   */
+  hasSplitterMenu(): boolean
+
+  /**
    * Split an image frame that has splitter option turned on
    * @param direction is either horizontal or vertical depending on how an image should be splitted
    */
@@ -481,7 +506,7 @@ export interface iPrintessApi {
    * Returns only false if property refers to a formfield which is not visible, because it doesn' match a specific condition.
    * @param propertyId ID of property to check
    */
-  isPropertyVisible(propertyId: string): boolean
+  isPropertyVisible(propertyId: string, wasVisibleBefore?: boolean): boolean
 
   /**
    * Returns all available properties in teh current document
@@ -539,6 +564,32 @@ export interface iPrintessApi {
   getMobileUiBackgroundButton(): Array<iMobileUIButton>
 
   /**
+   * Returns change layouts button for splitter text frames
+   */
+  getMobileUiSplitterLayoutsButton(): Array<iMobileUIButton>
+
+  /**
+   * Returns grid gap button for splitter frames
+   */
+  getMobileUiSplitterGapButton(): Array<iMobileUIButton>
+
+  /**
+  * Returns image to text convert button if available
+  */
+  getMobileUiSplitterToTextButton(): Array<iMobileUIButton>
+
+  /**
+   * Returns text to image convert button if available
+   */
+  getMobileUiSplitterToImageButton(): Array<iMobileUIButton>
+
+  /**
+   * Mobile UI helper method to go through a table form-field which is set as data-source in the template
+   * @param type up or down for arrow/data direction
+   */
+  getMobileUiRecordNavigationArrows(): Array<iMobileUIButton>
+
+  /**
    * Returns horizontal and vertical scissor buttons if available
    */
   getMobileUiScissorsButtons(): Array<iMobileUIButton>
@@ -591,6 +642,19 @@ export interface iPrintessApi {
    * @param newValue Must be string and will be converted if neccessary
    */
   setFormFieldValue(fieldName: string, newValue: string): Promise<void>;
+
+  /**
+   * updates a specific cell of a form field of type "table"
+   * Any then all other updates, 
+   * this will NOT trigger a selection change event on buyer side 
+   */
+  setTableCell(fieldNameOrId: string, rowIndex: number, cellName: string, value: string | number | boolean): Promise<void>
+
+  /**
+   * Adds a new row to a table form field.
+   * @param fieldNameOrId The property-id or a form-field-name or form-field-id 
+   */
+  addTableRow(fieldNameOrId: string): number | null
 
   /**
    * Sets the size of a specific document 
@@ -919,11 +983,28 @@ export interface iPrintessApi {
    */
   getInsertSpreadSnippets(): Promise<Array<iExternalSnippet>>
 
+
+  /**
+   * Get a list of all splitter-snippets (single frame only) having any of the provided tags
+   */
+  getSplitterSnippets(): Promise<Array<iExternalSnippet>>
+
+  /**
+   * Replaces current splitter-cell with splitter-snippet content 
+   */
+  applySplitterCellSnippet(splitterSnippetUrl: string): Promise<void>
+
+
   /**
    * Get a list of all image-filter-snippets having any of the provided tags
    */
   getImageFilterSnippets(tags: Array<string> | ReadonlyArray<string>): Promise<Array<iExternalSnippet>>
+
+  /**
+   * Applies image-filter-snippet to selected image
+   */
   applyImageFilterSnippet(filterSnippetUrl: string): Promise<void>
+
 
   /**
    * Insert a docuement from any template like a layout-snippet or group-snippet (sticker) to the current document/spread
@@ -1183,6 +1264,22 @@ export interface iPrintessApi {
   canSplitSelectedFrames(): boolean
 
   /**
+   * Change an image frame to a text snippet frame in a photo collage
+   */
+  convertSplitterCellToText(): Promise<void>
+
+  /**
+   * Change a text snippet frame to an image frame in a photo collage
+   */
+  convertSplitterCellToImage(): Promise<void>
+
+  /**
+   * Set the gap size of the photo grid
+   * @param n gap size of the photo grid
+   */
+  setSplitterGaps(n: number): void
+
+  /**
    * Returns `true` if either rich- or simple-text-editor is currently active
    */
   isTextEditorOpen(): boolean
@@ -1301,7 +1398,7 @@ export interface iPrintessApi {
   /**
    * Retrieves all price relevant form-fields plus tag information and referenced price-categories
    */
-  getAllPriceRelevantFormFieldsExt(): { priceCategories: Array<string>, formFields: { [key: string]: { value: string, tag: string } } }
+  getAllPriceRelevantFormFieldsExt(): { priceCategories: Array<string>, formFields: { [key: string]: { value: string, tag: string, label: string } } }
 
   /**
    * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
@@ -1388,6 +1485,11 @@ export interface iPrintessApi {
    */
   showAlertOnClose(): boolean
 
+  /**
+   * tells if the propertyId refers to
+   * a table form-field which is set as data-source in the template
+   */
+  isDataSource(propertyId: string): boolean
 
   /**
    * Sets the selected index of the primary data-source if the propertyId refers to
@@ -1574,7 +1676,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
@@ -1636,14 +1738,18 @@ export interface iExternalTableMeta {
   month?: number;
   year?: number;
   tableType: "generic" | "calendar-events";
+  maxTableEntries: number;
 }
 export interface iExternalTableColumn {
   name: string,
   label?: string,
   readonly?: boolean,
-  data?: "string" | "boolean" | "number" | "image",
+  data?: "string" | "boolean" | "number" | "image" | "color" | "multi",
   list?: Array<string | number>,
-  width?: string
+  listMode?: "select" | "auto-complete",
+  width?: string,
+  row?: string,
+  hide?: boolean
 }
 export interface iExternalNumberUi {
   max: number;
@@ -1754,9 +1860,12 @@ export declare type externalSelectionChangeCallback = (properties: Array<iExtern
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>, width: number, height: number) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
+export declare type receiveMessageCallback = null | ((topic: MessageTopic, data: Record<string, any>) => void);
 export declare type refreshUndoRedoCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
+
+export type MessageTopic = "SplitterFrameToText" | "ShowAlert" | "OpenImageUpload";
 
 export interface iExternalImage {
   id: string;
@@ -1769,6 +1878,7 @@ export interface iExternalImage {
   inUse: boolean;
   useCount: number;
   group: string;
+  average: number;
 }
 
 export interface iExternalButton {
@@ -1803,7 +1913,7 @@ export interface iMobileUIButton {
 }
 
 export interface iMobileUiState {
-  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop" | "table-add" | "table-edit"
+  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop" | "table-edit"
   externalProperty?: iExternalProperty,
   metaProperty?: iExternalMetaPropertyKind,
   tableRowIndex?: number
@@ -1928,7 +2038,14 @@ export type iExternalProductPriceInfo = {
    * All used layout-snippets and stickers with a price category
    * will be summed up here */
   snippetPriceCategories: Array<iUsedPriceCategory>,
-  /** A list of all used document-price-categories. Only returns documents which have actually been edited by the buyer  */
+  /** 
+   * 
+  */
+  /**
+   * @deprecated 
+   * A list of all used document-price-categories. Only returns documents which have actually been edited by the buyer  
+   * Important: Its depricated, You can not enable this feature anymore!
+   */
   priceCategories: Array<string>
 }
 
@@ -2210,4 +2327,8 @@ export type iconName =
   | "burger-menu"
   | "grid-lines"
   | "info-circle"
-  | "camera-slash";
+  | "camera-slash"
+  | "record-up"
+  | "record-down"
+  | "arrow-left-circle"
+  | "arrow-right-circle";
