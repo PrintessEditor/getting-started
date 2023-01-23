@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import { iconName, iExternalError, iExternalListMeta, iExternalPriceDisplay, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn, iExternalPropertyKind, iExternalImage, MobileUiMenuItems, iExternalSnippet, iExternalTab, iDropdownItems, iExternalDocAndSpreadInfo, FFInfoDisplayStyle } from "./printess-editor";
+import { iconName, iExternalError, iExternalListMeta, iExternalPriceDisplay, iExternalFieldListEntry, iExternalProperty, iExternalSnippetCluster, iExternalSpreadInfo, iPrintessApi, iMobileUIButton, iExternalMetaPropertyKind, MobileUiState, iMobileUiState, iExternalTableColumn, iExternalPropertyKind, iExternalImage, MobileUiMenuItems, iExternalSnippet, iExternalTab, iDropdownItems, iExternalDocAndSpreadInfo, FFInfoDisplayStyle, MessageTopic } from "./printess-editor";
 
 declare const bootstrap: any;
 
@@ -12,6 +12,7 @@ declare const bootstrap: any;
     renderDesktopUi: renderDesktopUi,
     refreshUndoRedoState: refreshUndoRedoState,
     refreshPagination: refreshPagination,
+    receiveMessage: receiveMessage,
     refreshPriceDisplay: refreshPriceDisplay,
     updatePageThumbnail: updatePageThumbnail,
     viewPortScroll: viewPortScroll,
@@ -21,6 +22,7 @@ declare const bootstrap: any;
     resetUi: resetUi,
     customLayoutSnippetRenderCallback: undefined
   }
+
 
   const canUseStorage = (function () {
     try {
@@ -54,6 +56,9 @@ declare const bootstrap: any;
     uih_currentTabId = "LOADING";
     uih_currentPriceDisplay = undefined;
     uih_mobilePriceDisplay = "none";
+    tableDragRowIndex = -1;
+    tableEditRow = {};
+    tableEditRowIndex = -1;
   }
 
   let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -95,7 +100,27 @@ declare const bootstrap: any;
 
   let uih_lastDragTarget: string | undefined;
 
+  let uih_oneTimeShowSplitterLayoutSelection = false;
+
+
   //console.log("Printess ui-helper loaded");
+
+
+  function receiveMessage(printess: iPrintessApi, topic: MessageTopic, data: Record<string, any>) {
+    switch (topic) {
+      case "ShowAlert":
+        alert("New Message: " + data.text);
+        break;
+      case "SplitterFrameToText":
+        uih_oneTimeShowSplitterLayoutSelection = true;
+        break;
+      case "OpenImageUpload": {
+        const ele: HTMLInputElement | null = document.querySelector('input[type="file"].form-control');
+        if (ele) ele.click();
+        break;
+      }
+    }
+  }
 
   async function validateAllInputs(printess: iPrintessApi, buttonType: "preview" | "validateAll"): Promise<boolean> {
     const errors = await printess.validateAsync("all");
@@ -480,6 +505,8 @@ declare const bootstrap: any;
       printess.resizePrintess();
     }
 
+    tableEditRowIndex = -1;
+    tableEditRow = {};
 
     uih_currentTabs = tabs;
     uih_currentGroupSnippets = groupSnippets;
@@ -697,6 +724,7 @@ declare const bootstrap: any;
         }
       } */
 
+      const isTextSplitterMenu = printess.hasSplitterMenu() && properties.length && properties[0].kind !== "image";
       const renderPhotoTabForEmptyImage = false;
       if (printess.showTabNavigation() && uih_currentTabId === "#PHOTOS") {
         if (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image") {
@@ -709,9 +737,34 @@ declare const bootstrap: any;
         }
       }
 
-      if (renderPhotoTabForEmptyImage) {
+      // show splitter guide
+      if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu()) {
+        showSplitterGuide(printess, properties[0], false);
+        setStorageItemSafe("splitter-frame-hint", "hint displayed");
+      }
+      // render Splitter Properties for Text
+      if (isTextSplitterMenu) {
+        const tabsDiv = document.createElement("div");
+        const tabs: Array<{ title: string, id: string, content: HTMLElement }> = [];
+
+        const propsDiv = document.createElement("div");
+        getProperties(printess, state, properties, propsDiv);
+
+        tabs.push({ id: "printess-splitter-props", title: printess.gl("ui.tabTextAndColor"), content: propsDiv });
+        tabs.push({ id: "printess-splitter-layouts", title: printess.gl("ui.changeLayout"), content: getSplitterSnippetsControl(printess, properties[0]) });
+
+        const tabPanel = getTabPanel(printess, tabs, "printess-splitter");
+        tabsDiv.appendChild(tabPanel);
+
+        if (printess.showTabNavigation()) {
+          container.appendChild(getPropertiesTitle(printess));
+        }
+        container.appendChild(tabsDiv);
+
+      } else if (renderPhotoTabForEmptyImage) {
         container.appendChild(getPropertiesTitle(printess));
         renderTabNavigationProperties(printess, container, false);
+
       } else {
         if (printess.showTabNavigation()) {
           container.appendChild(getPropertiesTitle(printess));
@@ -767,6 +820,129 @@ declare const bootstrap: any;
     return t;
   }
 
+  function showSplitterGuide(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): void {
+    const content = document.createElement("div");
+    content.className = "carousel carousel-dark slide";
+    content.id = "splitterGuideCarousel";
+    content.setAttribute("data-bs-interval", "false");
+
+    const steps = [{
+      idx: 0,
+      label: printess.gl("ui.removeImages"),
+      img: "../printess-editor/img/gifs/Splitter-Join-Gif.gif",
+      text: printess.gl("ui.removeSplitterImageInfo")
+    }, {
+      idx: 1,
+      label: printess.gl("ui.createImages"),
+      img: "../printess-editor/img/gifs/Splitter-Cut-Gif.gif",
+      text: printess.gl("ui.createSplitterImagesInfo"),
+    }, {
+      idx: 2,
+      label: printess.gl("ui.adjustGap"),
+      img: "../printess-editor/img/gifs/Splitter-Gap-Gif.gif",
+      text: printess.gl("ui.adjustGapInfo")
+    }, {
+      idx: 3,
+      label: printess.gl("ui.addText"),
+      img: "../printess-editor/img/gifs/Splitter-Text-Gif.gif",
+      text: printess.gl("ui.addSplitterTextInfo")
+    }]
+
+    // slide indicators
+    const indicatorsDiv = document.createElement("div");
+    indicatorsDiv.className = "carousel-indicators";
+    steps.forEach(step => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-bs-target", "#splitterGuideCarousel");
+      btn.setAttribute("data-bs-slide-to", step.idx.toString());
+      //@ts-ignore
+      btn.ariaLabel = "Slide " + step.idx;
+
+      if (step.idx === 0) {
+        btn.classList.add("active");
+        //@ts-ignore
+        btn.ariaCurrent = "true";
+      }
+
+      indicatorsDiv.appendChild(btn);
+    });
+    content.appendChild(indicatorsDiv);
+
+    // slide content
+    const slidesDiv = document.createElement("div");;
+    slidesDiv.className = "carousel-inner";
+    steps.forEach(step => {
+      const item = document.createElement("div");
+      item.className = "carousel-item";
+      item.setAttribute("data-bs-interval", "false");
+      item.setAttribute("data-pause", "true");
+      if (step.idx === 0) {
+        item.classList.add("active");
+      }
+
+      const img = document.createElement("img");
+      img.src = step.img;
+      img.className = "d-block";
+      img.alt = step.label;
+
+      const text = document.createElement("div");
+      text.className = "carousel-caption d-md-block";
+      const header = document.createElement("h3");
+      const badge = document.createElement("span");
+      badge.className = "badge rounded-pill bg-primary";
+      badge.style.verticalAlign = "bottom";
+      badge.style.marginRight = "10px";
+      badge.textContent = (step.idx + 1).toString();
+      header.appendChild(badge);
+      header.appendChild(document.createTextNode(step.label));
+
+      const subheader = document.createElement("p");
+      subheader.textContent = step.text;
+      text.appendChild(header);
+      text.appendChild(subheader);
+
+      item.appendChild(img);
+      item.appendChild(text);
+      slidesDiv.appendChild(item);
+    })
+    content.appendChild(slidesDiv);
+
+    // prev/next slide buttons
+    const prevBtn = getCarouselControlButton(printess, "prev");
+    const nextBtn = getCarouselControlButton(printess, "next");
+    content.appendChild(prevBtn);
+    content.appendChild(nextBtn);
+
+    if (forMobile) {
+      renderMobileDialogFullscreen(printess, p.id, "ui.photoGridHeader", content, false);
+    } else {
+      showModal(printess, "splitter-guide-overlay", content, printess.gl("ui.photoGridHeader"));
+    }
+
+  }
+
+  function getCarouselControlButton(printess: iPrintessApi, type: "prev" | "next"): HTMLButtonElement {
+    const btn = document.createElement("button");
+    btn.className = "carousel-control-" + type;
+    btn.setAttribute("data-bs-target", "#splitterGuideCarousel");
+    btn.setAttribute("data-bs-slide", type);
+
+    const icon = document.createElement("span");
+    icon.className = "carousel-control-" + type + "-icon";
+    //@ts-ignore
+    icon.ariaHidden = "true";
+
+    const text = document.createElement("span");
+    text.className = "visually-hidden";
+    text.textContent = type === "prev" ? printess.gl("ui.previous") : printess.gl("ui.next");
+
+    btn.appendChild(icon);
+    btn.appendChild(text);
+
+    return btn;
+  }
+
   function getFormFieldTab(properties: Array<iExternalProperty>): string | null {
     // only return tab if all properties are associalted with same tab
     if (!uih_currentTabId.startsWith("#FORMFIELDS") && !uih_currentTabId.startsWith("#NONE")) {
@@ -818,7 +994,7 @@ declare const bootstrap: any;
         const twoColorProps = uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors();
         if (!colorsContainer) {
           colorsContainer = document.createElement("div");
-          colorsContainer.className = "color-drop-down-list";
+          colorsContainer.className = "color-drop-down-list mb-3";
           if (twoColorProps) {
             colorsContainer.style.flexDirection = "column";
           }
@@ -1013,6 +1189,10 @@ declare const bootstrap: any;
         uih_currentTabId = printess.getInitialTabId();
       }
 
+      if (uih_currentTabId === "#LAYOUTS") {
+        setStorageItemSafe("changeLayout", "hint closed");
+      }
+
       const printessDesktopGrid = document.getElementById("printess-desktop-grid");
       if (printessDesktopGrid) {
         printessDesktopGrid.classList.add("main-tabs");
@@ -1110,21 +1290,7 @@ declare const bootstrap: any;
     const titleDiv = document.createElement("div");
     titleDiv.className = "properties-title";
 
-    // Attach back arrow to return to formFields if available
-    if (!hasFormFieldTab && !uih_currentTabId.startsWith("#FORMFIELDS") && printess.hasFormFields()) {
-      const icon = printess.getIcon("arrow-left");
-      const backButton = document.createElement("button");
-      backButton.className = "btn btn-sm btn-outline-primary";
-      backButton.onclick = () => {
-        selectTab(printess, "#FORMFIELDS");
-        printess.clearSelection();
-      }
-      backButton.appendChild(icon);
-      titleDiv.appendChild(backButton);
-      titleDiv.classList.remove("only-title");
-    } else {
-      titleDiv.classList.add("only-title");
-    }
+    titleDiv.classList.add("only-title");
 
     const title = document.createElement("h3");
 
@@ -1140,6 +1306,21 @@ declare const bootstrap: any;
     }
     title.textContent = caption.replace(/\\n/g, "");
     titleDiv.appendChild(title);
+
+    if (printess.hasSplitterMenu()) {
+      const icon = printess.getIcon("info-circle");
+      icon.style.width = "25px";
+      icon.style.height = "25px";
+      icon.style.color = "var(--bs-primary)";
+      icon.style.cursor = "pointer";
+
+      icon.onclick = () => {
+        showSplitterGuide(printess, uih_currentProperties[0], uih_currentRender === "mobile");
+      }
+
+      titleDiv.appendChild(icon);
+      titleDiv.style.display = "flex";
+    }
 
     return titleDiv;
   }
@@ -1201,7 +1382,8 @@ declare const bootstrap: any;
         }
       }
 
-      const tabIcon = printess.getIcon(t.icon);
+      const iconName = <iconName>printess.gl(t.icon);
+      const tabIcon = printess.getIcon(iconName);
       tabIcon.classList.add("desktop-tab-icon");
 
       const tabLink = document.createElement("a");
@@ -1235,7 +1417,7 @@ declare const bootstrap: any;
         // render tab panel if photo groupSnippets are available, else render only myImagesTab
         if (groupSnippets.length) {
           tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, forMobile) });
-          container.appendChild(getTabPanel(tabs, "photo-frames"));
+          container.appendChild(getTabPanel(printess, tabs, "photo-frames"));
           container.scrollTop = uih_snippetsScrollPosition;
         } else {
           container.appendChild(renderMyImagesTab(printess, forMobile, undefined, undefined, undefined, printess.showSearchBar(), true));
@@ -1388,7 +1570,7 @@ declare const bootstrap: any;
               tabs.push({ id: "crop-" + p.id, title: printess.gl("ui.cropTab"), content: getImageCropControl(printess, p, false, !forMobile) });
             }
           }
-          const tabPanel = getTabPanel(tabs, p.id);
+          const tabPanel = getTabPanel(printess, tabs, p.id);
           tabPanel.style.display = printess.isPropertyVisible(p.id) ? "block" : "none";
           return tabPanel;
         }
@@ -1440,7 +1622,7 @@ declare const bootstrap: any;
               case "image-filter":
                 {
                   const tags = p.imageMeta?.filterTags;
-                  if (tags && tags.length > 0) {
+                  if (tags && tags.length > 0 && !printess.hasSplitterMenu()) {
                     return getImageFilterButtons(printess, p, tags);
                   }
                 }
@@ -1471,9 +1653,9 @@ declare const bootstrap: any;
             tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
           }
           tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p, forMobile) });
-        }
 
-        return getTabPanel(tabs, p.id);
+        }
+        return getTabPanel(printess, tabs, p.id);
       }
 
       case "select-list":
@@ -1485,6 +1667,9 @@ declare const bootstrap: any;
 
       case "table":
         return getTableControl(printess, p, forMobile);
+
+      case "grid-gap-button":
+        return getGridGapControl(printess, p);
 
     }
 
@@ -2874,6 +3059,10 @@ declare const bootstrap: any;
   function addLabel(printess: iPrintessApi, p: iExternalProperty | undefined, input: HTMLElement, id: string, forMobile: boolean, kind: iExternalPropertyKind, label?: string, hasMaxChars: boolean = false, inControlGroup: boolean = false): HTMLElement {
     input.classList.add("form-control");
 
+    if (label === "Single Line Text") {
+      label = "";
+    }
+
     const container = document.createElement("div");
     !forMobile && container.classList.add("mb-3");
     container.id = "cnt_" + id;
@@ -2932,7 +3121,7 @@ declare const bootstrap: any;
     if (kind !== "image") container.appendChild(validation);
     if (hasMaxChars) getCharValidationLabel(printess, id, container);
 
-    if (p?.info) {
+    if (p?.info && p.kind !== "table") {
       const inf = document.createElement("p");
       inf.innerText = p.info;
       inf.style.fontSize = "0.875rem";
@@ -3043,7 +3232,7 @@ declare const bootstrap: any;
       if (p.validation && p.validation.visibility !== "always") {
         const div = document.getElementById("tabs-panel-" + p.id) || document.getElementById("cnt_" + p.id);
         if (div) {
-          const v = printess.isPropertyVisible(p.id);
+          const v = printess.isPropertyVisible(p.id, div.style.display === "block");
           if (v) {
             if (div.style.display === "none") {
               div.style.display = "block";
@@ -3149,7 +3338,7 @@ declare const bootstrap: any;
 
     if (!dropdown) {
       dropdown = document.createElement("div");
-      dropdown.classList.add("btn-group");
+      dropdown.className = "btn-group mb-3 me-1";
     }
 
     const colors = printess.getColors(p.id);
@@ -3169,7 +3358,7 @@ declare const bootstrap: any;
       button.dataset.bsAutoClose = "true"
       button.setAttribute("aria-expanded", "false");
 
-      button.style.backgroundColor = curColor;
+      button.style.backgroundColor = curColorRgb;
 
       if (p.value === "transparent") {
         const redLine = document.createElement("div");
@@ -3471,7 +3660,7 @@ declare const bootstrap: any;
 
 
 
-  function getTabPanel(tabs: Array<{ title: string, id: string, content: HTMLElement }>, id: string): HTMLDivElement {
+  function getTabPanel(printess: iPrintessApi, tabs: Array<{ title: string, id: string, content: HTMLElement }>, id: string): HTMLDivElement {
 
     const panel = document.createElement("div");
     panel.id = "tabs-panel-" + id;
@@ -3488,12 +3677,20 @@ declare const bootstrap: any;
       a.innerText = t.title;
       a.dataset.bsToggle = "tab";
       a.dataset.bsTarget = "#tab-" + t.id;
-      if (t === tabs[0]) {
+      // only switch to change layout tab if T-Icon has been clicked, else stay on first tab!!!
+
+      if (uih_oneTimeShowSplitterLayoutSelection && printess.hasSplitterMenu() && tabs.length > 1 && tabs[1].id === "printess-splitter-layouts") {
+        if (t.id === "printess-splitter-layouts") {
+          a.classList.add("active");
+        }
+      } else if (t === tabs[0]) {
         a.classList.add("active")
       }
+
       li.appendChild(a);
       ul.appendChild(li);
     }
+
 
     const content = document.createElement("div");
     content.className = "tab-content card";
@@ -3504,7 +3701,13 @@ declare const bootstrap: any;
       pane.className = "tab-pane card-body fade";
 
       pane.setAttribute("role", "tabpanel");
-      if (t === tabs[0]) {
+
+      if (uih_oneTimeShowSplitterLayoutSelection && printess.hasSplitterMenu() && tabs.length > 1 && tabs[1].id === "printess-splitter-layouts") {
+        if (t.id === "printess-splitter-layouts") {
+          pane.classList.add("show")
+          pane.classList.add("active")
+        }
+      } else if (t === tabs[0]) {
         pane.classList.add("show")
         pane.classList.add("active")
       }
@@ -3512,6 +3715,8 @@ declare const bootstrap: any;
       pane.appendChild(t.content);
       content.appendChild(pane);
     }
+
+    uih_oneTimeShowSplitterLayoutSelection = false;
 
     panel.appendChild(ul);
     panel.appendChild(content);
@@ -3547,11 +3752,96 @@ declare const bootstrap: any;
     return div;
   }
 
+  // Mobile Grip Gap Control for Photo Collages
+  let lastSelectedGripSize: "XS" | "S" | "M" | "XL" | null;
+
+  function getGridGapControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
+    const div = document.createElement("div");
+    div.className = "d-flex h-100 justify-content-center align-items-center";
+
+    const btnGroup = document.createElement("div");
+    btnGroup.className = "btn-group btn-group-lg";
+    btnGroup.setAttribute("role", "group");
+    //@ts-ignore
+    btnGroup.ariaLabel = "Basic radio toggle button group";
+
+    const gaps: Array<{ label: "XS" | "S" | "M" | "XL", size: number }> = [{
+      label: "XS", size: 0.3
+    }, {
+      label: "S", size: 0.6
+    }, {
+      label: "M", size: 1.1
+    }, {
+      label: "XL", size: 1.6
+    }];
+
+    gaps.forEach(g => {
+      const input = document.createElement("input");
+      input.className = "btn-check";
+      input.id = "btnradio" + g.label;
+      input.name = "btnradio";
+      input.type = "radio";
+      input.autocomplete = "off";
+      //input.checked = g.size === 0.3 ? true : false; // TODO: get actual value and set checked accordingly
+
+      const label = document.createElement("label");
+      label.className = "btn btn-outline-primary";
+      label.setAttribute("for", "btnradio" + g.label);
+      label.textContent = g.label;
+
+      if (lastSelectedGripSize === g.label) {
+        input.checked = true;
+      }
+
+      label.onclick = () => {
+        lastSelectedGripSize = g.label;
+        printess.setSplitterGaps(g.size);
+      }
+
+      btnGroup.appendChild(input);
+      btnGroup.appendChild(label);
+    })
+
+    div.appendChild(btnGroup);
+
+    return div;
+  }
+
+  function getSplitterSnippets(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
+
+    const div = document.createElement("div");
+
+    printess.getSplitterSnippets().then((snippets: Array<iExternalSnippet>) => {
+      const splittersDiv = document.createElement("div");
+      splittersDiv.className = "d-flex flex-wrap mb-3";
+      if (uih_currentRender === "mobile") {
+        splittersDiv.classList.add("justify-content-center");
+      }
+      for (const sn of snippets) {
+        const img = document.createElement("div");
+        img.className = "image-filter-snippet m-1 position-relative border border-dark text-center";
+        img.style.backgroundImage = "url('" + sn.thumbUrl + "')";
+        img.onclick = () => {
+          printess.applySplitterCellSnippet(sn.snippetUrl);
+
+          if (uih_currentRender === "mobile") {
+            hideModal(p.id);
+          }
+        }
+
+        splittersDiv.append(img);
+      }
+      div.appendChild(splittersDiv);
+    });
+
+    return div;
+  }
+
   function getImageFilterControl(printess: iPrintessApi, p: iExternalProperty, filterDiv?: HTMLDivElement, hasReset: boolean = true): HTMLElement {
     const container = filterDiv || document.createElement("div");
 
     const tags = p.imageMeta?.filterTags;
-    if (tags && tags.length > 0) {
+    if (tags && tags.length > 0 && !printess.hasSplitterMenu()) {
       container.appendChild(getImageFilterButtons(printess, p, tags));
     }
 
@@ -3603,6 +3893,12 @@ declare const bootstrap: any;
       container.appendChild(filterBtn);
     }
 
+    return container;
+  }
+
+  function getSplitterSnippetsControl(printess: iPrintessApi, p: iExternalProperty, splitterDiv?: HTMLDivElement, hasReset: boolean = true): HTMLElement {
+    const container = splitterDiv || document.createElement("div");
+    container.appendChild(getSplitterSnippets(printess, p));
     return container;
   }
 
@@ -3838,21 +4134,21 @@ declare const bootstrap: any;
           container.appendChild(scaleControl);
         }
       }
-      if (p.imageMeta?.isHandwriting === true) {
+      if (p.imageMeta?.isHandwriting === true && !forMobile) {
         const b = document.createElement("button");
-        b.className = "btn btn-primary";
-        b.innerText = "Back to text editing";
+        b.className = "btn btn-secondary w-100 mb-3";
+        b.innerText = printess.gl("ui.buttonBackToTextEditing");
         b.onclick = () => {
           printess.removeHandwritingImage();
         }
         imagePanel.appendChild(b);
-      } else {
-        if (forMobile) {
-          imagePanel.appendChild(renderImageControlButtons(printess, images, p))
-        } else {
-          imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
-        }
       }
+      if (forMobile) {
+        imagePanel.appendChild(renderImageControlButtons(printess, images, p))
+      } else {
+        imagePanel.appendChild(renderMyImagesTab(printess, forMobile, p, images));
+      }
+
       imagePanel.style.gridTemplateRows = "auto";
       imagePanel.style.gridTemplateColumns = "1fr";
       container.appendChild(imagePanel);
@@ -4128,7 +4424,7 @@ declare const bootstrap: any;
     rangeLabel.id = "range-label"
     const range: HTMLInputElement = document.createElement("input");
     range.className = "form-range";
-    if (forMobile) range.style.marginLeft = "0px";
+    if (forMobile || p.imageMeta?.isHandwriting) range.style.marginLeft = "0px";
 
     if (printess.isIPhone()) {
       range.classList.add("slider-catch-radius");
@@ -5631,7 +5927,7 @@ declare const bootstrap: any;
    * Book Mode Overlay for Arranging Pages (add, remove, shift)
    */
 
-  function getPageItem(printess: iPrintessApi, pageNo: number, pageIndex: number, spread: iExternalSpreadInfo, prevSpreadId: string, forMobile: boolean): HTMLElement {
+  function getPageItem(printess: iPrintessApi, pageNo: number, pageIndex: number, spread: iExternalSpreadInfo, prevSpreadId: string, forMobile: boolean, facingPages: boolean, isLastSpread: boolean): HTMLElement {
     const page = pageIndex === 0 ? "left-page" : "right-page";
 
     const pageItem = document.createElement("div");
@@ -5652,9 +5948,12 @@ declare const bootstrap: any;
       thumb.style.backgroundPosition = page === "right-page" ? "right" : "left";
     }
     const spreadForWidth = spread || printess.getAllSpreads()[1];
-    if (forMobile) {
-      thumb.style.height = ((spreadForWidth.height / spreadForWidth.width * (window.innerWidth - 40) * 0.5) * spreadForWidth.pages * 0.42) + "px";
-      thumb.style.width = ((window.innerWidth - 40) * 0.5 * 0.42) + "px";
+    if (forMobile && !facingPages) {
+      thumb.style.height = ((spreadForWidth.height / spreadForWidth.width * (window.innerWidth - 40) * 0.5) * spreadForWidth.pages * 0.84) + "px";
+      thumb.style.width = ((window.innerWidth - 40) * 0.5 * 0.84) + "px";
+    } else if (forMobile) {
+      thumb.style.height = ((spreadForWidth.height / spreadForWidth.width * (window.innerWidth - 40) * 0.5) * spreadForWidth.pages * 0.46) + "px";
+      thumb.style.width = ((window.innerWidth - 40) * 0.5 * 0.46) + "px";
     } else {
       thumb.style.width = (spreadForWidth.width / spreadForWidth.pages / spreadForWidth.height * 150) + "px";
     }
@@ -5670,38 +5969,28 @@ declare const bootstrap: any;
     pageItem.ondragenter = (ev: DragEvent) => {
       ev.stopPropagation();
       ev.preventDefault();
-      let marker: HTMLDivElement;
-      if (page === "right-page") {
-        marker = <HTMLDivElement>document.querySelector(`[data-after=${spread.spreadId}]`);
-      } else {
-        marker = <HTMLDivElement>document.querySelector(`[data-before=${spread.spreadId}]`);
-      }
-      uih_lastDragTarget = page === "right-page" ? spread.spreadId : prevSpreadId;
-      if (marker) marker.style.background = "var(--bs-primary)";
+
+      handlePageDragEvents(ev, spread, prevSpreadId, page, facingPages, isLastSpread);
     }
     pageItem.ondragover = (ev: DragEvent) => {
       ev.stopPropagation();
       ev.preventDefault();
-      let marker: HTMLDivElement;
-      if (page === "right-page") {
-        marker = <HTMLDivElement>document.querySelector(`[data-after=${spread.spreadId}]`);
-      } else {
-        marker = <HTMLDivElement>document.querySelector(`[data-before=${spread.spreadId}]`);
-      }
-      uih_lastDragTarget = page === "right-page" ? spread.spreadId : prevSpreadId;
-      if (marker) marker.style.background = "var(--bs-primary)";
+
+      handlePageDragEvents(ev, spread, prevSpreadId, page, facingPages, isLastSpread);
     }
-    pageItem.ondragleave = (ev: DragEvent) => {
+    pageItem.ondragleave = (ev: any) => {
       ev.stopPropagation();
       ev.preventDefault();
-      let marker: HTMLDivElement;
-      if (page === "right-page") {
-        marker = <HTMLDivElement>document.querySelector(`[data-after=${spread.spreadId}]`);
-      } else {
-        marker = <HTMLDivElement>document.querySelector(`[data-before=${spread.spreadId}]`);
+
+      const markers = document.querySelectorAll(".spread-drop-marker");
+      markers.forEach(m => (<HTMLDivElement>m).style.background = "transparent");
+
+      if (spread.index === 0 && !facingPages) {
+        const firstPageSeparator = document.getElementById("first-page_separator");
+        if (firstPageSeparator) firstPageSeparator.style.display = "none";
       }
+
       uih_lastDragTarget = undefined;
-      if (marker) marker.style.background = "transparent";
     }
     pageItem.ondrop = (ev: DragEvent) => {
       ev.stopPropagation();
@@ -5711,11 +6000,60 @@ declare const bootstrap: any;
     return pageItem;
   }
 
+  function handlePageDragEvents(ev: DragEvent, spread: iExternalSpreadInfo, prevSpreadId: string, page: "left-page" | "right-page", facingPages: boolean, isLastSpread: boolean) {
+
+    let marker: HTMLDivElement;
+    let spreadId: string = spread.spreadId;
+
+    if (!facingPages) {
+      const markers = document.querySelectorAll(".spread-drop-marker");
+      markers.forEach(m => (<HTMLDivElement>m).style.background = "transparent");
+    }
+
+    const firstPage = spread.index === 0 && !facingPages;
+    const lastPage = isLastSpread && !facingPages;
+    const rightPage = page === "right-page" || (!facingPages && ev.offsetX > (<HTMLElement>(ev.currentTarget)).clientWidth / 2);
+
+    if (rightPage) {
+      if (lastPage) {
+        marker = <HTMLDivElement>document.querySelector(`[data-after="last-page"]`);
+        uih_lastDragTarget = "last-page";
+
+        const separator = <HTMLLIElement>marker?.closest("li.spread-separator");
+        if (separator) separator.style.display = "grid";
+
+      } else {
+        marker = <HTMLDivElement>document.querySelector(`[data-after=${spreadId}]`);
+        uih_lastDragTarget = spreadId;
+      }
+
+    } else {
+
+      if (firstPage) {
+        marker = <HTMLDivElement>document.querySelector(`[data-after="first-page"]`);
+        uih_lastDragTarget = "first-page";
+
+        const separator = <HTMLLIElement>marker?.closest("li.spread-separator");
+        if (separator) separator.style.display = "grid";
+
+      } else {
+        marker = <HTMLDivElement>document.querySelector(`[data-before=${spreadId}]`);
+        uih_lastDragTarget = prevSpreadId;
+      }
+    }
+
+    if (marker) marker.style.background = "var(--bs-primary)";
+  }
+
   // Indicates where spread will be dropped
-  function getSpreadSeparator(spreadId: string, nextSpreadId: string): HTMLElement {
+  function getSpreadSeparator(spreadId: string, nextSpreadId: string, forMobile: boolean, facingPages: boolean): HTMLElement {
     const separator = document.createElement("li");
     separator.className = "spread-separator";
     separator.id = spreadId + "_separator";
+
+    if (forMobile && !facingPages) {
+      separator.style.width = "20px";
+    }
 
     const marker = document.createElement("div");
     marker.className = "spread-drop-marker";
@@ -5750,7 +6088,7 @@ declare const bootstrap: any;
   }
 
   function getSpreadItem(printess: iPrintessApi, pageNo: number, forMobile: boolean, spread: iExternalSpreadInfo & { snippetUrl: string }, spreads: Array<iExternalSpreadInfo & { snippetUrl: string }>, snippets: iExternalSnippet[], facingPages: boolean): HTMLElement {
-    const canAddRemoveSpread = spread.index !== 0 && spread.index !== spreads.length - 1;
+    const canAddRemoveSpread = (spread.index !== 0 && spread.index !== spreads.length - 1) || !facingPages;
     const addSpreads = printess.isNoOfPagesValid(spreads.length) ? printess.canAddSpreads(spreads.length) : 1;
     const removeSpreads = printess.canRemoveSpreads(spreads.length);
 
@@ -5759,7 +6097,7 @@ declare const bootstrap: any;
     spreadItem.id = spread.spreadId;
 
     if (!facingPages && forMobile) {
-      spreadItem.style.width = "21%";
+      spreadItem.style.width = "42%";
     }
 
     spreadItem.dataset.snippet = spread.snippetUrl;
@@ -5770,14 +6108,19 @@ declare const bootstrap: any;
     spreadItem.ondragend = (ev: DragEvent) => {
       ev.stopPropagation();
       ev.preventDefault();
-      const marker = document.querySelectorAll(".spread-drop-marker");
-      marker.forEach(m => (<HTMLDivElement>m).style.background = "transparent");
+      const markers = document.querySelectorAll(".spread-drop-marker");
+      markers.forEach(m => (<HTMLDivElement>m).style.background = "transparent");
 
       const modalBody = document.querySelector("div.modal-body");
       if (modalBody && spreads && spread && uih_lastDragTarget && uih_lastDragTarget !== spread.spreadId) {
         const lastScrollPosition = modalBody.scrollTop;
         const filteredSpreads = spreads.filter(s => s.spreadId !== spread.spreadId);
-        const idx = filteredSpreads.findIndex(s => s.spreadId === uih_lastDragTarget);
+        let idx: number = -1;
+        if (uih_lastDragTarget === "last-page") {
+          idx = spreads.length - 1
+        } else if (uih_lastDragTarget !== "first-page") {
+          idx = filteredSpreads.findIndex(s => s.spreadId === uih_lastDragTarget);
+        }
         filteredSpreads.splice(idx + 1, 0, spread);
         filteredSpreads.forEach((s, i) => s.index = i);
         modalBody.innerHTML = "";
@@ -5792,6 +6135,7 @@ declare const bootstrap: any;
     }
 
     spreadItem.onmousedown = () => {
+      if (!canAddRemoveSpread) return;
       const hint = document.createElement("div");
       hint.innerText = printess.gl("ui.arrangePagesShortText");
       hint.className = "spread-drag-hint";
@@ -5801,6 +6145,7 @@ declare const bootstrap: any;
       }, 2000);
     }
     spreadItem.ontouchstart = () => {
+      if (!canAddRemoveSpread) return;
       const hint = document.createElement("div");
       hint.innerText = printess.gl("ui.arrangePagesShortText");
       hint.className = "spread-drag-hint";
@@ -5813,7 +6158,8 @@ declare const bootstrap: any;
     for (let pageIndex = 0; pageIndex < spread.pages; pageIndex++) {
       pageNo++;
       const prevSpreadId = spread.index === 0 ? spread.spreadId : spreads[spread.index - 1].spreadId;
-      spreadItem.appendChild(getPageItem(printess, pageNo, pageIndex, spread, prevSpreadId, forMobile));
+      const pageItem = getPageItem(printess, pageNo, pageIndex, spread, prevSpreadId, forMobile, facingPages, spread.index === spreads.length - 1);
+      spreadItem.appendChild(pageItem);
     }
 
     if (addSpreads && canAddRemoveSpread) {
@@ -5961,6 +6307,11 @@ declare const bootstrap: any;
     let pageNo = 0;
 
     for (const spread of spreads) {
+      if (spread.index === 0 && !doc.facingPages) {
+        const spreadSeparator = getSpreadSeparator("first-page", spread.spreadId, forMobile, doc.facingPages);
+        spreadSeparator.style.display = "none";
+        pagesContainer.appendChild(spreadSeparator);
+      }
       const spreadItem = getSpreadItem(printess, pageNo, forMobile, spread, spreads, snippets, doc.facingPages);
       pagesContainer.appendChild(spreadItem);
       if (newSpreadIds && newSpreadIds.map(x => x.id).includes(spread.spreadId)) {
@@ -5973,8 +6324,13 @@ declare const bootstrap: any;
       if (spreads[spreads.length - 1] !== spread) {
         const spreadId = spread.spreadId;
         const nextSpreadId = spreads[spread.index + 1].spreadId;
-        pagesContainer.appendChild(getSpreadSeparator(spreadId, nextSpreadId));
+        pagesContainer.appendChild(getSpreadSeparator(spreadId, nextSpreadId, forMobile, doc.facingPages));
+      } else if (spreads[spreads.length - 1] === spread && !doc.facingPages) {
+        const spreadSeparator = getSpreadSeparator("last-page", spread.spreadId, forMobile, doc.facingPages);
+        spreadSeparator.style.display = "none";
+        pagesContainer.appendChild(spreadSeparator);
       }
+
       pageNo += spread.pages;
     }
 
@@ -6105,7 +6461,7 @@ declare const bootstrap: any;
     dragDropHint.textContent = printess.gl("ui.dragDropHint");
 
     // Wenn keine Property gesetzt ist, dann rendern wir den globel My-Images Tab
-    if (!p || p?.imageMeta?.canUpload) {
+    if (!p || p?.imageMeta?.canUpload || p.imageMeta?.isHandwriting) {
       const distributeBtn = document.createElement("button");
       distributeBtn.id = "distribute-button";
       distributeBtn.className = "btn btn-secondary mb-3"; // my-3 w-100";
@@ -6527,6 +6883,20 @@ declare const bootstrap: any;
       if (id === "CROPMODAL" || id === "PRICE-INFO" || id.startsWith("FF_")) {
         window.setTimeout(() => hideModal(id), 1000);
       }
+
+      if (id.startsWith("FF_")) {
+        const tr: HTMLTableRowElement | null = document.querySelector("tr.table-active");
+
+        if (tr && tr.dataset.rowNumber) {
+          tableEditRowIndex = parseInt(tr.dataset.rowNumber);
+        }
+
+        const badge = document.getElementById("table-record-badge");
+        if (badge) {
+          badge.textContent = (tableEditRowIndex + 1).toString();
+        }
+      }
+
     }
     header.appendChild(exitBtn);
 
@@ -6615,9 +6985,11 @@ declare const bootstrap: any;
     closeMobileExternalLayoutsContainer();
 
     const fullscreenContainer = document.querySelector(".fullscreen-add-properties");
+    const fullscreenDialog = document.querySelector(".fullscreen-mobile-dialog");
     const imageListContainer = document.querySelector(".image-list-fullscreen");
 
     if (fullscreenContainer) fullscreenContainer.remove();
+    if (fullscreenDialog) fullscreenDialog.remove();
     if (imageListContainer) imageListContainer.remove();
   }
 
@@ -7014,18 +7386,25 @@ declare const bootstrap: any;
    *   Table Controls
    */
   let tableEditRow: Record<string, string | number | boolean> = {};
-  let tableEditRowIndex = -1;
+  let tableEditRowIndex: number = -1;
+  let tableDragRowIndex: number = -1;
+  let lastClickedTableRow: number = -1;
+  let addButtonForTableDataClicked: boolean = false;
+  //let lastTableTargetDiv: HTMLTableRowElement;
 
-  function getTableControl(printess: iPrintessApi, p: iExternalProperty, _forMobile: boolean): HTMLElement {
+  function getTableControl(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean, data: any[] = []): HTMLElement {
+
     const container = document.createElement("div");
+    container.id = "printess-table-control";
     let hasRow = false;
     if (p.tableMeta) {
 
-      let data: any[] = [];
-      try {
-        data = JSON.parse(p.value.toString() || "[]");
-      } catch (error) {
-        data = [];
+      if (data.length === 0) {
+        try {
+          data = JSON.parse(p.value.toString() || "[]");
+        } catch (error) {
+          data = [];
+        }
       }
 
       if (data.length > 0) {
@@ -7033,13 +7412,45 @@ declare const bootstrap: any;
         table.className = "table mb-3";
         const thead = document.createElement("thead");
         let tr = document.createElement("tr");
+        let colCount = 0;
+
+        const thDrag = document.createElement("th");
+        thDrag.scope = "col";
+        tr.appendChild(thDrag);
+
         for (const col of p.tableMeta.columns) {
-          if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
+          if (!col.hide && (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event"))) {
+            colCount++;
             const th = document.createElement("th");
             th.scope = "col";
+            th.style.cursor = printess.isDataSource(p.id) ? "pointer" : "default";
             th.innerText = col.label && printess.gl(col.label) || printess.gl(col.name);
+
+            // sort data-table if the propertyId refers to a table form-field which is set as data-source
+            th.onclick = () => {
+              if (!printess.isDataSource(p.id)) return;
+              data = data.sort((a, b) => {
+                if (col.data === "number") {
+                  return a[col.name] - b[col.name];
+                } else {
+                  return a[col.name].localeCompare(b[col.name])
+                }
+              });
+              const dataString = JSON.stringify(data);
+              p.value = dataString;
+              printess.setProperty(p.id, dataString);
+              //const sortedDataContainer = getTableControl(printess, p, forMobile, data);
+              //container.replaceWith(sortedDataContainer);
+            }
+
             tr.appendChild(th);
           }
+        }
+        if (colCount > 3) {
+          container.classList.add("small");
+        }
+        if (colCount === 4) {
+          container.classList.add("col4");
         }
 
         const th = document.createElement("th");
@@ -7055,45 +7466,162 @@ declare const bootstrap: any;
         for (const row of data) {
           if (p.tableMeta.tableType !== "calendar-events" || row.month == p.tableMeta.month) {
             tr = document.createElement("tr");
-            if (selectedRowNumber == rowNumber) {
+            tr.style.cursor = "pointer";
+            tr.draggable = true;
+            if (selectedRowNumber == rowNumber && lastClickedTableRow === -1) {
               tr.classList.add("table-active");
             }
             tr.dataset.rowNumber = rowNumber.toString();
+
+            const tdDrag = document.createElement("td");
+            const dragIcon = printess.getIcon("ellipsis-v");
+            tdDrag.classList.add("table-drag-icon");
+            tdDrag.appendChild(dragIcon);
+            tr.appendChild(tdDrag);
+
             for (const col of p.tableMeta.columns) {
+              if (col.hide === true) {
+                continue;
+              }
+
+
+
               if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
                 const td = document.createElement("td");
-                td.innerText = printess.gl(row[col.name]?.toString() ?? "");
+                td.id = "cell" + rowNumber + "_" + col.name;
+                td.style.whiteSpace = "no-wrap";
+                let t = printess.gl(row[col.name]?.toString() ?? "");
+                if (t.length > 20) {
+                  t = t.substring(0, 20) + "...";
+                  td.style.fontSize = "0.7rem";
+                }
+                td.innerText = t;
                 tr.appendChild(td);
               }
             }
 
-            const td = document.createElement("td");
-            td.style.width = "30px";
-            const icon = printess.getIcon("pen");
-            icon.style.padding = "0";
-            icon.style.width = "25px";
-            icon.style.height = "25px";
-            icon.style.cursor = "pointer";
-            td.appendChild(icon);
-            tr.appendChild(td);
-
-            tr.onclick = (ele: any) => {
-              // tr.classList.add("table-active");
+            tr.ondragstart = (ele: any) => {
+              ele.dataTransfer?.setData('text/plain', p.id);
               const rowIndex = parseInt(ele.currentTarget.dataset.rowNumber);
+              closeTableEditControl();
+              tableDragRowIndex = rowIndex;
+
               if (rowIndex >= 0) {
                 for (const row of ele.currentTarget.parentElement.children) {
                   row.classList.remove("table-active");
                   ele.currentTarget.classList.add("table-active");
                 }
               }
+            }
+            tr.ondragenter = (ev: DragEvent) => handleRowDragDropEvents(ev, "dragenter");
+            tr.ondragover = (ev: DragEvent) => handleRowDragDropEvents(ev, "dragover");
+            tr.ondragleave = (ev: DragEvent) => handleRowDragDropEvents(ev, "dragleave");
+            tr.ondrop = (ev: DragEvent) => {
+              handleRowDragDropEvents(ev, "drop");
+
+              const target = <HTMLDivElement>ev.currentTarget;
+              if (!target) return;
+
+              const tableDropRowIndex = parseInt(target.dataset.rowNumber ?? "-1");
+              if (!(tableDropRowIndex >= 0)) {
+                return;
+              }
+              if (tableDropRowIndex === tableDragRowIndex) {
+                return;
+              }
+
+              const ele = data[tableDragRowIndex];
+              if (!ele) {
+                return;
+              }
+
+              const above = ev.offsetY < target.offsetHeight / 2;
+
+              const newData = [];
+
+              for (let i = 0; i < data.length; i++) {
+                if (i !== tableDragRowIndex) {
+                  if (above && i === tableDropRowIndex) {
+                    // before 
+                    newData.push(ele);
+                  }
+                  newData.push(data[i]);
+                  if (!above && i === tableDropRowIndex) {
+                    // below 
+                    newData.push(ele);
+                  }
+                }
+              }
+              data = newData;
+
+              tableDragRowIndex = -1;
+
+              p.value = JSON.stringify(data);
+              printess.setProperty(p.id, p.value);
+            }
+
+            const td = document.createElement("td");
+            td.style.width = "30px";
+            const deleteIcon = printess.getIcon("trash");
+            deleteIcon.classList.add("table-delete-icon");
+            td.appendChild(deleteIcon);
+            tr.appendChild(td);
+
+            deleteIcon.onclick = (e: any) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              const rowIndex = parseInt(e.currentTarget.closest("tr").dataset.rowNumber);
               tableEditRow = data[rowIndex];
               tableEditRowIndex = rowIndex;
-              printess.setTableRowIndex(p.id, rowIndex);
-              renderTableDetails(printess, p, false);
 
-            };
+              if (tableEditRowIndex === -1) return;
+
+              lastClickedTableRow = -1;
+
+              data.splice(tableEditRowIndex, 1);
+              p.value = JSON.stringify(data);
+              printess.setProperty(p.id, p.value);
+
+              if (data.length === 0) tableEditRowIndex = -1;
+
+              const table = document.getElementById("printess-table-control");
+              if (table && forMobile) {
+                table.replaceWith(getTableControl(printess, p, forMobile));
+              }
+            }
+
+            tr.onclick = (ele: any) => {
+              closeTableEditControl();
+
+              const rowIndex = parseInt(ele.currentTarget.dataset.rowNumber);
+              if (rowIndex >= 0) {
+                for (const row of ele.currentTarget.parentElement.children) {
+                  row.classList.remove("table-active");
+                }
+                ele.currentTarget.classList.add("table-active");
+              }
+              if (!ele.target?.classList?.contains("table-drag-icon")) {
+                const tableEditControl = renderTableEditControl(printess, p, data, rowIndex, forMobile);
+                ele.currentTarget.insertAdjacentElement("afterend", tableEditControl);
+                ele.currentTarget.style.display = "none";
+              }
+              lastClickedTableRow = rowIndex;
+            }
+
+
             tbody.appendChild(tr);
             hasRow = true;
+
+            if (lastClickedTableRow === rowNumber) {
+              const rowIndex = parseInt(tr.dataset.rowNumber);
+
+              tr.classList.add("table-active");
+              tr.style.display = "none";
+
+              const tableEditControl = renderTableEditControl(printess, p, data, rowIndex, forMobile);
+              tbody.appendChild(tableEditControl);
+            }
           }
           rowNumber++;
         }
@@ -7104,35 +7632,170 @@ declare const bootstrap: any;
       addButton.className = "btn btn-primary mb-3";
       addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
       addButton.onclick = () => {
-        if (p.tableMeta) {
-          tableEditRowIndex = -1;
-          tableEditRow = {};
-          for (const col of p.tableMeta.columns) {
-            tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
-          }
-          if (p.tableMeta.tableType === "calendar-events") {
-            tableEditRow.month = p.tableMeta.month || 1;
-            tableEditRow.event = "Birthday";
-          }
+        if (lastClickedTableRow > -1) {
+          const error = validateTableInput(printess, p);
+          if (error) return;
         }
-        renderTableDetails(printess, p, false);
+
+        // new approach, let printess add and save an empty row.
+        // row will only be added if different from last row. 
+        lastClickedTableRow = printess.addTableRow(p.id) ?? -1;
       }
+
       container.appendChild(addButton);
+
+      if (data.length === p.tableMeta?.maxTableEntries && p.tableMeta.maxTableEntries !== 0) {
+        addButton.style.display = "none";
+
+        const alert = document.createElement("div");
+        alert.className = "alert alert-primary";
+        alert.setAttribute("role", "alert");
+        alert.textContent = printess.gl("ui.maxEntriesInfo");
+
+        container.appendChild(alert);
+      } else {
+        addButton.style.display = "inline-block";
+      }
     }
 
     const details = document.createElement("div");
     details.id = "tableDetails_" + p.id;
-    details.className = "container-fluid border"
+    details.className = "container-fluid border";
+    if (addButtonForTableDataClicked) {
+      if (p.tableMeta) {
+        tableEditRowIndex = -1;
+        tableEditRow = {};
+        for (const col of p.tableMeta.columns) {
+          tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
+        }
+        if (p.tableMeta.tableType === "calendar-events") {
+          tableEditRow.month = p.tableMeta.month || 1;
+          tableEditRow.event = "Birthday";
+        }
+      }
+      const editBox = renderTableDetails(printess, p, forMobile);
+      details.appendChild(editBox);
+      addButtonForTableDataClicked = false;
+    }
     container.appendChild(details);
+
+    if (p.info) {
+      const inf = document.createElement("p");
+      inf.innerText = p.info;
+      inf.style.fontSize = "0.875rem";
+      inf.style.marginTop = "0.25rem";
+      container.appendChild(inf);
+    }
 
     return container;
   }
 
+  function handleRowDragDropEvents(ev: DragEvent, type: "dragenter" | "dragover" | "dragleave" | "drop"): void {
+    ev.stopPropagation();
+    ev.preventDefault();
+
+    closeTableEditControl();
+    tableEditRow = {};
+
+    if (type === "dragenter" || type === "dragover") {
+      const targetDiv = document.elementFromPoint(ev.clientX, ev.clientY);
+      const tableRow = targetDiv?.parentElement;
+
+      if (tableRow && tableRow.draggable && !tableRow.classList.contains("table-active") && targetDiv) {
+        const target = <HTMLTableRowElement>targetDiv.parentElement;
+        const above = ev.offsetY < target.offsetHeight / 2;
+        if (above) {
+          target.style.borderTop = "10px solid var(--bs-primary)";
+          target.style.borderBottom = "1px solid #ccc";
+        } else {
+          target.style.borderBottom = "10px solid var(--bs-primary)";
+          target.style.borderTop = "0px solid #ccc";
+        }
+      }
+    } else {
+      const targetDivs = document.querySelectorAll("tr");
+      targetDivs.forEach((div: HTMLTableRowElement) => {
+        if (div && div.draggable) {
+          div.style.borderBottom = "1px solid #ccc";
+          div.style.borderTop = "0px solid #ccc";
+        }
+      })
+    }
+  }
+
+  function closeTableEditControl() {
+    const details = document.getElementById("tableDetailsRow");
+    tableEditRowIndex = -1;
+    lastClickedTableRow = -1;
+    // never submit on close
+    // if (details) submitTableData(printess, p, details, "table-edit", forMobile);
+
+    if (details && details.parentElement) {
+      // enable original row 
+      const pRow = <HTMLTableRowElement | null>details.previousElementSibling;
+      if (pRow) {
+        pRow.style.display = "table-row"
+      }
+      details.parentElement?.removeChild(details);
+    }
+  }
+
+  function renderTableEditControl(printess: iPrintessApi, p: iExternalProperty, data: any[], rowIndex: number, forMobile: boolean): HTMLTableRowElement {
+    tableEditRow = data[rowIndex];
+    tableEditRowIndex = rowIndex;
+    printess.setTableRowIndex(p.id, rowIndex);
+
+    const tableRow = document.createElement("tr");
+    tableRow.id = "tableDetailsRow";
+    tableRow.style.border = "1px solid #ccc";
+    tableRow.style.background = "var(--bs-table-active-bg)";
+
+    const tableCell = document.createElement("td");
+    tableCell.style.position = "relative";
+    tableCell.colSpan = 100;
+
+    const tableDetails = renderTableDetails(printess, p, forMobile);
+
+    const closeButton = document.createElement("div");
+    closeButton.className = "table-edit-close-button";
+    const closeIcon = printess.getIcon("close");
+    closeIcon.style.width = "20px";
+    closeIcon.style.height = "20px";
+
+    closeButton.onclick = () => {
+      const error = validateTableInput(printess, p);
+      if (error) return;
+
+      closeTableEditControl();
+
+      const deleteIcons = document.querySelectorAll("svg.table-delete-icon");
+      deleteIcons.forEach(i => {
+        const icon = <SVGElement>i;
+        icon.style.pointerEvents = "none";
+        icon.style.color = "var(--bs-gray)";
+      });
+      window.setTimeout(() => {
+        const deleteIcons = document.querySelectorAll("svg.table-delete-icon");
+        deleteIcons.forEach(i => {
+          const icon = <SVGElement>i;
+          icon.style.pointerEvents = "auto";
+          icon.style.color = "var(--bs-primary)";
+        });
+      }, 1000);
+    }
+
+    closeButton.appendChild(closeIcon);
+    tableCell.appendChild(closeButton);
+    tableCell.appendChild(tableDetails);
+    tableRow.appendChild(tableCell);
+
+    return tableRow;
+  }
+
   function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
-    const details: HTMLElement | null = forMobile ? document.createElement("div") : document.getElementById("tableDetails_" + p.id);
+    const details: HTMLElement = document.createElement("div");
 
-    if (!details || !p.tableMeta) return document.createElement("div");
-
+    if (!p.tableMeta) return details;
 
     details.innerHTML = "";
 
@@ -7155,93 +7818,124 @@ declare const bootstrap: any;
       }
       details.appendChild(group);
     } else {
+      let prevRow: string | undefined = p.tableMeta.columns[0].row;
+      const detailsWrapper = document.createElement("div");
+      detailsWrapper.className = "d-flex flex-wrap";
       for (const col of p.tableMeta.columns) {
         if (col.list?.length) {
-          details.appendChild(getTableDetailsDropDown(printess, p, tableEditRowIndex, tableEditRow, col, false, true))
+          if (col.listMode === "auto-complete") {
+            const tableDetailsAutocomplete = getTableDetailsAutocomplete(printess, p, tableEditRow, col);
+            renderTableDetailsColumn(detailsWrapper, tableDetailsAutocomplete, col, prevRow);
+          } else {
+            const tableDetailsDropDown = getTableDetailsDropDown(printess, p, tableEditRowIndex, tableEditRow, col, false, true);
+            renderTableDetailsColumn(detailsWrapper, tableDetailsDropDown, col, prevRow);
+          }
+
         } else {
-          details.appendChild(getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false))
+          const tableTextBox = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
+          renderTableDetailsColumn(detailsWrapper, tableTextBox, col, prevRow);
         }
+        prevRow = col.row;
       }
+      details.appendChild(detailsWrapper);
     }
 
-    const submitButton = document.createElement("button");
-    submitButton.className = "btn btn-primary mb-3 float-left";
-    if (tableEditRowIndex === -1) {
-      submitButton.innerText = printess.gl("ui.buttonAdd");
-    } else {
-      submitButton.innerText = printess.gl("ui.buttonSubmit");
-    }
-    submitButton.onclick = () => {
-      if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done")
-        //alert(printess.gl("ui.eventText"));
-        return
-      }
-      if (p.tableMeta?.tableType === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
-        if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done")
-          return
-        } else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done")
-          return
-        } else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done")
-          return
-        } else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
-          getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done")
-          return
-        }
-      }
 
-      let data = [];
-      try {
-        data = JSON.parse(p.value.toString()) || [];
-        if (!Array.isArray(data)) {
-          data = [];
-        }
-      } catch (error) {
-        data = [];
-      }
+    window.setTimeout(() => {
+      const input = details.querySelector("input");
+      if (input) input.focus();
+    }, 100);
 
-      if (tableEditRowIndex === -1) {
-        data.push(tableEditRow);
-      } else {
-        data[tableEditRowIndex] = tableEditRow
-      }
-      p.value = JSON.stringify(data);
-      printess.setProperty(p.id, p.value);
-      details.innerHTML = "";
-    }
-    details.appendChild(submitButton);
-
-    const cancelButton = document.createElement("button");
-    cancelButton.className = "btn btn-secondary mb-3 ml-3";
-    cancelButton.style.marginLeft = "20px"; // ml-3 does not work ???
-    cancelButton.innerText = printess.gl("ui.buttonCancel");
-    cancelButton.onclick = () => {
-      details.innerHTML = "";
-      tableEditRowIndex = -1;
-    }
-    details.appendChild(cancelButton);
-
-    if (tableEditRowIndex !== -1) {
-      const deleteButton = document.createElement("button");
-      deleteButton.className = "btn btn-danger mb-3 ml-3";
-      deleteButton.style.marginLeft = "20px"; // ml-3 does not work ???
-      deleteButton.innerText = printess.gl("ui.buttonRemove");
-      deleteButton.onclick = () => {
-        const data: Array<any> = JSON.parse(p.value.toString()) || [];
-        data.splice(tableEditRowIndex, 1);
-        p.value = JSON.stringify(data);
-        printess.setProperty(p.id, p.value);
-        details.innerHTML = "";
-      }
-      details.appendChild(deleteButton);
-    }
     return details;
   }
 
+  function validateTableInput(printess: iPrintessApi, p: iExternalProperty): boolean {
+    // validate calender events input
+    if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
+      getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done")
+      //alert(printess.gl("ui.eventText"));
+      return true;
+    }
+    if (p.tableMeta?.tableType === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
+      if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done")
+        return true;
+      } else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done")
+        return true;
+      } else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done")
+        return true;
+      } else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done")
+        return true;
+      }
+    }
 
+    return false;
+  }
+
+  function submitTableData(printess: iPrintessApi, p: iExternalProperty, details: HTMLElement, forMobile: boolean): void {
+
+    lastClickedTableRow = -1;
+    if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
+      getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done")
+      //alert(printess.gl("ui.eventText"));
+      return
+    }
+    if (p.tableMeta?.tableType === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
+      if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done")
+        return
+      } else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done")
+        return
+      } else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done")
+        return
+      } else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
+        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done")
+        return
+      }
+    }
+
+    let data = [];
+    try {
+      data = JSON.parse(p.value.toString()) || [];
+      if (!Array.isArray(data)) {
+        data = [];
+      }
+    } catch (error) {
+      data = [];
+    }
+
+    if (tableEditRowIndex === -1) {
+      data.push(tableEditRow);
+    } else {
+      data[tableEditRowIndex] = tableEditRow
+    }
+    p.value = JSON.stringify(data);
+    printess.setProperty(p.id, p.value);
+    details.innerHTML = "";
+
+    const table = document.getElementById("printess-table-control");
+    if (table && forMobile) {
+      table.replaceWith(getTableControl(printess, p, forMobile));
+    }
+  }
+
+  function renderTableDetailsColumn(detailsWrapper: HTMLDivElement, tableDetailsDiv: HTMLElement, col: iExternalTableColumn, prevRow: string | undefined): void {
+    if (prevRow !== col.row || col.row === "auto" || col.row === "new") {
+      const flexBreak = document.createElement("div");
+      flexBreak.style.flexBasis = "100%";
+      flexBreak.style.height = "0";
+      detailsWrapper.appendChild(flexBreak);
+    }
+
+    tableDetailsDiv.style.marginRight = "4px";
+    tableDetailsDiv.style.flex = "1 1 0";
+    detailsWrapper.appendChild(tableDetailsDiv);
+  }
 
   function getTableDetailsShortList(printess: iPrintessApi, p: iExternalProperty, rowIndex: number, row: Record<string, any>, col: iExternalTableColumn): HTMLElement {
     const ddContent = document.createElement("div");
@@ -7261,7 +7955,7 @@ declare const bootstrap: any;
         a.classList.add("active");
       }
       a.onclick = () => {
-        setTableValue(col, f)
+        setTableValue(printess, p, col, f)
         if (col.list) {
           list.querySelectorAll("a").forEach(a => a.classList.remove("active"));
           a.classList.add("active");
@@ -7272,12 +7966,47 @@ declare const bootstrap: any;
     return list;
   }
 
+  function getTableDetailsAutocomplete(printess: iPrintessApi, p: iExternalProperty, row: Record<string, any>, col: iExternalTableColumn): HTMLElement {
+    const formGroup = document.createElement("div");
+    formGroup.className = "form-group mb-3";
+
+    const label = document.createElement("label");
+    label.className = "mb-2";
+    label.setAttribute("for", "input-datalist");
+    label.textContent = p.label;
+
+    const input = document.createElement("input");
+    input.className = "form-control bg-light";
+    input.id = "input-datalist";
+    input.setAttribute("list", "list-" + p.label);
+    input.value = row[col.name];
+
+    input.oninput = () => {
+      setTableValue(printess, p, col, input.value);
+    }
+    if (col.list) {
+      const datalist = document.createElement("datalist");
+      datalist.id = "list-" + p.label;
+
+      for (const entry of col.list) {
+        const option = document.createElement("option");
+        option.value = entry.toString();
+        datalist.appendChild(option);
+      }
+
+      formGroup.appendChild(label);
+      formGroup.appendChild(input);
+      formGroup.appendChild(datalist);
+    }
+
+    return formGroup;
+  }
 
   function getTableDetailsDropDown(printess: iPrintessApi, p: iExternalProperty, rowIndex: number, row: Record<string, any>, col: iExternalTableColumn, asList: boolean, fullWidth: boolean = true): HTMLElement {
 
     const dropdown = document.createElement("div");
     dropdown.classList.add("btn-group");
-
+    dropdown.style.padding = "0";
     const ddContent = document.createElement("ul");
 
     const value = row[col.name];
@@ -7315,7 +8044,7 @@ declare const bootstrap: any;
         const a = document.createElement("a");
         a.classList.add("dropdown-item");
         a.onclick = () => {
-          setTableValue(col, entry);
+          setTableValue(printess, p, col, entry);
 
           if (col.list) {
             button.innerHTML = "";
@@ -7360,8 +8089,7 @@ declare const bootstrap: any;
 
     // Key-up does not fire when autocomplete happens
     inp.oninput = () => {
-      setTableValue(col, inp.value)
-      //todo: add validation
+      setTableValue(printess, p, col, inp.value)
     }
 
     if (forMobile) {
@@ -7373,14 +8101,32 @@ declare const bootstrap: any;
     }
   }
 
-  function setTableValue(col: iExternalTableColumn, newValue: string | number | boolean) {
-    tableEditRow[col.name]
+  function setTableValue(printess: iPrintessApi, p: iExternalProperty, col: iExternalTableColumn, newValue: string | number | boolean) {
+
     if (col.data === "number" && typeof newValue !== "number") {
       tableEditRow[col.name] = isNaN(+newValue) ? 0 : +newValue;
     } else if (col.data === "boolean" && typeof newValue !== "boolean") {
       tableEditRow[col.name] = !!(newValue);
     } else {
       tableEditRow[col.name] = newValue;
+    }
+    printess.setTableCell(p.id, tableEditRowIndex, col.name, tableEditRow[col.name]);
+
+    // update our ui
+    const cell = document.getElementById("cell" + tableEditRowIndex + "_" + col.name);
+    if (cell) {
+      cell.innerText = printess.gl(tableEditRow[col.name].toString());
+    }
+
+    // and do it in the local model as well
+    try {
+      const a = JSON.parse(<any>p.value);
+      if (Array.isArray(a)) {
+        a[tableEditRowIndex][col.name] = tableEditRow[col.name];
+        p.value = JSON.stringify(a);
+      }
+    } catch (error) {
+      console.error("Can not upate table cell [" + col.name + "] or row " + tableEditRowIndex, error)
     }
   }
 
@@ -7563,6 +8309,12 @@ declare const bootstrap: any;
     }
     if (state !== "document") {
       mobileUi.appendChild(getMobilePropertyNavButtons(printess, state, false)); // double rendering because of call when loading mobileUi ???
+
+      // show splitter guide
+      if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu()) {
+        showSplitterGuide(printess, properties[0], true);
+        setStorageItemSafe("splitter-frame-hint", "hint displayed");
+      }
     } else {
       // propably we where in text edit and now need to wait for viewport scroll evevnt to fire 
       // to not resize twice 
@@ -7584,6 +8336,14 @@ declare const bootstrap: any;
 
     }
     // const inTextStyle = (properties.length && properties[0].kind === "selection-text-style");
+    for (const p of properties) {
+      if (p.kind === "table") {
+        const table = document.getElementById("printess-table-control");
+        if (table) {
+          table.replaceWith(getTableControl(printess, p, true));
+        }
+      }
+    }
 
     // set Zoom Mode to frame if state is text to zoom into text box when error message is "missing text"
     printess.setZoomMode(printess.isTextEditorOpen() || state === "text" ? "frame" : "spread");
@@ -7640,7 +8400,7 @@ declare const bootstrap: any;
 
   // render ui hints for mobile-property-plus-button ("add-design") & change-layout button
   function renderUiButtonHints(printess: iPrintessApi, container: HTMLElement, state: MobileUiState = uih_currentState, forMobile: boolean): void {
-    const showLayoutsHint = printess.showTabNavigation() && forMobile || !printess.showTabNavigation();
+    const showLayoutsHint = (printess.showTabNavigation() && forMobile) || (!forMobile && uih_currentTabId !== "#LAYOUTS");
 
     const uiHints = [{
       header: "expertMode",
@@ -7679,23 +8439,28 @@ declare const bootstrap: any;
       header: "changeLayout",
       msg: printess.gl("ui.changeLayoutHint"),
       position: "fixed",
-      top: printess.hasExpertButton() && forMobile ? "calc(50% - 100px)" : "calc(50% - 150px)",
-      left: "55px",
+      top: printess.hasExpertButton() && forMobile ? "calc(50% - 100px)" : printess.showTabNavigation() && !forMobile ? "calc(50% - 300px)" : "calc(50% - 150px)",
+      left: printess.showTabNavigation() && !forMobile ? "75px" : "55px",
       color: "primary",
       show: printess.uiHintsDisplay().includes("layoutSnippets") && !getStorageItemSafe("changeLayout") && printess.hasLayoutSnippets() && showLayoutsHint && !forMobile,
       task: () => {
-        const layoutBtn: HTMLButtonElement | null = document.querySelector(".show-layouts-button");
-        if (layoutBtn) {
-          layoutBtn.classList.remove("layouts-button-pulse");
-        }
-        const offCanvas: HTMLDivElement | null = document.querySelector("div#layoutOffcanvas");
-        if (offCanvas) {
-          offCanvas.style.visibility = "visible";
-          offCanvas.classList.add("show");
-        }
-        const offCanvasButton: HTMLButtonElement | null = document.querySelector("button#closeLayoutOffCanvas");
-        if (offCanvasButton && offCanvas) {
-          offCanvasButton.onclick = () => offCanvas.classList.remove("show");
+        if (printess.showTabNavigation() && !forMobile) {
+          selectTab(printess, "#LAYOUTS");
+          printess.clearSelection();
+        } else {
+          const layoutBtn: HTMLButtonElement | null = document.querySelector(".show-layouts-button");
+          if (layoutBtn) {
+            layoutBtn.classList.remove("layouts-button-pulse");
+          }
+          const offCanvas: HTMLDivElement | null = document.querySelector("div#layoutOffcanvas");
+          if (offCanvas) {
+            offCanvas.style.visibility = "visible";
+            offCanvas.classList.add("show");
+          }
+          const offCanvasButton: HTMLButtonElement | null = document.querySelector("button#closeLayoutOffCanvas");
+          if (offCanvasButton && offCanvas) {
+            offCanvasButton.onclick = () => offCanvas.classList.remove("show");
+          }
         }
       }
     }];
@@ -7779,6 +8544,7 @@ declare const bootstrap: any;
     circle.className = "mobile-property-circle";
     circle.onclick = () => {
       setStorageItemSafe("addDesign", "hint closed");
+      circle.classList.remove("mobile-property-plus-pulse");
       //renderMobileUi(printess, undefined, "add", undefined);
       renderMobilePropertiesFullscreen(printess, "add-design", "open");
     }
@@ -8828,8 +9594,29 @@ declare const bootstrap: any;
       buttons.unshift(...printess.getMobileUiBackgroundButton());
     }
 
-    if (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image") {
-      buttons.push(...printess.getMobileUiScissorsButtons());
+    if (printess.hasSplitterMenu()) {
+      if (uih_currentProperties[0]?.kind !== "image") {
+        buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
+      }
+
+      // buttons should not be displayed when editing image (collapsed meta properties) => check number of buttons
+      if ((buttons.length === 1 && uih_currentProperties[0].kind === "image") || uih_currentProperties[0]?.kind !== "image") {
+        buttons.push(...printess.getMobileUiScissorsButtons());
+        buttons.push(...printess.getMobileUiSplitterGapButton());
+
+        const isImageProperty = uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image";
+        const convertButton = isImageProperty ? printess.getMobileUiSplitterToTextButton() : printess.getMobileUiSplitterToImageButton();
+        buttons.push(...convertButton);
+      }
+    }
+
+    // add previous/next record buttons for data-source tables
+    const dataTableIdx = buttons.findIndex(b => b.newState.state === "table-edit");
+    const pid = buttons[dataTableIdx]?.newState?.externalProperty?.id;
+    if (dataTableIdx !== -1 && pid && printess.isDataSource(pid)) {
+      const recordNavigationArrows = printess.getMobileUiRecordNavigationArrows();
+      buttons.splice(dataTableIdx, 0, recordNavigationArrows[0]);
+      buttons.splice(dataTableIdx + 2, 0, recordNavigationArrows[1]);
     }
 
     const hasButtons = buttons.length > 0;
@@ -8903,6 +9690,12 @@ declare const bootstrap: any;
         const buttonDiv = document.createElement("div");
         buttonDiv.className = "no-selection";
 
+        if (pid && printess.isDataSource(pid)) {
+          if (b.newState.externalProperty?.kind === "record-left-button" || b.newState.state === "table-edit") {
+            buttonDiv.style.marginRight = "10px";
+          }
+        }
+
         const properties: Array<iExternalProperty> = [];
 
         // skip labels with no info text 
@@ -8956,7 +9749,8 @@ declare const bootstrap: any;
           mobileUiButtonClick(printess, b, buttonDiv, container, false, properties);
         }
 
-        if (b.newState.externalProperty?.kind === "background-button" || b.newState.externalProperty?.kind === "horizontal-scissor" || b.newState.externalProperty?.kind === "vertical-scissor") {
+        const externalPropertyKinds: Array<iExternalPropertyKind> = ["background-button", "record-left-button", "record-right-button", "horizontal-scissor", "vertical-scissor", "splitter-layouts-button", "grid-gap-button", "convert-to-image", "convert-to-text"];
+        if (b.newState.externalProperty && externalPropertyKinds.includes(b.newState.externalProperty.kind)) {
           drawButtonContent(printess, buttonDiv, [b.newState.externalProperty], controlGroup)
         } else if (controlGroup > 0) {
           drawButtonContent(printess, buttonDiv, properties, controlGroup);
@@ -9033,7 +9827,8 @@ declare const bootstrap: any;
       if (firstButton) {
         const containerWidth = container.offsetWidth;
         const buttonsWidth = buttonContainer.offsetWidth + 15 - (containerWidth * 1.45); // substract the animation way + right margin (0.45);
-        if (buttonsWidth > containerWidth) {
+        const space = (containerWidth - buttonsWidth) / 2;
+        if (buttonsWidth > containerWidth || space < 15) {
           firstButton.style.marginLeft = "15px";
           container.classList.add("scroll-right");
           scrollContainer.onscroll = () => {
@@ -9045,9 +9840,14 @@ declare const bootstrap: any;
           }
         } else {
           // center buttons;
-          const space = (containerWidth - buttonsWidth) / 2;
           firstButton.style.marginLeft = space + "px";
+        }
 
+        const b = buttons.filter(b => b.newState.externalProperty?.kind === "image")[0];
+        if (b && b.newState.externalProperty?.validation?.defaultValue === b.newState.externalProperty?.value && printess.hasSplitterMenu()) {
+          if (firstButton) {
+            mobileUiButtonClick(printess, b, firstButton, container, false, uih_currentProperties, true);
+          }
         }
       }
     }, 50);
@@ -9055,7 +9855,13 @@ declare const bootstrap: any;
     return { div: container, autoSelectButton: autoSelect };
   }
 
-  async function mobileUiButtonClick(printess: iPrintessApi, b: iMobileUIButton, buttonDiv: HTMLDivElement, container: HTMLDivElement, fromAutoSelect: boolean, properties?: Array<iExternalProperty>) {
+  function selectButtonDiv(buttonDiv: HTMLDivElement): void {
+    document.querySelectorAll(".mobile-property-button.selected").forEach((ele) => ele.classList.remove("selected"));
+    document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
+    buttonDiv.classList.toggle("selected");
+  }
+
+  async function mobileUiButtonClick(printess: iPrintessApi, b: iMobileUIButton, buttonDiv: HTMLDivElement, container: HTMLDivElement, fromAutoSelect: boolean, properties?: Array<iExternalProperty>, fromSplitterImageButton: boolean = false) {
 
     printess.setZoomMode("spread");
 
@@ -9065,13 +9871,60 @@ declare const bootstrap: any;
     if (b.newState.externalProperty?.kind === "background-button") {
       printess.selectBackground();
 
-    } else if (b.newState.externalProperty?.kind === "label" && b.newState.externalProperty.info) {
-      collapseControlHost()
+    } else if (b.newState.externalProperty?.kind === "record-left-button" || b.newState.externalProperty?.kind === "record-right-button") {
+      const prop = b.newState.externalProperty;
+      const tableProp = uih_currentProperties.filter(p => p.kind === "table")[0];
 
-      const sels = document.querySelectorAll(".mobile-property-button.selected");
-      sels.forEach((ele) => ele.classList.remove("selected"));
-      document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-      buttonDiv.classList.toggle("selected");
+      // click button and go to next item in data source
+      let data = [];
+      try {
+        data = JSON.parse(tableProp.value.toString()) || [];
+        if (!Array.isArray(data)) {
+          data = [];
+        }
+      } catch (error) {
+        data = [];
+      }
+
+      if (data.length > 0) {
+        tableEditRowIndex = tableEditRowIndex === -1 ? printess.getTableRowIndex(prop.id) : tableEditRowIndex;
+
+        if (prop.kind === "record-left-button" && tableEditRowIndex > 0) {
+          tableEditRowIndex--;
+          printess.setTableRowIndex(tableProp.id, tableEditRowIndex);
+        } else if (prop.kind === "record-right-button" && tableEditRowIndex < data.length - 1) {
+          tableEditRowIndex++;
+          printess.setTableRowIndex(tableProp.id, tableEditRowIndex);
+        }
+      }
+
+      const badge = document.getElementById("table-record-badge");
+      if (badge) {
+        badge.textContent = (tableEditRowIndex + 1).toString();
+      }
+
+      selectButtonDiv(buttonDiv);
+
+      return;
+
+    } else if (b.newState.externalProperty?.kind === "table") {
+      printess.clearSelection();
+      const prop = uih_currentProperties.filter(p => b.newState.externalProperty && p.id === b.newState.externalProperty.id)[0];
+
+      selectButtonDiv(buttonDiv);
+
+      const content = document.createElement("div");
+      content.id = "mobileTableDialog";
+      content.appendChild(getPropertyControl(printess, prop, undefined, true));
+      const caption = uih_currentTabs.filter(t => t.id === prop.tabId)[0]?.caption || prop.label;
+      renderMobileDialogFullscreen(printess, prop.id, caption || "table", content, false);
+
+      return;
+
+    } else if (b.newState.externalProperty?.kind === "label" && b.newState.externalProperty.info) {
+      collapseControlHost();
+      resizeMobileUi(printess);
+      selectButtonDiv(buttonDiv);
 
       const content = document.createElement("div");
       content.appendChild(getPropertyControl(printess, b.newState.externalProperty, undefined, true));
@@ -9079,13 +9932,38 @@ declare const bootstrap: any;
 
       return;
 
+    } else if (b.newState.externalProperty?.kind === "convert-to-text" || b.newState.externalProperty?.kind === "convert-to-image") {
+      collapseControlHost();
+      resizeMobileUi(printess);
+      selectButtonDiv(buttonDiv);
+
+      if (b.newState.externalProperty.kind === "convert-to-image") {
+        printess.convertSplitterCellToImage();
+      } else {
+        printess.convertSplitterCellToText();
+
+        const prop = uih_currentProperties[0];
+        const content = getSplitterSnippetsControl(printess, prop);
+        renderMobileDialogFullscreen(printess, prop.id, "ui.changeLayout", content, false);
+      }
+
+      return;
+
+    } else if (b.newState.externalProperty?.kind === "splitter-layouts-button") {
+      collapseControlHost();
+      resizeMobileUi(printess);
+      selectButtonDiv(buttonDiv);
+
+      const prop = uih_currentProperties[0];
+      const content = getSplitterSnippetsControl(printess, prop);
+      renderMobileDialogFullscreen(printess, prop.id, "ui.changeLayout", content, false);
+
+      return;
+
     } else if (b.newState.externalProperty?.kind === "horizontal-scissor") {
       collapseControlHost();
-
-      const sels = document.querySelectorAll(".mobile-property-button.selected");
-      sels.forEach((ele) => ele.classList.remove("selected"));
-      document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-      buttonDiv.classList.toggle("selected");
+      resizeMobileUi(printess);
+      selectButtonDiv(buttonDiv);
 
       await printess.splitFrame("vertical");
 
@@ -9097,11 +9975,8 @@ declare const bootstrap: any;
 
     } else if (b.newState.externalProperty?.kind === "vertical-scissor") {
       collapseControlHost();
-
-      const sels = document.querySelectorAll(".mobile-property-button.selected");
-      sels.forEach((ele) => ele.classList.remove("selected"));
-      document.querySelectorAll(".mobile-property-text").forEach((ele) => ele.classList.remove("selected"));
-      buttonDiv.classList.toggle("selected");
+      resizeMobileUi(printess);
+      selectButtonDiv(buttonDiv);
 
       await printess.splitFrame("horizontal");
 
@@ -9114,26 +9989,6 @@ declare const bootstrap: any;
     } else if (b.newState.externalProperty?.kind === "image" && b.newState.metaProperty === "handwriting-image") {
       printess.removeHandwritingImage();
       return;
-
-    } else if (b.newState.state === "table-add") {
-      const p = b.newState.externalProperty;
-      document.querySelectorAll(".mobile-property-button").forEach((ele) => ele.classList.remove("selected"));
-      if (p?.tableMeta) {
-        tableEditRowIndex = -1;
-        tableEditRow = {};
-        for (const col of p.tableMeta.columns) {
-          tableEditRow[col.name] = col.list ? col.list[0] : col.data === "number" ? 0 : "";
-        }
-        if (p.tableMeta.tableType === "calendar-events") {
-          tableEditRow.month = p.tableMeta.month || 1;
-          tableEditRow.event = "Birthday";
-        }
-
-        renderMobileControlHost(printess, b.newState);
-        getMobileUiDiv().appendChild(getMobilePropertyNavButtons(printess, "document", fromAutoSelect)); // group-snippets are only used with  "add" state
-
-
-      }
     } else if (b.newState.state === "table-edit") {
       const p = b.newState.externalProperty;
       const rowIndex = b.newState.tableRowIndex ?? -1;
@@ -9230,7 +10085,11 @@ declare const bootstrap: any;
         properties = uih_currentProperties;
       }
       drawButtonContent(printess, buttonDiv, properties, b.newState.externalProperty?.controlGroup || 0);
-      centerMobileButton(buttonDiv);
+
+      // for splitter frames with default image centerMobileButton leads to button falling out of visibility
+      if (!fromSplitterImageButton) {
+        centerMobileButton(buttonDiv);
+      }
 
       // center frame 
       // const pId = b.newState.externalProperty?.id ?? "";
@@ -9238,7 +10097,7 @@ declare const bootstrap: any;
       /* if (pId.startsWith("FF_")) {
          ffId = pId.substr(3);
        }*/
-      if (b.newState.externalProperty?.kind === "image" && (printess.canMoveSelectedFrames() || printess.canSplitSelectedFrames())) {
+      if (b.newState.externalProperty?.kind === "image" && (printess.canMoveSelectedFrames() || printess.canSplitSelectedFrames()) || b.newState.externalProperty?.kind === "grid-gap-button") {
         // for images its not good to zoom if they are moveable. Quite impossible to catch the handles 
         printess.setZoomMode("spread");
       } else {
@@ -9301,15 +10160,17 @@ declare const bootstrap: any;
 
       } else if (state.externalProperty) {
         controlHost.classList.add(getMobileControlHeightClass(printess, state.externalProperty, state.metaProperty));
-        if (state.state === "table-add" || state.state === "table-edit") {
-          const control = renderTableDetails(printess, state.externalProperty, true);
-          controlHost.appendChild(control);
+        if (state.state === "table-edit") {
+          /* const control = renderTableDetails(printess, state.externalProperty, true);
+          controlHost.appendChild(control); */
+          return
         } else {
           if (properties && properties.length > 0 && properties[0].controlGroup > 0) {
             // render control grouped input fields together
             controlHost.style.overflow = "auto";
             getProperties(printess, uih_currentState, properties, controlHost);
           } else {
+            if (state.externalProperty.kind === "image" && state.metaProperty === "handwriting-image") return;
             const control = getPropertyControl(printess, state.externalProperty, state.metaProperty, true);
             controlHost.appendChild(control);
           }
@@ -9488,7 +10349,11 @@ declare const bootstrap: any;
           caption += p.label + " ";
         }
       } else if (!caption) {
-        caption = printess.gl(b.caption);
+        if (printess.hasSplitterMenu()) {
+          caption = b.newState.externalProperty?.value.toString() || printess.gl("ui.text")
+        } else {
+          caption = printess.gl(b.caption);
+        }
       }
 
       const buttonText = document.createElement("div");
@@ -9515,15 +10380,38 @@ declare const bootstrap: any;
       buttonDiv.appendChild(buttonText);
 
     }
+
+    if (b.newState.state === "table-edit" && printess.isDataSource(propertyId)) {
+      const tableProp = uih_currentProperties.filter(p => b?.newState.externalProperty && p.id === b.newState.externalProperty.id)[0];
+
+      let data = [];
+      try {
+        data = JSON.parse(tableProp.value.toString()) || [];
+        if (!Array.isArray(data)) {
+          data = [];
+        }
+      } catch (error) {
+        data = [];
+      }
+
+      const badge = document.createElement("div");
+      badge.id = "table-record-badge";
+      badge.className = "position-absolute badge rounded-pill bg-primary";
+      badge.textContent = tableEditRowIndex === -1 && data.length > 0 ? "1" : (tableEditRowIndex + 1).toString();
+
+      buttonDiv.appendChild(badge);
+    }
   }
 
   function getButtonCircle(printess: iPrintessApi, m: iMobileUIButton, isSelected: boolean): HTMLDivElement {
 
     const c = printess.getButtonCircleModel(m, isSelected);
+    const p = m.newState.externalProperty;
 
     const circle = document.createElement("div");
     circle.className = "circle-button-graphic";
-    if (c.hasSvgCircle) {
+
+    if (c.hasSvgCircle && p?.kind !== "record-left-button" && p?.kind !== "record-right-button" && p?.kind !== "splitter-layouts-button" && p?.kind !== "convert-to-image" && p?.kind !== "convert-to-text" && m.newState.metaProperty !== "handwriting-image") {
       circle.appendChild(getSvgCircle(c.displayGauge, c.gaugeValue));
     }
     if (c.hasImage) {
@@ -9564,7 +10452,7 @@ declare const bootstrap: any;
       const icon = printess.getIcon(c.icon);
       icon.classList.add("circle-button-icon");
 
-      if (m.newState.externalProperty?.kind === "vertical-scissor") {
+      if (p?.kind === "vertical-scissor") {
         const scissorsLine = document.createElement("div");
         scissorsLine.className = "vertical-scissor-button";
         circle.appendChild(scissorsLine);
@@ -9572,10 +10460,23 @@ declare const bootstrap: any;
         icon.style.transform = "rotateZ(-90deg)";
       }
 
-      if (m.newState.externalProperty?.kind === "horizontal-scissor") {
+      if (p?.kind === "horizontal-scissor") {
         const scissorsLine = document.createElement("div");
         scissorsLine.className = "horizontal-scissor-button";
         circle.appendChild(scissorsLine);
+      }
+
+      if (p?.kind === "record-left-button" || p?.kind === "record-right-button") {
+        icon.style.width = "25px";
+        icon.style.height = "25px";
+      }
+
+      if (p?.kind === "splitter-layouts-button") {
+        icon.classList.add("mobile-splitter-button");
+      }
+
+      if (p?.kind === "convert-to-image" || p?.kind === "convert-to-text" || m.newState.metaProperty === "handwriting-image") {
+        circle.classList.add("circular-toggle-button");
       }
 
       circle.appendChild(icon);
