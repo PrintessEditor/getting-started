@@ -54,6 +54,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function resetUi() {
         uih_currentTabId = "LOADING";
+        uih_currentRender = "never";
         uih_currentPriceDisplay = undefined;
         uih_mobilePriceDisplay = "none";
         tableDragRowIndex = -1;
@@ -819,14 +820,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         let controlGroupTCs = "";
         let colorsContainer = null;
         for (const p of properties) {
-            if (p.tabId && uih_currentTabId && uih_currentTabId.startsWith("#FORMFIELDS") && p.tabId !== uih_currentTabId) {
-                continue;
-            }
-            if (!p.tabId && (uih_currentTabId === "#FORMFIELDS1" || uih_currentTabId === "#FORMFIELDS2")) {
-                continue;
+            if (printess.showTabNavigation()) {
+                if (p.tabId && uih_currentTabId && uih_currentTabId.startsWith("#FORMFIELDS") && p.tabId !== uih_currentTabId) {
+                    continue;
+                }
+                if (!p.tabId && (uih_currentTabId === "#FORMFIELDS1" || uih_currentTabId === "#FORMFIELDS2")) {
+                    continue;
+                }
             }
             t.push(JSON.stringify(p, undefined, 2));
-            if (p.kind === "color" && state !== "document") {
+            const mixedColorTypes = p.kind === "color" && p.id.startsWith("FF_") && uih_currentProperties.filter(p => p.kind === "color" && !p.id.startsWith("FF_")).length > 0;
+            if (p.kind === "color" && !p.id.startsWith("FF_") && state !== "document" || mixedColorTypes) {
                 const twoColorProps = uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors();
                 if (!colorsContainer) {
                     colorsContainer = document.createElement("div");
@@ -1722,10 +1726,59 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         textPropertiesDiv.appendChild(getTextAlignmentControl(printess, p));
         if (p.kind === "selection-text-style" && p.textStyle.allows.indexOf("handWriting") >= 0) {
+            const infoBox = getHandwritingInfoBox(printess, false);
+            textPropertiesDiv.appendChild(infoBox);
             const upload = getImageUploadButton(printess, p, p.id, false, true, "ui.uploadHandwriting");
             textPropertiesDiv.appendChild(upload);
         }
         return textPropertiesDiv;
+    }
+    function getHandwritingInfoBox(printess, forMobile) {
+        const container = document.createElement("div");
+        if (!forMobile) {
+            const header = document.createElement("h4");
+            header.className = "mb-3";
+            header.textContent = printess.gl("ui.imageTabHandwriting");
+            container.appendChild(header);
+        }
+        const infoBox = document.createElement("div");
+        infoBox.className = "alert alert-secondary mb-1 handwriting-info-box";
+        const icons = [{
+                icon: "handwriting",
+                text: "Write Text"
+            }, {
+                icon: "arrow-right-long",
+                text: ""
+            }, {
+                icon: "camera-solid",
+                text: "Take Photo"
+            }, {
+                icon: "arrow-right-long",
+                text: ""
+            }, {
+                icon: "cloud-upload-alt",
+                text: "Upload Photo"
+            }];
+        icons.forEach(i => {
+            const div = document.createElement("div");
+            div.className = "d-flex flex-column align-items-center";
+            const icon = printess.getIcon(i.icon);
+            if (forMobile) {
+                icon.style.width = i.icon === "arrow-right-long" ? "20px" : "25px";
+                icon.style.height = "28px";
+            }
+            else {
+                icon.style.width = i.icon === "arrow-right-long" ? "25px" : "30px";
+                icon.style.height = i.icon === "arrow-right-long" ? "25px" : "30px";
+            }
+            const text = document.createElement("div");
+            text.textContent = printess.gl(i.text);
+            div.appendChild(icon);
+            div.appendChild(text);
+            infoBox.appendChild(div);
+            container.appendChild(infoBox);
+        });
+        return container;
     }
     function getTextPropertyScrollContainer(child) {
         const d = document.createElement("div");
@@ -2597,7 +2650,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         validation.id = "val_" + id;
         validation.classList.add("invalid-feedback");
         validation.innerText = printess.gl("errors.textMissingInline");
-        if (kind !== "image")
+        if (kind !== "image" && kind !== "table")
             container.appendChild(validation);
         if (hasMaxChars)
             getCharValidationLabel(printess, id, container);
@@ -2618,12 +2671,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (container)
             container.appendChild(validation);
     }
-    function validate(printess, p) {
+    function validate(printess, p, error, cellName = "") {
         if (p.validation) {
-            const container = document.getElementById("cnt_" + p.id);
-            const input = document.getElementById("inp_" + p.id.replace("#", "-HASH-"));
+            const container = document.getElementById("cnt_" + p.id + cellName);
+            const input = document.getElementById("inp_" + p.id.replace("#", "-HASH-") + cellName);
             const validation = document.getElementById("val_" + p.id);
-            const charValidation = document.getElementById("char_" + p.id);
+            const charValidation = document.getElementById("char_" + p.id + cellName);
             if (charValidation && p.controlGroup === 0) {
                 if (p.validation.maxChars && p.value.toString().length <= p.validation.maxChars && (p.value && p.value !== p.validation.defaultValue)) {
                     charValidation.innerText = printess.gl("errors.maxCharsLeftInline", p.validation.maxChars - p.value.toString().length);
@@ -2662,6 +2715,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         return;
                     }
                 }
+                if (p.kind === "table" && error) {
+                    input.classList.add("is-invalid");
+                    validation.classList.add("table-validation-message");
+                    validation.innerHTML = "";
+                    const icon = printess.getIcon("info-circle");
+                    const msg = document.createElement("span");
+                    msg.innerText = printess.gl("errors." + error.errorCode, error.errorValue1);
+                    validation.appendChild(icon);
+                    validation.appendChild(msg);
+                    return;
+                }
                 if (p.validation.regExp) {
                     try {
                         let pattern = p.validation.regExp;
@@ -2683,6 +2747,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
                 input.classList.remove("is-invalid");
+                if (p.kind === "table")
+                    validation.classList.remove("table-validation-message");
             }
         }
         return;
@@ -2787,13 +2853,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
         if (!dropdown) {
             dropdown = document.createElement("div");
-            dropdown.className = "btn-group mb-3 me-1";
+            dropdown.className = "btn-group me-1";
         }
         const colors = printess.getColors(p.id);
         const button = document.createElement("button");
         const curColor = (metaProperty === "color" && p.textStyle) ? p.textStyle.color : p.value.toString();
         const curColorSwatch = colors.filter(c => c.name === curColor)[0];
         const curColorRgb = curColorSwatch ? curColorSwatch.color : hexToRgb(curColor);
+        const ffColor = p.id.startsWith("FF_") && uih_currentProperties.filter(p => p.kind === "color" && !p.id.startsWith("FF_")).length === 0;
         if (!forMobile) {
             button.className = "btn btn-light dropdown-toggle btn-color-select";
             button.dataset.bsToggle = "dropdown";
@@ -2809,11 +2876,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 button.appendChild(redLine);
             }
             dropdown.appendChild(button);
+            if (ffColor) {
+                dropdown.className = "btn-group me-1 color-label-group";
+                const colorProps = uih_currentProperties.filter(p => p.kind === "color");
+                if (colorProps.length && colorProps[colorProps.length - 1].id === p.id) {
+                    dropdown.classList.add("mb-3");
+                }
+                button.classList.add("me-2");
+                const label = document.createElement("div");
+                label.className = "color-formfield-label";
+                label.textContent = printess.gl(p.label);
+                label.dataset.bsToggle = "dropdown";
+                label.dataset.bsAutoClose = "true";
+                label.setAttribute("aria-expanded", "false");
+                dropdown.appendChild(label);
+                const flexBreak = document.createElement("div");
+                flexBreak.className = "d-flex w-100";
+                dropdown.insertAdjacentElement("beforebegin", flexBreak);
+            }
         }
         const ddContent = document.createElement("div");
         ddContent.className = "dropdown-menu";
         ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-        ddContent.style.width = "240px";
+        ddContent.style.width = !forMobile && ffColor ? "auto" : "240px";
         const colorList = document.createElement("div");
         colorList.className = "color-picker-drop-down";
         if (forMobile) {
@@ -3150,7 +3235,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         });
         return div;
     }
-    let lastSelectedGripSize;
+    let lastSelectedGridSize;
     function getGridGapControl(printess, p) {
         const div = document.createElement("div");
         div.className = "d-flex h-100 justify-content-center align-items-center";
@@ -3178,11 +3263,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             label.className = "btn btn-outline-primary";
             label.setAttribute("for", "btnradio" + g.label);
             label.textContent = g.label;
-            if (lastSelectedGripSize === g.label) {
+            if (lastSelectedGridSize === g.label) {
                 input.checked = true;
             }
             label.onclick = () => {
-                lastSelectedGripSize = g.label;
+                lastSelectedGridSize = g.label;
                 printess.setSplitterGaps(g.size);
             };
             btnGroup.appendChild(input);
@@ -5913,6 +5998,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (images.length > 0 && !forHandwriting) {
             container.appendChild(change);
         }
+        if (forHandwriting) {
+            const infoBox = getHandwritingInfoBox(printess, true);
+            container.appendChild(infoBox);
+        }
         return container;
     }
     function getDistributionOverlay(printess, forMobile, p, container) {
@@ -6194,6 +6283,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let tableEditRowIndex = -1;
     let tableDragRowIndex = -1;
     let lastClickedTableRow = -1;
+    let lastTablePropId = "";
     let addButtonForTableDataClicked = false;
     function getTableControl(printess, p, forMobile, data = []) {
         var _a, _b, _c;
@@ -6380,10 +6470,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 ele.currentTarget.style.display = "none";
                             }
                             lastClickedTableRow = rowIndex;
+                            lastTablePropId = p.id;
                         };
                         tbody.appendChild(tr);
                         hasRow = true;
-                        if (lastClickedTableRow === rowNumber) {
+                        if (lastClickedTableRow === rowNumber && lastTablePropId === p.id) {
                             const rowIndex = parseInt(tr.dataset.rowNumber);
                             tr.classList.add("table-active");
                             tr.style.display = "none";
@@ -6398,18 +6489,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(table);
             }
             const addButton = document.createElement("button");
-            addButton.className = "btn btn-primary mb-3";
+            addButton.className = "btn btn-primary mb-3 me-2";
             addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
             addButton.onclick = () => {
                 var _a;
-                if (lastClickedTableRow > -1) {
-                    const error = validateTableInput(printess, p);
-                    if (error)
-                        return;
-                }
+                const doneButton = document.getElementById("printess-close-table-details");
+                if (doneButton)
+                    doneButton.style.display = "inline-block";
                 lastClickedTableRow = (_a = printess.addTableRow(p.id)) !== null && _a !== void 0 ? _a : -1;
+                lastTablePropId = p.id;
+            };
+            const doneButton = document.createElement("button");
+            doneButton.className = "btn btn-primary mb-3";
+            doneButton.id = "printess-close-table-details";
+            doneButton.style.display = tableEditRowIndex > -1 ? "inline-block" : "none";
+            doneButton.innerText = printess.gl("ui.buttonDone");
+            doneButton.onclick = () => {
+                closeTableEditControl();
+                doneButton.style.display = "none";
             };
             container.appendChild(addButton);
+            container.appendChild(doneButton);
             if (data.length === ((_c = p.tableMeta) === null || _c === void 0 ? void 0 : _c.maxTableEntries) && p.tableMeta.maxTableEntries !== 0) {
                 addButton.style.display = "none";
                 const alert = document.createElement("div");
@@ -6499,6 +6599,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         tableEditRow = data[rowIndex];
         tableEditRowIndex = rowIndex;
         printess.setTableRowIndex(p.id, rowIndex);
+        const doneButton = document.getElementById("printess-close-table-details");
+        if (doneButton)
+            doneButton.style.display = "inline-block";
         const tableRow = document.createElement("tr");
         tableRow.id = "tableDetailsRow";
         tableRow.style.border = "1px solid #ccc";
@@ -6513,10 +6616,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         closeIcon.style.width = "20px";
         closeIcon.style.height = "20px";
         closeButton.onclick = () => {
-            const error = validateTableInput(printess, p);
-            if (error)
-                return;
             closeTableEditControl();
+            const doneButton = document.getElementById("printess-close-table-details");
+            if (doneButton)
+                doneButton.style.display = "none";
             const deleteIcons = document.querySelectorAll("svg.table-delete-icon");
             deleteIcons.forEach(i => {
                 const icon = i;
@@ -6538,15 +6641,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         tableRow.appendChild(tableCell);
         return tableRow;
     }
+    function renderInputValidation(printess, id) {
+        const validation = document.createElement("div");
+        validation.id = "val_" + id;
+        validation.classList.add("invalid-feedback");
+        return validation;
+    }
     function renderTableDetails(printess, p, forMobile) {
         var _a, _b;
         const details = document.createElement("div");
         if (!p.tableMeta)
             return details;
         details.innerHTML = "";
+        details.appendChild(renderInputValidation(printess, p.id));
         if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events") {
             const group = document.createElement("div");
-            group.className = "input-group mb-3";
+            group.className = "input-group";
             for (const col of p.tableMeta.columns) {
                 if (col.name === "day") {
                     const dayDiv = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
@@ -6594,81 +6704,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }, 100);
         return details;
     }
-    function validateTableInput(printess, p) {
-        var _a, _b;
-        if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
-            getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done");
-            return true;
-        }
-        if (((_b = p.tableMeta) === null || _b === void 0 ? void 0 : _b.tableType) === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
-            if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done");
-                return true;
-            }
-            else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done");
-                return true;
-            }
-            else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done");
-                return true;
-            }
-            else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done");
-                return true;
-            }
-        }
-        return false;
-    }
-    function submitTableData(printess, p, details, forMobile) {
-        var _a, _b;
-        lastClickedTableRow = -1;
-        if (((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableType) === "calendar-events" && !tableEditRow.text) {
-            getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done");
-            return;
-        }
-        if (((_b = p.tableMeta) === null || _b === void 0 ? void 0 : _b.tableType) === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
-            if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done");
-                return;
-            }
-            else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done");
-                return;
-            }
-            else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done");
-                return;
-            }
-            else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
-                getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done");
-                return;
-            }
-        }
-        let data = [];
-        try {
-            data = JSON.parse(p.value.toString()) || [];
-            if (!Array.isArray(data)) {
-                data = [];
-            }
-        }
-        catch (error) {
-            data = [];
-        }
-        if (tableEditRowIndex === -1) {
-            data.push(tableEditRow);
-        }
-        else {
-            data[tableEditRowIndex] = tableEditRow;
-        }
-        p.value = JSON.stringify(data);
-        printess.setProperty(p.id, p.value);
-        details.innerHTML = "";
-        const table = document.getElementById("printess-table-control");
-        if (table && forMobile) {
-            table.replaceWith(getTableControl(printess, p, forMobile));
-        }
-    }
     function renderTableDetailsColumn(detailsWrapper, tableDetailsDiv, col, prevRow) {
         if (prevRow !== col.row || col.row === "auto" || col.row === "new") {
             const flexBreak = document.createElement("div");
@@ -6679,32 +6714,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         tableDetailsDiv.style.marginRight = "4px";
         tableDetailsDiv.style.flex = "1 1 0";
         detailsWrapper.appendChild(tableDetailsDiv);
-    }
-    function getTableDetailsShortList(printess, p, rowIndex, row, col) {
-        const ddContent = document.createElement("div");
-        ddContent.className = "dropdown-menu";
-        ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-        ddContent.style.width = "240px";
-        const list = document.createElement("div");
-        list.className = "color-picker-drop-down";
-        const value = row[col.name];
-        for (const f of col.list || []) {
-            const a = document.createElement("a");
-            a.className = "color-picker-color dropdown-item";
-            a.innerText = f.toString();
-            if (value == f) {
-                a.classList.add("active");
-            }
-            a.onclick = () => {
-                setTableValue(printess, p, col, f);
-                if (col.list) {
-                    list.querySelectorAll("a").forEach(a => a.classList.remove("active"));
-                    a.classList.add("active");
-                }
-            };
-            list.appendChild(a);
-        }
-        return list;
     }
     function getTableDetailsAutocomplete(printess, p, row, col) {
         const formGroup = document.createElement("div");
@@ -6814,6 +6823,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.autocomplete = "off";
         inp.autocapitalize = "off";
         inp.spellcheck = false;
+        if (col.max && col.max > 0) {
+            inp.maxLength = col.max;
+        }
         inp.oninput = () => {
             setTableValue(printess, p, col, inp.value);
         };
@@ -6822,35 +6834,54 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return inp;
         }
         else {
-            const r = addLabel(printess, p, inp, p.id, forMobile, p.kind, col.label || col.name);
+            const r = addLabel(printess, p, inp, p.id + "_" + col.name, forMobile, p.kind, col.label || col.name);
             return r;
         }
     }
     function setTableValue(printess, p, col, newValue) {
-        if (col.data === "number" && typeof newValue !== "number") {
-            tableEditRow[col.name] = isNaN(+newValue) ? 0 : +newValue;
-        }
-        else if (col.data === "boolean" && typeof newValue !== "boolean") {
-            tableEditRow[col.name] = !!(newValue);
-        }
-        else {
-            tableEditRow[col.name] = newValue;
-        }
-        printess.setTableCell(p.id, tableEditRowIndex, col.name, tableEditRow[col.name]);
-        const cell = document.getElementById("cell" + tableEditRowIndex + "_" + col.name);
-        if (cell) {
-            cell.innerText = printess.gl(tableEditRow[col.name].toString());
-        }
-        try {
-            const a = JSON.parse(p.value);
-            if (Array.isArray(a)) {
-                a[tableEditRowIndex][col.name] = tableEditRow[col.name];
-                p.value = JSON.stringify(a);
+        return __awaiter(this, void 0, void 0, function* () {
+            let ret = null;
+            if (col.data === "number" && typeof newValue === "string") {
+                if (parseFloat(newValue).toString() !== newValue) {
+                    ret = { boxIds: [], errorCode: "invalidNumber", errorValue1: "" };
+                }
+                else {
+                    newValue = parseFloat(newValue);
+                }
             }
-        }
-        catch (error) {
-            console.error("Can not upate table cell [" + col.name + "] or row " + tableEditRowIndex, error);
-        }
+            if (col.data === "boolean" && typeof newValue === "string") {
+                if (newValue !== "true" && newValue !== "false") {
+                    console.error("Input is not a boolean (expect true or false)=" + newValue);
+                }
+                else {
+                    newValue = newValue === "true";
+                }
+            }
+            if (ret !== null) {
+                validate(printess, p, ret, "_" + col.name);
+                return;
+            }
+            ret = yield printess.setTableCell(p.id, tableEditRowIndex, col, newValue);
+            validate(printess, p, ret, "_" + col.name);
+            if (ret !== null) {
+                return;
+            }
+            tableEditRow[col.name] = newValue;
+            const cell = document.getElementById("cell" + tableEditRowIndex + "_" + col.name);
+            if (cell) {
+                cell.innerText = printess.gl(newValue.toString());
+            }
+            try {
+                const a = JSON.parse(p.value);
+                if (Array.isArray(a)) {
+                    a[tableEditRowIndex][col.name] = newValue;
+                    p.value = JSON.stringify(a);
+                }
+            }
+            catch (error) {
+                console.error("Can not upate table cell [" + col.name + "] or row " + tableEditRowIndex, error);
+            }
+        });
     }
     function getMobileUiDiv() {
         let mobileUi = document.querySelector(".mobile-ui");
@@ -7954,7 +7985,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         scrollContainer.className = "mobile-buttons-scroll-container";
         const buttonContainer = document.createElement("div");
         buttonContainer.className = "mobile-buttons";
-        const buttons = printess.getMobileUiButtons(uih_currentProperties, propertyIdFilter || "root");
+        const buttons = printess.getMobileUiButtons(uih_currentProperties, propertyIdFilter || "root", true);
         if (uih_currentState === "document") {
             buttons.unshift(...printess.getMobileUiBackgroundButton());
         }
@@ -8020,7 +8051,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 buttonDiv.className = "no-selection";
                 if (pid && printess.isDataSource(pid)) {
                     if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "record-left-button" || b.newState.state === "table-edit") {
-                        buttonDiv.style.marginRight = "10px";
+                        buttonDiv.style.marginRight = "5px";
                     }
                 }
                 const properties = [];
@@ -8062,6 +8093,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     buttonDiv.classList.add("mobile-property-button");
                     if (((_u = b.newState.externalProperty) === null || _u === void 0 ? void 0 : _u.kind) === "font") {
                         buttonDiv.classList.add("mobile-font-button");
+                    }
+                    else if (b.newState.state === "table-edit" && pid && printess.isDataSource(pid)) {
+                        buttonDiv.classList.add("mobile-table-button");
                     }
                 }
                 if (!firstButton) {
@@ -8203,9 +8237,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         printess.setTableRowIndex(tableProp.id, tableEditRowIndex);
                     }
                 }
-                const badge = document.getElementById("table-record-badge");
-                if (badge) {
-                    badge.textContent = (tableEditRowIndex + 1).toString();
+                const recordButton = document.getElementById("printess-table-record");
+                if (recordButton) {
+                    recordButton.innerHTML = printess.gl("ui.recordCaption", (tableEditRowIndex + 1).toString(), data.length);
                 }
                 selectButtonDiv(buttonDiv);
                 return;
@@ -8546,7 +8580,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const property = properties.filter(p => p.id === propertyId)[0];
         if (!property)
             return;
-        const buttons = printess.getMobileUiButtons([property], propertyId);
+        const buttons = printess.getMobileUiButtons([property], propertyId, true);
         let b = undefined;
         if (rowIndex !== undefined) {
             for (const button of buttons) {
@@ -8601,37 +8635,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else {
             const buttonCircle = getButtonCircle(printess, b, isSelected);
+            const caption = printess.gl(b.caption).replace(/\\n/g, "");
             const buttonText = document.createElement("div");
             buttonText.className = "mobile-property-caption no-selection";
-            buttonText.innerText = printess.gl(b.caption);
+            buttonText.innerText = caption;
             buttonDiv.appendChild(buttonCircle);
             buttonDiv.appendChild(buttonText);
         }
-        if (b.newState.state === "table-edit" && printess.isDataSource(propertyId)) {
-            const tableProp = uih_currentProperties.filter(p => (b === null || b === void 0 ? void 0 : b.newState.externalProperty) && p.id === b.newState.externalProperty.id)[0];
-            let data = [];
-            try {
-                data = JSON.parse(tableProp.value.toString()) || [];
-                if (!Array.isArray(data)) {
-                    data = [];
-                }
-            }
-            catch (error) {
-                data = [];
-            }
-            const badge = document.createElement("div");
-            badge.id = "table-record-badge";
-            badge.className = "position-absolute badge rounded-pill bg-primary";
-            badge.textContent = tableEditRowIndex === -1 && data.length > 0 ? "1" : (tableEditRowIndex + 1).toString();
-            buttonDiv.appendChild(badge);
-        }
     }
     function getButtonCircle(printess, m, isSelected) {
-        const c = printess.getButtonCircleModel(m, isSelected);
+        const c = printess.getButtonCircleModel(m, isSelected, true, true, true);
         const p = m.newState.externalProperty;
         const circle = document.createElement("div");
         circle.className = "circle-button-graphic";
-        if (c.hasSvgCircle && (p === null || p === void 0 ? void 0 : p.kind) !== "record-left-button" && (p === null || p === void 0 ? void 0 : p.kind) !== "record-right-button" && (p === null || p === void 0 ? void 0 : p.kind) !== "splitter-layouts-button" && (p === null || p === void 0 ? void 0 : p.kind) !== "convert-to-image" && (p === null || p === void 0 ? void 0 : p.kind) !== "convert-to-text" && m.newState.metaProperty !== "handwriting-image") {
+        if (c.hasSvgCircle) {
             circle.appendChild(getSvgCircle(c.displayGauge, c.gaugeValue));
         }
         if (c.hasImage) {
@@ -8648,6 +8665,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             caption.className = c.captionClass;
             caption.innerText = printess.gl(c.captionInCircle);
             circle.appendChild(caption);
+        }
+        if (m.newState.state === "table-edit" && p && printess.isDataSource(p.id)) {
+            const tableProp = uih_currentProperties.filter(prop => p && p.id === prop.id)[0];
+            let data = [];
+            try {
+                data = JSON.parse(tableProp.value.toString()) || [];
+                if (!Array.isArray(data)) {
+                    data = [];
+                }
+            }
+            catch (error) {
+                data = [];
+            }
+            const currentRecord = tableEditRowIndex === -1 && data.length > 0 ? "1" : (tableEditRowIndex + 1).toString();
+            const maxRecord = data.length;
+            const caption = document.createElement("div");
+            caption.id = "printess-table-record";
+            caption.className = c.captionClass;
+            caption.innerHTML = printess.gl("ui.recordCaption", currentRecord, maxRecord);
+            circle.appendChild(caption);
+            c.hasIcon = false;
         }
         if (c.hasColor) {
             const color = document.createElement("div");

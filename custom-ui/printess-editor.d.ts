@@ -41,6 +41,18 @@ export interface printessAttachParameters {
   };
 
   /**
+   * Optional parameter to merge all frame and document properties which have an exchange-id set.
+   * It loads an existing save token and takes over data onto the newly loaded template.
+   * It also can take overform-field values.
+   */
+  loadExchangeData?: {
+    saveToken: string, 
+    exchangeFormFields: boolean,
+    exchangeFrames: boolean, 
+    exchangeDocuments: boolean
+  },
+
+  /**
    * Activated by default. Deactivating `allowZoomAndPan` freezes the visible Area of the current document. 
    * The buyer will not be able to zoom or pan at all. It's handy for simple configurattions on desktop and conjunction with ```autoScale```
    * Handle with care on mobile, since users proably need zoom to have a closer look on their products.
@@ -556,7 +568,7 @@ export interface iPrintessApi {
    *                         "all" returns only top level buttons (no sub/meta property buttons)
    *                         "root" returns only top-level properties but sets the `hasCollapsedMetaProperties` flag if applicable
    */
-  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string): Array<iMobileUIButton>;
+  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string, customHandwriting: boolean = false): Array<iMobileUIButton>;
 
   /**
    * Returns change background button if available
@@ -600,7 +612,7 @@ export interface iPrintessApi {
    * @param m The mobile button to create a circle for
    * @param isSelected If the button is selected
    */
-  getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
+  getButtonCircleModel(m: iMobileUIButton, isSelected: boolean, customHandwriting?: boolean, customSplitterButton?: boolean, customTableRecordButton?: boolean): iButtonCircle
 
   /**
    * Returns a simple ui to change the postion of an image 
@@ -648,7 +660,7 @@ export interface iPrintessApi {
    * Any then all other updates, 
    * this will NOT trigger a selection change event on buyer side 
    */
-  setTableCell(fieldNameOrId: string, rowIndex: number, cellName: string, value: string | number | boolean): Promise<void>
+  setTableCell(fieldNameOrId: string, rowIndex: number, col: iExternalTableColumn, value: string | number | boolean): Promise<iExternalError | null>
 
   /**
    * Adds a new row to a table form field.
@@ -1749,7 +1761,10 @@ export interface iExternalTableColumn {
   listMode?: "select" | "auto-complete",
   width?: string,
   row?: string,
-  hide?: boolean
+  hide?: boolean,
+  /** Maximum allowed characters */
+  max?: number,
+  /* ADD NEW TABLE-FF COLUMN - add here and search for this comment - do not remove comment */
 }
 export interface iExternalNumberUi {
   max: number;
@@ -1806,7 +1821,7 @@ export type iExternalErrors = Array<iExternalError>
 
 export interface iExternalError {
   boxIds: Array<string>,
-  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
+  errorCode: "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
   errorValue3?: string | number
@@ -2331,4 +2346,6 @@ export type iconName =
   | "record-up"
   | "record-down"
   | "arrow-left-circle"
-  | "arrow-right-circle";
+  | "arrow-right-circle"
+  | "arrow-right-long"
+  | "camera-solid";

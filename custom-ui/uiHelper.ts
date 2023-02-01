@@ -54,6 +54,7 @@ declare const bootstrap: any;
   function resetUi(): void {
     // called before toggle to buyer side in design mode
     uih_currentTabId = "LOADING";
+    uih_currentRender = "never";
     uih_currentPriceDisplay = undefined;
     uih_mobilePriceDisplay = "none";
     tableDragRowIndex = -1;
@@ -980,17 +981,21 @@ declare const bootstrap: any;
     let colorsContainer: HTMLDivElement | null = null;
     //let setEventTab = false;
     for (const p of properties) {
-      //setEventTab = p.tableMeta && p.tableMeta.tableType === "calendar-events" ? true : false;
-      if (p.tabId && uih_currentTabId && uih_currentTabId.startsWith("#FORMFIELDS") && p.tabId !== uih_currentTabId) {
-        // skip property, only on desktop where tabs are available 
-        continue;
+      if (printess.showTabNavigation()) {
+        //setEventTab = p.tableMeta && p.tableMeta.tableType === "calendar-events" ? true : false;
+        if (p.tabId && uih_currentTabId && uih_currentTabId.startsWith("#FORMFIELDS") && p.tabId !== uih_currentTabId) {
+          // skip property, only on desktop where tabs are available 
+          continue;
+        }
+        if (!p.tabId && (uih_currentTabId === "#FORMFIELDS1" || uih_currentTabId === "#FORMFIELDS2")) {
+          // skip property, its in the default tab already
+          continue;
+        }
       }
-      if (!p.tabId && (uih_currentTabId === "#FORMFIELDS1" || uih_currentTabId === "#FORMFIELDS2")) {
-        // skip property, its in the default tab already
-        continue;
-      }
+
       t.push(JSON.stringify(p, undefined, 2));
-      if (p.kind === "color" && state !== "document") {
+      const mixedColorTypes = p.kind === "color" && p.id.startsWith("FF_") && uih_currentProperties.filter(p => p.kind === "color" && !p.id.startsWith("FF_")).length > 0;
+      if (p.kind === "color" && !p.id.startsWith("FF_") && state !== "document" || mixedColorTypes) {
         const twoColorProps = uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors();
         if (!colorsContainer) {
           colorsContainer = document.createElement("div");
@@ -2065,11 +2070,70 @@ declare const bootstrap: any;
     textPropertiesDiv.appendChild(getTextAlignmentControl(printess, p));
 
     if (p.kind === "selection-text-style" && p.textStyle.allows.indexOf("handWriting") >= 0) {
+      const infoBox = getHandwritingInfoBox(printess, false);
+      textPropertiesDiv.appendChild(infoBox);
+
       const upload = getImageUploadButton(printess, p, p.id, false, true, "ui.uploadHandwriting");
       textPropertiesDiv.appendChild(upload);
     }
 
     return textPropertiesDiv;
+  }
+
+  function getHandwritingInfoBox(printess: iPrintessApi, forMobile: boolean): HTMLElement {
+    const container = document.createElement("div");
+
+    if (!forMobile) {
+      const header = document.createElement("h4");
+      header.className = "mb-3";
+      header.textContent = printess.gl("ui.imageTabHandwriting");
+      container.appendChild(header);
+    }
+
+    const infoBox = document.createElement("div");
+    infoBox.className = "alert alert-secondary mb-1 handwriting-info-box";
+
+    const icons: Array<{ icon: iconName, text: string }> = [{
+      icon: "handwriting",
+      text: "Write Text"
+    }, {
+      icon: "arrow-right-long",
+      text: ""
+    }, {
+      icon: "camera-solid",
+      text: "Take Photo"
+    }, {
+      icon: "arrow-right-long",
+      text: ""
+    }, {
+      icon: "cloud-upload-alt",
+      text: "Upload Photo"
+    }];
+
+    icons.forEach(i => {
+      const div = document.createElement("div");
+      div.className = "d-flex flex-column align-items-center";
+
+      const icon = printess.getIcon(i.icon);
+
+      if (forMobile) {
+        icon.style.width = i.icon === "arrow-right-long" ? "20px" : "25px";
+        icon.style.height = "28px";
+      } else {
+        icon.style.width = i.icon === "arrow-right-long" ? "25px" : "30px";
+        icon.style.height = i.icon === "arrow-right-long" ? "25px" : "30px";
+      }
+
+      const text = document.createElement("div");
+      text.textContent = printess.gl(i.text);
+
+      div.appendChild(icon);
+      div.appendChild(text);
+      infoBox.appendChild(div);
+      container.appendChild(infoBox);
+    })
+
+    return container;
   }
 
   function getTextPropertyScrollContainer(child: HTMLElement): HTMLDivElement {
@@ -2261,6 +2325,8 @@ declare const bootstrap: any;
       svg.style.height = "24px";
       svg.style.float = "left";
       svg.style.fill = "var(--bs-light)";
+
+      // Was nicht besonder schön ist, das wenn das Icon in der translation table fest gelegt ist, dann erscheint es immer (im gegensatz zu normalen verhalten) 
 
       // was "margin-right" but should be "margin-left" to have some distance to the icon. 
       svg.style.marginLeft = caption ? "10px" : "0px";
@@ -3118,7 +3184,7 @@ declare const bootstrap: any;
     validation.classList.add("invalid-feedback");
     validation.innerText = printess.gl("errors.textMissingInline");
 
-    if (kind !== "image") container.appendChild(validation);
+    if (kind !== "image" && kind !== "table") container.appendChild(validation);
     if (hasMaxChars) getCharValidationLabel(printess, id, container);
 
     if (p?.info && p.kind !== "table") {
@@ -3139,12 +3205,12 @@ declare const bootstrap: any;
     if (container) container.appendChild(validation);
   }
 
-  function validate(printess: iPrintessApi, p: iExternalProperty): void {
+  function validate(printess: iPrintessApi, p: iExternalProperty, error?: iExternalError | null, cellName: string = ""): void {
     if (p.validation) {
-      const container = document.getElementById("cnt_" + p.id);
-      const input = document.getElementById("inp_" + p.id.replace("#", "-HASH-"));
+      const container = document.getElementById("cnt_" + p.id + cellName);
+      const input = document.getElementById("inp_" + p.id.replace("#", "-HASH-") + cellName);
       const validation = document.getElementById("val_" + p.id);
-      const charValidation = document.getElementById("char_" + p.id);
+      const charValidation = document.getElementById("char_" + p.id + cellName);
 
       if (charValidation && p.controlGroup === 0) {
         if (p.validation.maxChars && p.value.toString().length <= p.validation.maxChars && (p.value && p.value !== p.validation.defaultValue)) {
@@ -3192,6 +3258,22 @@ declare const bootstrap: any;
           }
         }
 
+        if (p.kind === "table" && error) {
+          input.classList.add("is-invalid");
+          validation.classList.add("table-validation-message");
+          validation.innerHTML = "";
+
+          const icon = printess.getIcon("info-circle");
+
+          const msg = document.createElement("span");
+          msg.innerText = printess.gl("errors." + error.errorCode, error.errorValue1);
+
+          validation.appendChild(icon);
+          validation.appendChild(msg);
+
+          return;
+        }
+
         if (p.validation.regExp) {
           try {
             let pattern = p.validation.regExp;
@@ -3215,10 +3297,9 @@ declare const bootstrap: any;
           }
         }
 
-
-
         // container.classList.add("was-validated"); // add to activate BS-green-marker
         input.classList.remove("is-invalid");
+        if (p.kind === "table") validation.classList.remove("table-validation-message");
 
       }
     }
@@ -3338,7 +3419,7 @@ declare const bootstrap: any;
 
     if (!dropdown) {
       dropdown = document.createElement("div");
-      dropdown.className = "btn-group mb-3 me-1";
+      dropdown.className = "btn-group me-1";
     }
 
     const colors = printess.getColors(p.id);
@@ -3349,6 +3430,7 @@ declare const bootstrap: any;
     const curColorSwatch: undefined | { color: string, name: string } = colors.filter(c => c.name === curColor)[0];
 
     const curColorRgb = curColorSwatch ? curColorSwatch.color : hexToRgb(curColor);
+    const ffColor = p.id.startsWith("FF_") && uih_currentProperties.filter(p => p.kind === "color" && !p.id.startsWith("FF_")).length === 0;
 
     if (!forMobile) {
 
@@ -3371,12 +3453,39 @@ declare const bootstrap: any;
 
       // button.innerHTML = "&nbsp;";
       dropdown.appendChild(button);
+
+      if (ffColor) {
+        dropdown.className = "btn-group me-1 color-label-group";
+        const colorProps = uih_currentProperties.filter(p => p.kind === "color");
+
+        if (colorProps.length && colorProps[colorProps.length - 1].id === p.id) {
+          dropdown.classList.add("mb-3");
+        }
+
+        button.classList.add("me-2");
+
+        const label = document.createElement("div");
+        label.className = "color-formfield-label";
+        label.textContent = printess.gl(p.label);
+        label.dataset.bsToggle = "dropdown";
+        label.dataset.bsAutoClose = "true";
+        label.setAttribute("aria-expanded", "false");
+        dropdown.appendChild(label);
+
+        const flexBreak = document.createElement("div");
+        flexBreak.className = "d-flex w-100";
+        dropdown.insertAdjacentElement("beforebegin", flexBreak);
+      }
     }
 
     const ddContent = document.createElement("div");
     ddContent.className = "dropdown-menu";
     ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-    ddContent.style.width = "240px";
+    ddContent.style.width = !forMobile && ffColor ? "auto" : "240px";
+
+    /* if (!forMobile && ffColor) {
+      ddContent.style.transform = "translate3d(0px, 40px, 0px)!important";
+    } */
 
     const colorList = document.createElement("div");
     colorList.className = "color-picker-drop-down";
@@ -3753,7 +3862,7 @@ declare const bootstrap: any;
   }
 
   // Mobile Grip Gap Control for Photo Collages
-  let lastSelectedGripSize: "XS" | "S" | "M" | "XL" | null;
+  let lastSelectedGridSize: "XS" | "S" | "M" | "XL" | null;
 
   function getGridGapControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
     const div = document.createElement("div");
@@ -3789,12 +3898,12 @@ declare const bootstrap: any;
       label.setAttribute("for", "btnradio" + g.label);
       label.textContent = g.label;
 
-      if (lastSelectedGripSize === g.label) {
+      if (lastSelectedGridSize === g.label) {
         input.checked = true;
       }
 
       label.onclick = () => {
-        lastSelectedGripSize = g.label;
+        lastSelectedGridSize = g.label;
         printess.setSplitterGaps(g.size);
       }
 
@@ -7028,6 +7137,12 @@ declare const bootstrap: any;
     if (images.length > 0 && !forHandwriting) {
       container.appendChild(change);
     }
+
+    if (forHandwriting) {
+      const infoBox = getHandwritingInfoBox(printess, true);
+      container.appendChild(infoBox);
+    }
+
     return container;
   }
 
@@ -7389,6 +7504,7 @@ declare const bootstrap: any;
   let tableEditRowIndex: number = -1;
   let tableDragRowIndex: number = -1;
   let lastClickedTableRow: number = -1;
+  let lastTablePropId: string = "";
   let addButtonForTableDataClicked: boolean = false;
   //let lastTableTargetDiv: HTMLTableRowElement;
 
@@ -7607,13 +7723,14 @@ declare const bootstrap: any;
                 ele.currentTarget.style.display = "none";
               }
               lastClickedTableRow = rowIndex;
+              lastTablePropId = p.id;
             }
 
 
             tbody.appendChild(tr);
             hasRow = true;
 
-            if (lastClickedTableRow === rowNumber) {
+            if (lastClickedTableRow === rowNumber && lastTablePropId === p.id) {
               const rowIndex = parseInt(tr.dataset.rowNumber);
 
               tr.classList.add("table-active");
@@ -7629,20 +7746,30 @@ declare const bootstrap: any;
         if (hasRow) container.appendChild(table);
       }
       const addButton = document.createElement("button");
-      addButton.className = "btn btn-primary mb-3";
+      addButton.className = "btn btn-primary mb-3 me-2";
       addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
       addButton.onclick = () => {
-        if (lastClickedTableRow > -1) {
-          const error = validateTableInput(printess, p);
-          if (error) return;
-        }
+        const doneButton = document.getElementById("printess-close-table-details");
+        if (doneButton) doneButton.style.display = "inline-block";
 
         // new approach, let printess add and save an empty row.
         // row will only be added if different from last row. 
         lastClickedTableRow = printess.addTableRow(p.id) ?? -1;
+        lastTablePropId = p.id;
+      }
+
+      const doneButton = document.createElement("button");
+      doneButton.className = "btn btn-primary mb-3";
+      doneButton.id = "printess-close-table-details";
+      doneButton.style.display = tableEditRowIndex > -1 ? "inline-block" : "none";
+      doneButton.innerText = printess.gl("ui.buttonDone");
+      doneButton.onclick = () => {
+        closeTableEditControl();
+        doneButton.style.display = "none";
       }
 
       container.appendChild(addButton);
+      container.appendChild(doneButton);
 
       if (data.length === p.tableMeta?.maxTableEntries && p.tableMeta.maxTableEntries !== 0) {
         addButton.style.display = "none";
@@ -7745,6 +7872,9 @@ declare const bootstrap: any;
     tableEditRowIndex = rowIndex;
     printess.setTableRowIndex(p.id, rowIndex);
 
+    const doneButton = document.getElementById("printess-close-table-details");
+    if (doneButton) doneButton.style.display = "inline-block";
+
     const tableRow = document.createElement("tr");
     tableRow.id = "tableDetailsRow";
     tableRow.style.border = "1px solid #ccc";
@@ -7763,10 +7893,10 @@ declare const bootstrap: any;
     closeIcon.style.height = "20px";
 
     closeButton.onclick = () => {
-      const error = validateTableInput(printess, p);
-      if (error) return;
-
       closeTableEditControl();
+
+      const doneButton = document.getElementById("printess-close-table-details");
+      if (doneButton) doneButton.style.display = "none";
 
       const deleteIcons = document.querySelectorAll("svg.table-delete-icon");
       deleteIcons.forEach(i => {
@@ -7792,6 +7922,14 @@ declare const bootstrap: any;
     return tableRow;
   }
 
+  function renderInputValidation(printess: iPrintessApi, id: string): HTMLElement {
+    const validation = document.createElement("div");
+    validation.id = "val_" + id;
+    validation.classList.add("invalid-feedback");
+
+    return validation;
+  }
+
   function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
     const details: HTMLElement = document.createElement("div");
 
@@ -7799,21 +7937,23 @@ declare const bootstrap: any;
 
     details.innerHTML = "";
 
+    details.appendChild(renderInputValidation(printess, p.id));
+
     if (p.tableMeta?.tableType === "calendar-events") {
       const group = document.createElement("div");
-      group.className = "input-group mb-3";
+      group.className = "input-group" // mb-3";
       for (const col of p.tableMeta.columns) {
         if (col.name === "day") {
           const dayDiv = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
           dayDiv.style.flexBasis = "80px"; //col.width ||
-          dayDiv.style.marginRight = "10px"
-          group.appendChild(dayDiv)
+          dayDiv.style.marginRight = "10px";
+          group.appendChild(dayDiv);
         } else if (col.name === "text") {
           const text = getTableTextBox(printess, p, tableEditRowIndex, tableEditRow, col, false);
           text.style.flexGrow = "1";
-          text.style.flexBasis = "80px"
-          text.style.marginRight = "10px"
-          group.appendChild(text)
+          text.style.flexBasis = "80px";
+          text.style.marginRight = "10px";
+          group.appendChild(text);
         }
       }
       details.appendChild(group);
@@ -7840,88 +7980,12 @@ declare const bootstrap: any;
       details.appendChild(detailsWrapper);
     }
 
-
     window.setTimeout(() => {
       const input = details.querySelector("input");
       if (input) input.focus();
     }, 100);
 
     return details;
-  }
-
-  function validateTableInput(printess: iPrintessApi, p: iExternalProperty): boolean {
-    // validate calender events input
-    if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
-      getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done")
-      //alert(printess.gl("ui.eventText"));
-      return true;
-    }
-    if (p.tableMeta?.tableType === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
-      if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done")
-        return true;
-      } else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done")
-        return true;
-      } else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done")
-        return true;
-      } else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done")
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  function submitTableData(printess: iPrintessApi, p: iExternalProperty, details: HTMLElement, forMobile: boolean): void {
-
-    lastClickedTableRow = -1;
-    if (p.tableMeta?.tableType === "calendar-events" && !tableEditRow.text) {
-      getValidationOverlay(printess, [{ boxIds: [], errorCode: "missingEventText", errorValue1: "" }], "done")
-      //alert(printess.gl("ui.eventText"));
-      return
-    }
-    if (p.tableMeta?.tableType === "calendar-events" && p.tableMeta.month && p.tableMeta.year) {
-      if ([4, 6, 9, 11].includes(p.tableMeta.month) && (tableEditRow.day > 30 || !Number(tableEditRow.day))) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "30" }], "done")
-        return
-      } else if (p.tableMeta.year % 4 === 0 && p.tableMeta.month === 2 && (tableEditRow.day > 29 || !Number(tableEditRow.day))) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "29" }], "done")
-        return
-      } else if (p.tableMeta.year % 4 > 0 && p.tableMeta.month === 2 && (tableEditRow.day > 28 || !Number(tableEditRow.day))) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "28" }], "done")
-        return
-      } else if (tableEditRow.day < 1 || tableEditRow.day > 31 || !Number(tableEditRow.day)) {
-        getValidationOverlay(printess, [{ boxIds: [], errorCode: "invalidNumber", errorValue1: "31" }], "done")
-        return
-      }
-    }
-
-    let data = [];
-    try {
-      data = JSON.parse(p.value.toString()) || [];
-      if (!Array.isArray(data)) {
-        data = [];
-      }
-    } catch (error) {
-      data = [];
-    }
-
-    if (tableEditRowIndex === -1) {
-      data.push(tableEditRow);
-    } else {
-      data[tableEditRowIndex] = tableEditRow
-    }
-    p.value = JSON.stringify(data);
-    printess.setProperty(p.id, p.value);
-    details.innerHTML = "";
-
-    const table = document.getElementById("printess-table-control");
-    if (table && forMobile) {
-      table.replaceWith(getTableControl(printess, p, forMobile));
-    }
   }
 
   function renderTableDetailsColumn(detailsWrapper: HTMLDivElement, tableDetailsDiv: HTMLElement, col: iExternalTableColumn, prevRow: string | undefined): void {
@@ -7935,35 +7999,6 @@ declare const bootstrap: any;
     tableDetailsDiv.style.marginRight = "4px";
     tableDetailsDiv.style.flex = "1 1 0";
     detailsWrapper.appendChild(tableDetailsDiv);
-  }
-
-  function getTableDetailsShortList(printess: iPrintessApi, p: iExternalProperty, rowIndex: number, row: Record<string, any>, col: iExternalTableColumn): HTMLElement {
-    const ddContent = document.createElement("div");
-    ddContent.className = "dropdown-menu";
-    ddContent.setAttribute("aria-labelledby", "defaultDropdown");
-    ddContent.style.width = "240px";
-
-    const list = document.createElement("div");
-    list.className = "color-picker-drop-down";
-
-    const value = row[col.name];
-    for (const f of col.list || []) {
-      const a = document.createElement("a");
-      a.className = "color-picker-color dropdown-item";
-      a.innerText = f.toString();
-      if (value == f) {
-        a.classList.add("active");
-      }
-      a.onclick = () => {
-        setTableValue(printess, p, col, f)
-        if (col.list) {
-          list.querySelectorAll("a").forEach(a => a.classList.remove("active"));
-          a.classList.add("active");
-        }
-      }
-      list.appendChild(a);
-    }
-    return list;
   }
 
   function getTableDetailsAutocomplete(printess: iPrintessApi, p: iExternalProperty, row: Record<string, any>, col: iExternalTableColumn): HTMLElement {
@@ -8086,43 +8121,76 @@ declare const bootstrap: any;
     inp.autocomplete = "off";
     inp.autocapitalize = "off";
     inp.spellcheck = false;
-
+    if (col.max && col.max > 0) {
+      inp.maxLength = col.max
+    }
     // Key-up does not fire when autocomplete happens
     inp.oninput = () => {
-      setTableValue(printess, p, col, inp.value)
+      setTableValue(printess, p, col, inp.value);
     }
 
     if (forMobile) {
       inp.classList.add("form-control");
       return inp;
     } else {
-      const r = addLabel(printess, p, inp, p.id, forMobile, p.kind, col.label || col.name);
+      const r = addLabel(printess, p, inp, p.id + "_" + col.name, forMobile, p.kind, col.label || col.name);
       return r;
     }
   }
 
-  function setTableValue(printess: iPrintessApi, p: iExternalProperty, col: iExternalTableColumn, newValue: string | number | boolean) {
+  async function setTableValue(printess: iPrintessApi, p: iExternalProperty, col: iExternalTableColumn, newValue: string | number | boolean): Promise<void> {
 
-    if (col.data === "number" && typeof newValue !== "number") {
-      tableEditRow[col.name] = isNaN(+newValue) ? 0 : +newValue;
-    } else if (col.data === "boolean" && typeof newValue !== "boolean") {
-      tableEditRow[col.name] = !!(newValue);
-    } else {
-      tableEditRow[col.name] = newValue;
+    // falsche Daten werden nicht geschrieben, falsch überschriebene Daten erhalten alten validen Wert => kein Datenbank-Update (auch lokal nicht!!!!)
+    // if failed return => add red warning text below input box
+
+    let ret: iExternalError | null = null;
+
+
+    if (col.data === "number" && typeof newValue === "string") {
+      if (parseFloat(newValue).toString() !== newValue) {
+        //console.error("Input is not a valid number=" + newValue);
+        ret = { boxIds: [], errorCode: "invalidNumber", errorValue1: "" }
+      } else {
+        newValue = parseFloat(newValue);
+      }
     }
-    printess.setTableCell(p.id, tableEditRowIndex, col.name, tableEditRow[col.name]);
 
-    // update our ui
+    if (col.data === "boolean" && typeof newValue === "string") {
+      if (newValue !== "true" && newValue !== "false") {
+        console.error("Input is not a boolean (expect true or false)=" + newValue);
+      } else {
+        newValue = newValue === "true";
+      }
+    }
+
+    if (ret !== null) {
+      //console.error(ret.errorCode);
+      validate(printess, p, ret, "_" + col.name);
+      return;
+    }
+
+    ret = await printess.setTableCell(p.id, tableEditRowIndex, col, newValue);
+
+    validate(printess, p, ret, "_" + col.name);
+
+    if (ret !== null) {
+      //console.error(ret.errorCode);
+      return;
+    }
+
+    tableEditRow[col.name] = newValue;
+
+    // update our ui (hidden table row)
     const cell = document.getElementById("cell" + tableEditRowIndex + "_" + col.name);
     if (cell) {
-      cell.innerText = printess.gl(tableEditRow[col.name].toString());
+      cell.innerText = printess.gl(newValue.toString());
     }
 
-    // and do it in the local model as well
+    // and do it in the local model as well (if valid input!!!)
     try {
       const a = JSON.parse(<any>p.value);
       if (Array.isArray(a)) {
-        a[tableEditRowIndex][col.name] = tableEditRow[col.name];
+        a[tableEditRowIndex][col.name] = newValue;
         p.value = JSON.stringify(a);
       }
     } catch (error) {
@@ -9588,7 +9656,7 @@ declare const bootstrap: any;
     buttonContainer.className = "mobile-buttons";
 
 
-    const buttons = printess.getMobileUiButtons(uih_currentProperties, propertyIdFilter || "root");
+    const buttons = printess.getMobileUiButtons(uih_currentProperties, propertyIdFilter || "root", true);
 
     if (uih_currentState === "document") {
       buttons.unshift(...printess.getMobileUiBackgroundButton());
@@ -9692,7 +9760,7 @@ declare const bootstrap: any;
 
         if (pid && printess.isDataSource(pid)) {
           if (b.newState.externalProperty?.kind === "record-left-button" || b.newState.state === "table-edit") {
-            buttonDiv.style.marginRight = "10px";
+            buttonDiv.style.marginRight = "5px";
           }
         }
 
@@ -9739,6 +9807,8 @@ declare const bootstrap: any;
           buttonDiv.classList.add("mobile-property-button");
           if (b.newState.externalProperty?.kind === "font") {
             buttonDiv.classList.add("mobile-font-button");
+          } else if (b.newState.state === "table-edit" && pid && printess.isDataSource(pid)) {
+            buttonDiv.classList.add("mobile-table-button");
           }
         }
 
@@ -9898,9 +9968,9 @@ declare const bootstrap: any;
         }
       }
 
-      const badge = document.getElementById("table-record-badge");
-      if (badge) {
-        badge.textContent = (tableEditRowIndex + 1).toString();
+      const recordButton = document.getElementById("printess-table-record");
+      if (recordButton) {
+        recordButton.innerHTML = printess.gl("ui.recordCaption", (tableEditRowIndex + 1).toString(), data.length);
       }
 
       selectButtonDiv(buttonDiv);
@@ -10311,7 +10381,7 @@ declare const bootstrap: any;
     const property = properties.filter(p => p.id === propertyId)[0];
     if (!property) return
 
-    const buttons = printess.getMobileUiButtons([property], propertyId);
+    const buttons = printess.getMobileUiButtons([property], propertyId, true);
     let b: iMobileUIButton | undefined = undefined;
     if (rowIndex !== undefined) {
       for (const button of buttons) {
@@ -10371,47 +10441,26 @@ declare const bootstrap: any;
     } else {
 
       const buttonCircle = getButtonCircle(printess, b, isSelected);
-
+      const caption = printess.gl(b.caption).replace(/\\n/g, "");
       const buttonText = document.createElement("div");
       buttonText.className = "mobile-property-caption no-selection";
-      buttonText.innerText = printess.gl(b.caption);
+      buttonText.innerText = caption;
 
       buttonDiv.appendChild(buttonCircle);
       buttonDiv.appendChild(buttonText);
 
     }
-
-    if (b.newState.state === "table-edit" && printess.isDataSource(propertyId)) {
-      const tableProp = uih_currentProperties.filter(p => b?.newState.externalProperty && p.id === b.newState.externalProperty.id)[0];
-
-      let data = [];
-      try {
-        data = JSON.parse(tableProp.value.toString()) || [];
-        if (!Array.isArray(data)) {
-          data = [];
-        }
-      } catch (error) {
-        data = [];
-      }
-
-      const badge = document.createElement("div");
-      badge.id = "table-record-badge";
-      badge.className = "position-absolute badge rounded-pill bg-primary";
-      badge.textContent = tableEditRowIndex === -1 && data.length > 0 ? "1" : (tableEditRowIndex + 1).toString();
-
-      buttonDiv.appendChild(badge);
-    }
   }
 
   function getButtonCircle(printess: iPrintessApi, m: iMobileUIButton, isSelected: boolean): HTMLDivElement {
 
-    const c = printess.getButtonCircleModel(m, isSelected);
+    const c = printess.getButtonCircleModel(m, isSelected, true, true, true);
     const p = m.newState.externalProperty;
 
     const circle = document.createElement("div");
     circle.className = "circle-button-graphic";
 
-    if (c.hasSvgCircle && p?.kind !== "record-left-button" && p?.kind !== "record-right-button" && p?.kind !== "splitter-layouts-button" && p?.kind !== "convert-to-image" && p?.kind !== "convert-to-text" && m.newState.metaProperty !== "handwriting-image") {
+    if (c.hasSvgCircle) {
       circle.appendChild(getSvgCircle(c.displayGauge, c.gaugeValue));
     }
     if (c.hasImage) {
@@ -10426,6 +10475,31 @@ declare const bootstrap: any;
       caption.className = c.captionClass;
       caption.innerText = printess.gl(c.captionInCircle);
       circle.appendChild(caption);
+    }
+    // table record caption in circle
+    if (m.newState.state === "table-edit" && p && printess.isDataSource(p.id)) {
+      const tableProp = uih_currentProperties.filter(prop => p && p.id === prop.id)[0];
+
+      let data = [];
+      try {
+        data = JSON.parse(tableProp.value.toString()) || [];
+        if (!Array.isArray(data)) {
+          data = [];
+        }
+      } catch (error) {
+        data = [];
+      }
+
+      const currentRecord = tableEditRowIndex === -1 && data.length > 0 ? "1" : (tableEditRowIndex + 1).toString();
+      const maxRecord = data.length;
+
+      const caption = document.createElement("div");
+      caption.id = "printess-table-record";
+      caption.className = c.captionClass;
+      caption.innerHTML = printess.gl("ui.recordCaption", currentRecord, maxRecord);
+      circle.appendChild(caption);
+
+      c.hasIcon = false;
     }
     if (c.hasColor) {
       const color = document.createElement("div");
