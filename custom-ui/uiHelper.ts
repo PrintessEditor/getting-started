@@ -7653,7 +7653,7 @@ declare const bootstrap: any;
 
               const above = ev.offsetY < target.offsetHeight / 2;
 
-              const newData = [];
+              const newData: any[] = [];
 
               for (let i = 0; i < data.length; i++) {
                 if (i !== tableDragRowIndex) {

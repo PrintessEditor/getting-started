@@ -568,7 +568,7 @@ export interface iPrintessApi {
    *                         "all" returns only top level buttons (no sub/meta property buttons)
    *                         "root" returns only top-level properties but sets the `hasCollapsedMetaProperties` flag if applicable
    */
-  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string, customHandwriting: boolean = false): Array<iMobileUIButton>;
+  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string, customHandwriting?: boolean): Array<iMobileUIButton>;
 
   /**
    * Returns change background button if available
