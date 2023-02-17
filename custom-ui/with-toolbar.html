@@ -190,6 +190,12 @@
             Insert Template
           </a>
         </li>
+        <li class="nav-item" style="display: flex; flex-direction: column;">
+          <a class="nav-link" id="btnLoadWithoutExchangeIDs" title="Load Base+Merge with exchange disabled" style="padding: 0 10px; font-size: 13px;">
+            No Exchange </a> 
+          <a class="nav-link" id="btnLoadWithExchangeIDs" title="Load Base+Merge with exchange enabled" style="padding: 0 10px; font-size: 13px;">
+            With Exchange </a>
+        </li>
 
 
 
@@ -487,6 +493,20 @@
     };
     document.getElementById("btnInsertTemplateAsLayoutSnippet").onclick = () => {
       printess.insertTemplateAsLayoutSnippet("Text Sticker", "draft", "Sticker Square 1", "layout");
+    };
+    document.getElementById("btnLoadWithoutExchangeIDs").onclick = () => {
+      const m = [{
+        templateName: "exchange-id-test-2",
+        ignoreExchangeIds: true
+      }]
+      printess.loadTemplate("exchange-id-test-1", m, false);
+    };
+    document.getElementById("btnLoadWithExchangeIDs").onclick = () => {
+      const m = [{
+        templateName: "exchange-id-test-2",
+        ignoreExchangeIds: false
+      }]
+      printess.loadTemplate("exchange-id-test-1", m, false);
     };
     document.getElementById("btnCenterInView").onclick = () => {
       printess.centerSpreadInView();

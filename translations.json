@@ -185,11 +185,13 @@
       "twoPagesAddedTitle": "Pages Added",
       "twoPagesAddedInfo": "Two pages were added to your book!",
       "productOverview": "Product Overview",
+
       "editText": "Edit Text",
       "closeTextEditing": "Close Text Editing",
       "applyImageZoom": "Apply Image Zoom",
       "contextMenu": "Menu",
       "arrange": "Arrange",
+
       "align": "Align",
       "left": "Left",
       "center": "Center",
@@ -203,19 +205,23 @@
       "group": "Group Frames",
       "ungroup": "Ungroup Frames",
       "delete": "Delete",
+
       "pages": "Pages",
       "placement-fit": "Fit",
       "placement-fill": "Fill",
       "placement-face": "Face",
       "placement-group": "Group",
+
       "leftPage": "Left Page",
       "rightPage": "Right Page",
+
       "splitImage": "Split Image",
       "convertToImage": "Convert to Image",
       "convertToText": "Convert to Text",
       "gridSize": "Grid Size",
       "addImage": "Add Image",
       "makeText": "Make Text",
+
       "photoGridHeader": "Creative Photo Grid",
       "removeImages": "Remove Images",
       "removeSplitterImageInfo": "Simply resize one image over another to remove it.",
@@ -225,8 +231,10 @@
       "adjustGapInfo": "Click the grid button to change the gap between the images.",
       "addText": "Add Text",
       "addSplitterTextInfo": "Click the 'T' button and select from multiple layouts.",
+
       "previous": "Previous",
       "next": "Next"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
@@ -271,9 +279,12 @@
       "moreProblems": "$1 More Problems",
       "pasteSafari": "To paste from clipboard, please click on the small black [PASTE] button",
       "pasteBrowser": "Your browser doesn't allow us to read from clipboard.",
+
       "framesToSmallForGap": "Some of the frames are to small for the selected gap size. Please make them bigger and try again."
     }
   },
+
+
   "de": {
     "ui": {
       "saveProgress": "Design wird gespeichert ...",
@@ -460,11 +471,13 @@
       "twoPagesAddedTitle": "Seiten hinzugefügt",
       "twoPagesAddedInfo": "Ihrem Buch wurden zwei Seiten hinzugefügt!",
       "productOverview": "Produktübersicht",
+
       "editText": "Text bearbeiten",
       "closeTextEditing": "Textbearbeitung schließen",
       "applyImageZoom": "Bildzoom anwenden",
       "contextMenu": "Menü",
       "arrange": "Anordnen",
+
       "align": "Ausrichten",
       "left": "Links",
       "center": "Center",
@@ -478,19 +491,23 @@
       "group": " Rahmen gruppieren",
       "ungroup": "Gruppierung der Rahmen aufheben",
       "delete": "Löschen",
+
       "pages": "Seiten",
       "placement-fit": "Einpassen",
       "placement-fill": "Ausfüllen",
       "placement-face": "Gesicht",
       "placement-group": "Gruppe",
+
       "leftPage": "Linke Seite",
       "rightPage": "Rechte Seite",
+
       "splitImage": "Bild teilen",
       "convertToImage": "In Bild konvertieren",
       "convertToText": "In Text umwandeln",
       "gridSize": "Rastergröße",
       "addImage": "Bild einfügen",
       "makeText": "Text erstellen",
+
       "photoGridHeader": "Kreatives Foto-Raster",
       "removeImages": "Bilder entfernen",
       "removeSplitterImageInfo": "Ändern Sie einfach die Größe eines Bildes über einem anderen, um es zu entfernen.",
@@ -500,8 +517,12 @@
       "adjustGapInfo": "Klicken Sie auf die Schaltfläche Raster, um den Abstand zwischen den Bildern zu ändern.",
       "addText": "Text hinzufügen",
       "addSplitterTextInfo": "Klicken Sie auf die Schaltfläche 'T' und wählen Sie aus mehreren Layouts.",
+
       "previous": "Vorherige",
       "next": "Nächste"
+
+
+
     },
     "errors": {
       "imageResolutionLowTitle": "Uups!\nSieht so aus, als ob Ihr Bild zu klein ist...",
@@ -546,6 +567,7 @@
       "moreProblems": "$1 Weitere Probleme",
       "pasteSafari": "Zum Einfügen aus der Zwischenablage klicken Sie bitte auf die kleine schwarze Schaltfläche [EINFÜGEN]",
       "pasteBrowser": "Ihr Browser erlaubt es uns nicht, aus der Zwischenablage zu lesen.",
+
       "framesToSmallForGap": "Einige der Rahmen sind zu klein für die gewählte Lückengröße. Bitte vergrößern Sie sie und versuchen Sie es erneut."
     }
   },
@@ -735,11 +757,13 @@
       "twoPagesAddedTitle": "Páginas añadidas",
       "twoPagesAddedInfo": "Se han añadido dos páginas a su libro.",
       "productOverview": "Resumen del producto",
+
       "editText": "Editar texto",
       "closeTextEditing": "Cerrar la edición de texto",
       "applyImageZoom": "Aplicar zoom a la imagen",
       "contextMenu": "Menú",
       "arrange": "Organizar",
+
       "align": "Alinear",
       "left": "Izquierda",
       "center": "Centro",
@@ -753,19 +777,23 @@
       "group": "Agrupar marcos",
       "ungroup": "Desagrupar cuadros",
       "delete": "Borrar",
+
       "pages": "Páginas",
       "placement-fit": "Adaptación",
       "placement-fill": "Rellenar",
       "placement-face": "Cara",
       "placement-group": "Grupo",
+
       "leftPage": "Página izquierda",
       "rightPage": "Página derecha",
+
       "splitImage": "Dividir Imagen",
       "convertToImage": "Convertir a imagen",
       "convertToText": "Convertir a texto",
       "gridSize": "Tamaño de la cuadrícula",
       "addImage": "Añadir Imagen",
       "makeText": "Hacer Texto",
+
       "photoGridHeader": "Rejilla de fotos creativa",
       "removeImages": "Eliminar imágenes",
       "removeSplitterImageInfo": "Basta con cambiar el tamaño de una imagen sobre otra para eliminarla.",
@@ -775,8 +803,10 @@
       "adjustGapInfo": "Haga clic en el botón de cuadrícula para cambiar el espacio entre las imágenes.",
       "addText": "Añadir texto",
       "addSplitterTextInfo": "Haz clic en el botón 'T' y selecciona entre varios diseños.",
+
       "previous": "Anterior",
       "next": "Siguiente"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Vaya!\nParece que tu foto es demasiado pequeña ...",
@@ -821,6 +851,7 @@
       "moreProblems": "$1 Problemas Más",
       "pasteSafari": "Para pegar desde el portapapeles, haga clic en el pequeño botón negro [PEGAR].",
       "pasteBrowser": "Su navegador no nos permite leer del portapapeles.",
+
       "framesToSmallForGap": "Algunos de los marcos son demasiado pequeños para el tamaño de hueco seleccionado. Por favor, hazlos más grandes e inténtalo de nuevo."
     }
   },
@@ -1010,11 +1041,13 @@
       "twoPagesAddedTitle": "Lisätty sivuja",
       "twoPagesAddedInfo": "Kirjallesi lisättiin kaksi sivua!",
       "productOverview": "Tuotteen yleiskatsaus",
+
       "editText": "Muokkaa tekstiä",
       "closeTextEditing": "Sulje tekstin muokkaus",
       "applyImageZoom": "Kuvan zoomaus",
       "contextMenu": "Valikko",
       "arrange": "Järjestä",
+
       "align": "Kohdista",
       "left": "Vasen",
       "center": "Keskusta",
@@ -1028,19 +1061,23 @@
       "group": "Ryhmäkehykset",
       "ungroup": "Ryhmittämättömät kehykset",
       "delete": "Poista",
+
       "pages": "Sivut",
       "placement-fit": "Sovittaminen",
       "placement-fill": "Täytä",
       "placement-face": "Kasvot",
       "placement-group": "Ryhmä",
+
       "leftPage": "Vasen sivu",
       "rightPage": "Oikea sivu",
+
       "splitImage": "Jaettu Kuva",
       "convertToImage": "Muunna kuvaksi",
       "convertToText": "Muunna tekstiksi",
       "gridSize": "Ruudukon koko",
       "addImage": "Lisää Kuva",
       "makeText": "Tee Tekstiä",
+
       "photoGridHeader": "Luova valokuva Ruudukko",
       "removeImages": "Poista kuvia",
       "removeSplitterImageInfo": "Poista kuva yksinkertaisesti muuttamalla yhden kuvan kokoa toisen kuvan päällä.",
@@ -1050,8 +1087,10 @@
       "adjustGapInfo": "Voit muuttaa kuvien välistä rakoa napsauttamalla ruudukkopainiketta.",
       "addText": "Lisää tekstiä",
       "addSplitterTextInfo": "Napsauta T-painiketta ja valitse useista asetteluista.",
+
       "previous": "Edellinen",
       "next": "Seuraava"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Hups!\nKuvasi näyttää olevan liian pieni...",
@@ -1096,6 +1135,7 @@
       "moreProblems": "$1 Ongelmaa Lisää",
       "pasteSafari": "Voit liittää leikepöydältä napsauttamalla pientä mustaa [PASTE]-painiketta.",
       "pasteBrowser": "Selaimesi ei salli meidän lukea leikepöydältä.",
+
       "framesToSmallForGap": "Jotkin kehykset ovat liian pieniä valitulle aukkokoolle. Tee niistä isompia ja yritä uudelleen."
     }
   },
@@ -1285,11 +1325,13 @@
       "twoPagesAddedTitle": "Pages ajoutées",
       "twoPagesAddedInfo": "Deux pages ont été ajoutées à votre livre !",
       "productOverview": "Aperçu du produit",
+
       "editText": "Modifier le texte",
       "closeTextEditing": "Fermer l'édition du texte",
       "applyImageZoom": "Appliquer le zoom sur l'image",
       "contextMenu": "Menu",
       "arrange": "Organiser",
+
       "align": "Aligner",
       "left": "Gauche",
       "center": "Centre",
@@ -1303,19 +1345,23 @@
       "group": "Grouper les images",
       "ungroup": "Dégrouper les cadres",
       "delete": "Supprimer",
+
       "pages": "Pages",
       "placement-fit": "Ajuster",
       "placement-fill": "Remplir",
       "placement-face": "Visage",
       "placement-group": "Groupe",
+
       "leftPage": "Page de gauche",
       "rightPage": "Page de droite",
+
       "splitImage": "Diviser l'image",
       "convertToImage": "Convertir en image",
       "convertToText": "Convertir en texte",
       "gridSize": "Taille de la grille",
       "addImage": "Ajouter l'image",
       "makeText": "Faire du texte",
+
       "photoGridHeader": "Grille photo créative",
       "removeImages": "Supprimer des images",
       "removeSplitterImageInfo": "Il suffit de redimensionner une image sur une autre pour la supprimer.",
@@ -1325,8 +1371,10 @@
       "adjustGapInfo": "Cliquez sur le bouton de la grille pour modifier l'écart entre les images.",
       "addText": "Ajouter du texte",
       "addSplitterTextInfo": "Cliquez sur le bouton 'T' et choisissez parmi plusieurs mises en page.",
+
       "previous": "Précédent",
       "next": "Suivant"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Oups!\nOn dirait que votre image est trop petite...",
@@ -1371,6 +1419,7 @@
       "moreProblems": "$1 Problèmes de Plus",
       "pasteSafari": "Pour coller à partir du presse-papiers, veuillez cliquer sur le petit bouton noir [PASTE]",
       "pasteBrowser": "Votre navigateur ne nous permet pas de lire le presse-papiers.",
+
       "framesToSmallForGap": "Certains des cadres sont trop petits pour la taille de l'espace sélectionné. Veuillez les agrandir et réessayer."
     }
   },
@@ -1560,11 +1609,13 @@
       "twoPagesAddedTitle": "Страницы добавлены",
       "twoPagesAddedInfo": "Две страницы были добавлены в вашу книгу!",
       "productOverview": "Обзор продукции",
+
       "editText": "Редактирование текста",
       "closeTextEditing": "Закрыть редактирование текста",
       "applyImageZoom": "Применить масштаб изображения",
       "contextMenu": "Меню",
       "arrange": "Упорядочить",
+
       "align": "Выравнивание",
       "left": "Слева",
       "center": "Центр",
@@ -1578,19 +1629,23 @@
       "group": "Группировать кадры",
       "ungroup": "Разгруппировать кадры",
       "delete": "Удалить",
+
       "pages": "Страницы",
       "placement-fit": "Приспособление",
       "placement-fill": "Заполнить",
       "placement-face": "Лицо",
       "placement-group": "Группа",
+
       "leftPage": "Левая страница",
       "rightPage": "Правая страница",
+
       "splitImage": "Сплит",
       "convertToImage": "Конвертировать в изображение",
       "convertToText": "Конвертировать в текст",
       "gridSize": "Размер сетки",
       "addImage": "Добавить изображение",
       "makeText": "Создать текст",
+
       "photoGridHeader": "Творческая сетка для фотографий",
       "removeImages": "Удаление изображений",
       "removeSplitterImageInfo": "Чтобы удалить одно изображение, просто измените размер другого.",
@@ -1600,8 +1655,10 @@
       "adjustGapInfo": "Нажмите кнопку сетки, чтобы изменить расстояние между изображениями.",
       "addText": "Добавить текст",
       "addSplitterTextInfo": "Нажмите кнопку 'T' и выберите один из нескольких вариантов расположения текста.",
+
       "previous": "Предыдущий",
       "next": "Следующий"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Упс!\nПохоже, что ваше изображение слишком маленькое...",
@@ -1646,6 +1703,7 @@
       "moreProblems": "Еще $1 Проблемы",
       "pasteSafari": "Для вставки из буфера обмена нажмите на маленькую черную кнопку [PASTE]",
       "pasteBrowser": "Ваш браузер не позволяет нам читать из буфера обмена.",
+
       "framesToSmallForGap": "Некоторые рамки слишком малы для выбранного размера зазора. Пожалуйста, сделайте их больше и попробуйте еще раз."
     }
   },
@@ -1835,11 +1893,13 @@
       "twoPagesAddedTitle": "Sidor som lagts till",
       "twoPagesAddedInfo": "Två sidor har lagts till i din bok!",
       "productOverview": "Produktöversikt",
+
       "editText": "Redigera text",
       "closeTextEditing": "Stänga textredigering",
       "applyImageZoom": "Använd bildzoom",
       "contextMenu": "Meny",
       "arrange": "Ordna",
+
       "align": "Anpassa",
       "left": "Vänster",
       "center": "Centrum",
@@ -1853,19 +1913,23 @@
       "group": "Gruppera ramar",
       "ungroup": "Avlägsna gruppering av ramar",
       "delete": "Ta bort",
+
       "pages": "Sidor",
       "placement-fit": "Passa in",
       "placement-fill": "Fyll i",
       "placement-face": "Ansikte",
       "placement-group": "Grupp",
+
       "leftPage": "Vänster sida",
       "rightPage": "Höger sida",
+
       "splitImage": "Delad Bild",
       "convertToImage": "Konvertera till bild",
       "convertToText": "Konvertera till text",
       "gridSize": "Rutstorlek",
       "addImage": "Lägg till bild",
       "makeText": "Skapa Text",
+
       "photoGridHeader": "Kreativa fotoraster",
       "removeImages": "Ta bort bilder",
       "removeSplitterImageInfo": "Ändra bara storleken på en bild över en annan för att ta bort den.",
@@ -1875,8 +1939,10 @@
       "adjustGapInfo": "Klicka på rutnätsknappen för att ändra avståndet mellan bilderna.",
       "addText": "Lägg till text",
       "addSplitterTextInfo": "Klicka på T-knappen och välj mellan flera layouter.",
+
       "previous": "Föregående",
       "next": "Nästa"
+
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nDet verkar som om bilden är för liten...",
@@ -1921,6 +1987,7 @@
       "moreProblems": "Ytterligare $1 Problem",
       "pasteSafari": "För att klistra in från urklipp klickar du på den lilla svarta knappen [PASTE]",
       "pasteBrowser": "Din webbläsare tillåter inte att vi läser från klippbordet.",
+
       "framesToSmallForGap": "Några av ramarna är för små för den valda springan. Gör dem större och försök igen."
     }
   }

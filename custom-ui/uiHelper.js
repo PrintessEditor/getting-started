@@ -93,20 +93,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_lastDragTarget;
     let uih_oneTimeShowSplitterLayoutSelection = false;
     function receiveMessage(printess, topic, data) {
-        switch (topic) {
-            case "ShowAlert":
-                alert("New Message: " + data.text);
-                break;
-            case "SplitterFrameToText":
-                uih_oneTimeShowSplitterLayoutSelection = true;
-                break;
-            case "OpenImageUpload": {
-                const ele = document.querySelector('input[type="file"].form-control');
-                if (ele)
-                    ele.click();
-                break;
+        return __awaiter(this, void 0, void 0, function* () {
+            switch (topic) {
+                case "ShowAlert":
+                    alert("New Message: " + data.text);
+                    break;
+                case "SplitterFrameToText":
+                    uih_oneTimeShowSplitterLayoutSelection = true;
+                    break;
+                case "OpenImageUpload": {
+                    const ele = document.querySelector('input[type="file"].form-control');
+                    if (ele)
+                        ele.click();
+                    break;
+                }
+                case "MobileImagesUpload": {
+                    const content = yield getMobileImagesUploadContent(printess, data.state);
+                    const ele = document.getElementById("mobileUploadContent");
+                    if (ele) {
+                        ele.replaceWith(content);
+                    }
+                    else if (data.state === "completed") {
+                        renderMobileUploadSuccessOverlay(printess);
+                    }
+                    break;
+                }
             }
-        }
+        });
     }
     function validateAllInputs(printess, buttonType) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -432,7 +445,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function renderDesktopUi(printess, properties = uih_currentProperties, state = uih_currentState, groupSnippets = uih_currentGroupSnippets, layoutSnippets = uih_currentLayoutSnippets, tabs = uih_currentTabs) {
         var _a, _b, _c;
         if (uih_currentRender === "never") {
-            if (window.visualViewport && !printess.autoScaleEnabled()) {
+            if (window.visualViewport && !printess.autoScaleDetails().enabled) {
                 uih_viewportHeight = -1;
                 _viewPortScroll(printess, "resize");
             }
@@ -1286,10 +1299,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     return getMultiLineTextBox(printess, p, forMobile);
                 }
             case "color":
-                if (!forMobile && uih_currentProperties.length <= 3 && uih_currentProperties.filter(p => p.kind === "color").length <= 1) {
+                if (!forMobile && uih_currentProperties.length <= 3 && uih_currentProperties.filter(p => p.kind === "color").length <= 1 && !p.id.startsWith("FF_")) {
                     return getTextPropertyScrollContainer(getColorDropDown(printess, p, undefined, true));
                 }
-                else if (!forMobile && uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors()) {
+                else if (!forMobile && uih_currentProperties.length === 2 && uih_currentProperties.filter(p => p.kind === "color").length === 2 && printess.enableCustomColors() && !p.id.startsWith("FF_")) {
                     const colorsContainer = getTextPropertyScrollContainer(getColorDropDown(printess, p, undefined, true));
                     colorsContainer.classList.add("mb-4");
                     return colorsContainer;
@@ -2671,7 +2684,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (container)
             container.appendChild(validation);
     }
-    function validate(printess, p, error, cellName = "") {
+    function validate(printess, p, error, cell) {
+        var _a;
+        const cellName = (_a = cell === null || cell === void 0 ? void 0 : cell.name) !== null && _a !== void 0 ? _a : "";
         if (p.validation) {
             const container = document.getElementById("cnt_" + p.id + cellName);
             const input = document.getElementById("inp_" + p.id.replace("#", "-HASH-") + cellName);
@@ -2680,6 +2695,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (charValidation && p.controlGroup === 0) {
                 if (p.validation.maxChars && p.value.toString().length <= p.validation.maxChars && (p.value && p.value !== p.validation.defaultValue)) {
                     charValidation.innerText = printess.gl("errors.maxCharsLeftInline", p.validation.maxChars - p.value.toString().length);
+                }
+                else if (p.kind === "table" && cell && cell.maxChar > 0) {
+                    charValidation.innerText = printess.gl("errors.maxCharsLeftInline", cell.maxChar - cell.value.toString().length);
                 }
                 else {
                     charValidation.innerText = "";
@@ -2743,7 +2761,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             return;
                         }
                     }
-                    catch (_a) {
+                    catch (_b) {
                     }
                 }
                 input.classList.remove("is-invalid");
@@ -2756,12 +2774,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function setPropertyVisibilities(printess) {
         for (const p of uih_currentProperties) {
             if (p.validation && p.validation.visibility !== "always") {
-                const div = document.getElementById("tabs-panel-" + p.id) || document.getElementById("cnt_" + p.id);
+                const div = document.getElementById("tabs-panel-" + p.id) || document.getElementById("cnt_" + p.id) || document.getElementById("color_" + p.id);
                 if (div) {
-                    const v = printess.isPropertyVisible(p.id, div.style.display === "block");
+                    const v = printess.isPropertyVisible(p.id, div.style.display === "block" || div.style.display === "flex");
                     if (v) {
                         if (div.style.display === "none") {
-                            div.style.display = "block";
+                            div.style.display = div.id.startsWith("color_") ? "flex" : "block";
                         }
                     }
                     else {
@@ -2853,6 +2871,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getColorDropDown(printess, p, metaProperty, forMobile = false, dropdown) {
         if (!dropdown) {
             dropdown = document.createElement("div");
+            dropdown.id = "color_" + p.id;
             dropdown.className = "btn-group me-1";
         }
         const colors = printess.getColors(p.id);
@@ -2958,6 +2977,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             ddContent.appendChild(colorList);
             dropdown.appendChild(ddContent);
+            dropdown.style.display = printess.isPropertyVisible(p.id) ? "flex" : "none";
             return dropdown;
         }
     }
@@ -3447,6 +3467,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         closer.classList.add("modal-closer-icon");
         closer.onclick = () => {
             hideModal(id);
+            if (id === "MOBILEUPLOADMODAL") {
+                const imageTabContainer = document.getElementById("image-tab-container");
+                if (imageTabContainer) {
+                    const p = uih_currentProperties.filter(p => p.kind === "image")[0] || undefined;
+                    imageTabContainer.replaceWith(renderMyImagesTab(printess, false, p, undefined));
+                }
+            }
         };
         const modalBody = document.createElement("div");
         modalBody.className = "modal-body";
@@ -3708,6 +3735,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
         });
+        if (printess.showMobileUploadButton()) {
+            label = "ui.desktopImageUpload";
+        }
         container.appendChild(progressDiv);
         container.appendChild(addLabel(printess, p, inp, id, forMobile, "image", label || "ui.changeImage"));
         return container;
@@ -5540,6 +5570,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (!forMobile || showMobileImagesUploadBtn)
                 container.appendChild(twoButtons);
         }
+        if (!forMobile && printess.showMobileUploadButton()) {
+            const mobileUploadButton = document.createElement("button");
+            mobileUploadButton.className = "btn btn-secondary w-100 mb-3";
+            mobileUploadButton.innerText = printess.gl("ui.mobileImageUpload");
+            mobileUploadButton.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                yield getMobileImagesUploadOverlay(printess, forMobile);
+            });
+            container.appendChild(mobileUploadButton);
+        }
         const multipleImagesHint = document.createElement("p");
         multipleImagesHint.id = "multiple-images-hint";
         multipleImagesHint.style.fontFamily = "var(--bs-font-sans-serif)";
@@ -6004,6 +6043,103 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return container;
     }
+    function getMobileImagesUploadContent(printess, step) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const content = document.createElement("div");
+            content.id = "mobileUploadContent";
+            content.className = "d-flex flex-column align-items-center";
+            const stepIndicator = document.createElement("div");
+            stepIndicator.className = "step-indicator";
+            const ul = document.createElement("ul");
+            ul.className = "progress-steps";
+            const steps = ["barcode", "upload", "completed"];
+            for (let i = 0; i < steps.length; i++) {
+                const li = document.createElement("li");
+                if (steps.indexOf(step) === i) {
+                    li.className = "active";
+                }
+                else if (steps.indexOf(step) > i) {
+                    li.className = "complete";
+                }
+                if (steps[i] === "barcode") {
+                    li.style.setProperty("--display-li-after", "none");
+                }
+                ul.appendChild(li);
+            }
+            stepIndicator.appendChild(ul);
+            content.appendChild(stepIndicator);
+            if (step === "barcode") {
+                const qrCode = document.createElement("div");
+                qrCode.id = "externalImageQrCodeContainer";
+                qrCode.style.width = "250px";
+                qrCode.style.margin = "0 200px";
+                const externalUploadInfo = yield printess.createExternalImageUploadChannel();
+                qrCode.append(externalUploadInfo.qr);
+                const txt = document.createElement("p");
+                txt.textContent = "Scan the QR Code to upload images from phone";
+                txt.style.margin = "1rem 0 0";
+                content.appendChild(qrCode);
+                content.appendChild(txt);
+                printess.startExternalImagePolling(externalUploadInfo.channelId);
+            }
+            else if (step === "upload") {
+                const icon = printess.getIcon("desktop-mobile-duotone");
+                icon.classList.add("mobile-upload-success-icon");
+                icon.classList.add("text-secondary");
+                const txt = document.createElement("p");
+                txt.textContent = printess.gl("ui.mobileImageUploadReady");
+                txt.style.margin = "2rem 0px 0px";
+                content.appendChild(icon);
+                content.appendChild(txt);
+            }
+            else if (step === "completed") {
+                const icon = printess.getIcon("cloud-upload-check");
+                icon.classList.add("mobile-upload-success-icon");
+                const txt = document.createElement("p");
+                txt.textContent = printess.gl("ui.mobileImagesSuccessAlert");
+                txt.style.margin = "2rem 0px 0px";
+                content.appendChild(icon);
+                content.appendChild(txt);
+            }
+            return content;
+        });
+    }
+    function getMobileImagesUploadOverlay(printess, forMobile) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const content = yield getMobileImagesUploadContent(printess, "barcode");
+            const id = "MOBILEUPLOADMODAL";
+            const modal = document.getElementById(id);
+            if (modal)
+                return;
+            showModal(printess, id, content, "Upload Images from Phone");
+        });
+    }
+    function renderMobileUploadSuccessOverlay(printess) {
+        const toast = document.createElement("div");
+        toast.className = "toast show align-items-center text-light bg-primary border-0 mobile-upload-success-alert";
+        toast.setAttribute("role", "alert");
+        const content = document.createElement("div");
+        content.className = "d-flex align-items-center";
+        const icon = printess.getIcon("cloud-check-duotone");
+        icon.style.width = "50px";
+        icon.style.height = "50px";
+        const text = document.createElement("div");
+        text.className = "toast-body";
+        text.style.fontSize = "1.25rem";
+        text.innerText = printess.gl("ui.mobileImagesSuccessAlert");
+        content.appendChild(icon);
+        content.appendChild(text);
+        toast.appendChild(content);
+        document.body.appendChild(toast);
+        window.setTimeout(() => {
+            toast.remove();
+            const imageTabContainer = document.getElementById("image-tab-container");
+            if (imageTabContainer) {
+                const p = uih_currentProperties.filter(p => p.kind === "image")[0] || undefined;
+                imageTabContainer.replaceWith(renderMyImagesTab(printess, false, p, undefined));
+            }
+        }, 2000);
+    }
     function getDistributionOverlay(printess, forMobile, p, container) {
         const content = document.createElement("div");
         content.className = "d-flex flex-column align-items-center";
@@ -6106,6 +6242,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return buttonWrapper;
     }
     function renderGroupSnippets(printess, groupSnippets, forMobile) {
+        var _a;
         const forPhotoTab = uih_currentTabId === "#PHOTOS" && printess.showTabNavigation();
         const div = document.createElement("div");
         div.className = forMobile ? "group-snippets" : "accordion";
@@ -6122,8 +6259,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     div.appendChild(hr);
                 }
                 const body = document.createElement("div");
-                body.className = "d-grid";
-                body.style.gridTemplateColumns = "1fr 1fr 1fr";
+                const col = (_a = cluster.columns) !== null && _a !== void 0 ? _a : 3;
+                body.style.display = "grid";
+                body.style.gridTemplateColumns = `repeat(${col}, 1fr)`;
                 body.style.gridGap = "6px";
                 for (const snippet of cluster.snippets) {
                     const thumbDiv = document.createElement("div");
@@ -6286,7 +6424,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let lastTablePropId = "";
     let addButtonForTableDataClicked = false;
     function getTableControl(printess, p, forMobile, data = []) {
-        var _a, _b, _c;
+        var _a, _b;
         const container = document.createElement("div");
         container.id = "printess-table-control";
         let hasRow = false;
@@ -6309,7 +6447,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 thDrag.scope = "col";
                 tr.appendChild(thDrag);
                 for (const col of p.tableMeta.columns) {
-                    if (!col.hide && (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event"))) {
+                    if (!col.hide && col.name !== "type" && (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event"))) {
                         colCount++;
                         const th = document.createElement("th");
                         th.scope = "col";
@@ -6347,6 +6485,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 const tbody = document.createElement("tbody");
                 let rowNumber = 0;
                 const selectedRowNumber = printess.getTableRowIndex(p.id);
+                const bgs = new Map();
+                for (const ao of p.tableMeta.tableAddOptions) {
+                    if (ao.type && ao.bg) {
+                        bgs.set(ao.type, ao.bg);
+                    }
+                }
                 for (const row of data) {
                     if (p.tableMeta.tableType !== "calendar-events" || row.month == p.tableMeta.month) {
                         tr = document.createElement("tr");
@@ -6356,13 +6500,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             tr.classList.add("table-active");
                         }
                         tr.dataset.rowNumber = rowNumber.toString();
+                        const bg = bgs.get(row.type);
+                        if (bg) {
+                            tr.style.backgroundColor = bg;
+                        }
                         const tdDrag = document.createElement("td");
                         const dragIcon = printess.getIcon("ellipsis-v");
                         tdDrag.classList.add("table-drag-icon");
                         tdDrag.appendChild(dragIcon);
                         tr.appendChild(tdDrag);
                         for (const col of p.tableMeta.columns) {
-                            if (col.hide === true) {
+                            if (col.hide === true || col.name === "type") {
                                 continue;
                             }
                             if (p.tableMeta.tableType !== "calendar-events" || (col.name !== "month" && col.name !== "event")) {
@@ -6488,17 +6636,53 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 if (hasRow)
                     container.appendChild(table);
             }
-            const addButton = document.createElement("button");
-            addButton.className = "btn btn-primary mb-3 me-2";
-            addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
-            addButton.onclick = () => {
-                var _a;
-                const doneButton = document.getElementById("printess-close-table-details");
-                if (doneButton)
-                    doneButton.style.display = "inline-block";
-                lastClickedTableRow = (_a = printess.addTableRow(p.id)) !== null && _a !== void 0 ? _a : -1;
-                lastTablePropId = p.id;
-            };
+            const canAddMoreEntries = data.length < p.tableMeta.maxTableEntries || p.tableMeta.maxTableEntries === 0;
+            if (canAddMoreEntries) {
+                if (p.tableMeta.tableAddOptions.length > 0) {
+                    for (const ao of p.tableMeta.tableAddOptions) {
+                        const addButton = document.createElement("button");
+                        addButton.className = "btn btn-primary mb-3 me-2";
+                        addButton.style.display = "inline-block";
+                        const plusIcon = printess.getIcon("plus");
+                        plusIcon.style.width = "16px";
+                        plusIcon.style.height = "16px";
+                        plusIcon.style.margin = "0 5px 3px -5px";
+                        const text = document.createElement("span");
+                        text.innerText = ao.label;
+                        addButton.appendChild(plusIcon);
+                        addButton.appendChild(text);
+                        addButton.onclick = () => {
+                            var _a;
+                            if (ao.libFF && p.tableMeta) {
+                                showModal(printess, "ADD-ROWS-MODAL", getAddTableRowsModal(printess, p, ao, forMobile), printess.gl("ui.buttonAdd"));
+                            }
+                            else {
+                                const doneButton = document.getElementById("printess-close-table-details");
+                                if (doneButton)
+                                    doneButton.style.display = "inline-block";
+                                lastClickedTableRow = (_a = printess.addTableRow(p.id, ao.type)) !== null && _a !== void 0 ? _a : -1;
+                                lastTablePropId = p.id;
+                            }
+                        };
+                        container.appendChild(addButton);
+                    }
+                }
+                else {
+                    const addButton = document.createElement("button");
+                    addButton.className = "btn btn-primary mb-3 me-2";
+                    addButton.style.display = "inline-block";
+                    addButton.innerText = p.tableMeta.tableType === "calendar-events" ? printess.gl("ui.newEvent") : printess.gl("ui.newEntry");
+                    addButton.onclick = () => {
+                        var _a;
+                        const doneButton = document.getElementById("printess-close-table-details");
+                        if (doneButton)
+                            doneButton.style.display = "inline-block";
+                        lastClickedTableRow = (_a = printess.addTableRow(p.id, "")) !== null && _a !== void 0 ? _a : -1;
+                        lastTablePropId = p.id;
+                    };
+                    container.appendChild(addButton);
+                }
+            }
             const doneButton = document.createElement("button");
             doneButton.className = "btn btn-primary mb-3";
             doneButton.id = "printess-close-table-details";
@@ -6508,18 +6692,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 closeTableEditControl();
                 doneButton.style.display = "none";
             };
-            container.appendChild(addButton);
             container.appendChild(doneButton);
-            if (data.length === ((_c = p.tableMeta) === null || _c === void 0 ? void 0 : _c.maxTableEntries) && p.tableMeta.maxTableEntries !== 0) {
-                addButton.style.display = "none";
+            if (!canAddMoreEntries) {
                 const alert = document.createElement("div");
                 alert.className = "alert alert-primary";
                 alert.setAttribute("role", "alert");
                 alert.textContent = printess.gl("ui.maxEntriesInfo");
                 container.appendChild(alert);
-            }
-            else {
-                addButton.style.display = "inline-block";
             }
         }
         const details = document.createElement("div");
@@ -6582,6 +6761,58 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             });
         }
     }
+    function getAddTableRowsModal(printess, p, addOption, forMobile) {
+        const content = document.createElement("div");
+        const container = document.createElement("div");
+        container.className = "checkbox-list";
+        const topContainer = document.createElement("div");
+        const addButton = document.createElement("button");
+        addButton.className = "btn btn-primary mb-3 me-2";
+        addButton.style.display = "inline-block";
+        addButton.innerText = printess.gl("ui.add");
+        addButton.onclick = () => {
+            const index = [];
+            for (const child of container.children) {
+                if (child instanceof HTMLInputElement) {
+                    if (child.checked && child.dataset.index) {
+                        index.push(parseInt(child.dataset.index));
+                    }
+                }
+            }
+            if (index.length > 0) {
+                printess.addTableRows(p.id, addOption.type, addOption.libFF, index);
+            }
+            hideModal("ADD-ROWS-MODAL");
+        };
+        topContainer.appendChild(addButton);
+        content.appendChild(topContainer);
+        if (p.tableMeta && addOption.libFF) {
+            const rows = printess.getTableRowsToAdd(addOption.libFF);
+            for (const r of rows) {
+                const id = "row-add-" + r.index;
+                const check = document.createElement("input");
+                check.type = "checkbox";
+                const input = document.createElement("input");
+                input.dataset.index = r.index.toString();
+                input.className = "form-check-input";
+                input.id = id;
+                input.type = "checkbox";
+                input.checked = false;
+                const label = document.createElement("label");
+                label.className = "form-check-label";
+                label.setAttribute("for", id);
+                if (forMobile)
+                    label.style.color = input.checked ? "var(--bs-light)" : "var(--bs-primary)";
+                label.textContent = r.label;
+                input.onchange = () => {
+                };
+                container.appendChild(input);
+                container.appendChild(label);
+            }
+        }
+        content.appendChild(container);
+        return content;
+    }
     function closeTableEditControl() {
         var _a;
         const details = document.getElementById("tableDetailsRow");
@@ -6596,6 +6827,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function renderTableEditControl(printess, p, data, rowIndex, forMobile) {
+        var _a;
         tableEditRow = data[rowIndex];
         tableEditRowIndex = rowIndex;
         printess.setTableRowIndex(p.id, rowIndex);
@@ -6606,6 +6838,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         tableRow.id = "tableDetailsRow";
         tableRow.style.border = "1px solid #ccc";
         tableRow.style.background = "var(--bs-table-active-bg)";
+        const bgs = new Map();
+        for (const ao of ((_a = p.tableMeta) === null || _a === void 0 ? void 0 : _a.tableAddOptions) || []) {
+            if (ao.type && ao.bg && ao.type === tableEditRow.type) {
+                tableRow.style.background = ao.bg;
+            }
+        }
         const tableCell = document.createElement("td");
         tableCell.style.position = "relative";
         tableCell.colSpan = 100;
@@ -6678,7 +6916,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             let prevRow = p.tableMeta.columns[0].row;
             const detailsWrapper = document.createElement("div");
             detailsWrapper.className = "d-flex flex-wrap";
-            for (const col of p.tableMeta.columns) {
+            for (const col of p.tableMeta.columns.filter(c => c.name !== "type")) {
                 if ((_b = col.list) === null || _b === void 0 ? void 0 : _b.length) {
                     if (col.listMode === "auto-complete") {
                         const tableDetailsAutocomplete = getTableDetailsAutocomplete(printess, p, tableEditRow, col);
@@ -6834,7 +7072,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return inp;
         }
         else {
-            const r = addLabel(printess, p, inp, p.id + "_" + col.name, forMobile, p.kind, col.label || col.name);
+            const r = addLabel(printess, p, inp, p.id + "_" + col.name, forMobile, p.kind, col.label || col.name, !!(col.max && col.max > 0));
             return r;
         }
     }
@@ -6858,11 +7096,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
             if (ret !== null) {
-                validate(printess, p, ret, "_" + col.name);
+                validate(printess, p, ret, { name: "_" + col.name, value: newValue.toString(), maxChar: col.max || 0 });
                 return;
             }
             ret = yield printess.setTableCell(p.id, tableEditRowIndex, col, newValue);
-            validate(printess, p, ret, "_" + col.name);
+            validate(printess, p, ret, { name: "_" + col.name, value: newValue.toString(), maxChar: col.max || 0 });
             if (ret !== null) {
                 return;
             }

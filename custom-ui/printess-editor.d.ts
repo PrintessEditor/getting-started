@@ -1,8 +1,32 @@
+import { tableAddOption } from "../classes/model/FormField";
+
 /** 
  * Main call to attach the Printess to div-element of your choice. 
  * In ```printessAttachParameters``` you can pass authorization, template-name and other parameters.
  */
 export declare function attachPrintess(p: printessAttachParameters): Promise<iPrintessApi>;
+
+interface iImage {
+  fileName: string,
+  original: iScaledImage,
+  source?: iScaledImage, // in case it's not png or jpg, this one contains the info about the source file (pdf, svg, tif etc)
+  scaledVersions?: iScaledImage[]
+  originalOrder?: number,
+  originalGroup?: string,
+  version?: number,
+  average?: number // number ranging from 0-255 (0 full black, 255 full white), the average of the image pixel values
+}
+
+interface iScaledImage {
+  id: string,
+  url: string,
+  width: number,
+  height: number,
+  userState?: string | number | Record<string, unknown>,
+  isImmutable?: boolean,
+  fileHash?: string,
+  version?: number
+}
 
 export interface printessAttachParameters {
   resourcePath?: string;
@@ -46,9 +70,9 @@ export interface printessAttachParameters {
    * It also can take overform-field values.
    */
   loadExchangeData?: {
-    saveToken: string, 
+    saveToken: string,
     exchangeFormFields: boolean,
-    exchangeFrames: boolean, 
+    exchangeFrames: boolean,
     exchangeDocuments: boolean
   },
 
@@ -664,9 +688,28 @@ export interface iPrintessApi {
 
   /**
    * Adds a new row to a table form field.
+   * Returns row-index of added row.
    * @param fieldNameOrId The property-id or a form-field-name or form-field-id 
+   * @param type each form field table should have a type column which can be set on insert.
    */
-  addTableRow(fieldNameOrId: string): number | null
+  addTableRow(fieldNameOrId: string, type: string): number | null
+
+  /**
+   * Returns the row-indizies of a table form field to add to another table form field.
+   * An array of those indizies can be passed to 'addTableRows()'
+   * @param ffName Form Field Name
+   */
+  getTableRowsToAdd(ffName: string): Array<{ index: number, label: string }>
+
+    /**
+   * Adds multiple table rows at once from another table from field
+   *  * Returns row-index of added row.
+   * @param fieldNameOrId The property-id or a form-field-name or form-field-id 
+   * @param type each form field table should have a type column which can be set on insert.
+   * @param ffLibName Name of form-field which contains row-library
+   * @param libIndizies list if row-indizies of row-library
+   */
+    addTableRows(fieldNameOrId: string, type: string, ffLibName: string, libIndizies: Array<number>): number | null
 
   /**
    * Sets the size of a specific document 
@@ -819,8 +862,11 @@ export interface iPrintessApi {
   * @param propertyId 
   */
   importImageFromUrl(url: string, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage | null>;
+
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
+
+  importImagesFromExternal(images: iImage[], assignToFrameOrNewFrame: boolean = false): Promise<iExternalImage[]>;
 
   /**
    * Sets image placement based on selection, can only handle a single selected image for now.
@@ -842,7 +888,7 @@ export interface iPrintessApi {
   /**
    * Returns how many columns a Change Layout overview should have to display layout snippets more properly
    */
-  numberOfColumns(): number
+  numberOfColumns(): number;
 
   /**
    * Returns if buyer is allowed to upload pdf files
@@ -865,6 +911,22 @@ export interface iPrintessApi {
    * Tells UI to always show image distribution button.
    */
   showImageDistributionButton(): boolean
+
+  /**
+   * Tells UI to display upload button for image upload from mobile phone.
+   */
+  showMobileUploadButton(): boolean
+
+  /**
+   * get a QR Code for uploading images on mobile phone
+   */
+  createExternalImageUploadChannel(): Promise<{ qr: HTMLImageElement, channelId: string }>
+
+  /**
+   * check for images uploaded from phone
+   * @param channeldId 
+   */
+  startExternalImagePolling(channeldId: string): Promise<void>
 
   /**
    * delete buyer uploaded images that are not in use
@@ -1667,7 +1729,8 @@ export interface iExternalTab {
 }
 export interface iExternalSnippetCluster {
   tabId: string,
-  name: string;
+  name: string,
+  columns: number,
   snippets: Array<iExternalSnippet>;
 }
 export interface iExternalSnippet {
@@ -1751,7 +1814,17 @@ export interface iExternalTableMeta {
   year?: number;
   tableType: "generic" | "calendar-events";
   maxTableEntries: number;
+  tableAddOptions: Array<iExternalTableAddOption>
 }
+
+export type iExternalTableAddOption = {
+  label: string,
+  type: string,
+  libFF: string,
+  multi: boolean,
+  bg: string
+}
+
 export interface iExternalTableColumn {
   name: string,
   label?: string,
@@ -1868,6 +1941,9 @@ export interface iMergeTemplate {
 
   /* Pass a pixel based position for placing the snippet */
   pos?: iExternalRect;
+
+  /** Tells printess to not apply exchange-id data */
+  ignoreExchangeIds?: boolean
 }
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string, tag: string) => void;
@@ -1880,7 +1956,7 @@ export declare type refreshUndoRedoCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
 
-export type MessageTopic = "SplitterFrameToText" | "ShowAlert" | "OpenImageUpload";
+export type MessageTopic = "SplitterFrameToText" | "ShowAlert" | "OpenImageUpload" | "MobileImagesUpload";
 
 export interface iExternalImage {
   id: string;
@@ -2323,6 +2399,7 @@ export type iconName =
   | "eye-dropper"
   | "eye-dropper-light"
   | "cloud-upload-light"
+  | "cloud-upload-check"
   | "shopping-basket"
   | "shopping-basket-light"
   | "home-solid"
@@ -2348,4 +2425,6 @@ export type iconName =
   | "arrow-left-circle"
   | "arrow-right-circle"
   | "arrow-right-long"
-  | "camera-solid";
+  | "camera-solid"
+  | "desktop-mobile-duotone"
+  | "cloud-check-duotone";
