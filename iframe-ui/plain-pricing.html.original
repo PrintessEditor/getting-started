@@ -85,7 +85,7 @@
               "basePrice": 1,
               "oldPrice": 0,
               "legalNotice": "Inkl. VAT plus shipping",
-              "infoUrl": "https://editor.printess.com/v/nightly/printess-editor/product-overview-sample.html",
+              "infoUrl": "https://editor.printess.com/v/2.0.0/printess-editor/product-overview-sample.html",
               "priceTestModeEnabled": false
             };
 
