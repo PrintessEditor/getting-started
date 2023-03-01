@@ -1,8 +1,32 @@
+import { tableAddOption } from "../classes/model/FormField";
+
 /** 
  * Main call to attach the Printess to div-element of your choice. 
  * In ```printessAttachParameters``` you can pass authorization, template-name and other parameters.
  */
 export declare function attachPrintess(p: printessAttachParameters): Promise<iPrintessApi>;
+
+interface iImage {
+  fileName: string,
+  original: iScaledImage,
+  source?: iScaledImage, // in case it's not png or jpg, this one contains the info about the source file (pdf, svg, tif etc)
+  scaledVersions?: iScaledImage[]
+  originalOrder?: number,
+  originalGroup?: string,
+  version?: number,
+  average?: number // number ranging from 0-255 (0 full black, 255 full white), the average of the image pixel values
+}
+
+interface iScaledImage {
+  id: string,
+  url: string,
+  width: number,
+  height: number,
+  userState?: string | number | Record<string, unknown>,
+  isImmutable?: boolean,
+  fileHash?: string,
+  version?: number
+}
 
 export interface printessAttachParameters {
   resourcePath?: string;
@@ -39,6 +63,18 @@ export interface printessAttachParameters {
     saveToken: string,
     content?: "all" | "images" | "text"
   };
+
+  /**
+   * Optional parameter to merge all frame and document properties which have an exchange-id set.
+   * It loads an existing save token and takes over data onto the newly loaded template.
+   * It also can take overform-field values.
+   */
+  loadExchangeData?: {
+    saveToken: string,
+    exchangeFormFields: boolean,
+    exchangeFrames: boolean,
+    exchangeDocuments: boolean
+  },
 
   /**
    * Activated by default. Deactivating `allowZoomAndPan` freezes the visible Area of the current document. 
@@ -181,6 +217,14 @@ export interface printessAttachParameters {
   getOverlayCallback?: externalGetOverlayCallback;
 
   /**
+   * Arbitary method used to send messages from printess to the web-ui.
+   * Current usages:
+   *    `topic="SplitterFrameToText" data={}` Indicates that the user has converted a splitter image to a text frame
+   *    `topic="ShowAlert",  data.text="The text to display"`  Asks for an alert box to be shown to the user.
+  */
+  receiveMessageCallback?: receiveMessageCallback;
+
+  /**
    * Is called when the page navigation has changed (and needs redraw) but selection has stayed the same.
    */
   refreshPaginationCallback?: refreshPaginationCallback;
@@ -269,12 +313,24 @@ export interface iPrintessApi {
 
   /**
    * Load a template to the Printess editor.
+   * Supports 'exchangeId' on document level. Docs with matching exchange-id's will transfer all user changes.
    * @param templateNameOrToken can be either the name of a template (case sensitive) or the save-token received as a result of a user design save. 
    * @param mergeTemplates optional parameter to pass other templates to merge 
    * @param takeOverFormFieldValues optional parameter to transfer global form field values from previous to next document
    */
   loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
 
+
+
+  /**
+   * Load a template to the Printess editor and sets form fields.
+   * Supports 'exchangeId' on document level. Docs with matching exchange-id's will transfer all user changes.
+   * @param templateNameOrToken can be either the name of a template (case sensitive) or the save-token received as a result of a user design save. 
+   * @param mergeTemplates optional parameter to pass other templates to merge 
+   * @param formFields optional parameter to pass global form field values  
+   * @param snippetPriceCategoryLabels optional parameter to pass snippetPriceCategoryLabels  
+   */
+  loadTemplateAndFormFields(templateName: string, mergeTemplates?: iMergeTemplate[], formFields?: { name: string, value: string }[] | null, snippetPriceCategoryLabels?: string[] | null): Promise<void>
 
 
   /**
@@ -373,7 +429,6 @@ export interface iPrintessApi {
   /**
    * Select and zoom to the frame(s) mentioned in the error object.
    * @param err
-   * @param zoomToSelection Overrides the default zoom behaviour of the item / template
    */
   bringErrorIntoView(err: iExternalError): Promise<void>
 
@@ -381,6 +436,11 @@ export interface iPrintessApi {
    * Indicates if a selected image frame can be splitted in certain directions
    */
   hasScissorMenu(): "never" | "horizontical" | "vertical" | "both"
+
+  /**
+   * Indicates if a splitter cell is selected
+   */
+  hasSplitterMenu(): boolean
 
   /**
    * Split an image frame that has splitter option turned on
@@ -481,7 +541,7 @@ export interface iPrintessApi {
    * Returns only false if property refers to a formfield which is not visible, because it doesn' match a specific condition.
    * @param propertyId ID of property to check
    */
-  isPropertyVisible(propertyId: string): boolean
+  isPropertyVisible(propertyId: string, wasVisibleBefore?: boolean): boolean
 
   /**
    * Returns all available properties in teh current document
@@ -531,12 +591,38 @@ export interface iPrintessApi {
    *                         "all" returns only top level buttons (no sub/meta property buttons)
    *                         "root" returns only top-level properties but sets the `hasCollapsedMetaProperties` flag if applicable
    */
-  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string): Array<iMobileUIButton>;
+  getMobileUiButtons(properties: Array<iExternalProperty>, propertyIdFilter: "all" | "root" | string, customHandwriting?: boolean): Array<iMobileUIButton>;
 
   /**
    * Returns change background button if available
    */
   getMobileUiBackgroundButton(): Array<iMobileUIButton>
+
+  /**
+   * Returns change layouts button for splitter text frames
+   */
+  getMobileUiSplitterLayoutsButton(): Array<iMobileUIButton>
+
+  /**
+   * Returns grid gap button for splitter frames
+   */
+  getMobileUiSplitterGapButton(): Array<iMobileUIButton>
+
+  /**
+  * Returns image to text convert button if available
+  */
+  getMobileUiSplitterToTextButton(): Array<iMobileUIButton>
+
+  /**
+   * Returns text to image convert button if available
+   */
+  getMobileUiSplitterToImageButton(): Array<iMobileUIButton>
+
+  /**
+   * Mobile UI helper method to go through a table form-field which is set as data-source in the template
+   * @param type up or down for arrow/data direction
+   */
+  getMobileUiRecordNavigationArrows(): Array<iMobileUIButton>
 
   /**
    * Returns horizontal and vertical scissor buttons if available
@@ -549,7 +635,7 @@ export interface iPrintessApi {
    * @param m The mobile button to create a circle for
    * @param isSelected If the button is selected
    */
-  getButtonCircleModel(m: iMobileUIButton, isSelected: boolean): iButtonCircle
+  getButtonCircleModel(m: iMobileUIButton, isSelected: boolean, customHandwriting?: boolean, customSplitterButton?: boolean, customTableRecordButton?: boolean): iButtonCircle
 
   /**
    * Returns a simple ui to change the postion of an image 
@@ -572,6 +658,13 @@ export interface iPrintessApi {
 
 
   /**
+   * Returns if property is a form field of type font
+   * @param propertyId 
+   */
+  isFontFormField(propertyId: string): Promise<boolean>;
+
+
+  /**
    * Sets the value of any top-level property passed to the external UI
    * @param propertyId 
    * @param propertyValue Must be string and will be converted if neccessary
@@ -584,6 +677,38 @@ export interface iPrintessApi {
    * @param newValue Must be string and will be converted if neccessary
    */
   setFormFieldValue(fieldName: string, newValue: string): Promise<void>;
+
+  /**
+   * updates a specific cell of a form field of type "table"
+   * Any then all other updates, 
+   * this will NOT trigger a selection change event on buyer side 
+   */
+  setTableCell(fieldNameOrId: string, rowIndex: number, col: iExternalTableColumn, value: string | number | boolean): Promise<iExternalError | null>
+
+  /**
+   * Adds a new row to a table form field.
+   * Returns row-index of added row.
+   * @param fieldNameOrId The property-id or a form-field-name or form-field-id 
+   * @param type each form field table should have a type column which can be set on insert.
+   */
+  addTableRow(fieldNameOrId: string, type: string): number | null
+
+  /**
+   * Returns the row-indizies of a table form field to add to another table form field.
+   * An array of those indizies can be passed to 'addTableRows()'
+   * @param ffName Form Field Name
+   */
+  getTableRowsToAdd(ffName: string): Array<{ index: number, label: string }>
+
+  /**
+ * Adds multiple table rows at once from another table from field
+ *  * Returns row-index of added row.
+ * @param fieldNameOrId The property-id or a form-field-name or form-field-id 
+ * @param type each form field table should have a type column which can be set on insert.
+ * @param ffLibName Name of form-field which contains row-library
+ * @param libIndizies list if row-indizies of row-library
+ */
+  addTableRows(fieldNameOrId: string, type: string, ffLibName: string, libIndizies: Array<number>): number | null
 
   /**
    * Sets the size of a specific document 
@@ -736,8 +861,11 @@ export interface iPrintessApi {
   * @param propertyId 
   */
   importImageFromUrl(url: string, assignToFrameOrNewFrame?: boolean, propertyId?: string): Promise<iExternalImage | null>;
+
   getSerializedImage(imageId: string): string | null;
   addSerializedImage(imageJson: string, assignToFrameOrNewFrame?: boolean): Promise<iExternalImage>;
+
+  importImagesFromExternal(images: iImage[], assignToFrameOrNewFrame: boolean = false): Promise<iExternalImage[]>;
 
   /**
    * Sets image placement based on selection, can only handle a single selected image for now.
@@ -759,7 +887,7 @@ export interface iPrintessApi {
   /**
    * Returns how many columns a Change Layout overview should have to display layout snippets more properly
    */
-  numberOfColumns(): number
+  numberOfColumns(): number;
 
   /**
    * Returns if buyer is allowed to upload pdf files
@@ -782,6 +910,28 @@ export interface iPrintessApi {
    * Tells UI to always show image distribution button.
    */
   showImageDistributionButton(): boolean
+
+  /**
+   * Tells UI to resize an image in the "My Photos" tab to fit within the bounds of its container with no cropping ("fit")
+   * or to expand an image to fill the whole container potentially with cropping ("fill")
+   */
+  getImageThumbFitProperty(): "fill" | "fit"
+
+  /**
+   * Tells UI to display upload button for image upload from mobile phone.
+   */
+  showMobileUploadButton(): boolean
+
+  /**
+   * get a QR Code for uploading images on mobile phone
+   */
+  createExternalImageUploadChannel(): Promise<{ qr: HTMLImageElement, channelId: string }>
+
+  /**
+   * check for images uploaded from phone
+   * @param channeldId 
+   */
+  startExternalImagePolling(channeldId: string): Promise<void>
 
   /**
    * delete buyer uploaded images that are not in use
@@ -912,11 +1062,28 @@ export interface iPrintessApi {
    */
   getInsertSpreadSnippets(): Promise<Array<iExternalSnippet>>
 
+
+  /**
+   * Get a list of all splitter-snippets (single frame only) having any of the provided tags
+   */
+  getSplitterSnippets(): Promise<Array<iExternalSnippet>>
+
+  /**
+   * Replaces current splitter-cell with splitter-snippet content 
+   */
+  applySplitterCellSnippet(splitterSnippetUrl: string): Promise<void>
+
+
   /**
    * Get a list of all image-filter-snippets having any of the provided tags
    */
   getImageFilterSnippets(tags: Array<string> | ReadonlyArray<string>): Promise<Array<iExternalSnippet>>
+
+  /**
+   * Applies image-filter-snippet to selected image
+   */
   applyImageFilterSnippet(filterSnippetUrl: string): Promise<void>
+
 
   /**
    * Insert a docuement from any template like a layout-snippet or group-snippet (sticker) to the current document/spread
@@ -1017,7 +1184,7 @@ export interface iPrintessApi {
    * Handle with care, this can destroy your photo-book document
    * @param newSpreadIds Array of spread id and optional snippetUrls in correct order
    */
-  reArrangeSpreads(newSpreadIds: Array<{id: string | "newSpread", snippetUrl: string}>): Promise<boolean>
+  reArrangeSpreads(newSpreadIds: Array<{ id: string | "newSpread", snippetUrl: string }>): Promise<boolean>
 
   /**
    * Returns how many spreads would be added before the back cover if `addSpreads()`is called. 
@@ -1153,6 +1320,11 @@ export interface iPrintessApi {
   gotoNextPreviewDocument(zoomDuration?: number): Promise<void>
 
   /**
+   * Retrieves information if the device is mobile or the screen is so small that zoom to frames is needed 
+   */
+  zoomToFrames(): boolean
+
+  /**
    * Tells printess the zoom mode to use for the next resize operation
    * `spread` zooms to the entire page
    * `frame`zooms to the selected frame(s)
@@ -1176,6 +1348,22 @@ export interface iPrintessApi {
   canSplitSelectedFrames(): boolean
 
   /**
+   * Change an image frame to a text snippet frame in a photo collage
+   */
+  convertSplitterCellToText(): Promise<void>
+
+  /**
+   * Change a text snippet frame to an image frame in a photo collage
+   */
+  convertSplitterCellToImage(): Promise<void>
+
+  /**
+   * Set the gap size of the photo grid
+   * @param n gap size of the photo grid
+   */
+  setSplitterGaps(n: number): void
+
+  /**
    * Returns `true` if either rich- or simple-text-editor is currently active
    */
   isTextEditorOpen(): boolean
@@ -1196,6 +1384,10 @@ export interface iPrintessApi {
    */
   nextStep(zoom?: "frame" | "spread"): Promise<void>;
 
+  /**
+   * Returns true f current doc is a 3D Preview
+   */
+  is3dPreviewSelected(): boolean
 
   /**
    * Goes to the previous step (if any)
@@ -1294,7 +1486,7 @@ export interface iPrintessApi {
   /**
    * Retrieves all price relevant form-fields plus tag information and referenced price-categories
    */
-  getAllPriceRelevantFormFieldsExt(): { priceCategories: Array<string>, formFields: { [key: string]: { value: string, tag: string } } }
+  getAllPriceRelevantFormFieldsExt(): { priceCategories: Array<string>, formFields: { [key: string]: { value: string, tag: string, label: string } } }
 
   /**
    * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
@@ -1381,6 +1573,11 @@ export interface iPrintessApi {
    */
   showAlertOnClose(): boolean
 
+  /**
+   * tells if the propertyId refers to
+   * a table form-field which is set as data-source in the template
+   */
+  isDataSource(propertyId: string): boolean
 
   /**
    * Sets the selected index of the primary data-source if the propertyId refers to
@@ -1395,7 +1592,7 @@ export interface iPrintessApi {
    * if table is set to be data-source of template the call returns current data-index 
    * @param propertyId  id of a table property
    */
-  getTableRowIndex(propertyId: string):  number
+  getTableRowIndex(propertyId: string): number
 
 
   /**
@@ -1546,7 +1743,8 @@ export interface iExternalTab {
 }
 export interface iExternalSnippetCluster {
   tabId: string,
-  name: string;
+  name: string,
+  columns: number,
   snippets: Array<iExternalSnippet>;
 }
 export interface iExternalSnippet {
@@ -1567,17 +1765,22 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
   "image-scale" | "image-placement" | "image-sepia" | "image-brightness" | "image-contrast" | "image-vivid" | "image-invert" | "image-hueRotate" | "image-rotation" | "image-crop" | "image-filter";
+
+export type FFInfoStyle = string;
+export type FFInfoDisplayStyle = "text" | "bullets" | "numbers" | "html" | "panel" | "card";
 
 export interface iExternalProperty {
   id: string;
   value: string | number;
   kind: iExternalPropertyKind;
   label: string;
+  info: string;
+  infoStyle: FFInfoStyle;
   controlGroup: number;
   validation?: iExternalValidation;
   textStyle?: iExternalTextStyle;
@@ -1597,6 +1800,8 @@ export interface iExternalTextStyle {
 }
 export interface iExternalValidation {
   maxChars: number;
+  regExp: string;
+  regExpMessage: string;
   defaultValue: string;
   isMandatory: boolean;
   clearOnFocus: boolean;
@@ -1622,14 +1827,31 @@ export interface iExternalTableMeta {
   month?: number;
   year?: number;
   tableType: "generic" | "calendar-events";
+  maxTableEntries: number;
+  tableAddOptions: Array<iExternalTableAddOption>
 }
+
+export type iExternalTableAddOption = {
+  label: string,
+  type: string,
+  libFF: string,
+  multi: boolean,
+  bg: string
+}
+
 export interface iExternalTableColumn {
   name: string,
   label?: string,
   readonly?: boolean,
-  data?: "string" | "boolean" | "number" | "image",
+  data?: "string" | "boolean" | "number" | "image" | "color" | "multi",
   list?: Array<string | number>,
-  width?: string
+  listMode?: "select" | "auto-complete",
+  width?: string,
+  row?: string,
+  hide?: boolean,
+  /** Maximum allowed characters */
+  max?: number,
+  /* ADD NEW TABLE-FF COLUMN - add here and search for this comment - do not remove comment */
 }
 export interface iExternalNumberUi {
   max: number;
@@ -1686,7 +1908,7 @@ export type iExternalErrors = Array<iExternalError>
 
 export interface iExternalError {
   boxIds: Array<string>,
-  errorCode: "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
+  errorCode: "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
   errorValue3?: string | number
@@ -1733,6 +1955,9 @@ export interface iMergeTemplate {
 
   /* Pass a pixel based position for placing the snippet */
   pos?: iExternalRect;
+
+  /** Tells printess to not apply exchange-id data */
+  ignoreExchangeIds?: boolean
 }
 
 export declare type externalFormFieldChangeCallback = (name: string, value: string, tag: string) => void;
@@ -1740,9 +1965,12 @@ export declare type externalSelectionChangeCallback = (properties: Array<iExtern
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>, width: number, height: number) => HTMLDivElement;
 export declare type refreshPaginationCallback = null | (() => void);
+export declare type receiveMessageCallback = null | ((topic: MessageTopic, data: Record<string, any>) => void);
 export declare type refreshUndoRedoCallback = null | (() => void);
 export declare type updatePageThumbnailCallback = null | ((spreadId: string, pageId: string, url: string) => void);
 export declare type textStyleModeEnum = "default" | "all-paragraphs" | "all-paragraphs-if-no-selection";
+
+export type MessageTopic = "SplitterFrameToText" | "ShowAlert" | "OpenImageUpload" | "MobileImagesUpload";
 
 export interface iExternalImage {
   id: string;
@@ -1755,6 +1983,7 @@ export interface iExternalImage {
   inUse: boolean;
   useCount: number;
   group: string;
+  average: number;
 }
 
 export interface iExternalButton {
@@ -1789,7 +2018,7 @@ export interface iMobileUIButton {
 }
 
 export interface iMobileUiState {
-  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop" | "table-add" | "table-edit"
+  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop" | "table-edit"
   externalProperty?: iExternalProperty,
   metaProperty?: iExternalMetaPropertyKind,
   tableRowIndex?: number
@@ -1914,7 +2143,14 @@ export type iExternalProductPriceInfo = {
    * All used layout-snippets and stickers with a price category
    * will be summed up here */
   snippetPriceCategories: Array<iUsedPriceCategory>,
-  /** A list of all used document-price-categories. Only returns documents which have actually been edited by the buyer  */
+  /** 
+   * 
+  */
+  /**
+   * @deprecated 
+   * A list of all used document-price-categories. Only returns documents which have actually been edited by the buyer  
+   * Important: Its depricated, You can not enable this feature anymore!
+   */
   priceCategories: Array<string>
 }
 
@@ -2177,6 +2413,7 @@ export type iconName =
   | "eye-dropper"
   | "eye-dropper-light"
   | "cloud-upload-light"
+  | "cloud-upload-check"
   | "shopping-basket"
   | "shopping-basket-light"
   | "home-solid"
@@ -2196,4 +2433,12 @@ export type iconName =
   | "burger-menu"
   | "grid-lines"
   | "info-circle"
-  | "camera-slash";
+  | "camera-slash"
+  | "record-up"
+  | "record-down"
+  | "arrow-left-circle"
+  | "arrow-right-circle"
+  | "arrow-right-long"
+  | "camera-solid"
+  | "desktop-mobile-duotone"
+  | "cloud-check-duotone";
