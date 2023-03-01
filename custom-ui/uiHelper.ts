@@ -829,6 +829,16 @@ declare const bootstrap: any;
         container.appendChild(getDoneButton(printess));
       }
     }
+
+    if (printess.zoomToFrames()) {
+      // on very small screens we need to zoom to selected frames 
+      const lastZoomMode = printess.getZoomMode();
+      printess.setZoomMode(printess.isTextEditorOpen() ? "frame" : "spread"); // || state === "text" 
+      if (lastZoomMode === "frame" || printess.getZoomMode() === "frame") {
+        printess.centerSelection();
+      }
+    }
+
     return t;
   }
 
@@ -838,27 +848,29 @@ declare const bootstrap: any;
     content.id = "splitterGuideCarousel";
     content.setAttribute("data-bs-interval", "false");
 
-    const steps = [{
-      idx: 0,
-      label: printess.gl("ui.removeImages"),
-      img: "../printess-editor/img/gifs/Splitter-Join-Gif.gif",
-      text: printess.gl("ui.removeSplitterImageInfo")
-    }, {
-      idx: 1,
-      label: printess.gl("ui.createImages"),
-      img: "../printess-editor/img/gifs/Splitter-Cut-Gif.gif",
-      text: printess.gl("ui.createSplitterImagesInfo"),
-    }, {
-      idx: 2,
-      label: printess.gl("ui.adjustGap"),
-      img: "../printess-editor/img/gifs/Splitter-Gap-Gif.gif",
-      text: printess.gl("ui.adjustGapInfo")
-    }, {
-      idx: 3,
-      label: printess.gl("ui.addText"),
-      img: "../printess-editor/img/gifs/Splitter-Text-Gif.gif",
-      text: printess.gl("ui.addSplitterTextInfo")
-    }]
+    const steps = [
+      {
+        idx: 0,
+        label: printess.gl("ui.createImages"),
+        img: "../printess-editor/img/gifs/Splitter-Cut-Gif.gif",
+        text: printess.gl("ui.createSplitterImagesInfo"),
+      }, {
+        idx: 1,
+        label: printess.gl("ui.removeImages"),
+        img: "../printess-editor/img/gifs/Splitter-Join-Gif.gif",
+        text: printess.gl("ui.removeSplitterImageInfo")
+      }, {
+        idx: 2,
+        label: printess.gl("ui.adjustGap"),
+        img: "../printess-editor/img/gifs/Splitter-Gap-Gif.gif",
+        text: printess.gl("ui.adjustGapInfo")
+      }, {
+        idx: 3,
+        label: printess.gl("ui.addText"),
+        img: "../printess-editor/img/gifs/Splitter-Text-Gif.gif",
+        text: printess.gl("ui.addSplitterTextInfo")
+      }
+    ]
 
     // slide indicators
     const indicatorsDiv = document.createElement("div");
@@ -1027,7 +1039,7 @@ declare const bootstrap: any;
         colorsContainer = null;
         if (controlGroupDiv && p.controlGroup === controlGroup) {
           // add to current control group
-          controlGroupTCs += getControlGroupWidth(p);
+          controlGroupTCs += " " + getControlGroupWidth(p);
           controlGroupDiv.appendChild(getPropertyControl(printess, p));
         } else {
           if (controlGroupDiv) {
@@ -1716,6 +1728,7 @@ declare const bootstrap: any;
       para.style.marginTop = "38px";
       para.style.marginBottom = "0";
       para.style.marginLeft = "5px";
+      para.style.marginRight = "5px";
       para.style.fontSize = "16pt";
       para.textContent = text
       return para;
@@ -2222,8 +2235,10 @@ declare const bootstrap: any;
     }
     inp.onfocus = () => {
       const ffId = p.id.startsWith("FF_") ? p.id.substr(3) : undefined;
-      printess.setZoomMode("frame");
-      printess.resizePrintess(false, undefined, undefined, undefined, ffId);
+      if (ffId || printess.zoomToFrames()) {
+        printess.setZoomMode("frame");
+        printess.resizePrintess(false, undefined, undefined, undefined, ffId);
+      }
       //printess.centerSelection(ffId);
       if (inp.value && p.validation && p.validation.clearOnFocus && inp.value === p.validation.defaultValue) {
         inp.value = "";
@@ -2232,7 +2247,13 @@ declare const bootstrap: any;
       }
     }
     inp.onblur = () => {
+      const lastZoomMode = printess.getZoomMode();
       printess.setZoomMode("spread");
+      // das reicht nicht, der zoomed nicht raus auf small desktop.
+      // aber das ist auch nur wichtig, wenn er vorher reingezoomt hat.
+      if (forMobile === false && lastZoomMode === "frame") {
+        printess.centerSelection(undefined, "spread");
+      }
     }
 
     const r = addLabel(printess, p, inp, p.id, forMobile, p.kind, p.label, !!p.validation?.maxChars && p.controlGroup === 0, p.controlGroup > 0);
@@ -3118,6 +3139,16 @@ declare const bootstrap: any;
       } else {
         window.setTimeout(() => !printess.isIPhone() && inp.select(), 0);
       }
+      if (!forMobile && printess.zoomToFrames()) {
+        printess.setZoomMode("frame");
+        printess.centerSelection();
+      }
+    }
+    inp.onblur = () => {
+      if (!forMobile && printess.zoomToFrames()) {
+        printess.setZoomMode("spread");
+        printess.centerSelection();
+      }
     }
 
 
@@ -3563,7 +3594,6 @@ declare const bootstrap: any;
 
     if (forMobile) {
       return colorList;
-      //TODO(AKA): Sieht so aus, als wenn die umschaltung von sichtbar auf unsichtbar / condition auf mobile gar nicht funktioniert
     } else {
       ddContent.appendChild(colorList);
       dropdown.appendChild(ddContent);
@@ -4473,7 +4503,7 @@ declare const bootstrap: any;
       }
     }
 
-    if (printess.showMobileUploadButton()) {
+    if (printess.showMobileUploadButton() && !forMobile) {
       label = "ui.desktopImageUpload";
     }
 
@@ -6631,7 +6661,7 @@ declare const bootstrap: any;
       mobileUploadButton.className = "btn btn-secondary w-100 mb-3";
       mobileUploadButton.innerText = printess.gl("ui.mobileImageUpload");
       mobileUploadButton.onclick = async () => {
-        await getMobileImagesUploadOverlay(printess, forMobile);
+        await getMobileImagesUploadOverlay(printess);
       }
       container.appendChild(mobileUploadButton);
     }
@@ -6780,6 +6810,9 @@ declare const bootstrap: any;
     thumb.style.position = "relative";
     thumb.style.width = "91px";
     thumb.style.height = "91px";
+    if (printess.getImageThumbFitProperty() === "fit") {
+      thumb.style.backgroundSize = "contain";
+    }
     if (im.inUse) {
       if (im.useCount > 1) {
         const box = document.createElement("div");
@@ -7217,7 +7250,7 @@ declare const bootstrap: any;
     if (step === "barcode") {
       const qrCode = document.createElement("div");
       qrCode.id = "externalImageQrCodeContainer";
-      qrCode.style.width = "250px";
+      qrCode.style.width = "230px";
       qrCode.style.margin = "0 200px";
       const externalUploadInfo = await printess.createExternalImageUploadChannel();
       qrCode.append(externalUploadInfo.qr);
@@ -7259,14 +7292,26 @@ declare const bootstrap: any;
   }
 
   // open dialog to upload images from mobile phone
-  async function getMobileImagesUploadOverlay(printess: iPrintessApi, forMobile: boolean): Promise<void> {
+  async function getMobileImagesUploadOverlay(printess: iPrintessApi): Promise<void> {
     const content = await getMobileImagesUploadContent(printess, "barcode");
     const id = "MOBILEUPLOADMODAL";
 
     const modal = document.getElementById(id);
     if (modal) return;
 
-    showModal(printess, id, content, "Upload Images from Phone");
+    const footer = document.createElement("div");
+    footer.className = "modal-footer";
+
+    const close = document.createElement("button");
+    close.className = "btn btn-primary";
+    close.textContent = printess.gl("ui.buttonClose");
+    close.onclick = () => {
+      hideModal(id);
+    }
+
+    footer.appendChild(close);
+
+    showModal(printess, id, content, "Upload Images from Phone", footer);
   }
 
   function renderMobileUploadSuccessOverlay(printess: iPrintessApi): void {

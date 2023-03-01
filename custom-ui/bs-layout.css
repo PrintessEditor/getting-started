@@ -2190,7 +2190,8 @@ input[type='range']::-moz-range-thumb {
   height: 50px;
   margin: 0px 5px 5px 0;
 
-  background-color: rgb(215, 232, 235);
+  background-color: white;
+  /* rgb(215, 232, 235); */
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;

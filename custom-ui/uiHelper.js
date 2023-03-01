@@ -702,6 +702,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 container.appendChild(getDoneButton(printess));
             }
         }
+        if (printess.zoomToFrames()) {
+            const lastZoomMode = printess.getZoomMode();
+            printess.setZoomMode(printess.isTextEditorOpen() ? "frame" : "spread");
+            if (lastZoomMode === "frame" || printess.getZoomMode() === "frame") {
+                printess.centerSelection();
+            }
+        }
         return t;
     }
     function showSplitterGuide(printess, p, forMobile) {
@@ -709,16 +716,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         content.className = "carousel carousel-dark slide";
         content.id = "splitterGuideCarousel";
         content.setAttribute("data-bs-interval", "false");
-        const steps = [{
+        const steps = [
+            {
                 idx: 0,
-                label: printess.gl("ui.removeImages"),
-                img: "../printess-editor/img/gifs/Splitter-Join-Gif.gif",
-                text: printess.gl("ui.removeSplitterImageInfo")
-            }, {
-                idx: 1,
                 label: printess.gl("ui.createImages"),
                 img: "../printess-editor/img/gifs/Splitter-Cut-Gif.gif",
                 text: printess.gl("ui.createSplitterImagesInfo"),
+            }, {
+                idx: 1,
+                label: printess.gl("ui.removeImages"),
+                img: "../printess-editor/img/gifs/Splitter-Join-Gif.gif",
+                text: printess.gl("ui.removeSplitterImageInfo")
             }, {
                 idx: 2,
                 label: printess.gl("ui.adjustGap"),
@@ -729,7 +737,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 label: printess.gl("ui.addText"),
                 img: "../printess-editor/img/gifs/Splitter-Text-Gif.gif",
                 text: printess.gl("ui.addSplitterTextInfo")
-            }];
+            }
+        ];
         const indicatorsDiv = document.createElement("div");
         indicatorsDiv.className = "carousel-indicators";
         steps.forEach(step => {
@@ -864,7 +873,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             else {
                 colorsContainer = null;
                 if (controlGroupDiv && p.controlGroup === controlGroup) {
-                    controlGroupTCs += getControlGroupWidth(p);
+                    controlGroupTCs += " " + getControlGroupWidth(p);
                     controlGroupDiv.appendChild(getPropertyControl(printess, p));
                 }
                 else {
@@ -1433,6 +1442,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             para.style.marginTop = "38px";
             para.style.marginBottom = "0";
             para.style.marginLeft = "5px";
+            para.style.marginRight = "5px";
             para.style.fontSize = "16pt";
             para.textContent = text;
             return para;
@@ -1855,8 +1865,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         };
         inp.onfocus = () => {
             const ffId = p.id.startsWith("FF_") ? p.id.substr(3) : undefined;
-            printess.setZoomMode("frame");
-            printess.resizePrintess(false, undefined, undefined, undefined, ffId);
+            if (ffId || printess.zoomToFrames()) {
+                printess.setZoomMode("frame");
+                printess.resizePrintess(false, undefined, undefined, undefined, ffId);
+            }
             if (inp.value && p.validation && p.validation.clearOnFocus && inp.value === p.validation.defaultValue) {
                 inp.value = "";
             }
@@ -1865,7 +1877,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         };
         inp.onblur = () => {
+            const lastZoomMode = printess.getZoomMode();
             printess.setZoomMode("spread");
+            if (forMobile === false && lastZoomMode === "frame") {
+                printess.centerSelection(undefined, "spread");
+            }
         };
         const r = addLabel(printess, p, inp, p.id, forMobile, p.kind, p.label, !!((_a = p.validation) === null || _a === void 0 ? void 0 : _a.maxChars) && p.controlGroup === 0, p.controlGroup > 0);
         return r;
@@ -2598,6 +2614,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             else {
                 window.setTimeout(() => !printess.isIPhone() && inp.select(), 0);
+            }
+            if (!forMobile && printess.zoomToFrames()) {
+                printess.setZoomMode("frame");
+                printess.centerSelection();
+            }
+        };
+        inp.onblur = () => {
+            if (!forMobile && printess.zoomToFrames()) {
+                printess.setZoomMode("spread");
+                printess.centerSelection();
             }
         };
         if (forMobile) {
@@ -3735,7 +3761,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
         });
-        if (printess.showMobileUploadButton()) {
+        if (printess.showMobileUploadButton() && !forMobile) {
             label = "ui.desktopImageUpload";
         }
         container.appendChild(progressDiv);
@@ -5575,7 +5601,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             mobileUploadButton.className = "btn btn-secondary w-100 mb-3";
             mobileUploadButton.innerText = printess.gl("ui.mobileImageUpload");
             mobileUploadButton.onclick = () => __awaiter(this, void 0, void 0, function* () {
-                yield getMobileImagesUploadOverlay(printess, forMobile);
+                yield getMobileImagesUploadOverlay(printess);
             });
             container.appendChild(mobileUploadButton);
         }
@@ -5706,6 +5732,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         thumb.style.position = "relative";
         thumb.style.width = "91px";
         thumb.style.height = "91px";
+        if (printess.getImageThumbFitProperty() === "fit") {
+            thumb.style.backgroundSize = "contain";
+        }
         if (im.inUse) {
             if (im.useCount > 1) {
                 const box = document.createElement("div");
@@ -6071,7 +6100,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (step === "barcode") {
                 const qrCode = document.createElement("div");
                 qrCode.id = "externalImageQrCodeContainer";
-                qrCode.style.width = "250px";
+                qrCode.style.width = "230px";
                 qrCode.style.margin = "0 200px";
                 const externalUploadInfo = yield printess.createExternalImageUploadChannel();
                 qrCode.append(externalUploadInfo.qr);
@@ -6104,14 +6133,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             return content;
         });
     }
-    function getMobileImagesUploadOverlay(printess, forMobile) {
+    function getMobileImagesUploadOverlay(printess) {
         return __awaiter(this, void 0, void 0, function* () {
             const content = yield getMobileImagesUploadContent(printess, "barcode");
             const id = "MOBILEUPLOADMODAL";
             const modal = document.getElementById(id);
             if (modal)
                 return;
-            showModal(printess, id, content, "Upload Images from Phone");
+            const footer = document.createElement("div");
+            footer.className = "modal-footer";
+            const close = document.createElement("button");
+            close.className = "btn btn-primary";
+            close.textContent = printess.gl("ui.buttonClose");
+            close.onclick = () => {
+                hideModal(id);
+            };
+            footer.appendChild(close);
+            showModal(printess, id, content, "Upload Images from Phone", footer);
         });
     }
     function renderMobileUploadSuccessOverlay(printess) {

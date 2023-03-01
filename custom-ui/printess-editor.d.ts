@@ -429,7 +429,6 @@ export interface iPrintessApi {
   /**
    * Select and zoom to the frame(s) mentioned in the error object.
    * @param err
-   * @param zoomToSelection Overrides the default zoom behaviour of the item / template
    */
   bringErrorIntoView(err: iExternalError): Promise<void>
 
@@ -701,15 +700,15 @@ export interface iPrintessApi {
    */
   getTableRowsToAdd(ffName: string): Array<{ index: number, label: string }>
 
-    /**
-   * Adds multiple table rows at once from another table from field
-   *  * Returns row-index of added row.
-   * @param fieldNameOrId The property-id or a form-field-name or form-field-id 
-   * @param type each form field table should have a type column which can be set on insert.
-   * @param ffLibName Name of form-field which contains row-library
-   * @param libIndizies list if row-indizies of row-library
-   */
-    addTableRows(fieldNameOrId: string, type: string, ffLibName: string, libIndizies: Array<number>): number | null
+  /**
+ * Adds multiple table rows at once from another table from field
+ *  * Returns row-index of added row.
+ * @param fieldNameOrId The property-id or a form-field-name or form-field-id 
+ * @param type each form field table should have a type column which can be set on insert.
+ * @param ffLibName Name of form-field which contains row-library
+ * @param libIndizies list if row-indizies of row-library
+ */
+  addTableRows(fieldNameOrId: string, type: string, ffLibName: string, libIndizies: Array<number>): number | null
 
   /**
    * Sets the size of a specific document 
@@ -911,6 +910,12 @@ export interface iPrintessApi {
    * Tells UI to always show image distribution button.
    */
   showImageDistributionButton(): boolean
+
+  /**
+   * Tells UI to resize an image in the "My Photos" tab to fit within the bounds of its container with no cropping ("fit")
+   * or to expand an image to fill the whole container potentially with cropping ("fill")
+   */
+  getImageThumbFitProperty(): "fill" | "fit"
 
   /**
    * Tells UI to display upload button for image upload from mobile phone.
@@ -1315,6 +1320,11 @@ export interface iPrintessApi {
   gotoNextPreviewDocument(zoomDuration?: number): Promise<void>
 
   /**
+   * Retrieves information if the device is mobile or the screen is so small that zoom to frames is needed 
+   */
+  zoomToFrames(): boolean
+
+  /**
    * Tells printess the zoom mode to use for the next resize operation
    * `spread` zooms to the entire page
    * `frame`zooms to the selected frame(s)
@@ -1374,6 +1384,10 @@ export interface iPrintessApi {
    */
   nextStep(zoom?: "frame" | "spread"): Promise<void>;
 
+  /**
+   * Returns true f current doc is a 3D Preview
+   */
+  is3dPreviewSelected(): boolean
 
   /**
    * Goes to the previous step (if any)
