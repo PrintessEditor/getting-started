@@ -190,6 +190,12 @@
             Insert Template
           </a>
         </li>
+        <li class="nav-item" style="display: flex; flex-direction: column;">
+          <a class="nav-link" id="btnLoadWithoutExchangeIDs" title="Load Base+Merge with exchange disabled" style="padding: 0 10px; font-size: 13px;">
+            No Exchange </a> 
+          <a class="nav-link" id="btnLoadWithExchangeIDs" title="Load Base+Merge with exchange enabled" style="padding: 0 10px; font-size: 13px;">
+            With Exchange </a>
+        </li>
 
 
 
@@ -263,11 +269,13 @@
       <a class="dropdown-item" href="#Puzzle">Puzzle</a>
       <a class="dropdown-item" href="#T-shirt%202">T-Shirt</a>
       <a class="dropdown-item" href="#Photo%20Mug">Photo Mug</a>
+      <a class="dropdown-item" href="#Menu%Board">Menu Board with Exchange State</a>
 
       <div class="dropdown-divider">UI Test Templates</div>
       <a class="dropdown-item" href="#BuyerText-Eddi-P-or-Sel_draft">Rich Editing with Fallback to Paragraph</a>
       <a class="dropdown-item" href="#BuyerText-No-Eddi_draft">Form Editing with and without Paragraph Split</a>
       <a class="dropdown-item" href="#8Pages_draft">8 Pages</a>
+      <a class="dropdown-item" href="#Handwriting-Test">Handwriting test</a>
       <a class="dropdown-item" href="#8DoublePages_draft">14 Facing Pages</a>
       <a class="dropdown-item" href="#8DoublePagesFF_draft">14 Facing Pages w. FormField</a>
       <a class="dropdown-item" href="#Avatar_draft">Avatar-Test</a>
@@ -403,6 +411,7 @@
         getOverlayCallback: getOverlayCallback,
         updatePageThumbnailCallback: (spreadId, pageId, url) => uiHelper.updatePageThumbnail(spreadId, pageId, url),
         refreshPaginationCallback: () => uiHelper.refreshPagination(printess),
+        receiveMessageCallback: (topic, data) => uiHelper.receiveMessage(printess, topic, data),
         refreshUndoRedoCallback: () => uiHelper.refreshUndoRedoState(printess),
 
         /* Optional: List of one or more templates to merge on load */
@@ -484,6 +493,20 @@
     };
     document.getElementById("btnInsertTemplateAsLayoutSnippet").onclick = () => {
       printess.insertTemplateAsLayoutSnippet("Text Sticker", "draft", "Sticker Square 1", "layout");
+    };
+    document.getElementById("btnLoadWithoutExchangeIDs").onclick = () => {
+      const m = [{
+        templateName: "exchange-id-test-2",
+        ignoreExchangeIds: true
+      }]
+      printess.loadTemplate("exchange-id-test-1", m, false);
+    };
+    document.getElementById("btnLoadWithExchangeIDs").onclick = () => {
+      const m = [{
+        templateName: "exchange-id-test-2",
+        ignoreExchangeIds: false
+      }]
+      printess.loadTemplate("exchange-id-test-1", m, false);
     };
     document.getElementById("btnCenterInView").onclick = () => {
       printess.centerSpreadInView();
