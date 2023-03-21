@@ -2695,10 +2695,6 @@ a.dropdown-item .dropdown-list-info {
   white-space: pre-line;
 }
 
-a.dropdown-item.printess-add-info {
-  padding: 0px;
-}
-
 #desktop-properties .dropdown-toggle.full-width::after {
   /* tweaking the bootstrap class for 100% width controls */
   position: absolute;
@@ -3891,6 +3887,10 @@ body.has-mobile-price-bar .mobile-pricebar {
   .image-placement-button>div {
     font-size: 11px;
     padding-top: 0px;
+  }
+
+  a.dropdown-item.printess-add-info {
+    padding: 0px;
   }
 
 }
