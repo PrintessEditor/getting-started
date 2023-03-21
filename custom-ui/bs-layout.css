@@ -2676,6 +2676,29 @@ input#invert-image-checker {
   font-size: 12pt;
 }
 
+.dropdown-list-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.dropdown-list-info {
+  font-size: 0.8em;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+a.dropdown-item .dropdown-list-info {
+  white-space: pre-line;
+}
+
+a.dropdown-item.printess-add-info {
+  padding: 0px;
+}
+
 #desktop-properties .dropdown-toggle.full-width::after {
   /* tweaking the bootstrap class for 100% width controls */
   position: absolute;
@@ -3450,8 +3473,8 @@ input#invert-image-checker {
 }
 
 .circular-toggle-button svg {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   color: var(--bs-white);
   fill: var(--bs-white);
 }
