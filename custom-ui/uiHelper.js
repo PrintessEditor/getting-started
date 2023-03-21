@@ -2702,6 +2702,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 htmlLabel.style.fontSize = "0.85em";
                 htmlLabel.style.opacity = "0.7";
             }
+            if (p && p.info.trim().startsWith("http") && label) {
+                const infoIcon = printess.getIcon("info-circle");
+                infoIcon.classList.add("price-info-icon");
+                infoIcon.style.marginLeft = "6px";
+                infoIcon.style.alignSelf = "center";
+                infoIcon.onclick = () => {
+                    label = label ? printess.gl(label) : "";
+                    getIframeOverlay(printess, printess.gl(label), p.info.trim(), forMobile);
+                };
+                htmlLabel.style.display = "flex";
+                htmlLabel.appendChild(infoIcon);
+            }
             if (kind === "image" && !forMobile) {
                 const button = document.createElement("button");
                 button.className = "btn btn-primary image-upload-btn";
@@ -2739,7 +2751,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.appendChild(validation);
         if (hasMaxChars)
             getCharValidationLabel(printess, id, container);
-        if ((p === null || p === void 0 ? void 0 : p.info) && p.kind !== "table") {
+        if ((p === null || p === void 0 ? void 0 : p.info) && p.kind !== "table" && !p.info.trim().startsWith("http")) {
             const inf = document.createElement("p");
             inf.innerText = p.info;
             inf.style.fontSize = "0.875rem";
@@ -6259,6 +6271,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             close.textContent = printess.gl("ui.buttonClose");
             close.onclick = () => {
                 hideModal(id);
+                const imageTabContainer = document.getElementById("image-tab-container");
+                if (imageTabContainer) {
+                    const p = uih_currentProperties.filter(p => p.kind === "image")[0] || undefined;
+                    imageTabContainer.replaceWith(renderMyImagesTab(printess, false, p, undefined));
+                }
             };
             footer.appendChild(close);
             showModal(printess, id, content, "Upload Images from Phone", footer);
