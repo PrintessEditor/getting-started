@@ -3239,13 +3239,12 @@ declare const bootstrap: any;
         htmlLabel.style.opacity = "0.7";
       }
 
-      if (p && p.info.trim().startsWith("http") && label) {
+      if (p && infoIsWebLink(p.info)) {
         const infoIcon = printess.getIcon("info-circle");
         infoIcon.classList.add("price-info-icon");
-        infoIcon.style.marginLeft = "6px";
         infoIcon.style.alignSelf = "center";
         infoIcon.onclick = () => {
-          label = label ? printess.gl(label) : "";
+          label = label ? printess.gl(label) : "Info";
           getIframeOverlay(printess, printess.gl(label), p.info.trim(), forMobile);
         }
         htmlLabel.style.display = "flex";
@@ -3292,7 +3291,7 @@ declare const bootstrap: any;
     if (kind !== "image" && kind !== "table") container.appendChild(validation);
     if (hasMaxChars) getCharValidationLabel(printess, id, container);
 
-    if (p?.info && p.kind !== "table" && !p.info.trim().startsWith("http")) {
+    if (p?.info && p.kind !== "table" && !infoIsWebLink(p.info)) {
       const inf = document.createElement("p");
       inf.innerText = p.info;
       inf.style.fontSize = "0.875rem";
@@ -3300,6 +3299,16 @@ declare const bootstrap: any;
       container.appendChild(inf);
     }
     return container;
+  }
+
+  function infoIsWebLink(info: string): boolean {
+    const infoArr = info.trim().split(" ");
+
+    if (infoArr.length === 1 && infoArr[0].startsWith("http")) {
+      return true;
+    }
+
+    return false;
   }
 
   function getCharValidationLabel(printess: iPrintessApi, id: string, container: HTMLElement): void {
