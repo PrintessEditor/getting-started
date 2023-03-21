@@ -310,6 +310,7 @@ export interface printessAttachParameters {
 export interface iPrintessApi {
   getJson(): string;
   setJson(jsonString: string): Promise<void>;
+  getResourcePath(): string;
 
   /**
    * Load a template to the Printess editor.
@@ -441,6 +442,11 @@ export interface iPrintessApi {
    * Indicates if a splitter cell is selected
    */
   hasSplitterMenu(): boolean
+
+  /**
+   * Indicate if the template has static image filters to diplay, like AI-enhancement for example
+   */
+  hasStaticImageFilters(): boolean
 
   /**
    * Split an image frame that has splitter option turned on
@@ -1104,7 +1110,7 @@ export interface iPrintessApi {
   /**
    * returns an array of uiHints to be displayed on buyer side.
    */
-  uiHintsDisplay(): Array<"layoutSnippets" | "groupSnippets" | "editableFrames" | "expertMode">;
+  uiHintsDisplay(): Array<"splitterGuide" | "layoutSnippets" | "groupSnippets" | "editableFrames" | "expertMode">;
 
   /**
    * @deprecated
@@ -1765,7 +1771,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "select-list+info" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
