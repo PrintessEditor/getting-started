@@ -444,6 +444,11 @@ export interface iPrintessApi {
   hasSplitterMenu(): boolean
 
   /**
+   * number of active splitter edges 
+   */
+  splitterEdgesCount() : number 
+
+  /**
    * Indicate if the template has static image filters to diplay, like AI-enhancement for example
    */
   hasStaticImageFilters(): boolean

@@ -557,6 +557,7 @@ body {
   max-height: 38px;
   margin-left: .5rem !important;
   align-self: center;
+  overflow: hidden;
 }
 
 .total-price-container.price-info-only {
@@ -581,8 +582,7 @@ body {
 }
 
 .product-name {
-  display: flex;
-  align-items: center;
+  display: inline-block;
   text-align: left;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -591,6 +591,7 @@ body {
 }
 
 .price-info-icon {
+  min-width: 17px;
   width: 17px;
   height: 17px;
   color: var(--bs-primary);
@@ -2731,7 +2732,7 @@ a.dropdown-item .dropdown-list-info {
   filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0100%) contrast(100%);
 }
 
-.color-label-group {
+.printess-color-label {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2743,7 +2744,7 @@ a.dropdown-item .dropdown-list-info {
   cursor: pointer;
 }
 
-.color-label-group::after {
+.printess-color-label::after {
   position: absolute;
   right: 0px;
   display: inline-block;
@@ -2758,15 +2759,15 @@ a.dropdown-item .dropdown-list-info {
   pointer-events: none;
 }
 
-.color-label-group:empty::after {
+.printess-color-label:empty::after {
   margin-left: 0;
 }
 
-.color-label-group .dropdown-toggle::after {
+.printess-color-label .dropdown-toggle::after {
   visibility: hidden;
 }
 
-.color-label-group .dropdown-menu.show {
+.printess-color-label .dropdown-menu.show {
   /* transform: translate3d(0px, 40px, 0px) !important; */
   padding: 0.5rem;
   max-height: 60vh;
