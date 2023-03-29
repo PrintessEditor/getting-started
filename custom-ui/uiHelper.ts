@@ -396,14 +396,14 @@ declare const bootstrap: any;
       for (let i = 0; i < listOfLinks.length; i++) {
         const text = listOfLinks[i].split("](")[0].replace("[", "");
         const link = listOfLinks[i].split("](")[1].replace(")", "");
-        const id = label ? label.replace(" ", "") : "legal-notice-link-" + i;
+        const id = label ? label.replace(/\s/g, '') : "legal-notice-link-" + i;
         const a = `<span id=${id} style="color: var(--bs-primary); cursor: pointer;">${text}</span>`;
 
         legalNotice = legalNotice.replace(listOfLinks[i], a);
 
         window.setTimeout(() => {
           const agb = document.getElementById(id);
-          if (agb) agb.onclick = () => getIframeOverlay(printess, text, link, forMobile);
+          if (agb) agb.onclick = () => getIframeOverlay(printess, label || text, link, forMobile);
         }, 100)
       }
     }
@@ -3302,7 +3302,7 @@ declare const bootstrap: any;
 
     if (infoText && p?.kind !== "table" && !infoIsWebLink(infoText)) {
       const inf = document.createElement("p");
-      inf.innerHTML = getLegalNoticeText(printess, infoText, forMobile, "link_" + id);
+      inf.innerHTML = getLegalNoticeText(printess, infoText, forMobile, label || "link_" + id);
       inf.style.fontSize = "0.875rem";
       inf.style.marginTop = "0.25rem";
       container.appendChild(inf);
