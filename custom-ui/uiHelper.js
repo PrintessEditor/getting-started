@@ -639,8 +639,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
             }
             if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu() && printess.uiHintsDisplay().includes("splitterGuide")) {
-                showSplitterGuide(printess, properties[0], false);
-                setStorageItemSafe("splitter-frame-hint", "hint displayed");
+                const edges = printess.splitterEdgesCount();
+                if (edges > 0) {
+                    showSplitterGuide(printess, properties[0], false);
+                    setStorageItemSafe("splitter-frame-hint", "hint displayed");
+                }
             }
             if (isTextSplitterMenu) {
                 const tabsDiv = document.createElement("div");
@@ -1463,7 +1466,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const ls = getInfoStyle(p);
         if (forControlGroup) {
             const para = document.createElement("span");
-            para.setAttribute("data-visibility-id", p.id);
+            para.className = "printess-text-" + p.kind;
+            para.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
             para.style.marginTop = "38px";
             para.style.marginBottom = "0";
             para.style.marginLeft = "5px";
@@ -1482,8 +1486,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 return alert;
             }
             const container = document.createElement("div");
-            container.className = "mb-1";
-            container.setAttribute("data-visibility-id", p.id);
+            container.className = "mb-1 printess-text-" + p.kind;
+            container.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
             if (ls.style !== "html") {
                 let el = "h4";
                 if (ls.size === "large") {
@@ -1502,9 +1506,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (ls.style === "html") {
                 const div = document.createElement("div");
                 div.innerHTML = p.info;
+                container.className = "mb-1 printess-html-" + p.kind;
                 container.appendChild(div);
             }
             else if (ls.style === "bullets" || ls.style === "numbers") {
+                container.className = "mb1 printess-" + ls.style + "-" + p.kind;
                 const items = p.info.split("\n");
                 const list = document.createElement(ls.style === "numbers" ? "ol" : "ul");
                 for (const item of items) {
@@ -1536,8 +1542,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else {
             const para = document.createElement("h4");
-            para.setAttribute("data-visibility-id", p.id);
-            para.className = "mb-1";
+            para.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
+            para.className = "mb-1 printess-text-" + p.kind;
             para.innerHTML = text;
             if (ls.color !== "default") {
                 para.style.color = `var(--bs-${ls.color})`;
@@ -1557,8 +1563,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getBootstrapCardLabel(printess, p, text, color, size, forMobile = false) {
         const container = document.createElement("div");
         const headerColor = color === "default" ? "" : "text-" + color;
-        container.className = "card mb-4 ";
-        container.setAttribute("data-visibility-id", p.id);
+        container.className = "card mb-4 printess-card-" + p.kind;
+        container.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
         const header = document.createElement("div");
         header.className = "card-header " + headerColor;
         header.textContent = text;
@@ -1587,8 +1593,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getBootstrapPanelLabel(printess, p, text, color, size, forMobile = false) {
         const container = document.createElement("div");
         const bgColor = color === "default" ? "secondary" : color;
-        container.className = "alert alert-" + bgColor + " mb-4 ";
-        container.setAttribute("data-visibility-id", p.id);
+        container.className = "alert alert-" + bgColor + " mb-4 printess-panel-" + p.kind;
+        container.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
         const h4 = document.createElement("h4");
         h4.className = "alert-heading";
         h4.textContent = text;
@@ -1613,8 +1619,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getSwitchControl(printess, p, forMobile) {
         const switchControl = document.createElement("div");
-        switchControl.className = "form-check form-switch mb-3";
-        switchControl.setAttribute("data-visibility-id", p.id);
+        switchControl.className = "form-check form-switch mb-3 printess-" + p.kind;
+        switchControl.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
         const input = document.createElement("input");
         input.className = "form-check-input";
         input.id = p.id + "_switch";
@@ -2681,6 +2687,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             label = "";
         }
         const container = document.createElement("div");
+        container.className = "printess-" + kind;
         if ((_a = p === null || p === void 0 ? void 0 : p.imageMeta) === null || _a === void 0 ? void 0 : _a.isHandwriting) {
             container.classList.add("mb-1");
         }
@@ -2688,8 +2695,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.classList.add("mb-3");
         }
         container.id = "cnt_" + id;
-        container.setAttribute("data-visibility-id", id);
+        container.setAttribute("data-visibility-id", id.replace("#", "_hash_"));
         container.style.display = printess.isPropertyVisible(id) || kind === "image" ? "block" : "none";
+        const infoText = (p === null || p === void 0 ? void 0 : p.info) ? printess.gl(p.info) : "";
         if (label) {
             if (label.trim() === "")
                 label = "&nbsp;";
@@ -2702,13 +2710,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 htmlLabel.style.fontSize = "0.85em";
                 htmlLabel.style.opacity = "0.7";
             }
-            if (p && infoIsWebLink(p.info)) {
+            if (infoIsWebLink(infoText)) {
                 const infoIcon = printess.getIcon("info-circle");
                 infoIcon.classList.add("price-info-icon");
                 infoIcon.style.alignSelf = "center";
                 infoIcon.onclick = () => {
                     label = label ? printess.gl(label) : "Info";
-                    getIframeOverlay(printess, printess.gl(label), p.info.trim(), forMobile);
+                    getIframeOverlay(printess, printess.gl(label), infoText.trim(), forMobile);
                 };
                 htmlLabel.style.display = "flex";
                 htmlLabel.appendChild(infoIcon);
@@ -2750,9 +2758,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.appendChild(validation);
         if (hasMaxChars)
             getCharValidationLabel(printess, id, container);
-        if ((p === null || p === void 0 ? void 0 : p.info) && p.kind !== "table" && !infoIsWebLink(p.info)) {
+        if (infoText && (p === null || p === void 0 ? void 0 : p.kind) !== "table" && !infoIsWebLink(infoText)) {
             const inf = document.createElement("p");
-            inf.innerText = p.info;
+            inf.innerHTML = getLegalNoticeText(printess, infoText, forMobile, "link_" + id);
             inf.style.fontSize = "0.875rem";
             inf.style.marginTop = "0.25rem";
             container.appendChild(inf);
@@ -2761,7 +2769,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function infoIsWebLink(info) {
         const infoArr = info.trim().split(" ");
-        if (infoArr.length === 1 && infoArr[0].startsWith("http")) {
+        if (infoArr.length === 1 && infoArr[0].toLowerCase().startsWith("http")) {
             return true;
         }
         return false;
@@ -2864,7 +2872,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function setPropertyVisibilities(printess) {
         for (const p of uih_currentProperties) {
             if (p.validation && p.validation.visibility !== "always") {
-                const div = document.querySelector(`[data-visibility-id=${p.id}]`);
+                const div = document.querySelector(`[data-visibility-id=${p.id.replace("#", "_hash_")}]`);
                 if (div) {
                     const v = printess.isPropertyVisible(p.id, div.style.display === "block" || div.style.display === "flex");
                     if (v) {
@@ -2972,7 +2980,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (!dropdown) {
             dropdown = document.createElement("div");
             dropdown.id = "color_" + p.id;
-            dropdown.setAttribute("data-visibility-id", p.id);
+            dropdown.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
             dropdown.className = "btn-group me-1";
         }
         const colors = printess.getColors(p.id);
@@ -2997,7 +3005,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             dropdown.appendChild(button);
             if (ffColor) {
-                dropdown.className = "btn-group me-1 color-label-group";
+                dropdown.className = "btn-group me-1 printess-color-label";
                 const colorProps = uih_currentProperties.filter(p => p.kind === "color");
                 if (colorProps.length && colorProps[colorProps.length - 1].id === p.id) {
                     dropdown.classList.add("mb-3");
@@ -3334,7 +3342,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getTabPanel(printess, tabs, id) {
         const panel = document.createElement("div");
         panel.id = "tabs-panel-" + id;
-        panel.setAttribute("data-visibility-id", id);
+        panel.setAttribute("data-visibility-id", id.replace("#", "_hash_"));
         const ul = document.createElement("ul");
         ul.className = "nav nav-tabs";
         ul.setAttribute("role", "tablist");
@@ -6538,7 +6546,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (layoutSnippets) {
             for (const cluster of layoutSnippets) {
                 const headline = document.createElement("div");
-                headline.textContent = cluster.name;
+                headline.textContent = printess.gl(cluster.name);
                 headline.className = "snippet-cluster-name";
                 if (cluster === layoutSnippets[0]) {
                     headline.style.marginTop = "0";
@@ -6600,8 +6608,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         var _a, _b;
         const container = document.createElement("div");
         container.id = "table-control-" + p.id;
-        container.setAttribute("data-visibility-id", p.id);
-        container.className = "mb-3";
+        container.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
+        container.className = "mb-3 printess-" + p.kind;
         container.style.display = printess.isPropertyVisible(p.id) ? "block" : "none";
         let hasRow = false;
         if (p.tableMeta) {
@@ -6902,7 +6910,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         container.appendChild(details);
         if (p.info) {
             const inf = document.createElement("p");
-            inf.innerText = p.info;
+            inf.innerText = printess.gl(p.info);
             inf.style.fontSize = "0.875rem";
             inf.style.marginTop = "0.25rem";
             container.appendChild(inf);
@@ -7423,8 +7431,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (state !== "document") {
             mobileUi.appendChild(getMobilePropertyNavButtons(printess, state, false));
             if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu() && printess.uiHintsDisplay().includes("splitterGuide")) {
-                showSplitterGuide(printess, properties[0], true);
-                setStorageItemSafe("splitter-frame-hint", "hint displayed");
+                const edges = printess.splitterEdgesCount();
+                if (edges > 0) {
+                    showSplitterGuide(printess, properties[0], true);
+                    setStorageItemSafe("splitter-frame-hint", "hint displayed");
+                }
             }
         }
         else {
