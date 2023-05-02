@@ -1263,7 +1263,7 @@ input[type="radio"]:checked+label>svg {
 }
 
 .modal {
-  z-index: 100000;
+  z-index: 1000000;
 }
 
 .modal-body {
@@ -1419,6 +1419,10 @@ ul.progress-steps {
   /*border-top: 1px solid;*/
   position: sticky;
   padding: 1.25rem;
+}
+
+#validation-modal .modal-dialog {
+  min-width: 450px;
 }
 
 #pageArrangementDialog .modal-dialog,
@@ -1735,6 +1739,10 @@ li.spread-separator {
     grid-template-rows: 22px auto;
   }
 
+  #validation-modal .modal-dialog {
+    min-width: unset;
+  }
+
   .add-pages-icon,
   .remove-pages-icon,
   .move-pages-icon {
@@ -1792,6 +1800,10 @@ li.spread-separator {
   #layoutSnippetsSelection .layout-snippet-cluster {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+  #layoutSnippetsSelection .layout-snippet-cluster.big-thumbs {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   #pageArrangementDialog .scroll-up-indicator {
@@ -1897,10 +1909,14 @@ li.spread-separator {
   border: 1px solid var(--mobile-button-border);
 }
 
-.snippet-thumb.layout-dialog>img {
+.snippet-thumb.layout-dialog > img {
   width: unset;
-  max-height: 400px;
+  max-height: 300px;
   max-width: 300px;
+}
+.layout-snippet-cluster.big-thumbs > .snippet-thumb.layout-dialog > img {
+  max-height: 400px;
+  max-width: 400px;
 }
 
 .snippet-cluster-name {
@@ -2715,6 +2731,7 @@ a.dropdown-item .dropdown-list-info {
 .color-drop-down-list {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
 }
 
 /* overide bootstrap behaviour */

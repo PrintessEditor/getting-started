@@ -446,7 +446,7 @@ export interface iPrintessApi {
   /**
    * number of active splitter edges 
    */
-  splitterEdgesCount() : number 
+  splitterEdgesCount(): number
 
   /**
    * Indicate if the template has static image filters to diplay, like AI-enhancement for example
@@ -923,6 +923,11 @@ export interface iPrintessApi {
   showImageDistributionButton(): boolean
 
   /**
+   * returns true if a single frame with buyer side image upload allow is selected
+   */
+  currentSelectionAllowsImageUpload(): boolean
+
+  /**
    * Tells UI to resize an image in the "My Photos" tab to fit within the bounds of its container with no cropping ("fit")
    * or to expand an image to fill the whole container potentially with cropping ("fill")
    */
@@ -1027,6 +1032,10 @@ export interface iPrintessApi {
    */
   getHexColor(color: string): string
 
+  /**
+   * Returns black or white hex depending on color value
+   */
+  invertColor(hex: string, bw: boolean): string
 
   /**
    * Retrieves a SVG icon from printess
@@ -1390,13 +1399,18 @@ export interface iPrintessApi {
   showEnterTextEditorButton(): boolean
 
   /**
+   * Returns true if text styles should have a caption
+   */
+  showTextStyleCaptions(): boolean
+
+  /**
    * Goes to the next available step (if any)
    * @param zoom overrides the frames zoom settings for all devices
    */
   nextStep(zoom?: "frame" | "spread"): Promise<void>;
 
   /**
-   * Returns true f current doc is a 3D Preview
+   * Returns true if current doc is a 3D Preview
    */
   is3dPreviewSelected(): boolean
 
@@ -1542,6 +1556,26 @@ export interface iPrintessApi {
    */
   hasLayoutSnippets(): boolean,
 
+  /**
+    * Returns if LayoutSnippets are available
+    */
+  hasLayoutSnippetMenu(): boolean
+
+  /**
+   * Returns Filter Menu for Layout Snippets
+   */
+  getLayoutSnippetFilterMenu(): Promise<iLayoutSnippetFilterCategory[] | undefined>
+
+  /**
+   * Retrieved availbale keyowrds for layout search
+   */
+  getLayoutSnippetKeywords(): Promise<Array<string>>
+
+  /**
+   * Retrieved availbale keyowrds for layout search
+   */
+  loadLayoutSnippetsByKeywords(keywords: string[]): Promise<Array<iExternalSnippet>>
+
   /** only for internal use, to transfer visual-viewport to iOs in iframe-mode */
   setIFrameViewPort(v: { offsetTop: number, height: number }): void
 
@@ -1626,6 +1660,14 @@ export interface iPrintessApi {
    * @param tag
    */
   getFormFieldPriceLabelByTag(tag: string): string
+
+  /**
+  * When using direct upload, this will return all the pending image upload promises.
+  * You can use Promise.any() to show some nice progress.
+  * 
+  * @returns The currently pending upload promises for direct upload.
+  */
+  getPendingImageUploads(): Set<Promise<any>>;
 }
 
 export interface iBuyerStep {
@@ -1744,8 +1786,6 @@ export interface iExternalDocAndSpreadInfo {
   isBook: boolean
 }
 
-
-
 export interface iExternalTab {
   id: string,
   caption: string,
@@ -1765,6 +1805,41 @@ export interface iExternalSnippet {
   bgColor: string;
   priceLabel: string;
 }
+
+export interface iLayoutSnippetFilterMenu {
+  categories: Array<iLayoutSnippetFilterCategory>
+  name: string
+}
+
+export interface iLayoutSnippetFilterCategory {
+  topics: Array<iLayoutSnippetFilterTopic>
+  name: string
+}
+
+export interface iLayoutSnippetFilterTopic {
+  keywords: Array<string>
+  name: string
+}
+
+
+
+
+
+export interface iSnippetMenu {
+  categories: Array<iSnippetMenuCategory>
+  name: string
+}
+
+export interface iSnippetMenuCategory {
+  topics: Array<iSnippetMenuTopic>
+  name: string
+}
+
+export interface iSnippetMenuTopic {
+  keywords: Array<string>
+  name: string
+}
+
 export interface iExternalFrameBounds {
   zoom: number;
   pageOffsetY: number;
@@ -1919,7 +1994,8 @@ export type iExternalErrors = Array<iExternalError>
 
 export interface iExternalError {
   boxIds: Array<string>,
-  errorCode: "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
+  pinnedDocId?: string,
+  errorCode: "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "imageStillUploading" | "imageCouldNotUpload" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "regExpNotMatching" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
   errorValue3?: string | number
