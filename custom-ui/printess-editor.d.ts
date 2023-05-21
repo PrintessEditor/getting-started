@@ -828,8 +828,20 @@ export interface iPrintessApi {
       vivid?: number
     }): Promise<void>;
 
+
   /**
-   * Uploads one or many images to Printess and can auto assign the first image
+   * Uploads one or many images to Printess and auto assigns the first image if an image frame is selected
+   * If no frame is selected it distributes to the next possible frame or
+   * automatically distributes all images depending on the template settings 
+   * @param files 
+   * @param progressCallback 
+   * @param propertyId Auto assigns the first image to a specific frame identified via property Id.
+   */
+  uploadAndDistributeImages(files: FileList | null, propertyId: string,progressCallback?: (percent: number, state: "upload" | "optimization") => void): Promise<iExternalImage[]>;
+
+  /**
+   * Uploads one or many images to Printess and can auto assign the first image 
+   * @deprecated Its deprecated, because buyer side never create frames on image upload. Just via stickers, use uploadAndDistributeImages() instead
    * @param files 
    * @param progressCallback 
    * @param assignToFrameOrNewFrame Auto assigns the first image to the current slection or a specific frame
@@ -839,6 +851,7 @@ export interface iPrintessApi {
 
   /**
    * Uploads a single image to Printess and can auto assign this image
+   * @deprecated Its deprecated, because buyer side never create frames on image upload. Just via stickers
    * @param file 
    * @param progressCallback 
    * @param assignToFrameOrNewFrame 
@@ -1559,7 +1572,12 @@ export interface iPrintessApi {
   /**
     * Returns if LayoutSnippets are available
     */
-  hasLayoutSnippetMenu(): boolean
+  hasLayoutSnippetMenu(): boolean 
+  
+  /**
+    * Returns if LayoutSnippets are available
+    */
+  getDocumentAspectRatioName(): string
 
   /**
    * Returns Filter Menu for Layout Snippets

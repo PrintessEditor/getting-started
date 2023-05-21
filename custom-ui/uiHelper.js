@@ -116,9 +116,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_currentLayoutSnippetKeywords = [];
     let uih_lastLayouSnippetKeywords = [];
     let uih_lastLayouSnippetKeywordsResults = [];
+    let uih_currentSpreadAspect = "not loaded";
+    let uih_lastSpreadAspect = "not set";
     function getCurrentMenuEntry() {
         var _a, _b;
-        if (!uih_currentMenuCategories)
+        if (!uih_currentMenuCategories || !uih_currentMenuCategories.length)
             return null;
         const categories = uih_currentMenuCategories;
         const category = (_a = uih_currentMenuCategories.filter(c => c.name === uih_currentLayoutSnippetCategory)[0]) !== null && _a !== void 0 ? _a : uih_currentMenuCategories[0];
@@ -2969,6 +2971,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getImageSelectList(printess, p, forMobile) {
+        var _a;
         const container = document.createElement("div");
         if (p.listMeta && p.listMeta.list) {
             const cssId = p.id.replace("#", "-");
@@ -2978,8 +2981,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 st.innerHTML = css.split("\n").join("");
                 container.appendChild(st);
             }
-            const imageListWrapper = document.createElement("div");
-            imageListWrapper.classList.add("image-select-list-wrapper");
             const imageList = document.createElement("div");
             imageList.classList.add("image-select-list");
             for (const entry of p.listMeta.list) {
@@ -3005,6 +3006,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (mobileButtonDiv) {
                         drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
                     }
+                    const labelText = document.querySelector("label[for='inp_" + p.id + "']");
+                    if (labelText) {
+                        labelText.textContent = entry.label && !entry.label.startsWith("#") ? printess.gl(p.label) + " - " + printess.gl(entry.label) : printess.gl(p.label);
+                    }
                 };
                 const priceLabel = printess.getFormFieldPriceLabelByTag(entry.tag);
                 if (priceLabel) {
@@ -3017,11 +3022,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             container.appendChild(imageList);
         }
+        const label = (_a = p.listMeta) === null || _a === void 0 ? void 0 : _a.list.filter(e => e.key === p.value)[0].label;
+        const caption = label && !label.startsWith("#") ? printess.gl(p.label) + " - " + printess.gl(label) : p.label;
         if (forMobile) {
             return container;
         }
         else {
-            return addLabel(printess, p, container, p.id, forMobile, p.kind, p.label);
+            return addLabel(printess, p, container, p.id, forMobile, p.kind, caption);
         }
     }
     function hexToRgb(hexColor) {
@@ -3940,16 +3947,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     label.style.display = "none";
                 }
                 printess.showOverlay("Uploading Images ...");
-                const newImg = yield printess.uploadImages(inp.files, (progress) => {
+                yield printess.uploadAndDistributeImages(inp.files, id, (progress) => {
                     progressBar.style.width = (progress * 100) + "%";
-                }, assignToFrameOrNewFrame, id);
+                });
                 printess.hideOverlay();
-                if (printess.getImages().length > 0 && printess.allowImageDistribution() && inp.files.length > 1) {
-                    yield printess.distributeImages();
-                }
-                else if (!assignToFrameOrNewFrame && newImg && newImg.length > 0) {
-                    printess.assignImageToNextPossibleFrame(newImg[0].id);
-                }
                 if (!assignToFrameOrNewFrame) {
                     const imageTabContainer = document.getElementById("tab-my-images");
                     if (imageTabContainer) {
@@ -4314,10 +4315,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             dropdown = document.createElement("div");
             dropdown.classList.add("btn-group");
             dropdown.classList.add("form-control");
+            dropdown.classList.add("printess-font-dropdown");
         }
         dropdown.style.padding = "0";
         const fonts = printess.getFonts(p.id);
         const ddContent = document.createElement("ul");
+        ddContent.classList.add("printess-font-dropdown");
         let selectedItem = null;
         if (fonts.length) {
             if (p.textStyle) {
@@ -5868,12 +5871,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (images === null || images === void 0 ? void 0 : images.filter(i => i.group === group).length) {
                         const card = document.createElement("div");
                         card.className = "accordion-item";
+                        card.style.background = "transparent";
                         const title = document.createElement("h2");
                         title.className = "accordion-header";
                         title.id = "heading-" + group.replace(" ", "");
                         const button = document.createElement("button");
                         button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
-                        button.style.backgroundColor = "white";
+                        button.style.backgroundColor = "transparent";
                         button.setAttribute("data-bs-toggle", "collapse");
                         button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
                         button.setAttribute("aria-expanded", "true");
@@ -6462,6 +6466,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const accordionItem = document.createElement("div");
         accordionItem.className = "accordion-item";
         accordionItem.style.border = "none";
+        accordionItem.style.background = "transparent";
         const headerId = title.split(" ").join("") + "_PanelHeader";
         const bodyId = title.split(" ").join("") + "_PanelBody";
         const header = document.createElement("h2");
@@ -6476,6 +6481,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         accordionBtn.setAttribute("data-bs-toggle", "collapse");
         accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
         accordionBtn.style.boxShadow = "none";
+        accordionBtn.style.background = "transparent";
         accordionBtn.textContent = title;
         accordionBtn.onclick = () => {
             const collapseButtons = document.querySelectorAll("button.accordion-collapse-btn.disabled");
@@ -6680,13 +6686,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(filter);
                 }
                 if (hasKeywordMenu && uih_currentLayoutSnippetKeywords.length > 0) {
-                    if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|")) {
+                    const uih_currentSpreadAspect = printess.getDocumentAspectRatioName();
+                    if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|") && uih_currentSpreadAspect === uih_lastSpreadAspect) {
                         renderLayoutSnippetCluster(printess, clusterDiv, uih_lastLayouSnippetKeywordsResults, forLayoutDialog, !!forMobile);
                     }
                     else {
                         printess.loadLayoutSnippetsByKeywords(uih_currentLayoutSnippetKeywords).then((snippets) => {
                             uih_lastLayouSnippetKeywordsResults = snippets;
                             uih_lastLayouSnippetKeywords = uih_currentLayoutSnippetKeywords;
+                            uih_lastSpreadAspect = uih_currentSpreadAspect;
                             renderLayoutSnippetCluster(printess, clusterDiv, snippets, forLayoutDialog, !!forMobile);
                         });
                     }

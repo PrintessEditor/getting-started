@@ -132,11 +132,14 @@ declare const bootstrap: any;
   let uih_lastLayouSnippetKeywords: Array<string> = [];
   let uih_lastLayouSnippetKeywordsResults: Array<iExternalSnippet> = [];
 
+  let uih_currentSpreadAspect: string = "not loaded"
+  let uih_lastSpreadAspect: string = "not set"
+
   //console.log("Printess ui-helper loaded");
 
 
   function getCurrentMenuEntry(): null | { categories: iSnippetMenuCategory[], category: iSnippetMenuCategory, topic: iSnippetMenuTopic } {
-    if (!uih_currentMenuCategories) return null;
+    if (!uih_currentMenuCategories || !uih_currentMenuCategories.length) return null;
 
     const categories = uih_currentMenuCategories
     const category = uih_currentMenuCategories.filter(c => c.name === uih_currentLayoutSnippetCategory)[0] ?? uih_currentMenuCategories[0];
@@ -3550,8 +3553,8 @@ declare const bootstrap: any;
         container.appendChild(st);
       }
 
-      const imageListWrapper = document.createElement("div");
-      imageListWrapper.classList.add("image-select-list-wrapper");
+      /* const imageListWrapper = document.createElement("div");
+      imageListWrapper.classList.add("image-select-list-wrapper"); */
       const imageList = document.createElement("div");
       imageList.classList.add("image-select-list");
 
@@ -3581,6 +3584,10 @@ declare const bootstrap: any;
             drawButtonContent(printess, <HTMLDivElement>mobileButtonDiv, [p], p.controlGroup);
           }
 
+          const labelText = document.querySelector("label[for='inp_" + p.id + "']");
+          if (labelText) {
+            labelText.textContent = entry.label && !entry.label.startsWith("#") ? printess.gl(p.label) + " - " + printess.gl(entry.label) : printess.gl(p.label);
+          }
         }
 
         const priceLabel = printess.getFormFieldPriceLabelByTag(entry.tag);
@@ -3595,10 +3602,14 @@ declare const bootstrap: any;
       }
       container.appendChild(imageList);
     }
+
+    const label = p.listMeta?.list.filter(e => e.key === p.value)[0].label;
+    const caption = label && !label.startsWith("#") ? printess.gl(p.label) + " - " + printess.gl(label) : p.label;
+
     if (forMobile) {
       return container;
     } else {
-      return addLabel(printess, p, container, p.id, forMobile, p.kind, p.label);
+      return addLabel(printess, p, container, p.id, forMobile, p.kind, caption);
     }
   }
 
@@ -4684,7 +4695,7 @@ declare const bootstrap: any;
           imageControl.style.gridTemplateColumns = "1fr";
           imageControl.appendChild(progressDiv);
         }
-
+ 
         // display progress bar
         progressDiv.style.display = "flex";
 
@@ -4696,10 +4707,15 @@ declare const bootstrap: any;
         // can upload multiple files at once
         printess.showOverlay("Uploading Images ...");
 
-        const newImg = await printess.uploadImages(inp.files, (progress) => {
+        await printess.uploadAndDistributeImages(inp.files, id, (progress) => {
           progressBar.style.width = (progress * 100) + "%"
-        }
-          , assignToFrameOrNewFrame, id); // true auto assigns image and triggers selection change which redraws this control.
+        });
+
+        printess.hideOverlay();
+
+        /*const newImages = await printess.uploadImages(inp.files, (progress) => {
+          progressBar.style.width = (progress * 100) + "%"
+        }, assignToFrameOrNewFrame, id); // true auto assigns image and triggers selection change which redraws this control.
 
         printess.hideOverlay();
 
@@ -4708,10 +4724,11 @@ declare const bootstrap: any;
           //const imagesContainer = <HTMLDivElement>document.getElementById("image-tab-container");
           //getDistributionOverlay(printess, forMobile, uih_currentProperties[0], imagesContainer);
           await printess.distributeImages()
-        } else if (!assignToFrameOrNewFrame && newImg && newImg.length > 0) {
+        } else if (!assignToFrameOrNewFrame && newImages && newImages.length > 0) {
           // assign to next available frame 
-          printess.assignImageToNextPossibleFrame(newImg[0].id)
+          printess.assignImageToNextPossibleFrame(newImages[0].id)
         }
+        */
 
 
         // optional: promise resolution returns list of added images 
@@ -5139,11 +5156,13 @@ declare const bootstrap: any;
       dropdown = document.createElement("div");
       dropdown.classList.add("btn-group");
       dropdown.classList.add("form-control");
+      dropdown.classList.add("printess-font-dropdown");
     }
     dropdown.style.padding = "0";
 
     const fonts = printess.getFonts(p.id);
     const ddContent = document.createElement("ul");
+    ddContent.classList.add("printess-font-dropdown");
 
     let selectedItem: { name: string, thumbUrl: string, displayName: string, familyName: string, weight: number, isItalic: boolean } | null = null;
     if (fonts.length) {
@@ -6968,13 +6987,14 @@ declare const bootstrap: any;
           if (images?.filter(i => i.group === group).length) {
             const card = document.createElement("div");
             card.className = "accordion-item";
+            card.style.background = "transparent";
 
             const title = document.createElement("h2");
             title.className = "accordion-header";
             title.id = "heading-" + group.replace(" ", "");
             const button = document.createElement("button");
             button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
-            button.style.backgroundColor = "white";
+            button.style.backgroundColor = "transparent";
             button.setAttribute("data-bs-toggle", "collapse");
             button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
             button.setAttribute("aria-expanded", "true");
@@ -7689,6 +7709,7 @@ declare const bootstrap: any;
     const accordionItem = document.createElement("div");
     accordionItem.className = "accordion-item";
     accordionItem.style.border = "none";
+    accordionItem.style.background = "transparent";
 
     const headerId = title.split(" ").join("") + "_PanelHeader";
     const bodyId = title.split(" ").join("") + "_PanelBody";
@@ -7704,6 +7725,7 @@ declare const bootstrap: any;
     accordionBtn.setAttribute("data-bs-toggle", "collapse");
     accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
     accordionBtn.style.boxShadow = "none";
+    accordionBtn.style.background = "transparent";
     accordionBtn.textContent = title;
     accordionBtn.onclick = () => {
       const collapseButtons = document.querySelectorAll("button.accordion-collapse-btn.disabled");
@@ -7971,12 +7993,15 @@ declare const bootstrap: any;
 
         if (hasKeywordMenu && uih_currentLayoutSnippetKeywords.length > 0) {
 
-          if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|")) {
+          const uih_currentSpreadAspect = printess.getDocumentAspectRatioName();
+
+          if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|") && uih_currentSpreadAspect === uih_lastSpreadAspect) {
             renderLayoutSnippetCluster(printess, clusterDiv, uih_lastLayouSnippetKeywordsResults, forLayoutDialog, !!forMobile)
           } else {
             printess.loadLayoutSnippetsByKeywords(uih_currentLayoutSnippetKeywords).then((snippets) => {
               uih_lastLayouSnippetKeywordsResults = snippets;
               uih_lastLayouSnippetKeywords = uih_currentLayoutSnippetKeywords;
+              uih_lastSpreadAspect = uih_currentSpreadAspect;
               renderLayoutSnippetCluster(printess, clusterDiv, snippets, forLayoutDialog, !!forMobile)
             });
           }

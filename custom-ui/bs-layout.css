@@ -825,6 +825,7 @@ body {
 
 #printess-desktop-grid.main-tabs .tab-content.card {
   border: none;
+  background: transparent;
 }
 
 #tabs-panel-photo-frames li.nav-item {
@@ -946,6 +947,10 @@ body {
     line-height: 20px;
   }
 
+  .nav-tabs .nav-link.active,
+  .nav-tabs .nav-item.show .nav-link {
+    border-bottom: 1px solid var(--bs-body-bg);
+  }
 
   ul.step-tabs-desktop .nav-link {
     font-size: 14px;
@@ -953,7 +958,8 @@ body {
 
   ul.step-tabs-desktop .nav-link.active {
     /*  background: linear-gradient(#eee,white,white) !important;*/
-    border-color: var(--bs-primary) var(--bs-primary) #fff;
+    background: transparent;
+    border-color: var(--bs-primary) var(--bs-primary) var(--bs-body-bg);
     color: var(--bs-primary);
     font-size: 20px;
     line-height: 23px;
@@ -975,7 +981,7 @@ body {
 
   ul.step-tabs-desktop>.nav-item:first-child>.nav-link.active,
   ul.step-tabs-desktop>.nav-item:first-child>.nav-link.active:hover {
-    border-color: var(--bs-primary) var(--bs-primary) #fff;
+    border-color: var(--bs-primary) var(--bs-primary) var(--bs-body-bg);
   }
 
   ul.nav.nav-tabs.step-tabs-desktop:last-child {
@@ -1801,6 +1807,7 @@ li.spread-separator {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
+
   #layoutSnippetsSelection .layout-snippet-cluster.big-thumbs {
     display: grid;
     grid-template-columns: 1fr;
@@ -1909,12 +1916,13 @@ li.spread-separator {
   border: 1px solid var(--mobile-button-border);
 }
 
-.snippet-thumb.layout-dialog > img {
+.snippet-thumb.layout-dialog>img {
   width: unset;
   max-height: 300px;
   max-width: 300px;
 }
-.layout-snippet-cluster.big-thumbs > .snippet-thumb.layout-dialog > img {
+
+.layout-snippet-cluster.big-thumbs>.snippet-thumb.layout-dialog>img {
   max-height: 400px;
   max-width: 400px;
 }
@@ -3130,7 +3138,7 @@ a.dropdown-item .dropdown-list-info {
   justify-content: center;
   font-family: sans-serif;
   color: white;
-  background-image: linear-gradient(to right, rgba(168, 168, 168, 0), #f8f8f8);
+  background-image: linear-gradient(to right, rgba(168, 168, 168, 0), var(--mobile-panel-background));
   right: 0;
   top: 0;
   bottom: 0;
