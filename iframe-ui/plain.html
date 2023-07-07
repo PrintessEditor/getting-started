@@ -57,6 +57,10 @@
             prompt("Proceed to checkout.\n\nsave-token:\n" + event.data.token + "\n\nThumbnailUrl:", event.data.thumbnailUrl);
             break;
 
+          case "save":
+            prompt("Save button pressed.\n\nsave-token:\n", + event.data.token);
+            break;
+
           case "formFieldChanged":
             /* You can react to changes of price-relevant form fields here */
             console.log("Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'");
@@ -72,10 +76,11 @@
         cmd: "attach", properties: {
 
           /* Paste your Printess shop-token here */
-          token: "", // 
+          token: "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJZa3BjU0xoQWpKVXNBUmtnd1UwQjV6WEVub3kxIiwianRpIjoiZld5VGpNaUVrMjU2QUpWWFBmWEZndTRxWnlnMkltSUciLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYyMTU0MjA5NywiZXhwIjoxOTM2OTAyMDk3LCJpYXQiOjE2MjE1NDIwOTcsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.ODyJTgVwyT8LdmXg9bLnMusRJS9wSm5EVGUPhEyxnBmJcoviIfVZ4PByDsk09W0dzQmsHmt9H4PdO_71JxasNu6dbs8StKl0UZgJtX6zYJc8XLI421MJ2U3sn4_KXPFonRJ3HeaeMQCapSApgZCiisxxZRw8aKTn4RckAZEwNh9dXQBe0x72tknn0NHeX361pGJ2BVpa6GthGRUNl25xAZ-YW2AXnWGpJPkEf5Exv8GASeoH9UlwgrJ04WfCa1yElx8q7Q1HLoZy7d8oLxQ4BePdVOKqPQd5dbbXJvAvqtJ8B0PsarrnB0jY7GOisvccTLUGRVsKTUV6itw9MpTR3xV2QaymRP35zryNwcFkqbp6FiE6M7iB2kD1BTVzJskauQVOL9_gBfBKKjiQwxyy7KRCjDh53lxTkBsJujX0zHTsXn46dR0g5pr6FZNoTXhdCT8GTtc616Jv7RRxide4Pt8zEdaOAOo16YHA2QTwU7OjfT9x2YIkX-wjrlqzn81WnbU5Ycz54FD7xyAdHYSiC9VZpno74Bpcw7hUt7wmt__5bJlxZg-UwMdW2eflujBZ8kNa9xMi7nmtWHrojzzfn-WQOL2zTiiK5-T2SNKpBlntZKnFpy_JVDj_AN6MiWvCf29Jw3xSfZFDUgmihNTBzwxOu5L_6IwH5aLk2nOLJCs", // 
 
           /* Name of the template to load. You can also pass a save-token from "basket" or "back" callback here to load previously saved work. */
-          templateName: "Greeting Card",
+          templateName: "dm_football_wales_tabloid_proposal",
+          templateVersion: "draft",
 
           /* A unique ID to identify this session, can later be used to connect to a UserID once the user has logged in or createdan account */
           basketId: "Some-Unique-Basket-Or-Session-Id",

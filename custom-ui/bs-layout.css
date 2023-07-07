@@ -875,7 +875,7 @@ body {
   display: grid;
 }
 
-.control-group .btn-group.form-control {
+.btn-group.form-control {
   padding: 0;
 }
 
@@ -2478,19 +2478,6 @@ input#invert-image-checker {
   cursor: pointer;
 }
 
-.form-switch .form-check-input {
-  width: 4em;
-  height: 2em;
-}
-
-.form-switch .form-check-label {
-  width: auto;
-  cursor: pointer;
-  font-size: 16pt;
-  margin-left: 10px;
-  line-height: 40px;
-}
-
 .form-check-input:checked {
   background-color: var(--bs-primary);
   border-color: var(--bs-primary);
@@ -2716,6 +2703,11 @@ input#invert-image-checker {
   text-overflow: ellipsis;
 }
 
+.disabled > .dropdown-item, .image-select-list > .disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
 a.dropdown-item .dropdown-list-info {
   white-space: pre-line;
 }
@@ -2762,8 +2754,6 @@ a.dropdown-item .dropdown-list-info {
   justify-content: center;
   align-items: center;
   width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 4px;
   background: var(--bs-light);
   margin-bottom: 0.25rem;
   cursor: pointer;
@@ -2877,15 +2867,18 @@ a.dropdown-item .dropdown-list-info {
 #desktop-properties .color-drop-down-list .btn-color-select:after {
   position: absolute;
   top: 45%;
-  right: 12px;
-  color: white;
+  /* switch color between white and black depending on background*/
+  --light: 80;
+  --threshod: 60;
+  --switch: calc((var(--light) - var(--threshold)) * -100%);
+  color: hsl(0, 0%, var(--switch));
 }
 
-#desktop-properties .color-drop-down-list .btn-color-select {
+#desktop-properties .color-drop-down-list .btn-color-select {  display: flex;
+  justify-content: center;
   border-radius: 50%;
   min-width: 39px;
   min-height: 39px;
-  padding: 2px;
   border: 1px solid lightgray;
 }
 

@@ -239,10 +239,11 @@
       "adjustGapInfo": "Click the grid button to change the gap between the images.",
       "addText": "Add Text",
       "addSplitterTextInfo": "Click the 'T' button and select from multiple layouts.",
-
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
 
+      "removeBorder": "Remove Border",
+      "imageDragNotAllowed": "Sorry, you can't change this image."
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
@@ -544,9 +545,10 @@
       "addSplitterTextInfo": "Klicken Sie auf die Schaltfläche 'T' und wählen Sie aus mehreren Layouts.",
 
       "previous": "Vorherige",
-      "next": "Nächste"
+      "next": "Nächste",
 
-
+      "removeBorder": "Rand entfernen",
+      "imageDragNotAllowed": "Leider dürfen sie dieses Bild nicht ändern."
 
     },
     "errors": {

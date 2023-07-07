@@ -834,10 +834,11 @@ export interface iPrintessApi {
    * If no frame is selected it distributes to the next possible frame or
    * automatically distributes all images depending on the template settings 
    * @param files 
-   * @param progressCallback 
    * @param propertyId Auto assigns the first image to a specific frame identified via property Id.
+   * @param progressCallback 
+   * @param isHandwritingImage Toggle the current textframe to handwriting mode und assigns image
    */
-  uploadAndDistributeImages(files: FileList | null, propertyId: string,progressCallback?: (percent: number, state: "upload" | "optimization") => void): Promise<iExternalImage[]>;
+  uploadAndDistributeImages(files: FileList | null, propertyId: string, progressCallback?: (percent: number, state: "upload" | "optimization") => void, isHandwritingImage?: boolean): Promise<iExternalImage[]>;
 
   /**
    * Uploads one or many images to Printess and can auto assign the first image 
@@ -1029,6 +1030,10 @@ export interface iPrintessApi {
     name: string;
     color: string;
   }>;
+
+  showCMYKColorDialog(p: iExternalProperty): Promise<iExternalColor | null>  
+  
+  getColorInfo(p: iExternalProperty): iExternalColor | null
 
   /**
    * Returns a list of available paragraph-style for a certain selected property (frame).
@@ -1253,16 +1258,25 @@ export interface iPrintessApi {
    */
   lockCoverInside(): boolean
 
-
+  /**
+   * 
+   * @param fileName deprecated. Not used anymore.
+   * @param documentName Optional: The name of the document you want to render the pages images for. If not provided the one marked as thumbnail will be taken, otherwise the preview document, or as last try the first/primary document.
+   * @param maxWidth Optional: Maximum render width. Defaults to 400.
+   * @param maxHeight Optional: Maximum render height. Defaults to 400.
+   */
   renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
 
 
   /**
    * Renders all pages as images for the given document. 
-   * @param fileNameSuffix The file name suffix when uploading the image. All files will be prefixed with the page index + underscore character.
+   * 
+   * 
+   * @param fileNameSuffix deprecated. Not used anymore.
    * @param documentName Optional: The name of the document you want to render the pages images for. If not provided the one marked as thumbnail will be taken, otherwise the preview document, or as last try the first/primary document.
    * @param maxWidth Optional: Maximum render width. Defaults to 400.
    * @param maxHeight Optional: Maximum render height. Defaults to 400.
+   * @returns Array of urls to the images. They can be png with tranparency or jpg. 
    */
   renderPageImages(fileNameSuffix: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string[]>;
 
@@ -1395,6 +1409,25 @@ export interface iPrintessApi {
    * @param n gap size of the photo grid
    */
   setSplitterGaps(n: number): void
+
+  /**
+   * Returns if splitter layout has gap around
+   */
+  hasGapAround(): Promise<boolean>  
+  
+  /**
+   * If splitter frames are present on current spread this method adds
+   * a gap between all splitter-frames and the page border
+   * Returns `true` if succesfull
+   */
+  addGapAround(): Promise<boolean>
+
+  /**
+   * If splitter frames are present on current spread this method removes
+   * the gap between all splitter-frames and the page border
+   *  * Returns `true` if succesfull
+   */
+  removeGapAround(): Promise<boolean>
 
   /**
    * Returns `true` if either rich- or simple-text-editor is currently active
@@ -1572,8 +1605,8 @@ export interface iPrintessApi {
   /**
     * Returns if LayoutSnippets are available
     */
-  hasLayoutSnippetMenu(): boolean 
-  
+  hasLayoutSnippetMenu(): boolean
+
   /**
     * Returns if LayoutSnippets are available
     */
@@ -1822,6 +1855,8 @@ export interface iExternalSnippet {
   thumbUrl: string;
   bgColor: string;
   priceLabel: string;
+  imageCount: number;
+  favourite: number;
 }
 
 export interface iLayoutSnippetFilterMenu {
@@ -1924,7 +1959,8 @@ export type iExternalFieldListEntry = {
   label: string, // multi-language??
   description: string,
   imageUrl: string,
-  tag: string
+  tag: string,
+  enabled: boolean
 }
 export interface iExternalTableMeta {
   columns: Array<iExternalTableColumn>;
@@ -2013,7 +2049,7 @@ export type iExternalErrors = Array<iExternalError>
 export interface iExternalError {
   boxIds: Array<string>,
   pinnedDocId?: string,
-  errorCode: "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "imageStillUploading" | "imageCouldNotUpload" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "regExpNotMatching" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
+  errorCode: "preflight" | "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "imageStillUploading" | "imageCouldNotUpload" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "regExpNotMatching" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
   errorValue3?: string | number
@@ -2022,6 +2058,22 @@ export interface iExternalError {
 export interface iExternalFrame {
   top: string,
   left: string
+}
+
+
+export interface iExternalColor {
+  mode: "rgb" | "cmyk";
+  label: string;
+  allowCMYK: boolean;
+
+  r: number;  // 0-255
+  g: number;
+  b: number;
+
+  c: number;  // 0-100
+  m: number;
+  y: number;
+  k: number;
 }
 
 export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside"
