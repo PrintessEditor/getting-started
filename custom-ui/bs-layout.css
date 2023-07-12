@@ -3912,4 +3912,8 @@ body.has-mobile-price-bar .mobile-pricebar {
     padding: 0px;
   }
 
+  .dropdown-menu {
+    /* only shown on mobile with ff-groups */
+    position: fixed !important;
+  }
 }

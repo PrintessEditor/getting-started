@@ -28,6 +28,8 @@ interface iScaledImage {
   version?: number
 }
 
+export type ErrorName = "templateNotFound" 
+
 export interface printessAttachParameters {
   resourcePath?: string;
   domain?: string;
@@ -300,6 +302,10 @@ export interface printessAttachParameters {
    */
   priceCategoryLabels?: Record<string, string>
 
+  /**
+   * Provide a callback function which is called when an error happens.
+   */
+  errorCallback?: (errorName: ErrorName, data?: Record<string, string>) => void
 }
 
 
