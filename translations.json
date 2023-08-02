@@ -98,6 +98,17 @@
       "color": "Color",
       "rotation": "Rotation",
       "bendingArc": "Bending Arc",
+
+      "imageUploadInfoboxTitle": "We are almost there!",
+      "imageUploadInfoboxInstruction": "Please hold on and don't close the window.",
+      "imageUploadProgressPreparing": "Preparing Image Upload",
+      "imageUploadProgress": "Uploading Images",
+      "imageUploadProgressMeta": "Uploading Meta Data",
+      "quote1": "\"Waiting for Godot\" – Samuel Becker",
+      "quote2": "\"Patience is not simply the ability to wait - it's how we behave while we're waiting.\" - Joyce Meyer",
+      "quote3": "\"You usually have to wait for that which is worth waiting for.\" – Craig Bruce",
+      "quote4": "\"All the love is waiting for is opportunity.\" – Miguel de Cervantes Saavedra",
+
       "desktopImageUpload": "Upload Images from Desktop",
       "mobileImageUpload": "Upload Images from Phone",
       "mobileImageUploadReady": "Now you can select images you wish to upload from your Phone.",
@@ -243,7 +254,15 @@
       "next": "Next",
 
       "removeBorder": "Remove Border",
-      "imageDragNotAllowed": "Sorry, you can't change this image."
+      "imageDragNotAllowed": "Sorry, you can't change this image.",
+
+      "photoAmount": "How many photos?",
+      "recommended": "recommended",
+
+      "strokeWidth": "Stroke Width",
+      "opacity": "Opacity",
+
+      "buttonPrint": "Create PDF"
     },
     "errors": {
       "imageResolutionLowTitle": "Oops!\nLooks like your image is too small...",
@@ -402,6 +421,17 @@
       "color": "Farbe",
       "rotation": "Drehung",
       "bendingArc": "Biegewinkel",
+
+      "imageUploadInfoboxTitle": "Gleich ist's geschafft!",
+      "imageUploadInfoboxInstruction": "Bitte warten und nicht das Fenster schließen.",
+      "imageUploadProgressPreparing": "Bilder werden vorbereitet",
+      "imageUploadProgress": "Bilder werden hochgeladen",
+      "imageUploadProgressMeta": "Metadaten werden hochgeladen",
+      "quote1": "\"Warten auf Godot\" – Samuel Becker",
+      "quote2": "\"Geduld ist nicht einfach die Fähigkeit zu warten - es geht darum, wie wir uns verhalten, während wir warten.\" - Joyce Meyer",
+      "quote3": "\"Normalerweise muss man auf das warten, worauf es sich zu warten lohnt.\" – Craig Bruce",
+      "quote4": "\"Wart ist hart, warten ist harten.\" – Mathias Daus",
+
       "desktopImageUpload": "Bilder vom Desktop hochladen",
       "mobileImageUpload": "Bilder vom Handy hochladen",
       "mobileImageUploadReady": "Nun können Sie Bilder auswählen, die Sie von Ihrem Handy hochladen möchten.",
@@ -548,7 +578,15 @@
       "next": "Nächste",
 
       "removeBorder": "Rand entfernen",
-      "imageDragNotAllowed": "Leider dürfen sie dieses Bild nicht ändern."
+      "imageDragNotAllowed": "Leider dürfen sie dieses Bild nicht ändern.",
+
+      "photoAmount": "Wieviele Fotos möchten Sie hochladen?",
+      "recommended": "empfohlen",
+
+      "strokeWidth": "Strichbreite",
+      "opacity": "Deckkraft",
+
+      "buttonPrint": "PDF erzeugen"
 
     },
     "errors": {
@@ -708,6 +746,17 @@
       "color": "Color",
       "rotation": "Rotación",
       "bendingArc": "Arco de flexión",
+
+      "imageUploadInfoboxTitle": "¡Ya casi estamos!",
+      "imageUploadInfoboxInstruction": "Por favor, aguanta y no cierres la ventana.",
+      "imageUploadProgressPreparing": "Preparando subida de imágenes",
+      "imageUploadProgress": "Subir imágenes",
+      "imageUploadProgressMeta": "Cargar metadatos",
+      "quote1": "\"Esperando a Godot\" – Samuel Becker",
+      "quote2": "\"La paciencia no es sólo la capacidad de esperar, es cómo nos comportamos mientras esperamos.\" - Joyce Meyer",
+      "quote3": "\"Normalmente tienes que esperar por aquello que vale la pena esperar.\" – Craig Bruce",
+      "quote4": "\"Todo lo que el amor está esperando es una oportunidad.\" – Miguel de Cervantes Saavedra",
+
       "desktopImageUpload": "Cargar imágenes desde el escritorio",
       "mobileImageUpload": "Cargar imágenes desde el teléfono",
       "mobileImageUploadReady": "Ahora puede seleccionar las imágenes que desea cargar desde su teléfono.",
@@ -851,7 +900,15 @@
       "addSplitterTextInfo": "Haz clic en el botón 'T' y selecciona entre varios diseños.",
 
       "previous": "Anterior",
-      "next": "Siguiente"
+      "next": "Siguiente",
+
+      "photoAmount": "¿Cuántas fotos?",
+      "recommended": "recomendado",
+
+      "strokeWidth": "Anchura del trazo",
+      "opacity": "Opacidad",
+
+      "buttonPrint": "Crear PDF"
 
     },
     "errors": {
@@ -1011,6 +1068,17 @@
       "color": "Couleur",
       "rotation": "Rotation",
       "bendingArc": "Arc de pliage",
+
+      "imageUploadInfoboxTitle" : "Nous y sommes presque !",
+      "imageUploadInfoboxInstruction" : "Tenez bon et ne fermez pas la fenêtre.",
+      "imageUploadProgressPreparing" : "Préparation du téléchargement de l'image",
+      "imageUploadProgress": "Téléchargement d'images",
+      "imageUploadProgressMeta": "Téléchargement de métadonnées",
+      "quote1": "\"En attendant Godot\" – Samuel Becker",
+      "quote2": "\"La patience n'est pas simplement la capacité d'attendre - c'est la façon dont nous nous comportons pendant que nous attendons.\" - Joyce Meyer",
+      "quote3": "\"Il faut généralement attendre ce qui vaut la peine d'être attendu.\" – Craig Bruce",
+      "quote4": "\"Tout ce que l'amour attend, c'est l'opportunité.\" – Miguel de Cervantes Saavedra",
+
       "desktopImageUpload": "Télécharger des images à partir du bureau",
       "mobileImageUpload": "Télécharger des images depuis un téléphone",
       "mobileImageUploadReady": "Vous pouvez maintenant sélectionner les images que vous souhaitez télécharger à partir de votre téléphone.",
@@ -1154,7 +1222,15 @@
       "addSplitterTextInfo": "Cliquez sur le bouton 'T' et choisissez parmi plusieurs mises en page.",
 
       "previous": "Précédent",
-      "next": "Suivant"
+      "next": "Suivant",
+
+      "photoAmount": "Combien de photos?",
+      "recommended": "recommandé",
+
+      "strokeWidth": "Largeur du trait",
+      "opacity": "Opacité",
+
+      "buttonPrint": "Créer un PDF"
 
     },
     "errors": {
@@ -1314,6 +1390,17 @@
       "color": "Väri",
       "rotation": "Rotation",
       "bendingArc": "Bending Arc",
+
+      "imageUploadInfoboxTitle": "Olemme melkein perillä!",
+      "imageUploadInfoboxInstruction": "Pidä kiinni äläkä sulje ikkunaa.",
+      "imageUploadProgressPreparing": "Kuvan latauksen valmistelu",
+      "imageUploadProgress": "Kuvien lataaminen",
+      "imageUploadProgressMeta": "Metatietojen lataaminen",
+      "quote1": "\"Godotia odotellessa\" – Samuel Becker",
+      "quote2": "\"Kärsivällisyys ei ole vain kykyä odottaa - se on sitä, miten käyttäydymme odottaessamme.\" - Joyce Meyer",
+      "quote3": "\"Yleensä on odotettava sitä, mikä on odottamisen arvoista.\" – Craig Bruce",
+      "quote4": "\"Kaikki mitä rakkaus odottaa, on tilaisuus.\" – Miguel de Cervantes Saavedra",
+
       "desktopImageUpload": "Lataa kuvia työpöydältä",
       "mobileImageUpload": "Lataa kuvia puhelimesta",
       "mobileImageUploadReady": "Nyt voit valita kuvat, jotka haluat ladata puhelimestasi.",
@@ -1457,7 +1544,15 @@
       "addSplitterTextInfo": "Napsauta T-painiketta ja valitse useista asetteluista.",
 
       "previous": "Edellinen",
-      "next": "Seuraava"
+      "next": "Seuraava",
+
+      "photoAmount": "Kuinka monta valokuvaa?",
+      "recommended": "suositellaan",
+
+      "strokeWidth": "Iskun leveys",
+      "opacity": "Opasiteetti",
+
+      "buttonPrint": "Luo PDF"
 
     },
     "errors": {
@@ -1617,6 +1712,17 @@
       "color": "Färg",
       "rotation": "Rotation",
       "bendingArc": "Böjd båge",
+
+      "imageUploadInfoboxTitle": "Vi är nästan framme!",
+      "imageUploadInfoboxInstruktion": "Håll ut och stäng inte fönstret.",
+      "imageUploadProgressPreparing": "Förbereder uppladdning av bild",
+      "imageUploadProgress": "Ladda upp bilder",
+      "imageUploadProgressMeta": "Ladda upp metadata",
+      "quote1": "\"I väntan på Godot\" – Samuel Becker",
+      "quote2": "\"Tålamod är inte bara förmågan att vänta - det är hur vi beter oss medan vi väntar.\" - Joyce Meyer",
+      "quote3": "\"Du måste oftast vänta på det som är värt att vänta på.\" – Craig Bruce",
+      "quote4": "\"Allt kärleken väntar på är en möjlighet.\" – Miguel de Cervantes Saavedra",
+
       "desktopImageUpload": "Ladda upp bilder från skrivbordet",
       "mobileImageUpload": "Ladda upp bilder från telefonen",
       "mobileImageUploadReady": "Nu kan du välja bilder som du vill ladda upp från din telefon.",
@@ -1760,7 +1866,15 @@
       "addSplitterTextInfo": "Klicka på T-knappen och välj mellan flera layouter.",
 
       "previous": "Föregående",
-      "next": "Nästa"
+      "next": "Nästa",
+
+      "photoAmount": "Hur många bilder?",
+      "recommended": "rekommenderad",
+
+      "strokeWidth": "Slagbredd",
+      "opacity": "Opacitet",
+
+      "buttonPrint": "Skapa PDF"
 
     },
     "errors": {
@@ -1920,6 +2034,17 @@
       "color": "Цвет",
       "rotation": "Вращение",
       "bendingArc": "Изгибающая дуга",
+
+      "imageUploadInfoboxTitle": "Мы почти у цели!",
+      "imageUploadInfoboxInstruction": "Пожалуйста, держитесь и не закрывайте окно.",
+      "imageUploadProgressPreparing": "Подготовка к загрузке изображения",
+      "imageUploadProgress": "Загрузка изображений",
+      "imageUploadProgressMeta": "Загрузка метаданных",
+      "quote1": "\"В ожидании Годо\" – Самуэль Беккер",
+      "quote2": "\"Терпение - это не просто способность ждать - это то, как мы ведем себя во время ожидания.\" - Джойс Мейер",
+      "quote3": "\"Обычно приходится ждать того, чего стоит ждать.\" – Крейг Брюс",
+      "quote4": "\"Все, чего ждет любовь - это возможность.\" – Мигель де Сервантес Сааведра",
+
       "desktopImageUpload": "Загрузка изображений с рабочего стола",
       "mobileImageUpload": "Загрузка изображений с телефона",
       "mobileImageUploadReady": "Теперь вы можете выбрать изображения, которые хотите загрузить с вашего телефона.",
@@ -2063,7 +2188,16 @@
       "addSplitterTextInfo": "Нажмите кнопку 'T' и выберите один из нескольких вариантов расположения текста.",
 
       "previous": "Предыдущий",
-      "next": "Следующий"
+      "next": "Следующий",
+
+      "photoAmount": "Сколько фотографий?",
+      "recommended": "рекомендуемые",
+
+      "strokeWidth": "Ширина хода",
+      "opacity": "Непрозрачность",
+
+      "buttonPrint": "Создать PDF"
+
 
     },
     "errors": {

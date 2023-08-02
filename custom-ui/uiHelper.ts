@@ -80,6 +80,7 @@ declare const bootstrap: any;
     uih_currentLayoutSnippetKeywords = [];
     uih_lastLayouSnippetKeywords = [];
     uih_lastLayouSnippetKeywordsResults = [];
+    uih_currentLayoutSnippetImageAmount = "";
   }
 
   let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -131,6 +132,7 @@ declare const bootstrap: any;
   let uih_currentLayoutSnippetKeywords: Array<string> = [];
   let uih_lastLayouSnippetKeywords: Array<string> = [];
   let uih_lastLayouSnippetKeywordsResults: Array<iExternalSnippet> = [];
+  let uih_currentLayoutSnippetImageAmount: string = "";
 
   let uih_currentSpreadAspect: string = "not loaded"
   let uih_lastSpreadAspect: string = "not set"
@@ -187,7 +189,12 @@ declare const bootstrap: any;
   }
 
   function handleBackButtonCallback(printess: iPrintessApi, callback: CallableFunction) {
-    if (printess.isInDesignerMode()) {
+    if (printess.userInBuyerSide()) {
+      // ask for logout 
+      if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+        printess.logout();
+      }
+    } else if (printess.isInDesignerMode()) {
       // do not save in designer mode.
       callback("");
     } else {
@@ -229,9 +236,115 @@ declare const bootstrap: any;
     }
   }
 
+  // make it a web component?
+  function getQuotes(printess: iPrintessApi): string[] {
+    return [
+      printess.gl("ui.quote1"),
+      printess.gl("ui.quote2"),
+      printess.gl("ui.quote3"),
+      printess.gl("ui.quote4"),
+    ];
+  }
+  function postQuote(quotes: string[], condition: boolean, callBack: Function, waitMs: number = 10000): string {
+    const myQuotes = quotes;
+    if (condition) {
+      setTimeout(() => postQuote(myQuotes, condition, callBack), waitMs);
+      const index: number = Math.floor(Math.random() * myQuotes.length);
+      const quote = myQuotes[index];
+      if (myQuotes.length > 2) myQuotes.splice(index, 1); // remove quote, don't repeat
+      return callBack(quote);
+    } else {
+      return "";
+    }
+  }
+
   async function addToBasket(printess: iPrintessApi) {
-    const validation = await validateAllInputs(printess, "validateAll");
-    if (!validation) {
+    if (printess.getUploadsInProgress() > 0 || printess.getPendingImageUploadsCount() > 0 || printess.getDirectImageMetadataFinalizationPromises().size) {
+      const backdrop = document.createElement("div");
+      backdrop.className = "modal modal-dialog-centered bg-dark";
+      backdrop.style.opacity = "0.9";
+      document.body.appendChild(backdrop);
+
+      const modal = document.createElement("div");
+      modal.className = "modal-content modal-body modal-lg position-absolute top-50 start-50 translate-middle";
+      modal.style.opacity = "1";
+      backdrop.appendChild(modal);
+
+      const modalTitle = document.createElement("div");
+      modalTitle.innerHTML = printess.gl("ui.imageUploadInfoboxTitle");
+      modalTitle.className = "h2";
+      modal.appendChild(modalTitle);
+
+      const modalQuote = document.createElement("div");
+      modal.appendChild(modalQuote);
+      postQuote(getQuotes(printess), true, (quote: string) => {
+        modalQuote.innerHTML = `<p><i>${quote}</i></p>`;
+      })
+
+      const explainationText = document.createElement("p");
+      explainationText.innerHTML = printess.gl("ui.imageUploadInfoboxInstruction");
+      modal.appendChild(explainationText);
+
+      const text = document.createElement("span");
+      text.innerHTML = printess.gl("ui.imageUploadProgressPreparing");
+      modal.appendChild(text);
+
+      const progress = document.createElement("div");
+      progress.className = "progress";
+      modal.appendChild(progress)
+
+      const progressBar = document.createElement("div");
+      const progressBarClasses = progressBar.classList;
+      progressBarClasses.add("progress-bar");
+      progressBarClasses.add("progress-bar-striped");
+      progressBarClasses.add("progress-bar-animated");
+      progressBarClasses.add("bg-success");
+      progressBar.setAttribute("role", "progressbar");
+      //progressBar.ariaValueNow = "2";
+      //progressBar.ariaValueMin = "0";
+      //progressBar.ariaValueMax = "100";
+      progressBar.style.width = "2%";
+      progress.appendChild(progressBar);
+
+      // upload is in preparation
+      while (printess.getUploadsInProgress() && !printess.getPendingImageUploads().size) {
+        // show progress bar striped
+        await new Promise(resolve => setTimeout(resolve, 2000)); // wait two seconds
+      }
+      const uploadImagePromises = printess.getPendingImageUploads();
+
+      // set counter
+      const uploadedImagesCount: number = printess.getPendingImageUploadsCount();
+      const metaSteps: number = 1; // meta data upload counts only 1
+      const steps: number = uploadedImagesCount + metaSteps + 1;
+
+      // upload images
+      while (uploadImagePromises.size > 0) {
+        const pendingImagesCount: number = printess.getPendingImageUploadsCount();
+        const procent = Math.floor(100 - (pendingImagesCount + metaSteps) * 100 / steps);
+        progressBar.style.width = String(procent) + "%";
+        //progressBar.ariaValueNow = String(procent);
+        const imagesAlready = uploadedImagesCount + metaSteps - pendingImagesCount;
+        text.innerHTML = printess.gl("ui.imageUploadProgress")
+          + ": " + imagesAlready + " " + printess.gl("ui.of")
+          + " " + uploadedImagesCount;
+        await Promise.race(uploadImagePromises);
+      }
+
+      // upload meta data of images
+      const uploadMetaPromises = printess.getDirectImageMetadataFinalizationPromises();
+      while (uploadMetaPromises.size > 0) {
+        const procent = Math.floor(100 - 100 / (steps - metaSteps));
+        progressBar.style.width = String(procent) + "%";
+        //progressBar.ariaValueNow = String(procent);
+        text.innerHTML = printess.gl("ui.imageUploadProgressMeta");
+        await Promise.race(uploadMetaPromises);
+      }
+      backdrop.remove();
+    }
+
+    const isValid = await validateAllInputs(printess, "validateAll");
+    if (!isValid) {
       return;
     }
 
@@ -409,7 +522,9 @@ declare const bootstrap: any;
     if (oldPrice) newPriceSpan.style.color = "red";
     newPriceSpan.innerText = printess.gl(price);
 
-    if (infoUrl) {
+    const hasOnlySpaces = (x: any): boolean => /^\s+$/.test(x);
+
+    if (infoUrl && !hasOnlySpaces(infoUrl)) {
       const infoIcon = printess.getIcon("info-circle");
       infoIcon.classList.add("price-info-icon");
       if (oldPrice) infoIcon.style.marginRight = "6px";
@@ -778,8 +893,9 @@ declare const bootstrap: any;
       } */
 
       const isTextSplitterMenu = printess.hasSplitterMenu() && properties.length && properties[0].kind !== "image";
+
       const renderPhotoTabForEmptyImage = false;
-      if (printess.showTabNavigation() && uih_currentTabId === "#PHOTOS") {
+      /*if (printess.showTabNavigation() && uih_currentTabId === "#PHOTOS") {
         if (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image") {
           const p = uih_currentProperties[0];
           if (p.value === p.validation?.defaultValue) {
@@ -788,7 +904,7 @@ declare const bootstrap: any;
             //renderPhotoTabForEmptyImage = true;
           }
         }
-      }
+      }*/
 
       // show splitter guide
       if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu() && printess.uiHintsDisplay().includes("splitterGuide")) {
@@ -1628,6 +1744,7 @@ declare const bootstrap: any;
       // return getColorControl(printess, p);
 
       case "number":
+      case "pixelLength":
         return getNumberSlider(printess, p);
 
       case "image-id": // like image form field
@@ -1735,6 +1852,8 @@ declare const bootstrap: any;
         // desktop
         const tabs: Array<{ title: string, id: string, content: HTMLElement }> = [];
 
+        let hasImageSplitterMenu = printess.hasSplitterMenu() && p.imageMeta?.canUpload;
+
         if (p.imageMeta?.canUpload) {
           // select and upload
           tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
@@ -1750,6 +1869,9 @@ declare const bootstrap: any;
           }
           tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p, forMobile) });
 
+        }
+        if (hasImageSplitterMenu) {
+          tabs.push({ id: "printess-splitter-layouts", title: printess.gl("ui.changeLayout"), content: getSplitterSnippetsControl(printess, p) });
         }
         return getTabPanel(printess, tabs, p.id);
       }
@@ -2050,7 +2172,7 @@ declare const bootstrap: any;
       },
       basket: {
         name: "basket",
-        text: printess.gl("ui.buttonBasket"),
+        text: printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket"),
         task: () => addToBasket(printess)
       }
     }
@@ -2457,7 +2579,7 @@ declare const bootstrap: any;
     }
 
     const basketBtn = document.createElement("button");
-    const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.gl("ui.buttonBasket");
+    const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket")
     basketBtn.className = "btn btn-primary d-flex justify-content-center";
     basketBtn.style.whiteSpace = "nowrap";
     if (!hasSaveAndCloseBtnInPageIconView && printess.pageNavigationDisplay() === "icons") {
@@ -2466,7 +2588,7 @@ declare const bootstrap: any;
 
     basketBtn.innerText = caption;
 
-    const basketIcon = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+    const basketIcon = printess.userInBuyerSide() ? <iconName>"print-solid" : <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
     const icon = hasSaveAndCloseBtnInPageIconView ? basketIcon : <iconName>printess.gl("ui.buttonBasketIcon");
     if (icon) {
       const svg = printess.getIcon(icon);
@@ -3230,7 +3352,7 @@ declare const bootstrap: any;
     const basketButton = document.createElement("button");
     basketButton.className = "btn btn-primary";
     basketButton.style.whiteSpace = "nowrap";
-    basketButton.innerText = printess.gl("ui.buttonBasket");
+    basketButton.innerText = printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket")
     basketButton.onclick = () => addToBasket(printess);
     return basketButton;
   }
@@ -3894,27 +4016,28 @@ declare const bootstrap: any;
     hexGroup.appendChild(hexInput);
     hexGroup.appendChild(submitHex);
 
-    if (extColor && extColor.allowCMYK) {
-      const cmykButton = document.createElement("button");
-      cmykButton.innerText = "CMYK";
+    if (extColor) {
+      const colorDialogButton = document.createElement("button");
+      colorDialogButton.innerText = "...";
+      colorDialogButton.className = "btn btn-danger";
+
       if (extColor.mode === "cmyk") {
-        cmykButton.className = "btn btn-danger";
         hexInput.value = extColor.label;
         hexInput.style.color = "red";
         hexInput.disabled = true;
-      }  else {
-          cmykButton.className = "btn btn-outline-danger";
+      } else {
+        colorDialogButton.className = "btn btn-danger";
       }
 
-      cmykButton.onclick = () => {
-        printess.showCMYKColorDialog(p).then(r => {
+      colorDialogButton.onclick = () => {
+        printess.showColorDialog(p).then(r => {
           if (r) {
             colorList.querySelectorAll(".selected").forEach(c => c.classList.remove("selected"));
           }
         })
       }
-      hexGroup.appendChild(cmykButton);
-    } 
+      hexGroup.appendChild(colorDialogButton);
+    }
 
     return hexGroup;
   }
@@ -4198,7 +4321,7 @@ declare const bootstrap: any;
     const div = document.createElement("div");
     div.className = "d-flex h-100 justify-content-center align-items-center";
 
-    const btnGroup = document.createElement("div");
+    let btnGroup = document.createElement("div");
     btnGroup.className = "btn-group btn-group-lg";
     btnGroup.setAttribute("role", "group");
     //@ts-ignore
@@ -4243,6 +4366,54 @@ declare const bootstrap: any;
 
     div.appendChild(btnGroup);
 
+    btnGroup = document.createElement("div");
+    btnGroup.className = "btn-group btn-group-lg";
+    btnGroup.style.marginLeft = "10px";
+    btnGroup.setAttribute("role", "group");
+    //@ts-ignore
+    btnGroup.ariaLabel = "Basic radio toggle button group";
+
+    const hasGapAround = printess.hasGapAround();
+
+    ["border", "no-border"].forEach(g => {
+      const input = document.createElement("input");
+      input.className = "btn-check";
+      input.id = "btnradio" + g;
+      input.name = "btnradio-border";
+      input.type = "radio";
+      input.autocomplete = "off";
+
+      const label = document.createElement("label");
+      label.className = "btn btn-outline-primary";
+      label.setAttribute("for", "btnradio" + g);
+
+      if (g === "border") {
+        label.appendChild(printess.getIcon("add-gap-around"));
+      } else {
+        label.appendChild(printess.getIcon("remove-gap-around"));
+      }
+      label.style.width = "48px";
+      label.style.height = "48px";
+      label.style.padding = "6px 10px 14px 10px";
+
+      if ((hasGapAround && g === "border") || (!hasGapAround && g === "no-border")) {
+        input.checked = true;
+      }
+
+      label.onclick = () => {
+        if (g === "border") {
+          printess.addGapAround();
+        } else {
+          printess.removeGapAround();
+        }
+      }
+
+      btnGroup.appendChild(input);
+      btnGroup.appendChild(label);
+    })
+
+    div.appendChild(btnGroup);
+
     return div;
   }
 
@@ -4258,7 +4429,7 @@ declare const bootstrap: any;
       }
       for (const sn of snippets) {
         const img = document.createElement("div");
-        img.className = "image-filter-snippet m-1 position-relative border border-dark text-center";
+        img.className = "splitter-content-snippet m-1 position-relative border border-dark text-center";
         img.style.backgroundImage = "url('" + sn.thumbUrl + "')";
         img.onclick = () => {
           printess.applySplitterCellSnippet(sn.snippetUrl);
@@ -4698,7 +4869,7 @@ declare const bootstrap: any;
     inp.type = "file";
     inp.id = "inp_" + id.replace("#", "-HASH-");
     inp.className = "form-control"
-    inp.accept = `image/png,image/jpg,image/webp,image/heic,image/heif,image/jpeg${printess.allowPdfUpload() ? ",application/pdf" : ""}`; // do not add pdf or svg, since it cannot be rotated!!
+    inp.accept = printess.allowOnlyVectorImageUpload() ? "image/svg+xml" : `image/png,image/jpg,image/webp,image/heic,image/heif,image/jpeg,image/svg+xml${printess.allowPdfUpload() ? ",application/pdf" : ""}`; // do not add pdf or svg, since it cannot be rotated!!
     inp.multiple = !id.startsWith("FF_");
     inp.style.display = "none";
     inp.onchange = async () => {
@@ -4728,7 +4899,6 @@ declare const bootstrap: any;
           imageControl.style.gridTemplateColumns = "1fr";
           imageControl.appendChild(progressDiv);
         }
-
         // display progress bar
         progressDiv.style.display = "flex";
 
@@ -5734,6 +5904,7 @@ declare const bootstrap: any;
       btnBack.style.marginRight = "5px";
     }
 
+
     const closeIcon = <iconName>printess.gl("ui.buttonBackIcon") || "close";
     const icon = cornerTools ? closeIcon : <iconName>printess.gl("ui.buttonBackIcon");
     if (icon) {
@@ -5752,7 +5923,13 @@ declare const bootstrap: any;
       btnBack.classList.add("disabled");
     }
     btnBack.onclick = () => {
-      if (printess.isInDesignerMode()) {
+
+      if (printess.userInBuyerSide()) {
+        // ask for logout 
+        if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+          printess.logout();
+        }
+      } else if (printess.isInDesignerMode()) {
         const callback = printess.getBackButtonCallback();
         if (callback) {
           handleBackButtonCallback(printess, callback);
@@ -5771,6 +5948,7 @@ declare const bootstrap: any;
     } else if (!cornerTools) {
       miniBar.appendChild(btnBack);
     }
+
 
     if (printess.showUndoRedo() || cornerTools) {
       const btnUndo = document.createElement("button");
@@ -6145,7 +6323,7 @@ declare const bootstrap: any;
         // Mini-Cart Button
         const button = document.createElement("button");
         button.className = "btn btn-primary ms-2";
-        const iconName = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+        const iconName = printess.userInBuyerSide() ? <iconName>"print-solid" : <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
         const icon = printess.getIcon(iconName);
         icon.style.width = "25px";
         icon.style.height = "25px";
@@ -6213,7 +6391,7 @@ declare const bootstrap: any;
               thumb.id = "thumb_" + spread.spreadId + "_" + (p?.pageId ?? "")
               if (url) {
                 thumb.style.backgroundImage = "url(" + url + ")";
-                thumb.style.backgroundColor = p?.bgColor ?? "white"
+                thumb.style.backgroundColor = p?.bgColor ?? "white";
               }
               if (spread.pages > 1) {
                 const shadow = document.createElement("div");
@@ -6226,8 +6404,14 @@ declare const bootstrap: any;
                 }
                 thumb.appendChild(shadow);
               }
-
-              thumb.style.width = (spread.width / spread.pages / spread.height * 72) + "px";
+              let tHeight = 72;
+              let tWidth = spread.width / spread.pages / spread.height * tHeight;
+              if (tWidth > 200) {
+                tHeight =  200 / tWidth * tHeight;
+                tWidth = 200;
+              }
+              thumb.style.width = tWidth + "px";
+              thumb.style.height = tHeight + "px";
               thumb.style.backgroundSize = "cover";
 
               const caption = document.createElement("div");
@@ -6986,7 +7170,7 @@ declare const bootstrap: any;
 
     if (!forMobile && printess.showMobileUploadButton() && (!p || p.imageMeta?.canUpload)) {
       const mobileUploadButton = document.createElement("button");
-      mobileUploadButton.className = "btn btn-secondary w-100 mb-3";
+      mobileUploadButton.className = "btn btn-secondary w-100 mb-3 mt-2";
       mobileUploadButton.innerText = printess.gl("ui.mobileImageUpload");
       mobileUploadButton.onclick = async () => {
         await getMobileImagesUploadOverlay(printess);
@@ -8059,13 +8243,13 @@ declare const bootstrap: any;
     return container;
   }
 
-  function getSnippetSubHeadline(cols: number, text: string): HTMLDivElement {
+  /* function getSnippetSubHeadline(cols: number, text: string): HTMLDivElement {
     const headline = document.createElement("div");
     headline.style.gridColumn = "1 / span " + cols;
     headline.textContent = text;
     headline.className = "snippet-cluster-name";
     return headline;
-  }
+  }*/
 
   function getSnippetThumb(printess: iPrintessApi, snippet: iExternalSnippet, forLayoutDialog: boolean, forMobile: boolean): HTMLDivElement {
     const thumbDiv = document.createElement("div");
@@ -8098,21 +8282,22 @@ declare const bootstrap: any;
 
   function renderLayoutSnippetCluster(
     printess: iPrintessApi,
-    clusterDiv: HTMLDivElement, snippets: Array<iExternalSnippet>,
+    clusterDiv: HTMLDivElement, resultSet: Array<iExternalSnippet>,
     forLayoutDialog: boolean, forMobile: boolean) {
 
     const hasKeywordMenu = printess.hasLayoutSnippetMenu();
     const numberOfColumns = printess.numberOfColumns();
 
-    let lastImageCount = -1;
-    let isFirstFavourite = true;
-    let start = 0;
+    let snippets: Array<iExternalSnippet> = [...resultSet];
     if (hasKeywordMenu) {
-      let designYourself = snippets[0]?.title.startsWith("@@") ? snippets[0] : null;
-      let singlePhoto = snippets[1]?.title.startsWith("@@") ? snippets[1] : null;
+
+      renderImageAmountButtons(printess, clusterDiv, resultSet, forLayoutDialog);
+
+      let designYourself = resultSet[0]?.title.startsWith("@@") ? snippets[0] : null;
+      let singlePhoto = resultSet[1]?.title.startsWith("@@") ? snippets[1] : null;
       if (designYourself && singlePhoto && !forLayoutDialog) {
         const clusterDiv2 = document.createElement("div");
-        clusterDiv.appendChild(getSnippetSubHeadline(numberOfColumns, "Basics:"));
+        //  clusterDiv.appendChild(getSnippetSubHeadline(numberOfColumns, "Basics:"));
         clusterDiv2.className = "layout-snippet-cluster";
         clusterDiv2.style.display = "grid";
         clusterDiv2.style.gridTemplateColumns = "1fr 1fr";
@@ -8121,27 +8306,23 @@ declare const bootstrap: any;
         clusterDiv2.appendChild(getSnippetThumb(printess, singlePhoto, forLayoutDialog, forMobile));
         clusterDiv2.appendChild(getSnippetThumb(printess, designYourself, forLayoutDialog, forMobile));
         clusterDiv.appendChild(clusterDiv2);
-        start = 2
+        snippets.splice(0, 2);
       }
     }
 
-    for (let i = start; i < snippets.length; i++) {
-      const snippet = snippets[i];
-      if (hasKeywordMenu) {
-        if (snippet.favourite > 0) {
-          if (isFirstFavourite) {
-            clusterDiv.appendChild(getSnippetSubHeadline(numberOfColumns, "Favourites:"));
-            isFirstFavourite = false;
-          }
-        } else if (lastImageCount !== snippet.imageCount) {
-          lastImageCount = snippet.imageCount;
-          let text = lastImageCount === 0 ? "Layouts without images:" : "Layouts with " + lastImageCount + " image" + (lastImageCount === 1 ? "" : "s") + ":";
-          clusterDiv.appendChild(getSnippetSubHeadline(numberOfColumns, text));
+    const imCount = uih_currentLayoutSnippetImageAmount ? parseInt(uih_currentLayoutSnippetImageAmount) : -1;
+    if (hasKeywordMenu) {
+      snippets = snippets.filter(s => {
+        if (s.favourite && imCount === -1) {
+          return true;
         }
-      }
-
+        return imCount === s.imageCount
+      })
+    }
+    for (const snippet of snippets) {
       clusterDiv.appendChild(getSnippetThumb(printess, snippet, forLayoutDialog, forMobile));
     }
+
   }
 
 
@@ -8237,8 +8418,76 @@ declare const bootstrap: any;
     const resultSet = await printess.loadLayoutSnippetsByKeywords(uih_currentLayoutSnippetKeywords);
     uih_lastLayouSnippetKeywordsResults = resultSet;
     uih_lastLayouSnippetKeywords = uih_currentLayoutSnippetKeywords;
+
     clusterDiv.innerHTML = "";
     renderLayoutSnippetCluster(printess, clusterDiv, resultSet, forLayoutDialog, uih_currentRender === "mobile");
+  }
+
+  function renderImageAmountButtons(
+    printess: iPrintessApi,
+    clusterDiv: HTMLDivElement,
+    snippets: Array<iExternalSnippet>,
+    forLayoutDialog: boolean) {
+
+    const div = document.querySelector(".menu-image-amount-wrapper");
+    if (!div) {
+      window.setTimeout(() => {
+        renderImageAmountButtons(printess, clusterDiv, snippets, forLayoutDialog);
+      }, 300);
+      return;
+    }
+    div.innerHTML = "";
+
+    const btnGroup = document.createElement("div");
+    btnGroup.className = "btn-group btn-group-sm me-2";
+    //btnGroup.ariaLabel = "Image Amount Filter Buttons";
+
+    const label1 = document.createElement("div");
+    label1.className = "snippet-label";
+    label1.innerText = printess.gl("ui.photoAmount"); //  "How many photos?"
+    div.appendChild(label1);
+
+    const buttons = new Set<number>();
+    for (const s of snippets) {
+      if (!s.title.startsWith("@@")) {
+        buttons.add(s.imageCount);
+      }
+    }
+
+    if (uih_currentLayoutSnippetImageAmount !== "") {
+      if (!buttons.has(parseInt(uih_currentLayoutSnippetImageAmount))) {
+        uih_currentLayoutSnippetImageAmount = "";
+      }
+    }
+
+
+    const sorted = ["", ...Array.from(buttons).sort((a, b) => a - b).map(n => n + "")];
+
+    for (const b of sorted) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn image-amount";
+      if (b === uih_currentLayoutSnippetImageAmount) {
+        btn.classList.add("btn-secondary");
+      } else {
+        btn.classList.add("btn-outline-secondary");
+      }
+      btn.innerText = b === "" ? printess.gl("ui.recommended") : b;
+      btn.dataset.amount = b;
+      btn.onclick = () => {
+        btnGroup.childNodes.forEach(c => {
+          (<HTMLDivElement>c).classList.remove("btn-secondary");
+          (<HTMLDivElement>c).classList.add("btn-outline-secondary");
+        });
+        btn.classList.add("btn-secondary");
+        uih_currentLayoutSnippetImageAmount = btn.dataset.amount ?? "";
+        clusterDiv.innerHTML = "";
+        renderLayoutSnippetCluster(printess, clusterDiv, snippets, forLayoutDialog, uih_currentRender === "mobile");
+      }
+      btnGroup.appendChild(btn);
+    }
+
+    div.appendChild(btnGroup);
   }
 
   async function renderLayoutSnippetKeywordMenu(printess: iPrintessApi, parent: HTMLDivElement, clusterDiv: HTMLDivElement, forLayoutDialog: boolean) {
@@ -8254,6 +8503,12 @@ declare const bootstrap: any;
     const topicWrapper = document.createElement("div");
     topicWrapper.className = "menu-topic-wrapper";
     parent.appendChild(topicWrapper);
+
+    const imageAmountWrapper = document.createElement("div");
+    imageAmountWrapper.className = "menu-image-amount-wrapper";
+    parent.appendChild(imageAmountWrapper);
+
+
 
     if (!uih_currentMenuCategories) {
       uih_currentMenuCategories = (await printess.getLayoutSnippetFilterMenu()) ?? null;
@@ -9573,7 +9828,7 @@ declare const bootstrap: any;
       container.className = "mobile-property-button-container";
     }
 
-    const iconName = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+    const iconName = printess.userInBuyerSide() ? <iconName>"print-solid" : <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
     const basketIcon = printess.getIcon(iconName);
 
     const buttons = {
@@ -9807,7 +10062,12 @@ declare const bootstrap: any;
           if (!callback) btn.classList.add("disabled");
 
           btn.onclick = () => {
-            if (printess.isInDesignerMode()) {
+            if (printess.userInBuyerSide()) {
+              // ask for logout 
+              if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+                printess.logout();
+              }
+            } else if (printess.isInDesignerMode()) {
               if (callback) {
                 handleBackButtonCallback(printess, callback);
               }
@@ -10001,7 +10261,7 @@ declare const bootstrap: any;
         btn.classList.add("main-button-pulse");
       }
 
-      const caption = printess.gl("ui.buttonBasketMobile");
+      const caption = printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasketMobile");
 
       if (caption) {
         btn.textContent = caption;
@@ -10009,7 +10269,7 @@ declare const bootstrap: any;
         btn.style.whiteSpace = "nowrap";
         btn.style.border = "1px solid var(--bs-light)";
       } else {
-        const icon = <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+        const icon = printess.userInBuyerSide() ? <iconName>"print-solid" : <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
         const ico = printess.getIcon(icon);
         ico.classList.add("big-icon");
         ico.style.fill = "var(--bs-light)";
@@ -10088,7 +10348,12 @@ declare const bootstrap: any;
         disabled: !printess.getBackButtonCallback(),
         show: true,
         task: () => {
-          if (printess.isInDesignerMode()) {
+          if (printess.userInBuyerSide()) {
+            // ask for logout 
+            if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+              printess.logout();
+            }
+          } else if (printess.isInDesignerMode()) {
             const callback = printess.getBackButtonCallback();
             if (callback) {
               handleBackButtonCallback(printess, callback);
@@ -10577,12 +10842,17 @@ declare const bootstrap: any;
     }
 
     if (printess.hasSplitterMenu() && uih_currentState !== "details") {
-      if (uih_currentProperties[0]?.kind !== "image") {
-        buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
-      }
+      /* if (uih_currentProperties[0]?.kind !== "image") {
+     
+      } */
+      buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
 
       // buttons should not be displayed when editing image (collapsed meta properties) => check number of buttons
-      if ((buttons.length === 1 && uih_currentProperties[0]?.kind === "image") || uih_currentProperties[0]?.kind !== "image") {
+      if ((buttons.length === 2 && uih_currentProperties[0]?.kind === "image") || uih_currentProperties[0]?.kind !== "image") {
+
+        // also show chage layout on images:
+        // buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
+
         buttons.push(...printess.getMobileUiScissorsButtons());
         buttons.push(...printess.getMobileUiSplitterGapButton());
 
@@ -10838,7 +11108,12 @@ declare const bootstrap: any;
 
         const b = buttons.filter(b => b.newState.externalProperty?.kind === "image")[0];
         if (b && b.newState.externalProperty?.validation?.defaultValue === b.newState.externalProperty?.value && printess.hasSplitterMenu()) {
+          if (firstButton && firstButton.id === "splitterLayoutButton:") {
+            // should not click on splitter-layout. Its a weird logic anyhow.
+            firstButton = <HTMLDivElement>firstButton.nextSibling;
+          }
           if (firstButton) {
+            // clicks on button to show fat "upload-image" area / button
             mobileUiButtonClick(printess, b, firstButton, container, false, uih_currentProperties, true);
           }
         }

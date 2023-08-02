@@ -28,7 +28,7 @@ interface iScaledImage {
   version?: number
 }
 
-export type ErrorName = "templateNotFound" 
+export type ErrorName = "templateNotFound"
 
 export interface printessAttachParameters {
   resourcePath?: string;
@@ -393,6 +393,18 @@ export interface iPrintessApi {
   mergeCurrentDocumentToTargetDocument(targetDocId: string, frames: "all" | "snippets"): Promise<void>
 
   /**
+   * Returns if a real user is logged in - in buyer side only mode with only print option
+   */
+  userInBuyerSide(): boolean
+
+  /**
+   * Logs the current printess user out
+   * Not available for buyer-side users!
+   * Only if userInBuyerSide() === true
+   */
+  logout(): void
+
+  /**
    * Returns the add to basket callback you have set in `attachPrintess()`
    */
   getAddToBasketCallback(): null | ((saveToken: string, url: string) => void);
@@ -696,6 +708,13 @@ export interface iPrintessApi {
   setFormFieldValue(fieldName: string, newValue: string): Promise<void>;
 
   /**
+   * Sets the spine width, colud be any Length value, like an equation or a fixed value with unit.
+   * @param formular like `=spine.pages * 0.3mm` or just `2cm`
+   */
+  setSpineFormular(formular: string): Promise<void>
+
+
+  /**
    * updates a specific cell of a form field of type "table"
    * Any then all other updates, 
    * this will NOT trigger a selection change event on buyer side 
@@ -924,6 +943,11 @@ export interface iPrintessApi {
    * Returns if buyer is allowed to upload pdf files
    */
   allowPdfUpload(): boolean;
+  
+  /**
+   * Returns if buyer is only allowed to upload vector (svg) files
+   */
+  allowOnlyVectorImageUpload(): boolean;
 
   /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
@@ -999,6 +1023,11 @@ export interface iPrintessApi {
   getUploadedImagesCount(): number
 
   /**
+   * When using direct upload, this will return the count of outstanding image uploads.
+   */
+  getPendingImageUploadsCount(): number
+
+  /**
    * Returns if an externalProperty resolves to multiple mobile-ui-buttons
    * @param p 
    */
@@ -1037,8 +1066,8 @@ export interface iPrintessApi {
     color: string;
   }>;
 
-  showCMYKColorDialog(p: iExternalProperty): Promise<iExternalColor | null>  
-  
+  showColorDialog(p: iExternalProperty): Promise<iExternalColor | null>
+
   getColorInfo(p: iExternalProperty): iExternalColor | null
 
   /**
@@ -1419,8 +1448,8 @@ export interface iPrintessApi {
   /**
    * Returns if splitter layout has gap around
    */
-  hasGapAround(): Promise<boolean>  
-  
+  hasGapAround(): boolean
+
   /**
    * If splitter frames are present on current spread this method adds
    * a gap between all splitter-frames and the page border
@@ -1592,6 +1621,17 @@ export interface iPrintessApi {
   hasTextOverflow(propertyId: string): boolean
 
   /**
+   * Returns short language code in lower case, like "en" or "de" 
+   */
+  languageShort(): string
+
+  /**
+   * Returns long language code if available. Otherwise returns short code like `languageShort()`.
+   * Format: lower case main language + sub language in upper case, like "en-GB" or "de-DE" 
+   */
+  languageLong(): string
+
+  /**
    * Returns a translation as string to display the ui in different languages
    * @param translationKey String containing the keys for the translation table separated by period
    * @param params String or number parameters that substitute $1, ..., $9 properties in a translation
@@ -1719,12 +1759,27 @@ export interface iPrintessApi {
   getFormFieldPriceLabelByTag(tag: string): string
 
   /**
-  * When using direct upload, this will return all the pending image upload promises.
-  * You can use Promise.any() to show some nice progress.
-  * 
-  * @returns The currently pending upload promises for direct upload.
-  */
+   * When using direct upload, this will return all the pending image upload promises.
+   * You can use Promise.any() to show some nice progress.
+   * 
+   * @returns The currently pending upload promises for direct upload.
+   */
   getPendingImageUploads(): Set<Promise<any>>;
+
+  /**
+   * When using direct upload, this will return all the image meta data finalization promises.
+   * 
+   * @returns The currently pending metadata promises for direct upload.
+   */
+  getDirectImageMetadataFinalizationPromises(): Set<Promise<any>>;
+
+  /**
+   * When using direct upload, this returns the count of upload processes.
+   * 
+   * @returns The number of upload processes.
+   */
+  getUploadsInProgress(): number;
+
 }
 
 export interface iBuyerStep {
@@ -1910,7 +1965,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "select-list+info" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "pixelLength" | "image" | "font" | "select-list" | "select-list+info" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
@@ -2604,4 +2659,8 @@ export type iconName =
   | "arrow-right-long"
   | "camera-solid"
   | "desktop-mobile-duotone"
-  | "cloud-check-duotone";
+  | "cloud-check-duotone"
+
+  | "add-gap-around"
+  | "remove-gap-around"
+  ;
