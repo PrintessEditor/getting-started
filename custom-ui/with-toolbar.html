@@ -196,7 +196,7 @@
           <a class="nav-link" id="btnLoadWithExchangeIDs" title="Load Base+Merge with exchange enabled" style="padding: 0 10px; font-size: 13px;">
             With Exchange </a>
         </li>
-
+         
 
 
       </ul>
@@ -406,6 +406,9 @@
         templateName: decodeURIComponent(window.location.hash.substr(1).replace("_draft", "")) || "Greeting Card",
 
         loadingDoneCallback: loadingDoneCallback,
+        loadTemplateButtonCallback: () => {
+          printess.loadTemplateWithExchangeToken("Menu Board Test", "st:RJSCVrfzkpLUro3wg-qtxEwTRoZl3r_qNBD4ehvOAj7Gu5Cd-YIQPrHhaW9hvCLi2tdKKyDB55hDYnblSKrhVQ", false);
+        },
         selectionChangeCallback: selectionChangeCallback,
         spreadChangeCallback: spreadChangeCallback,
         getOverlayCallback: getOverlayCallback,

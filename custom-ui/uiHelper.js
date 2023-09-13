@@ -76,6 +76,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         uih_currentLayoutSnippetKeywords = [];
         uih_lastLayouSnippetKeywords = [];
         uih_lastLayouSnippetKeywordsResults = [];
+        uih_currentLayoutSnippetImageAmount = "";
     }
     let uih_viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     let uih_viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
@@ -116,9 +117,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     let uih_currentLayoutSnippetKeywords = [];
     let uih_lastLayouSnippetKeywords = [];
     let uih_lastLayouSnippetKeywordsResults = [];
+    let uih_currentLayoutSnippetImageAmount = "";
+    let uih_currentSpreadAspect = "not loaded";
+    let uih_lastSpreadAspect = "not set";
     function getCurrentMenuEntry() {
         var _a, _b;
-        if (!uih_currentMenuCategories)
+        if (!uih_currentMenuCategories || !uih_currentMenuCategories.length)
             return null;
         const categories = uih_currentMenuCategories;
         const category = (_a = uih_currentMenuCategories.filter(c => c.name === uih_currentLayoutSnippetCategory)[0]) !== null && _a !== void 0 ? _a : uih_currentMenuCategories[0];
@@ -168,7 +172,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         });
     }
     function handleBackButtonCallback(printess, callback) {
-        if (printess.isInDesignerMode()) {
+        if (printess.userInBuyerSide()) {
+            if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+                printess.logout();
+            }
+        }
+        else if (printess.isInDesignerMode()) {
             callback("");
         }
         else {
@@ -204,10 +213,94 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             editableFrameHint.remove();
         }
     }
+    function getQuotes(printess) {
+        return [
+            printess.gl("ui.quote1"),
+            printess.gl("ui.quote2"),
+            printess.gl("ui.quote3"),
+            printess.gl("ui.quote4"),
+        ];
+    }
+    function postQuote(quotes, condition, callBack, waitMs = 10000) {
+        const myQuotes = quotes;
+        if (condition) {
+            setTimeout(() => postQuote(myQuotes, condition, callBack), waitMs);
+            const index = Math.floor(Math.random() * myQuotes.length);
+            const quote = myQuotes[index];
+            if (myQuotes.length > 2)
+                myQuotes.splice(index, 1);
+            return callBack(quote);
+        }
+        else {
+            return "";
+        }
+    }
     function addToBasket(printess) {
         return __awaiter(this, void 0, void 0, function* () {
-            const validation = yield validateAllInputs(printess, "validateAll");
-            if (!validation) {
+            if (printess.getUploadsInProgress() > 0 || printess.getPendingImageUploadsCount() > 0 || printess.getDirectImageMetadataFinalizationPromises().size) {
+                const backdrop = document.createElement("div");
+                backdrop.className = "modal modal-dialog-centered bg-dark";
+                backdrop.style.opacity = "0.9";
+                document.body.appendChild(backdrop);
+                const modal = document.createElement("div");
+                modal.className = "modal-content modal-body modal-lg position-absolute top-50 start-50 translate-middle";
+                modal.style.opacity = "1";
+                backdrop.appendChild(modal);
+                const modalTitle = document.createElement("div");
+                modalTitle.innerHTML = printess.gl("ui.imageUploadInfoboxTitle");
+                modalTitle.className = "h2";
+                modal.appendChild(modalTitle);
+                const modalQuote = document.createElement("div");
+                modal.appendChild(modalQuote);
+                postQuote(getQuotes(printess), true, (quote) => {
+                    modalQuote.innerHTML = `<p><i>${quote}</i></p>`;
+                });
+                const explainationText = document.createElement("p");
+                explainationText.innerHTML = printess.gl("ui.imageUploadInfoboxInstruction");
+                modal.appendChild(explainationText);
+                const text = document.createElement("span");
+                text.innerHTML = printess.gl("ui.imageUploadProgressPreparing");
+                modal.appendChild(text);
+                const progress = document.createElement("div");
+                progress.className = "progress";
+                modal.appendChild(progress);
+                const progressBar = document.createElement("div");
+                const progressBarClasses = progressBar.classList;
+                progressBarClasses.add("progress-bar");
+                progressBarClasses.add("progress-bar-striped");
+                progressBarClasses.add("progress-bar-animated");
+                progressBarClasses.add("bg-success");
+                progressBar.setAttribute("role", "progressbar");
+                progressBar.style.width = "2%";
+                progress.appendChild(progressBar);
+                while (printess.getUploadsInProgress() && !printess.getPendingImageUploads().size) {
+                    yield new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                const uploadImagePromises = printess.getPendingImageUploads();
+                const uploadedImagesCount = printess.getPendingImageUploadsCount();
+                const metaSteps = 1;
+                const steps = uploadedImagesCount + metaSteps + 1;
+                while (uploadImagePromises.size > 0) {
+                    const pendingImagesCount = printess.getPendingImageUploadsCount();
+                    const procent = Math.floor(100 - (pendingImagesCount + metaSteps) * 100 / steps);
+                    progressBar.style.width = String(procent) + "%";
+                    const imagesAlready = uploadedImagesCount + metaSteps - pendingImagesCount;
+                    text.innerHTML = printess.gl("ui.imageUploadProgress")
+                        + ": " + imagesAlready + " " + printess.gl("ui.of")
+                        + " " + uploadedImagesCount;
+                    yield Promise.race(uploadImagePromises);
+                }
+                const uploadMetaPromises = printess.getDirectImageMetadataFinalizationPromises();
+                while (uploadMetaPromises.size > 0) {
+                    const procent = Math.floor(100 - 100 / (steps - metaSteps));
+                    progressBar.style.width = String(procent) + "%";
+                    text.innerHTML = printess.gl("ui.imageUploadProgressMeta");
+                    yield Promise.race(uploadMetaPromises);
+                }
+                backdrop.remove();
+            }
+            const isValid = yield validateAllInputs(printess, "validateAll");
+            if (!isValid) {
                 return;
             }
             const callback = printess.getAddToBasketCallback();
@@ -374,7 +467,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (oldPrice)
             newPriceSpan.style.color = "red";
         newPriceSpan.innerText = printess.gl(price);
-        if (infoUrl) {
+        const hasOnlySpaces = (x) => /^\s+$/.test(x);
+        if (infoUrl && !hasOnlySpaces(infoUrl)) {
             const infoIcon = printess.getIcon("info-circle");
             infoIcon.classList.add("price-info-icon");
             if (oldPrice)
@@ -406,8 +500,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                         agb.onclick = () => getIframeOverlay(printess, label || text, link, forMobile);
                 }, 100);
             }
+            return legalNotice;
         }
-        return legalNotice;
+        else {
+            return printess.gl(legalNotice);
+        }
     }
     function refreshPagination(printess) {
         if (uih_currentRender === "mobile") {
@@ -637,7 +734,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (uih_currentTabId.startsWith("#FORMFIELDS")) {
                         container.appendChild(propsDiv);
                     }
-                    else if (uih_currentTabId === "#LAYOUTS" && layoutSnippetAmount === 0) {
+                    else if (uih_currentTabId === "#LAYOUTS" && layoutSnippetAmount === 0 && !((_c = window.uiHelper) === null || _c === void 0 ? void 0 : _c.customLayoutSnippetRenderCallback)) {
                         uih_currentTabId = printess.getInitialTabId();
                         renderTabNavigationProperties(printess, container, false);
                     }
@@ -662,16 +759,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         else {
             const isTextSplitterMenu = printess.hasSplitterMenu() && properties.length && properties[0].kind !== "image";
             const renderPhotoTabForEmptyImage = false;
-            if (printess.showTabNavigation() && uih_currentTabId === "#PHOTOS") {
-                if (uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image") {
-                    const p = uih_currentProperties[0];
-                    if (p.value === ((_c = p.validation) === null || _c === void 0 ? void 0 : _c.defaultValue)) {
-                    }
-                }
-            }
             if (!getStorageItemSafe("splitter-frame-hint") && printess.hasSplitterMenu() && printess.uiHintsDisplay().includes("splitterGuide")) {
                 const edges = printess.splitterEdgesCount();
-                if (edges > 0) {
+                const isImage = properties.filter(p => p.imageMeta).length > 0;
+                if (isImage && edges > 0) {
                     showSplitterGuide(printess, properties[0], false);
                     setStorageItemSafe("splitter-frame-hint", "hint displayed");
                 }
@@ -1205,13 +1296,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         return titleDiv;
     }
     function renderTabsNavigation(printess, tabsContainer, forMobile) {
+        var _a, _b;
         let tabs = uih_currentTabs;
         tabsContainer.innerHTML = "";
-        const selected = getSelectedTab();
+        let selected = getSelectedTab();
         const tabsToolbar = document.createElement("ul");
         tabsToolbar.className = "nav";
         if (tabs.findIndex(t => t.id === "#PHOTOS") >= 0 && !printess.showPhotoTab()) {
             tabs = tabs.filter(t => t.id !== "#PHOTOS");
+        }
+        if (selected && tabs.filter(t => t.id === (selected === null || selected === void 0 ? void 0 : selected.id)).length === 0) {
+            const newTabId = (_b = (_a = tabs[0]) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "#NONE";
+            selectTab(printess, newTabId);
+            selected = getSelectedTab();
         }
         if (tabs.length > 2 && !forMobile && tabsContainer.clientHeight - (120 * tabs.length) < 100) {
             tabsToolbar.style.height = "100%";
@@ -1321,7 +1418,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getPropertyControl(printess, p, metaProperty, forMobile = false) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
         switch (p.kind) {
             case "label":
                 return getSimpleLabel(printess, p, p.label, p.controlGroup > 0, forMobile);
@@ -1376,6 +1473,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     return getColorDropDown(printess, p, undefined, forMobile);
                 }
             case "number":
+            case "pixelLength":
                 return getNumberSlider(printess, p);
             case "image-id":
                 if (forMobile) {
@@ -1455,18 +1553,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 }
                 const tabs = [];
-                if ((_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.canUpload) {
+                const hasImageSplitterMenu = printess.hasSplitterMenu() && ((_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.canUpload);
+                if ((_h = p.imageMeta) === null || _h === void 0 ? void 0 : _h.canUpload) {
                     tabs.push({ id: "upload-" + p.id, title: printess.gl("ui.imageTab"), content: getImageUploadControl(printess, p) });
                 }
                 else {
-                    const title = ((_h = p.imageMeta) === null || _h === void 0 ? void 0 : _h.isHandwriting) ? printess.gl("ui.imageTabHandwriting") : printess.gl("ui.imageTabSelect");
+                    const title = ((_j = p.imageMeta) === null || _j === void 0 ? void 0 : _j.isHandwriting) ? printess.gl("ui.imageTabHandwriting") : printess.gl("ui.imageTabSelect");
                     tabs.push({ id: "upload-" + p.id, title: title, content: getImageUploadControl(printess, p) });
                 }
-                if (((_j = p.imageMeta) === null || _j === void 0 ? void 0 : _j.canUpload) && p.value !== ((_k = p.validation) === null || _k === void 0 ? void 0 : _k.defaultValue)) {
-                    if (((_l = p.imageMeta) === null || _l === void 0 ? void 0 : _l.allows.length) > 2 && p.value !== ((_m = p.validation) === null || _m === void 0 ? void 0 : _m.defaultValue)) {
+                if (((_k = p.imageMeta) === null || _k === void 0 ? void 0 : _k.canUpload) && p.value !== ((_l = p.validation) === null || _l === void 0 ? void 0 : _l.defaultValue)) {
+                    if (((_m = p.imageMeta) === null || _m === void 0 ? void 0 : _m.allows.length) > 2 && p.value !== ((_o = p.validation) === null || _o === void 0 ? void 0 : _o.defaultValue)) {
                         tabs.push({ id: "filter-" + p.id, title: printess.gl("ui.filterTab"), content: getImageFilterControl(printess, p) });
                     }
                     tabs.push({ id: "rotate-" + p.id, title: printess.gl("ui.rotateTab"), content: getImageRotateControl(printess, p, forMobile) });
+                }
+                if (hasImageSplitterMenu) {
+                    tabs.push({ id: "printess-splitter-layouts", title: printess.gl("ui.changeLayout"), content: getSplitterSnippetsControl(printess, p) });
                 }
                 return getTabPanel(printess, tabs, p.id);
             }
@@ -1504,7 +1606,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             para.style.marginLeft = "5px";
             para.style.marginRight = "5px";
             para.style.fontSize = "16pt";
-            para.textContent = text;
+            para.textContent = printess.gl(text);
             return para;
         }
         else if (p.info) {
@@ -1528,7 +1630,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     el = "h5";
                 }
                 const header = document.createElement(el);
-                header.textContent = text;
+                header.textContent = printess.gl(text);
                 if (ls.color !== "default") {
                     header.classList.add("text-" + ls.color);
                 }
@@ -1598,7 +1700,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         container.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
         const header = document.createElement("div");
         header.className = "card-header " + headerColor;
-        header.textContent = text;
+        header.textContent = printess.gl(text);
         if (size === "large") {
             header.style.fontSize = "18px";
         }
@@ -1628,7 +1730,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         container.setAttribute("data-visibility-id", p.id.replace("#", "_hash_"));
         const h4 = document.createElement("h4");
         h4.className = "alert-heading";
-        h4.textContent = text;
+        h4.textContent = printess.gl(text);
         if (size === "large") {
             h4.style.fontSize = "28px";
         }
@@ -1730,7 +1832,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             },
             basket: {
                 name: "basket",
-                text: printess.gl("ui.buttonBasket"),
+                text: printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket"),
                 task: () => addToBasket(printess)
             }
         };
@@ -1836,7 +1938,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (p.kind === "selection-text-style" && p.textStyle.allows.indexOf("handWriting") >= 0) {
             const infoBox = getHandwritingInfoBox(printess, false);
             textPropertiesDiv.appendChild(infoBox);
-            const upload = getImageUploadButton(printess, p, p.id, false, true, "ui.uploadHandwriting");
+            const upload = getImageUploadButton(printess, p, p.id, false, false, "ui.uploadHandwriting", true);
             textPropertiesDiv.appendChild(upload);
             if (printess.showMobileUploadButton()) {
                 const mobileUploadButton = document.createElement("button");
@@ -1848,7 +1950,94 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 textPropertiesDiv.appendChild(mobileUploadButton);
             }
         }
+        if ((p.textStyle.allows.indexOf("letterGenerator") >= 0)) {
+            const openLetterConfigurationButton = document.createElement("button");
+            openLetterConfigurationButton.className = "btn btn-primary w-100 mt-1 mb-3";
+            openLetterConfigurationButton.innerText = printess.gl("ui.openLetterGenerator");
+            openLetterConfigurationButton.onclick = () => __awaiter(this, void 0, void 0, function* () {
+                yield createLetterGeneratorModal(printess, p);
+            });
+            textPropertiesDiv.appendChild(openLetterConfigurationButton);
+        }
         return textPropertiesDiv;
+    }
+    function createLetterGeneratorModal(printess, p) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const modal = document.createElement("div");
+            modal.id = "lettergenerator-modal";
+            modal.className = "modal show align-items-center";
+            modal.setAttribute("tabindex", "-1");
+            modal.style.backgroundColor = "rgba(0,0,0,0.7)";
+            modal.style.display = "flex";
+            const dialog = document.createElement("div");
+            dialog.className = "modal-dialog";
+            const content = document.createElement("div");
+            content.className = "modal-content";
+            const modalHeader = document.createElement("div");
+            modalHeader.className = "modal-header bg-primary";
+            const title = document.createElement("h3");
+            title.className = "modal-title";
+            title.innerHTML = printess.gl("lettergenerator.title").replace(/\n/g, "<br>");
+            title.style.color = "#fff";
+            const modalBody = document.createElement("div");
+            modalBody.className = "modal-body";
+            const ui = document.createElement("wc-letter-generator");
+            ui.state = yield printess.loadLetterGeneratorState();
+            const textArea = document.createElement("textarea");
+            let currentPrompt = "";
+            modalBody.style.display = "grid";
+            modalBody.style.gridTemplateColumns = "1fr 2fr";
+            ui.style.gridColumn = "1";
+            textArea.style.gridColumn = "2";
+            modalBody.appendChild(ui);
+            modalBody.appendChild(textArea);
+            const modalFooter = document.createElement("div");
+            modalFooter.className = "modal-footer";
+            const ok = document.createElement("button");
+            ok.className = "btn btn-secondary";
+            ok.disabled = true;
+            ok.textContent = printess.gl("ui.buttonOk");
+            ok.onclick = () => {
+                var _a;
+                printess.setEditorText((_a = textArea.textContent) !== null && _a !== void 0 ? _a : "");
+                modal.remove();
+            };
+            const close = document.createElement("button");
+            close.className = "btn btn-secondary";
+            close.textContent = printess.gl("ui.buttonClose");
+            close.onclick = () => {
+                modal.remove();
+            };
+            const generate = document.createElement("button");
+            generate.className = "btn btn-primary";
+            generate.disabled = true;
+            generate.textContent = printess.gl("ui.buttonSubmit");
+            generate.onclick = () => {
+                generate.disabled = true;
+                ok.disabled = true;
+                printess.streamPrompt(currentPrompt, message => {
+                    textArea.textContent += message;
+                }, () => {
+                    generate.disabled = false;
+                    ok.disabled = false;
+                    ok.className = "btn btn-primary";
+                    generate.className = "btn btn-secondary";
+                });
+            };
+            ui.addEventListener("printess.promptChanged", e => {
+                currentPrompt = e.detail.evaluatedPrompt;
+                generate.disabled = false;
+            });
+            modalFooter.appendChild(generate);
+            modalFooter.appendChild(ok);
+            modalFooter.appendChild(close);
+            content.appendChild(modalHeader);
+            content.appendChild(modalBody);
+            content.appendChild(modalFooter);
+            dialog.appendChild(content);
+            modal.appendChild(dialog);
+            document.body.appendChild(modal);
+        });
     }
     function getHandwritingInfoBox(printess, forMobile) {
         const container = document.createElement("div");
@@ -2058,14 +2247,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             wrapper.appendChild(saveAndQuitButton);
         }
         const basketBtn = document.createElement("button");
-        const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.gl("ui.buttonBasket");
+        const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket");
         basketBtn.className = "btn btn-primary d-flex justify-content-center";
         basketBtn.style.whiteSpace = "nowrap";
         if (!hasSaveAndCloseBtnInPageIconView && printess.pageNavigationDisplay() === "icons") {
             basketBtn.style.flex = "1 1 0";
         }
         basketBtn.innerText = caption;
-        const basketIcon = printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+        const basketIcon = printess.userInBuyerSide() ? "print-solid" : printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
         const icon = hasSaveAndCloseBtnInPageIconView ? basketIcon : printess.gl("ui.buttonBasketIcon");
         if (icon) {
             const svg = printess.getIcon(icon);
@@ -2187,6 +2376,39 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         btn.onclick = () => __awaiter(this, void 0, void 0, function* () {
             btn.classList.add("disabled");
             saveTemplate(printess, "save");
+            window.setTimeout(() => btn.classList.remove("disabled"), 1500);
+        });
+        return btn;
+    }
+    function getLoadButton(printess, forMobile) {
+        const btn = document.createElement("button");
+        btn.id = "printess-load-button";
+        if (printess.pageNavigationDisplay() === "icons") {
+            btn.className = "btn me-1 button-with-caption";
+        }
+        else if (forMobile) {
+            btn.className = "btn me-2 button-mobile-with-caption";
+        }
+        else {
+            btn.className = "btn me-2 button-with-caption";
+        }
+        const btnClass = forMobile ? "btn-outline-light" : "btn-outline-primary";
+        btn.classList.add(btnClass);
+        const svg = printess.getIcon("folder-open-solid");
+        btn.appendChild(svg);
+        const txt = document.createElement("div");
+        txt.textContent = printess.gl("ui.buttonLoad").toUpperCase();
+        btn.appendChild(txt);
+        btn.onclick = () => __awaiter(this, void 0, void 0, function* () {
+            btn.classList.add("disabled");
+            const cb = printess.getLoadTemplateButtonCallback();
+            if (cb) {
+                yield printess.clearSelection();
+                cb();
+            }
+            else {
+                alert("Please add your callback in attachPrintess. [loadTemplateButtonCallback]");
+            }
             window.setTimeout(() => btn.classList.remove("disabled"), 1500);
         });
         return btn;
@@ -2694,7 +2916,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const basketButton = document.createElement("button");
         basketButton.className = "btn btn-primary";
         basketButton.style.whiteSpace = "nowrap";
-        basketButton.innerText = printess.gl("ui.buttonBasket");
+        basketButton.innerText = printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket");
         basketButton.onclick = () => addToBasket(printess);
         return basketButton;
     }
@@ -2969,6 +3191,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getImageSelectList(printess, p, forMobile) {
+        var _a, _b;
         const container = document.createElement("div");
         if (p.listMeta && p.listMeta.list) {
             const cssId = p.id.replace("#", "-");
@@ -2978,8 +3201,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 st.innerHTML = css.split("\n").join("");
                 container.appendChild(st);
             }
-            const imageListWrapper = document.createElement("div");
-            imageListWrapper.classList.add("image-select-list-wrapper");
             const imageList = document.createElement("div");
             imageList.classList.add("image-select-list");
             for (const entry of p.listMeta.list) {
@@ -2992,10 +3213,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 else if (p.kind === "color-list") {
                     thumb.style.backgroundColor = entry.key;
                 }
+                if (!entry.enabled) {
+                    thumb.classList.add("disabled");
+                }
                 thumb.style.width = p.listMeta.thumbWidth + "px";
                 thumb.style.height = p.listMeta.thumbHeight + "px";
-                if (entry.key === p.value)
+                if (entry.key === p.value && entry.enabled) {
                     thumb.classList.add("selected");
+                }
                 thumb.onclick = () => {
                     printess.setProperty(p.id, entry.key).then(() => setPropertyVisibilities(printess));
                     imageList.childNodes.forEach((c) => c.classList.remove("selected"));
@@ -3004,6 +3229,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     const mobileButtonDiv = document.getElementById(p.id + ":");
                     if (mobileButtonDiv) {
                         drawButtonContent(printess, mobileButtonDiv, [p], p.controlGroup);
+                    }
+                    const labelText = document.querySelector("label[for='inp_" + p.id + "']");
+                    if (labelText) {
+                        labelText.textContent = entry.label && !entry.label.startsWith("#") ? printess.gl(p.label) + " - " + printess.gl(entry.label) : printess.gl(p.label);
                     }
                 };
                 const priceLabel = printess.getFormFieldPriceLabelByTag(entry.tag);
@@ -3017,11 +3246,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             container.appendChild(imageList);
         }
+        const label = (_b = (_a = p.listMeta) === null || _a === void 0 ? void 0 : _a.list.filter(e => (e.key === p.value && e.enabled))[0]) === null || _b === void 0 ? void 0 : _b.label;
+        const caption = label && !label.startsWith("#") ? printess.gl(p.label) + " - " + printess.gl(label) : p.label;
         if (forMobile) {
             return container;
         }
         else {
-            return addLabel(printess, p, container, p.id, forMobile, p.kind, p.label);
+            return addLabel(printess, p, container, p.id, forMobile, p.kind, caption);
         }
     }
     function hexToRgb(hexColor) {
@@ -3063,7 +3294,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             dropdown.appendChild(button);
             if (ffColor) {
-                dropdown.className = "btn-group me-1 printess-color-label";
+                dropdown.className = "btn-group form-control me-1 printess-color-label";
                 const colorProps = uih_currentProperties.filter(p => p.kind === "color");
                 if (colorProps.length && colorProps[colorProps.length - 1].id === p.id) {
                     dropdown.classList.add("mb-3");
@@ -3091,7 +3322,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             colorList.style.paddingRight = "30px";
         }
         if (printess.enableCustomColors()) {
-            colors.unshift({ name: "custom color_" + p.id, color: curColorRgb });
         }
         for (const f of colors) {
             const color = document.createElement("a");
@@ -3111,11 +3341,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             color.onclick = () => {
                 var _a;
-                setColor(printess, p, f.color, f.name.includes("custom color") ? color.style.backgroundColor : f.name, metaProperty);
+                if (f.name.includes("custom color")) {
+                    return;
+                }
+                setColor(printess, p, f.color, f.name, metaProperty);
                 const colorInput = document.getElementById("hex-color-input_" + p.id);
                 const hexColor = printess.getHexColor(f.color);
-                if (colorInput && hexColor)
+                if (colorInput && hexColor) {
                     colorInput.value = hexColor;
+                    colorInput.style.backgroundColor = hexColor;
+                    colorInput.style.color = printess.invertColor(hexColor, true);
+                }
                 colorList.querySelectorAll(".selected").forEach(c => c.classList.remove("selected"));
                 color.classList.add("selected");
                 if (!forMobile) {
@@ -3204,31 +3440,46 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         hexInput.value = curColor;
         hexInput.maxLength = 7;
         const submitHex = document.createElement("button");
-        submitHex.className = "btn btn-secondary";
-        const checkHex = printess.getIcon("check");
-        checkHex.style.height = "20px";
-        submitHex.onclick = () => {
-            const colorInput = document.getElementById("hex-color-input_" + p.id);
-            const color = colorInput === null || colorInput === void 0 ? void 0 : colorInput.value;
-            if (color) {
-                const colorItem = document.querySelector(`a[data-color='custom color_${p.id}']`);
-                if (colorItem) {
-                    colorList.querySelectorAll(".selected").forEach(c => c.classList.remove("selected"));
-                    colorItem.classList.add("selected");
-                    colorItem.style.backgroundColor = color;
-                }
-                setColor(printess, p, color, color, metaProperty);
-                const redLine = document.getElementById("custom-red-line-picker-" + p.id);
-                if (redLine)
-                    redLine.remove();
-                if (!forMobile) {
-                    const buttonRedLine = document.getElementById("red-line-" + p.id);
-                    if (buttonRedLine)
-                        buttonRedLine.remove();
-                    button.style.backgroundColor = color;
-                }
+        submitHex.className = "btn btn-primary";
+        const extColor = printess.getColorInfo(p);
+        if (!extColor) {
+            console.error("Color not found for property: " + p.id, p);
+        }
+        else {
+            submitHex.innerText = printess.gl("ui.buttonMoreColors");
+            hexInput.style.cursor = "pointer";
+            hexInput.style.backgroundColor = curColor;
+            hexInput.style.color = printess.invertColor(curColor, true);
+            hexInput.style.borderColor = "black";
+            submitHex.style.borderColor = "black";
+            hexPicker.style.borderColor = "black";
+            if (extColor.mode === "cmyk") {
+                hexInput.value = extColor.label;
             }
-        };
+            hexInput.onclick = submitHex.onclick = (e) => {
+                e.stopImmediatePropagation();
+                printess.showColorDialog(p).then(r => {
+                    if (r) {
+                        const rgb = "rgb(" + r.r + "," + r.g + "," + r.b + ")";
+                        colorList.querySelectorAll(".selected").forEach(c => c.classList.remove("selected"));
+                        const colorItem = document.querySelector(`a[data-color='custom color_${p.id}']`);
+                        if (colorItem) {
+                            colorItem.classList.add("selected");
+                            colorItem.style.backgroundColor = rgb;
+                        }
+                        else if (p.id.startsWith("FF_")) {
+                            const colorButton = document.querySelector(`#color_${p.id} > button`);
+                            if (colorButton) {
+                                colorButton.style.backgroundColor = rgb;
+                            }
+                        }
+                        hexInput.value = r.label;
+                        hexInput.style.backgroundColor = rgb;
+                        hexInput.style.color = printess.invertColor(rgb, true);
+                    }
+                });
+            };
+        }
         hexPicker.onclick = () => __awaiter(this, void 0, void 0, function* () {
             const colorInput = document.getElementById("hex-color-input_" + p.id);
             try {
@@ -3259,7 +3510,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         });
         hexPicker.appendChild(hexIcon);
-        submitHex.appendChild(checkHex);
         hexGroup.appendChild(hexPicker);
         hexGroup.appendChild(hexInput);
         hexGroup.appendChild(submitHex);
@@ -3273,7 +3523,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             dropdown.classList.add("dropup");
         const ddContent = document.createElement("ul");
         if (p.listMeta && p.listMeta.list) {
-            const selectedItem = (_a = p.listMeta.list.filter(itm => itm.key === p.value)[0]) !== null && _a !== void 0 ? _a : null;
+            const selectedItem = (_a = p.listMeta.list.filter(itm => (itm.key === p.value && itm.enabled))[0]) !== null && _a !== void 0 ? _a : null;
             const button = document.createElement("button");
             button.className = "btn btn-light dropdown-toggle w-100";
             if (fullWidth) {
@@ -3336,6 +3586,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 a.classList.add("dropdown-item");
                 if (addInfo) {
                     a.classList.add("printess-add-info");
+                }
+                if (!entry.enabled) {
+                    li.classList.add("disabled");
                 }
                 a.onclick = () => {
                     p.value = entry.key;
@@ -3496,7 +3749,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getGridGapControl(printess, p) {
         const div = document.createElement("div");
         div.className = "d-flex h-100 justify-content-center align-items-center";
-        const btnGroup = document.createElement("div");
+        let btnGroup = document.createElement("div");
         btnGroup.className = "btn-group btn-group-lg";
         btnGroup.setAttribute("role", "group");
         btnGroup.ariaLabel = "Basic radio toggle button group";
@@ -3531,6 +3784,46 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             btnGroup.appendChild(label);
         });
         div.appendChild(btnGroup);
+        btnGroup = document.createElement("div");
+        btnGroup.className = "btn-group btn-group-lg";
+        btnGroup.style.marginLeft = "10px";
+        btnGroup.setAttribute("role", "group");
+        btnGroup.ariaLabel = "Basic radio toggle button group";
+        const hasGapAround = printess.hasGapAround();
+        ["border", "no-border"].forEach(g => {
+            const input = document.createElement("input");
+            input.className = "btn-check";
+            input.id = "btnradio" + g;
+            input.name = "btnradio-border";
+            input.type = "radio";
+            input.autocomplete = "off";
+            const label = document.createElement("label");
+            label.className = "btn btn-outline-primary";
+            label.setAttribute("for", "btnradio" + g);
+            if (g === "border") {
+                label.appendChild(printess.getIcon("add-gap-around"));
+            }
+            else {
+                label.appendChild(printess.getIcon("remove-gap-around"));
+            }
+            label.style.width = "48px";
+            label.style.height = "48px";
+            label.style.padding = "6px 10px 14px 10px";
+            if ((hasGapAround && g === "border") || (!hasGapAround && g === "no-border")) {
+                input.checked = true;
+            }
+            label.onclick = () => {
+                if (g === "border") {
+                    printess.addGapAround();
+                }
+                else {
+                    printess.removeGapAround();
+                }
+            };
+            btnGroup.appendChild(input);
+            btnGroup.appendChild(label);
+        });
+        div.appendChild(btnGroup);
         return div;
     }
     function getSplitterSnippets(printess, p) {
@@ -3543,7 +3836,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
             for (const sn of snippets) {
                 const img = document.createElement("div");
-                img.className = "image-filter-snippet m-1 position-relative border border-dark text-center";
+                img.className = "splitter-content-snippet m-1 position-relative border border-dark text-center";
                 img.style.backgroundImage = "url('" + sn.thumbUrl + "')";
                 img.onclick = () => {
                     printess.applySplitterCellSnippet(sn.snippetUrl);
@@ -3835,7 +4128,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         else {
             if ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canUpload) {
-                container.appendChild(getImageUploadButton(printess, p, p.id, forMobile, true));
+                container.appendChild(getImageUploadButton(printess, p, p.id, forMobile, false));
             }
             const imageListWrapper = document.createElement("div");
             imageListWrapper.classList.add("image-list-wrapper");
@@ -3892,7 +4185,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
-    function getImageUploadButton(printess, p, id, forMobile = false, assignToFrameOrNewFrame = true, label = "") {
+    function getImageUploadButton(printess, p, id, forMobile = false, isMyImagesTab, label = "", isHandwritingImage = false) {
         const container = document.createElement("div");
         const progressDiv = document.createElement("div");
         progressDiv.className = "progress";
@@ -3905,7 +4198,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         inp.type = "file";
         inp.id = "inp_" + id.replace("#", "-HASH-");
         inp.className = "form-control";
-        inp.accept = `image/png,image/jpg,image/webp,image/heic,image/heif,image/jpeg${printess.allowPdfUpload() ? ",application/pdf" : ""}`;
+        inp.accept = printess.allowOnlyVectorImageUpload() ? "image/svg+xml" : `image/png,image/jpg,image/webp,image/heic,image/heif,image/jpeg,image/svg+xml${printess.allowPdfUpload() ? ",application/pdf" : ""}`;
         inp.multiple = !id.startsWith("FF_");
         inp.style.display = "none";
         inp.onchange = () => __awaiter(this, void 0, void 0, function* () {
@@ -3940,17 +4233,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     label.style.display = "none";
                 }
                 printess.showOverlay("Uploading Images ...");
-                const newImg = yield printess.uploadImages(inp.files, (progress) => {
+                yield printess.uploadAndDistributeImages(inp.files, id, (progress) => {
                     progressBar.style.width = (progress * 100) + "%";
-                }, assignToFrameOrNewFrame, id);
+                }, isHandwritingImage);
                 printess.hideOverlay();
-                if (printess.getImages().length > 0 && printess.allowImageDistribution() && inp.files.length > 1) {
-                    yield printess.distributeImages();
-                }
-                else if (!assignToFrameOrNewFrame && newImg && newImg.length > 0) {
-                    printess.assignImageToNextPossibleFrame(newImg[0].id);
-                }
-                if (!assignToFrameOrNewFrame) {
+                if (isMyImagesTab) {
                     const imageTabContainer = document.getElementById("tab-my-images");
                     if (imageTabContainer) {
                         imageTabContainer.innerHTML = "";
@@ -4314,10 +4601,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             dropdown = document.createElement("div");
             dropdown.classList.add("btn-group");
             dropdown.classList.add("form-control");
+            dropdown.classList.add("printess-font-dropdown");
         }
         dropdown.style.padding = "0";
         const fonts = printess.getFonts(p.id);
         const ddContent = document.createElement("ul");
+        ddContent.classList.add("printess-font-dropdown");
         let selectedItem = null;
         if (fonts.length) {
             if (p.textStyle) {
@@ -4562,9 +4851,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (forMobile) {
             group.classList.add("form-control");
         }
-        for (const v of ["left", "center", "right", "justifyLeft"]) {
+        const ha = ["left", "center", "right", "justifyLeft"];
+        if (p.textStyle && p.textStyle.allows.indexOf("bullet") >= 0) {
+            ha.push("bullet");
+        }
+        for (const v of ha) {
             let icon = "text-align-left";
             switch (v) {
+                case "bullet":
+                    icon = "list-ul";
+                    break;
                 case "right":
                     icon = "text-align-right";
                     break;
@@ -4794,7 +5090,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             btnBack.classList.add("disabled");
         }
         btnBack.onclick = () => {
-            if (printess.isInDesignerMode()) {
+            if (printess.userInBuyerSide()) {
+                if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+                    printess.logout();
+                }
+            }
+            else if (printess.isInDesignerMode()) {
                 const callback = printess.getBackButtonCallback();
                 if (callback) {
                     handleBackButtonCallback(printess, callback);
@@ -4867,6 +5168,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         if (printess.showSaveButton()) {
             miniBar.appendChild(getSaveButton(printess, false));
+        }
+        if (printess.showLoadButton()) {
+            miniBar.appendChild(getLoadButton(printess, false));
         }
         miniBar.classList.add("undo-redo-bar");
         if (cornerTools) {
@@ -4986,6 +5290,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const spreads = printess.getAllSpreads();
         const info = printess.pageInfoSync();
         let lastScrollLeftPos = 0;
+        const hasFacingPages = spreads.filter(sp => sp.pages > 1).length > 0;
         const pages = container || document.querySelector("#desktop-pagebar");
         if (pages) {
             const scrollContainer = pages.querySelector(".pagination");
@@ -5008,6 +5313,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const isStepBadgeList = printess.stepHeaderDisplay() === "badge list";
             if (printess.pageNavigationDisplay() === "icons") {
                 pages.classList.add("big");
+                if (printess.showLoadButton() && printess.hasExpertButton() && printess.showSaveButton()) {
+                    pages.classList.add("extra");
+                }
                 ul.style.overflowX = "auto";
                 document.documentElement.style.setProperty("--editor-pagebar-height", "122px");
                 document.documentElement.style.setProperty("--editor-margin-top", "10px");
@@ -5124,7 +5432,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 const button = document.createElement("button");
                 button.className = "btn btn-primary ms-2";
-                const iconName = printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+                const iconName = printess.userInBuyerSide() ? "print-solid" : printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
                 const icon = printess.getIcon(iconName);
                 icon.style.width = "25px";
                 icon.style.height = "25px";
@@ -5153,6 +5461,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                             pageNo++;
                             const page = pageIndex === 0 ? "left-page" : "right-page";
                             const isActive = info.spreadId === spread.spreadId && info.current === pageNo;
+                            let hasDuplicateButton = false;
+                            if (info.spreadId === spread.spreadId && printess.canDuplicateSpread()) {
+                                if (hasFacingPages) {
+                                    hasDuplicateButton = !info.isFirst && !info.isLast && pageNo % 2 === 1;
+                                }
+                                else {
+                                    hasDuplicateButton = true;
+                                }
+                            }
                             if (isActive && !uih_currentVisiblePage)
                                 uih_currentVisiblePage = page;
                             const disabled = printess.lockCoverInside() && (pageNo === 2 || pageNo === count - 1);
@@ -5184,6 +5501,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 thumb.style.backgroundImage = "url(" + url + ")";
                                 thumb.style.backgroundColor = (_d = p === null || p === void 0 ? void 0 : p.bgColor) !== null && _d !== void 0 ? _d : "white";
                             }
+                            if (hasDuplicateButton) {
+                                const duplicate = printess.getIcon("copy-solid");
+                                duplicate.classList.add("duplicate-icon");
+                                duplicate.addEventListener("click", () => {
+                                    printess.duplicateSpread();
+                                });
+                                thumb.appendChild(duplicate);
+                            }
                             if (spread.pages > 1) {
                                 const shadow = document.createElement("div");
                                 if (pageIndex === 0) {
@@ -5196,7 +5521,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                                 }
                                 thumb.appendChild(shadow);
                             }
-                            thumb.style.width = (spread.width / spread.pages / spread.height * 72) + "px";
+                            let tHeight = 72;
+                            let tWidth = spread.width / spread.pages / spread.height * tHeight;
+                            if (tWidth > 200) {
+                                tHeight = 200 / tWidth * tHeight;
+                                tWidth = 200;
+                            }
+                            thumb.style.width = tWidth + "px";
+                            thumb.style.height = tHeight + "px";
                             thumb.style.backgroundSize = "cover";
                             const caption = document.createElement("div");
                             caption.className = "big-page-caption";
@@ -5315,6 +5647,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 if (printess.showSaveButton()) {
                     cornerTools.classList.add("save-mode");
+                }
+                if (printess.showLoadButton()) {
+                    cornerTools.classList.add("load-mode");
                 }
                 cornerTools.appendChild(getBackUndoMiniBar(printess));
                 const priceDiv = document.createElement("div");
@@ -5804,7 +6139,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         showModal(printess, "pageAddedInfoDialog", content, title, footer);
     }
     function renderMyImagesTab(printess, forMobile, p, images, imagesContainer, showSearchIcon = true, showMobileImagesUploadBtn = false) {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d, _e, _f, _g, _h;
         const container = imagesContainer || document.createElement("div");
         container.id = "image-tab-container";
         container.innerHTML = "";
@@ -5826,7 +6161,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const twoButtons = document.createElement("div");
             twoButtons.id = "two-buttons";
             twoButtons.style.display = "grid";
-            twoButtons.appendChild(getImageUploadButton(printess, p, (_c = p === null || p === void 0 ? void 0 : p.id) !== null && _c !== void 0 ? _c : "", false, p !== undefined));
+            twoButtons.appendChild(getImageUploadButton(printess, p, (_c = p === null || p === void 0 ? void 0 : p.id) !== null && _c !== void 0 ? _c : "", true, p !== undefined));
             if (printess.showImageDistributionButton()) {
                 twoButtons.style.gridTemplateColumns = "1fr 15px 1fr";
                 twoButtons.appendChild(document.createElement("div"));
@@ -5835,9 +6170,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (!forMobile || showMobileImagesUploadBtn)
                 container.appendChild(twoButtons);
         }
-        if (!forMobile && printess.showMobileUploadButton()) {
+        if (!forMobile && printess.showMobileUploadButton() && (!p || ((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.canUpload))) {
             const mobileUploadButton = document.createElement("button");
-            mobileUploadButton.className = "btn btn-secondary w-100 mb-3";
+            mobileUploadButton.className = "btn btn-secondary w-100 mb-3 mt-2";
             mobileUploadButton.innerText = printess.gl("ui.mobileImageUpload");
             mobileUploadButton.onclick = () => __awaiter(this, void 0, void 0, function* () {
                 yield getMobileImagesUploadOverlay(printess);
@@ -5868,12 +6203,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (images === null || images === void 0 ? void 0 : images.filter(i => i.group === group).length) {
                         const card = document.createElement("div");
                         card.className = "accordion-item";
+                        card.style.background = "transparent";
                         const title = document.createElement("h2");
                         title.className = "accordion-header";
                         title.id = "heading-" + group.replace(" ", "");
                         const button = document.createElement("button");
                         button.className = `accordion-button ${group === uih_activeImageAccordion ? "" : "collapsed"}`;
-                        button.style.backgroundColor = "white";
+                        button.style.backgroundColor = "transparent";
                         button.setAttribute("data-bs-toggle", "collapse");
                         button.setAttribute("data-bs-target", "#collapse-" + group.replace(" ", ""));
                         button.setAttribute("aria-expanded", "true");
@@ -5901,13 +6237,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                 });
                 container.appendChild(accordion);
-                if (p && ((_d = p.imageMeta) === null || _d === void 0 ? void 0 : _d.canSetDefaultImage) && ((_e = p.validation) === null || _e === void 0 ? void 0 : _e.defaultValue) !== "fallback") {
+                if (p && ((_e = p.imageMeta) === null || _e === void 0 ? void 0 : _e.canSetDefaultImage) && ((_f = p.validation) === null || _f === void 0 ? void 0 : _f.defaultValue) !== "fallback") {
                     const resetButton = getDefaultImageButton(printess, p, "button");
                     container.appendChild(resetButton);
                 }
             }
             else {
-                if (p && ((_f = p.imageMeta) === null || _f === void 0 ? void 0 : _f.canSetDefaultImage) && ((_g = p.validation) === null || _g === void 0 ? void 0 : _g.defaultValue) !== "fallback") {
+                if (p && ((_g = p.imageMeta) === null || _g === void 0 ? void 0 : _g.canSetDefaultImage) && ((_h = p.validation) === null || _h === void 0 ? void 0 : _h.defaultValue) !== "fallback") {
                     const defaultThumb = getDefaultImageButton(printess, p, "div");
                     imageList.appendChild(defaultThumb);
                 }
@@ -6301,7 +6637,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         changeIcon.style.height = "50px";
         change.appendChild(changeIcon);
         const handwritingCaption = forHandwriting ? printess.gl("ui.uploadHandwriting") : "";
-        container.appendChild(getImageUploadButton(printess, p, (p === null || p === void 0 ? void 0 : p.id) || "images", true, true, handwritingCaption));
+        container.appendChild(getImageUploadButton(printess, p, (p === null || p === void 0 ? void 0 : p.id) || "images", true, false, handwritingCaption, true));
         if (images.length > 0 && !forHandwriting) {
             container.appendChild(change);
         }
@@ -6462,6 +6798,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const accordionItem = document.createElement("div");
         accordionItem.className = "accordion-item";
         accordionItem.style.border = "none";
+        accordionItem.style.background = "transparent";
         const headerId = title.split(" ").join("") + "_PanelHeader";
         const bodyId = title.split(" ").join("") + "_PanelBody";
         const header = document.createElement("h2");
@@ -6476,7 +6813,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         accordionBtn.setAttribute("data-bs-toggle", "collapse");
         accordionBtn.setAttribute("data-bs-target", "#" + bodyId);
         accordionBtn.style.boxShadow = "none";
-        accordionBtn.textContent = title;
+        accordionBtn.style.background = "transparent";
+        accordionBtn.textContent = printess.gl(title);
         accordionBtn.onclick = () => {
             const collapseButtons = document.querySelectorAll("button.accordion-collapse-btn.disabled");
             collapseButtons === null || collapseButtons === void 0 ? void 0 : collapseButtons.forEach(b => b.classList.remove("disabled"));
@@ -6680,13 +7018,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     container.appendChild(filter);
                 }
                 if (hasKeywordMenu && uih_currentLayoutSnippetKeywords.length > 0) {
-                    if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|")) {
+                    const uih_currentSpreadAspect = printess.getDocumentAspectRatioName();
+                    if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|") && uih_currentSpreadAspect === uih_lastSpreadAspect) {
                         renderLayoutSnippetCluster(printess, clusterDiv, uih_lastLayouSnippetKeywordsResults, forLayoutDialog, !!forMobile);
                     }
                     else {
                         printess.loadLayoutSnippetsByKeywords(uih_currentLayoutSnippetKeywords).then((snippets) => {
                             uih_lastLayouSnippetKeywordsResults = snippets;
                             uih_lastLayouSnippetKeywords = uih_currentLayoutSnippetKeywords;
+                            uih_lastSpreadAspect = uih_currentSpreadAspect;
                             renderLayoutSnippetCluster(printess, clusterDiv, snippets, forLayoutDialog, !!forMobile);
                         });
                     }
@@ -6708,31 +7048,66 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         return container;
     }
-    function renderLayoutSnippetCluster(printess, clusterDiv, snippets, forLayoutDialog, forMobile) {
-        for (const snippet of snippets) {
-            const thumbDiv = document.createElement("div");
-            thumbDiv.className = forLayoutDialog ? "snippet-thumb layout-dialog" : "snippet-thumb big";
-            thumbDiv.setAttribute("aria-label", "Close");
-            thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
-            thumbDiv.setAttribute("data-bs-target", "#layoutOffcanvas");
-            const thumb = document.createElement("img");
-            thumb.src = snippet.thumbUrl;
-            thumb.style.backgroundColor = snippet.bgColor;
-            thumbDiv.appendChild(thumb);
-            const priceBox = document.createElement("span");
-            priceBox.className = "badge bg-primary";
-            priceBox.textContent = printess.gl(snippet.priceLabel);
-            if (snippet.priceLabel)
-                thumbDiv.appendChild(priceBox);
-            thumbDiv.onclick = () => {
-                const propsDiv = document.getElementById("desktop-properties");
-                if (propsDiv && !forMobile && printess.showTabNavigation()) {
-                    uih_snippetsScrollPosition = propsDiv.scrollTop;
+    function getSnippetThumb(printess, snippet, forLayoutDialog, forMobile) {
+        const thumbDiv = document.createElement("div");
+        thumbDiv.className = forLayoutDialog ? "snippet-thumb layout-dialog" : "snippet-thumb big";
+        thumbDiv.setAttribute("aria-label", "Close");
+        thumbDiv.setAttribute("data-bs-dismiss", "offcanvas");
+        thumbDiv.setAttribute("data-bs-target", "#layoutOffcanvas");
+        const thumb = document.createElement("img");
+        thumb.src = snippet.thumbUrl;
+        thumb.style.backgroundColor = snippet.bgColor;
+        thumbDiv.appendChild(thumb);
+        const priceBox = document.createElement("span");
+        priceBox.className = "badge bg-primary";
+        priceBox.textContent = printess.gl(snippet.priceLabel);
+        if (snippet.priceLabel)
+            thumbDiv.appendChild(priceBox);
+        thumbDiv.onclick = () => {
+            const propsDiv = document.getElementById("desktop-properties");
+            if (propsDiv && !forMobile && printess.showTabNavigation()) {
+                uih_snippetsScrollPosition = propsDiv.scrollTop;
+            }
+            printess.insertLayoutSnippet(snippet.snippetUrl);
+            closeLayoutOverlays(printess, forMobile !== null && forMobile !== void 0 ? forMobile : uih_currentRender === "mobile");
+        };
+        return thumbDiv;
+    }
+    function renderLayoutSnippetCluster(printess, clusterDiv, resultSet, forLayoutDialog, forMobile) {
+        const hasKeywordMenu = printess.hasLayoutSnippetMenu();
+        const numberOfColumns = printess.numberOfColumns();
+        let snippets = resultSet;
+        if (hasKeywordMenu) {
+            if (printess.hasLayoutSnippetImageCountFilter()) {
+                renderImageAmountButtons(printess, clusterDiv, resultSet, forLayoutDialog);
+                const atatResults = resultSet.filter(s => s.title.startsWith("@@"));
+                const imCount = uih_currentLayoutSnippetImageAmount ? parseInt(uih_currentLayoutSnippetImageAmount) : -1;
+                snippets = snippets.filter(s => {
+                    if (s.title.startsWith("@@")) {
+                        return false;
+                    }
+                    if (s.favourite && imCount === -1) {
+                        return true;
+                    }
+                    return imCount === s.imageCount;
+                });
+                if (atatResults.length === 2 && !forLayoutDialog) {
+                    let designYourself = atatResults[0];
+                    let singlePhoto = atatResults[1];
+                    const clusterDiv2 = document.createElement("div");
+                    clusterDiv2.className = "layout-snippet-cluster";
+                    clusterDiv2.style.display = "grid";
+                    clusterDiv2.style.gridTemplateColumns = "1fr 1fr";
+                    clusterDiv2.style.gridColumn = "1 / span " + numberOfColumns;
+                    clusterDiv2.style.gap = "6px";
+                    clusterDiv2.appendChild(getSnippetThumb(printess, singlePhoto, forLayoutDialog, forMobile));
+                    clusterDiv2.appendChild(getSnippetThumb(printess, designYourself, forLayoutDialog, forMobile));
+                    clusterDiv.appendChild(clusterDiv2);
                 }
-                printess.insertLayoutSnippet(snippet.snippetUrl);
-                closeLayoutOverlays(printess, forMobile !== null && forMobile !== void 0 ? forMobile : uih_currentRender === "mobile");
-            };
-            clusterDiv.appendChild(thumbDiv);
+            }
+        }
+        for (const snippet of snippets) {
+            clusterDiv.appendChild(getSnippetThumb(printess, snippet, forLayoutDialog, forMobile));
         }
     }
     function renderCategoryButtons(printess, categoryWrapper, topicWrapper, clusterDiv, forLayoutDialog) {
@@ -6742,7 +7117,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         for (const c of entry.categories) {
             const categoryBtn = document.createElement("button");
             categoryBtn.className = "btn btn-outline-primary mb-1 me-1";
-            categoryBtn.textContent = c.name;
+            categoryBtn.textContent = translateKeyWord(printess, c.name);
             if (c === entry.category) {
                 categoryBtn.classList.add("btn-primary");
                 categoryBtn.classList.remove("btn-outline-primary");
@@ -6781,7 +7156,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             for (const t of entry.category.topics) {
                 const topicBtn = document.createElement("button");
                 topicBtn.className = "btn btn-sm btn-outline-secondary topic-menu-btn mb-1 me-1";
-                topicBtn.textContent = t.name;
+                topicBtn.textContent = translateKeyWord(printess, t.name);
                 if (entry.topic === t) {
                     topicBtn.classList.add("btn-secondary");
                     topicBtn.classList.remove("btn-outline-secondary");
@@ -6807,6 +7182,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
     }
+    function translateKeyWord(printess, k) {
+        const t = printess.gl("menu." + k);
+        if (t === "menu." + k) {
+            return k;
+        }
+        return t;
+    }
     function setMenuState(printess, topic, clusterDiv, forLayoutDialog) {
         return __awaiter(this, void 0, void 0, function* () {
             uih_currentLayoutSnippetTopic = topic.name;
@@ -6818,6 +7200,60 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             renderLayoutSnippetCluster(printess, clusterDiv, resultSet, forLayoutDialog, uih_currentRender === "mobile");
         });
     }
+    function renderImageAmountButtons(printess, clusterDiv, snippets, forLayoutDialog) {
+        const div = document.querySelector(".menu-image-amount-wrapper");
+        if (!div) {
+            window.setTimeout(() => {
+                renderImageAmountButtons(printess, clusterDiv, snippets, forLayoutDialog);
+            }, 300);
+            return;
+        }
+        div.innerHTML = "";
+        const btnGroup = document.createElement("div");
+        btnGroup.className = "btn-group btn-group-sm me-2";
+        const label1 = document.createElement("div");
+        label1.className = "snippet-label";
+        label1.innerText = printess.gl("ui.photoAmount");
+        div.appendChild(label1);
+        const buttons = new Set();
+        for (const s of snippets) {
+            if (!s.title.startsWith("@@")) {
+                buttons.add(s.imageCount);
+            }
+        }
+        if (uih_currentLayoutSnippetImageAmount !== "") {
+            if (!buttons.has(parseInt(uih_currentLayoutSnippetImageAmount))) {
+                uih_currentLayoutSnippetImageAmount = "";
+            }
+        }
+        const sorted = ["", ...Array.from(buttons).sort((a, b) => a - b).map(n => n + "")];
+        for (const b of sorted) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn image-amount";
+            if (b === uih_currentLayoutSnippetImageAmount) {
+                btn.classList.add("btn-secondary");
+            }
+            else {
+                btn.classList.add("btn-outline-secondary");
+            }
+            btn.innerText = b === "" ? printess.gl("ui.recommended") : b;
+            btn.dataset.amount = b;
+            btn.onclick = () => {
+                var _a;
+                btnGroup.childNodes.forEach(c => {
+                    c.classList.remove("btn-secondary");
+                    c.classList.add("btn-outline-secondary");
+                });
+                btn.classList.add("btn-secondary");
+                uih_currentLayoutSnippetImageAmount = (_a = btn.dataset.amount) !== null && _a !== void 0 ? _a : "";
+                clusterDiv.innerHTML = "";
+                renderLayoutSnippetCluster(printess, clusterDiv, snippets, forLayoutDialog, uih_currentRender === "mobile");
+            };
+            btnGroup.appendChild(btn);
+        }
+        div.appendChild(btnGroup);
+    }
     function renderLayoutSnippetKeywordMenu(printess, parent, clusterDiv, forLayoutDialog) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
@@ -6827,6 +7263,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const topicWrapper = document.createElement("div");
             topicWrapper.className = "menu-topic-wrapper";
             parent.appendChild(topicWrapper);
+            const imageAmountWrapper = document.createElement("div");
+            imageAmountWrapper.className = "menu-image-amount-wrapper";
+            parent.appendChild(imageAmountWrapper);
             if (!uih_currentMenuCategories) {
                 uih_currentMenuCategories = (_a = (yield printess.getLayoutSnippetFilterMenu())) !== null && _a !== void 0 ? _a : null;
             }
@@ -7915,7 +8354,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             container.id = "mobile-nav-buttons-container";
             container.className = "mobile-property-button-container";
         }
-        const iconName = printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+        const iconName = printess.userInBuyerSide() ? "print-solid" : printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
         const basketIcon = printess.getIcon(iconName);
         const buttons = {
             add: {
@@ -8027,11 +8466,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         const hasSteps = printess.hasSteps();
         const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
         const isBookMode = printess.canAddSpreads() || printess.canRemoveSpreads();
-        const noStepsMenu = printess.showUndoRedo() && !hasSteps && (printess.hasExpertButton() || printess.showSaveButton()) && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0 || isDocTabs);
+        const noStepsMenu = printess.showUndoRedo() && !hasSteps && (printess.hasExpertButton() || printess.showSaveButton() || printess.showLoadButton()) && (basketBtnBehaviour === "go-to-preview" || isBookMode > 0 || isDocTabs);
         const showUndoRedo = printess.showUndoRedo() && !hasSteps && !printess.hasPreviewBackButton() && !isDocTabs;
         const noCloseBtn = hasSteps || (isDocTabs && printess.showUndoRedo());
-        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps && !printess.showSaveButton();
-        const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never" && !printess.showSaveButton();
+        const showExpertBtn = printess.hasExpertButton() && !noStepsMenu && !hasSteps && !(printess.showSaveButton() || printess.showLoadButton);
+        const showExpertBtnWithSteps = printess.hasExpertButton() && hasSteps && printess.stepHeaderDisplay() === "never" && !(printess.showSaveButton() || printess.showLoadButton());
         const showSaveBtn = printess.showSaveButton() && !noStepsMenu && !hasSteps && !printess.hasExpertButton();
         const showSaveBtnWithSteps = printess.showSaveButton() && hasSteps && printess.stepHeaderDisplay() === "never" && !printess.hasExpertButton();
         {
@@ -8069,7 +8508,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     if (!callback)
                         btn.classList.add("disabled");
                     btn.onclick = () => {
-                        if (printess.isInDesignerMode()) {
+                        if (printess.userInBuyerSide()) {
+                            if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+                                printess.logout();
+                            }
+                        }
+                        else if (printess.isInDesignerMode()) {
                             if (callback) {
                                 handleBackButtonCallback(printess, callback);
                             }
@@ -8224,7 +8668,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             if (printess.hasSteps() && !printess.hasNextStep()) {
                 btn.classList.add("main-button-pulse");
             }
-            const caption = printess.gl("ui.buttonBasketMobile");
+            const caption = printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasketMobile");
             if (caption) {
                 btn.textContent = caption;
                 btn.style.color = "white";
@@ -8232,7 +8676,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 btn.style.border = "1px solid var(--bs-light)";
             }
             else {
-                const icon = printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
+                const icon = printess.userInBuyerSide() ? "print-solid" : printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
                 const ico = printess.getIcon(icon);
                 ico.classList.add("big-icon");
                 ico.style.fill = "var(--bs-light)";
@@ -8266,7 +8710,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 disabled: !printess.getBackButtonCallback(),
                 show: true,
                 task: () => {
-                    if (printess.isInDesignerMode()) {
+                    if (printess.userInBuyerSide()) {
+                        if (confirm("Do you want to log out?\n(Please print your current work before leaving)")) {
+                            printess.logout();
+                        }
+                    }
+                    else if (printess.isInDesignerMode()) {
                         const callback = printess.getBackButtonCallback();
                         if (callback) {
                             handleBackButtonCallback(printess, callback);
@@ -8274,6 +8723,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     }
                     else {
                         getCloseEditorDialog(printess);
+                    }
+                }
+            }, {
+                id: "load",
+                title: "ui.buttonLoad",
+                icon: "folder-open-solid",
+                show: printess.showLoadButton(),
+                disabled: false,
+                task: () => {
+                    const cb = printess.getLoadTemplateButtonCallback();
+                    if (cb) {
+                        cb();
                     }
                 }
             }, {
@@ -8393,7 +8854,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     item.classList.add("reverse-menu-btn-content");
                 }
                 item.style.border = "1px solid rgba(0,0,0,.125)";
-                if (hasExpertButton || noStepsMenu || printess.showSaveButton()) {
+                if (hasExpertButton || noStepsMenu || printess.showSaveButton() || printess.showLoadButton()) {
                     item.style.minWidth = "50%";
                 }
                 else {
@@ -8406,14 +8867,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     item.classList.remove("btn-primary");
                     item.classList.add("btn-light");
                 }
-                if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu && !printess.showSaveButton()) {
+                if (mi.id === "back" && !printess.showUndoRedo() && !hasExpertButton && !noStepsMenu && !(printess.showSaveButton() || printess.showLoadButton())) {
                     item.style.minWidth = "100%";
                 }
                 const span = document.createElement("span");
                 span.textContent = printess.gl(mi.title);
-                if (printess.hasExpertButton() && printess.showSaveButton()) {
-                    if (idx < 4)
-                        item.style.minWidth = "33%";
+                if (printess.hasExpertButton() && (printess.showSaveButton() || printess.showLoadButton())) {
+                    if (printess.showSaveButton() && printess.showLoadButton()) {
+                        if (idx < 5)
+                            item.style.minWidth = "25%";
+                    }
+                    else {
+                        if (idx < 4)
+                            item.style.minWidth = "33%";
+                    }
                     if (mi.id === "expert") {
                         span.textContent = "Expert";
                     }
@@ -8647,7 +9114,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
     }
     function getMobileButtons(printess, barContainer, propertyIdFilter, skipAutoSelect = false, fromImageSelection = false) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v;
         const container = barContainer || document.createElement("div");
         container.className = "mobile-buttons-container";
         const scrollContainer = document.createElement("div");
@@ -8659,10 +9126,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             buttons.unshift(...printess.getMobileUiBackgroundButton());
         }
         if (printess.hasSplitterMenu() && uih_currentState !== "details") {
-            if (((_a = uih_currentProperties[0]) === null || _a === void 0 ? void 0 : _a.kind) !== "image") {
-                buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
-            }
-            if ((buttons.length === 1 && ((_b = uih_currentProperties[0]) === null || _b === void 0 ? void 0 : _b.kind) === "image") || ((_c = uih_currentProperties[0]) === null || _c === void 0 ? void 0 : _c.kind) !== "image") {
+            buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
+            if ((buttons.length === 2 && ((_a = uih_currentProperties[0]) === null || _a === void 0 ? void 0 : _a.kind) === "image") || ((_b = uih_currentProperties[0]) === null || _b === void 0 ? void 0 : _b.kind) !== "image") {
                 buttons.push(...printess.getMobileUiScissorsButtons());
                 buttons.push(...printess.getMobileUiSplitterGapButton());
                 const isImageProperty = uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image";
@@ -8671,7 +9136,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         }
         const dataTableIdx = buttons.findIndex(b => b.newState.state === "table-edit");
-        const pid = (_f = (_e = (_d = buttons[dataTableIdx]) === null || _d === void 0 ? void 0 : _d.newState) === null || _e === void 0 ? void 0 : _e.externalProperty) === null || _f === void 0 ? void 0 : _f.id;
+        const pid = (_e = (_d = (_c = buttons[dataTableIdx]) === null || _c === void 0 ? void 0 : _c.newState) === null || _d === void 0 ? void 0 : _d.externalProperty) === null || _e === void 0 ? void 0 : _e.id;
         if (dataTableIdx !== -1 && pid && printess.isDataSource(pid)) {
             const recordNavigationArrows = printess.getMobileUiRecordNavigationArrows();
             buttons.splice(dataTableIdx, 0, recordNavigationArrows[0]);
@@ -8696,7 +9161,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         let autoSelect = null;
         let autoSelectHasMeta = false;
         let firstButton = null;
-        const ep = (_h = (_g = buttons[0]) === null || _g === void 0 ? void 0 : _g.newState) === null || _h === void 0 ? void 0 : _h.externalProperty;
+        const ep = (_g = (_f = buttons[0]) === null || _f === void 0 ? void 0 : _f.newState) === null || _g === void 0 ? void 0 : _g.externalProperty;
         if (ep && buttons.length === 1 && skipAutoSelect !== true) {
             if (ep.kind === "image") {
                 autoSelect = buttons[0];
@@ -8715,14 +9180,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         if (hasButtons && (!autoSelect || autoSelectHasMeta === true)) {
             let controlGroup = 0;
             for (const b of buttons) {
-                const selectScaleButton = b.newState.metaProperty === "image-scale" && ((_k = (_j = b.newState.externalProperty) === null || _j === void 0 ? void 0 : _j.imageMeta) === null || _k === void 0 ? void 0 : _k.canScale) && ((_l = b.newState.externalProperty) === null || _l === void 0 ? void 0 : _l.value) !== ((_o = (_m = b.newState.externalProperty) === null || _m === void 0 ? void 0 : _m.validation) === null || _o === void 0 ? void 0 : _o.defaultValue);
+                const selectScaleButton = b.newState.metaProperty === "image-scale" && ((_j = (_h = b.newState.externalProperty) === null || _h === void 0 ? void 0 : _h.imageMeta) === null || _j === void 0 ? void 0 : _j.canScale) && ((_k = b.newState.externalProperty) === null || _k === void 0 ? void 0 : _k.value) !== ((_m = (_l = b.newState.externalProperty) === null || _l === void 0 ? void 0 : _l.validation) === null || _m === void 0 ? void 0 : _m.defaultValue);
                 const buttonDiv = document.createElement("div");
                 buttonDiv.className = "no-selection";
                 if (b.hide) {
                     buttonDiv.style.display = "none";
                 }
                 if (pid && printess.isDataSource(pid)) {
-                    if (((_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.kind) === "record-left-button" || b.newState.state === "table-edit") {
+                    if (((_o = b.newState.externalProperty) === null || _o === void 0 ? void 0 : _o.kind) === "record-left-button" || b.newState.state === "table-edit") {
                         buttonDiv.style.marginRight = "5px";
                         if (!printess.isPropertyVisible(pid)) {
                             buttonDiv.style.display = "none";
@@ -8756,17 +9221,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     buttonDiv.classList.add("selected");
                 }
                 if (b.newState.tableRowIndex !== undefined) {
-                    buttonDiv.id = ((_r = (_q = b.newState.externalProperty) === null || _q === void 0 ? void 0 : _q.id) !== null && _r !== void 0 ? _r : "") + "$$$" + b.newState.tableRowIndex;
+                    buttonDiv.id = ((_q = (_p = b.newState.externalProperty) === null || _p === void 0 ? void 0 : _p.id) !== null && _q !== void 0 ? _q : "") + "$$$" + b.newState.tableRowIndex;
                 }
                 else {
-                    buttonDiv.id = ((_t = (_s = b.newState.externalProperty) === null || _s === void 0 ? void 0 : _s.id) !== null && _t !== void 0 ? _t : "") + ":" + ((_u = b.newState.metaProperty) !== null && _u !== void 0 ? _u : "");
+                    buttonDiv.id = ((_s = (_r = b.newState.externalProperty) === null || _r === void 0 ? void 0 : _r.id) !== null && _s !== void 0 ? _s : "") + ":" + ((_t = b.newState.metaProperty) !== null && _t !== void 0 ? _t : "");
                 }
                 if (printess.isTextButton(b) || controlGroup > 0) {
                     buttonDiv.classList.add("mobile-property-text");
                 }
                 else {
                     buttonDiv.classList.add("mobile-property-button");
-                    if (((_v = b.newState.externalProperty) === null || _v === void 0 ? void 0 : _v.kind) === "font") {
+                    if (((_u = b.newState.externalProperty) === null || _u === void 0 ? void 0 : _u.kind) === "font") {
                         buttonDiv.classList.add("mobile-font-button");
                     }
                     else if (b.newState.state === "table-edit" && pid && printess.isDataSource(pid)) {
@@ -8792,7 +9257,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 buttonContainer.appendChild(buttonDiv);
             }
         }
-        if (((_w = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _w === void 0 ? void 0 : _w.kind) === "selection-text-style") {
+        if (((_v = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.externalProperty) === null || _v === void 0 ? void 0 : _v.kind) === "selection-text-style") {
             const meta = uih_lastMobileState === null || uih_lastMobileState === void 0 ? void 0 : uih_lastMobileState.metaProperty;
             if (meta && !printess.isSoftwareKeyBoardExpanded()) {
                 for (const b of buttons) {
@@ -8866,6 +9331,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 const b = buttons.filter(b => { var _a; return ((_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.kind) === "image"; })[0];
                 if (b && ((_b = (_a = b.newState.externalProperty) === null || _a === void 0 ? void 0 : _a.validation) === null || _b === void 0 ? void 0 : _b.defaultValue) === ((_c = b.newState.externalProperty) === null || _c === void 0 ? void 0 : _c.value) && printess.hasSplitterMenu()) {
+                    if (firstButton && firstButton.id === "splitterLayoutButton:") {
+                        firstButton = firstButton.nextSibling;
+                    }
                     if (firstButton) {
                         mobileUiButtonClick(printess, b, firstButton, container, false, uih_currentProperties, true);
                     }

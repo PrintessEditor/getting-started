@@ -28,6 +28,8 @@ interface iScaledImage {
   version?: number
 }
 
+export type ErrorName = "templateNotFound"
+
 export interface printessAttachParameters {
   resourcePath?: string;
   domain?: string;
@@ -253,9 +255,15 @@ export interface printessAttachParameters {
 
   /**
    * Provide a callback function which is called when the buyer presses the [Save] button
-   * Design is automtically saved and function gets a [token] to load or print this design
+   * Design is automatically saved and function gets a [token] to load or print this design
    */
   saveTemplateCallback?: (saveToken: string, type: "save" | "close") => void,
+
+  /**
+   * Provide a callback function which is called when the buyer presses the [Load] button
+   * No automatic save is executed before.
+   */
+  loadTemplateButtonCallback?: () => void,
 
   /**
    * Provide a callback function which is called whenever the buyer-image-list changed or an image is assigned to a frame
@@ -300,6 +308,10 @@ export interface printessAttachParameters {
    */
   priceCategoryLabels?: Record<string, string>
 
+  /**
+   * Provide a callback function which is called when an error happens.
+   */
+  errorCallback?: (errorName: ErrorName, data?: Record<string, string>) => void
 }
 
 
@@ -321,7 +333,13 @@ export interface iPrintessApi {
    */
   loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
 
-
+ /**
+  * Loads template first and then exchange state from save-token.
+  * @param templateName name of template to load
+  * @param saveToken save-token to extract exchange state from 
+  * @param publishedVersion optional, default is true.
+  */
+  loadTemplateWithExchangeToken(templateName: string,  saveToken: string, publishedVersion?: boolean = true): Promise<void>
 
   /**
    * Load a template to the Printess editor and sets form fields.
@@ -387,6 +405,18 @@ export interface iPrintessApi {
   mergeCurrentDocumentToTargetDocument(targetDocId: string, frames: "all" | "snippets"): Promise<void>
 
   /**
+   * Returns if a real user is logged in - in buyer side only mode with only print option
+   */
+  userInBuyerSide(): boolean
+
+  /**
+   * Logs the current printess user out
+   * Not available for buyer-side users!
+   * Only if userInBuyerSide() === true
+   */
+  logout(): void
+
+  /**
    * Returns the add to basket callback you have set in `attachPrintess()`
    */
   getAddToBasketCallback(): null | ((saveToken: string, url: string) => void);
@@ -405,6 +435,16 @@ export interface iPrintessApi {
    * Returns the save button callback you have set in `attachPrintess()`
    */
   getSaveTemplateCallback(): null | ((saveToken: string, type: "save" | "close") => void);
+
+  /**
+    * Returns the `loadTemplateButtonCallback` you have set in `attachPrintess()`
+    */
+  getLoadTemplateButtonCallback(): null | (() => void);
+
+  /**
+   * Returns true if the ui should show a "load" button.
+   */
+  showLoadButton(): boolean
 
   /**
    * Clears current printess frames selection and shows document-wide properties like form fields.
@@ -690,6 +730,13 @@ export interface iPrintessApi {
   setFormFieldValue(fieldName: string, newValue: string): Promise<void>;
 
   /**
+   * Sets the spine width, colud be any Length value, like an equation or a fixed value with unit.
+   * @param formular like `=spine.pages * 0.3mm` or just `2cm`
+   */
+  setSpineFormular(formular: string): Promise<void>
+
+
+  /**
    * updates a specific cell of a form field of type "table"
    * Any then all other updates, 
    * this will NOT trigger a selection change event on buyer side 
@@ -828,8 +875,21 @@ export interface iPrintessApi {
       vivid?: number
     }): Promise<void>;
 
+
   /**
-   * Uploads one or many images to Printess and can auto assign the first image
+   * Uploads one or many images to Printess and auto assigns the first image if an image frame is selected
+   * If no frame is selected it distributes to the next possible frame or
+   * automatically distributes all images depending on the template settings 
+   * @param files 
+   * @param propertyId Auto assigns the first image to a specific frame identified via property Id.
+   * @param progressCallback 
+   * @param isHandwritingImage Toggle the current textframe to handwriting mode und assigns image
+   */
+  uploadAndDistributeImages(files: FileList | null, propertyId: string, progressCallback?: (percent: number, state: "upload" | "optimization") => void, isHandwritingImage?: boolean): Promise<iExternalImage[]>;
+
+  /**
+   * Uploads one or many images to Printess and can auto assign the first image 
+   * @deprecated Its deprecated, because buyer side never create frames on image upload. Just via stickers, use uploadAndDistributeImages() instead
    * @param files 
    * @param progressCallback 
    * @param assignToFrameOrNewFrame Auto assigns the first image to the current slection or a specific frame
@@ -839,6 +899,7 @@ export interface iPrintessApi {
 
   /**
    * Uploads a single image to Printess and can auto assign this image
+   * @deprecated Its deprecated, because buyer side never create frames on image upload. Just via stickers
    * @param file 
    * @param progressCallback 
    * @param assignToFrameOrNewFrame 
@@ -904,6 +965,11 @@ export interface iPrintessApi {
    * Returns if buyer is allowed to upload pdf files
    */
   allowPdfUpload(): boolean;
+
+  /**
+   * Returns if buyer is only allowed to upload vector (svg) files
+   */
+  allowOnlyVectorImageUpload(): boolean;
 
   /**
    * automatically distribute all non used uploaded images to frames which have not been assigned yet.
@@ -979,6 +1045,11 @@ export interface iPrintessApi {
   getUploadedImagesCount(): number
 
   /**
+   * When using direct upload, this will return the count of outstanding image uploads.
+   */
+  getPendingImageUploadsCount(): number
+
+  /**
    * Returns if an externalProperty resolves to multiple mobile-ui-buttons
    * @param p 
    */
@@ -1016,6 +1087,10 @@ export interface iPrintessApi {
     name: string;
     color: string;
   }>;
+
+  showColorDialog(p: iExternalProperty): Promise<iExternalColor | null>
+
+  getColorInfo(p: iExternalProperty): iExternalColor | null
 
   /**
    * Returns a list of available paragraph-style for a certain selected property (frame).
@@ -1235,21 +1310,40 @@ export interface iPrintessApi {
   removeSpreads(): Promise<boolean>
 
   /**
+   * Tells if user is allowed to duplicate the current spread
+   */
+  canDuplicateSpread(): boolean 
+
+  /**
+   * Duplicates the currently selected spread
+   */
+  async duplicateSpread(): void
+
+  /**
    * Gets the state of the "lockCoverInside" user setting in "book" mode
    * If set to true the cover extends to two spreads when adding or removing spreads
    */
   lockCoverInside(): boolean
 
-
+  /**
+   * 
+   * @param fileName deprecated. Not used anymore.
+   * @param documentName Optional: The name of the document you want to render the pages images for. If not provided the one marked as thumbnail will be taken, otherwise the preview document, or as last try the first/primary document.
+   * @param maxWidth Optional: Maximum render width. Defaults to 400.
+   * @param maxHeight Optional: Maximum render height. Defaults to 400.
+   */
   renderFirstPageImage(fileName: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string>;
 
 
   /**
    * Renders all pages as images for the given document. 
-   * @param fileNameSuffix The file name suffix when uploading the image. All files will be prefixed with the page index + underscore character.
+   * 
+   * 
+   * @param fileNameSuffix deprecated. Not used anymore.
    * @param documentName Optional: The name of the document you want to render the pages images for. If not provided the one marked as thumbnail will be taken, otherwise the preview document, or as last try the first/primary document.
    * @param maxWidth Optional: Maximum render width. Defaults to 400.
    * @param maxHeight Optional: Maximum render height. Defaults to 400.
+   * @returns Array of urls to the images. They can be png with tranparency or jpg. 
    */
   renderPageImages(fileNameSuffix: string, documentName?: string, maxWidth?: number, maxHeight?: number): Promise<string[]>;
 
@@ -1382,6 +1476,25 @@ export interface iPrintessApi {
    * @param n gap size of the photo grid
    */
   setSplitterGaps(n: number): void
+
+  /**
+   * Returns if splitter layout has gap around
+   */
+  hasGapAround(): boolean
+
+  /**
+   * If splitter frames are present on current spread this method adds
+   * a gap between all splitter-frames and the page border
+   * Returns `true` if succesfull
+   */
+  addGapAround(): Promise<boolean>
+
+  /**
+   * If splitter frames are present on current spread this method removes
+   * the gap between all splitter-frames and the page border
+   *  * Returns `true` if succesfull
+   */
+  removeGapAround(): Promise<boolean>
 
   /**
    * Returns `true` if either rich- or simple-text-editor is currently active
@@ -1540,6 +1653,17 @@ export interface iPrintessApi {
   hasTextOverflow(propertyId: string): boolean
 
   /**
+   * Returns short language code in lower case, like "en" or "de" 
+   */
+  languageShort(): string
+
+  /**
+   * Returns long language code if available. Otherwise returns short code like `languageShort()`.
+   * Format: lower case main language + sub language in upper case, like "en-GB" or "de-DE" 
+   */
+  languageLong(): string
+
+  /**
    * Returns a translation as string to display the ui in different languages
    * @param translationKey String containing the keys for the translation table separated by period
    * @param params String or number parameters that substitute $1, ..., $9 properties in a translation
@@ -1562,9 +1686,20 @@ export interface iPrintessApi {
   hasLayoutSnippetMenu(): boolean
 
   /**
+    * Returns if LayoutSnippets are available
+    */
+  getDocumentAspectRatioName(): string
+
+  /**
    * Returns Filter Menu for Layout Snippets
    */
   getLayoutSnippetFilterMenu(): Promise<iLayoutSnippetFilterCategory[] | undefined>
+
+  /**
+   * Returns if ui should show image count filter for layou snippets
+   * Only active if filter menu is displayed
+   */
+  hasLayoutSnippetImageCountFilter(): boolean
 
   /**
    * Retrieved availbale keyowrds for layout search
@@ -1662,12 +1797,31 @@ export interface iPrintessApi {
   getFormFieldPriceLabelByTag(tag: string): string
 
   /**
-  * When using direct upload, this will return all the pending image upload promises.
-  * You can use Promise.any() to show some nice progress.
-  * 
-  * @returns The currently pending upload promises for direct upload.
-  */
+   * When using direct upload, this will return all the pending image upload promises.
+   * You can use Promise.any() to show some nice progress.
+   * 
+   * @returns The currently pending upload promises for direct upload.
+   */
   getPendingImageUploads(): Set<Promise<any>>;
+
+  /**
+   * When using direct upload, this will return all the image meta data finalization promises.
+   * 
+   * @returns The currently pending metadata promises for direct upload.
+   */
+  getDirectImageMetadataFinalizationPromises(): Set<Promise<any>>;
+
+  /**
+   * When using direct upload, this returns the count of upload processes.
+   * 
+   * @returns The number of upload processes.
+   */
+  getUploadsInProgress(): number;
+
+
+
+  streamPrompt(prompt: string, onMessage: (message: string) => void, onFinished: () => void): void;
+  loadLetterGeneratorState(): Promise<LetterState | undefined>;
 }
 
 export interface iBuyerStep {
@@ -1694,6 +1848,7 @@ export interface UploadProvider {
 
   /** This method is called before Printess adds the form data containing the data needed for the upload. Use it in case you must prepend some fields to the form data before. */
   beforeAddingFormData?: (formData: FormData, blob: Blob, fileName: string) => void;
+
 }
 
 export interface AwsUploadProvider extends UploadProvider {
@@ -1804,6 +1959,8 @@ export interface iExternalSnippet {
   thumbUrl: string;
   bgColor: string;
   priceLabel: string;
+  imageCount: number;
+  favourite: number;
 }
 
 export interface iLayoutSnippetFilterMenu {
@@ -1851,7 +2008,7 @@ export interface iExternalFrameBounds {
   boxId: string;
 }
 
-export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "image" | "font" | "select-list" | "select-list+info" | "image-list" | "color-list" | "table" | "image-id";
+export type iExternalPropertyKind = "color" | "single-line-text" | "text-area" | "label" | "checkbox" | "background-button" | "splitter-layouts-button" | "grid-gap-button" | "convert-to-image" | "convert-to-text" | "record-left-button" | "record-right-button" | "horizontal-scissor" | "vertical-scissor" | "multi-line-text" | "selection-text-style" | "number" | "pixelLength" | "image" | "font" | "select-list" | "select-list+info" | "image-list" | "color-list" | "table" | "image-id";
 
 export type iExternalMetaPropertyKind = null |
   "text-style-color" | "text-style-size" | "text-style-font" | "text-style-hAlign" | "text-style-vAlign" | "text-style-vAlign-hAlign" | "text-style-paragraph-style" | "handwriting-image" |
@@ -1881,7 +2038,7 @@ export interface iExternalTextStyle {
   font: string;
   hAlign: "bullet" | "left" | "center" | "right" | "justifyLeft" | "justifyCenter" | "justifyRight" | "justifyJustify";
   vAlign: "top" | "center" | "bottom";
-  allows: Array<"content" | "mandatory" | "color" | "stroke" | "font" | "size" | "lineHeight" | "tracking" | "baselineShift" | "horizontalAlignment" | "verticalAlignment" | "padding" | "styles" | "bullet" | "indent" | "paragraphSpacing" | "baselineGrid" | "handWriting">;
+  allows: Array<"content" | "mandatory" | "color" | "stroke" | "font" | "size" | "lineHeight" | "tracking" | "baselineShift" | "horizontalAlignment" | "verticalAlignment" | "padding" | "styles" | "bullet" | "indent" | "paragraphSpacing" | "baselineGrid" | "handWriting" | "letterGenerator">;
   pStyle: string;
 }
 export interface iExternalValidation {
@@ -1906,7 +2063,8 @@ export type iExternalFieldListEntry = {
   label: string, // multi-language??
   description: string,
   imageUrl: string,
-  tag: string
+  tag: string,
+  enabled: boolean
 }
 export interface iExternalTableMeta {
   columns: Array<iExternalTableColumn>;
@@ -1995,7 +2153,7 @@ export type iExternalErrors = Array<iExternalError>
 export interface iExternalError {
   boxIds: Array<string>,
   pinnedDocId?: string,
-  errorCode: "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "imageStillUploading" | "imageCouldNotUpload" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "regExpNotMatching" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
+  errorCode: "preflight" | "rowIndexLessThanZero" | "invalidDayValue" | "imageResolutionLow" | "imageMissing" | "imageStillUploading" | "imageCouldNotUpload" | "textMissing" | "characterMissing" | "maxCharsExceeded" | "offensiveLanguageDetected" | "regExpNotMatching" | "textOverflow" | "noLayoutSnippetSelected" | "invalidNumber" | "missingEventText" | "emptyBookPage",
   errorValue1: string | number,
   errorValue2?: string | number,
   errorValue3?: string | number
@@ -2004,6 +2162,22 @@ export interface iExternalError {
 export interface iExternalFrame {
   top: string,
   left: string
+}
+
+
+export interface iExternalColor {
+  mode: "rgb" | "cmyk";
+  label: string;
+  allowCMYK: boolean;
+
+  r: number;  // 0-255
+  g: number;
+  b: number;
+
+  c: number;  // 0-100
+  m: number;
+  y: number;
+  k: number;
 }
 
 export type MergeMode = "merge" | "layout-snippet-no-repeat" | "layout-snippet-repeat-all" | "layout-snippet-repeat-inside"
@@ -2115,7 +2289,7 @@ export interface iMobileUiState {
 export type MobileUiState = "document" | "frames" | "add" | "details" | "text";
 
 export interface MobileUiMenuItems {
-  id: "back" | "save" | "expert" | "undo" | "redo" | "addPages" | "arrangePages" | "previous" | "next" | "firstStep" | "lastStep",
+  id: "back" | "save" | "load" | "expert" | "undo" | "redo" | "addPages" | "arrangePages" | "previous" | "next" | "firstStep" | "lastStep",
   title: string,
   icon?: iconName,
   disabled: boolean,
@@ -2528,4 +2702,8 @@ export type iconName =
   | "arrow-right-long"
   | "camera-solid"
   | "desktop-mobile-duotone"
-  | "cloud-check-duotone";
+  | "cloud-check-duotone"
+
+  | "add-gap-around"
+  | "remove-gap-around"
+  ;
