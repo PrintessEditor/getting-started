@@ -84,7 +84,7 @@ declare global {
 
     uih_currentMenuCategories = null;
     uih_currentLayoutSnippetCategory = "";
-    uih_currentLayoutSnippetTopic = "";
+    uih_currentLayoutSnippetTopic = null;
     uih_currentLayoutSnippetKeywords = [];
     uih_lastLayouSnippetKeywords = [];
     uih_lastLayouSnippetKeywordsResults = [];
@@ -136,7 +136,7 @@ declare global {
 
   let uih_currentMenuCategories: iSnippetMenuCategory[] | null = null;
   let uih_currentLayoutSnippetCategory: string = "";
-  let uih_currentLayoutSnippetTopic: string = "";
+  let uih_currentLayoutSnippetTopic: iSnippetMenuTopic | null = null;
   let uih_currentLayoutSnippetKeywords: Array<string> = [];
   let uih_lastLayouSnippetKeywords: Array<string> = [];
   let uih_lastLayouSnippetKeywordsResults: Array<iExternalSnippet> = [];
@@ -153,7 +153,7 @@ declare global {
 
     const categories = uih_currentMenuCategories
     const category = uih_currentMenuCategories.filter(c => c.name === uih_currentLayoutSnippetCategory)[0] ?? uih_currentMenuCategories[0];
-    const topic = category.topics.filter(t => t.name === uih_currentLayoutSnippetTopic)[0] ?? category.topics[0];
+    const topic = category.topics.filter(t => t.name === uih_currentLayoutSnippetTopic?.name)[0] ?? category.topics[0];
 
     return { categories, category, topic };
   }
@@ -253,16 +253,16 @@ declare global {
       printess.gl("ui.quote4"),
     ];
   }
-  function postQuote(quotes: string[], condition: boolean, callBack: Function, waitMs: number = 10000): string {
+
+  function postQuote(quotes: string[], condition: boolean, callBack: (quote: string) => void, waitMs: number = 10000): void {
     const myQuotes = quotes;
+
     if (condition) {
       setTimeout(() => postQuote(myQuotes, condition, callBack), waitMs);
       const index: number = Math.floor(Math.random() * myQuotes.length);
       const quote = myQuotes[index];
       if (myQuotes.length > 2) myQuotes.splice(index, 1); // remove quote, don't repeat
-      return callBack(quote);
-    } else {
-      return "";
+      callBack(quote);
     }
   }
 
@@ -625,8 +625,12 @@ declare global {
               desktopGrid.style.height = height + "px"; // set desktopGrid height to available viewportHeight to determine 1fr properly on safari
 
               const desktopProperties = document.getElementById("desktop-properties");
+              if (desktopProperties) {
+                desktopProperties.style.paddingTop = "10px";
+              }
               const tabsContainer = <HTMLDivElement>document.querySelector(".tabs-navigation");
               if (printess.showTabNavigation() && desktopProperties) {
+
                 desktopProperties.style.height = calcHeight;
                 if (tabsContainer) {
                   renderTabsNavigation(printess, tabsContainer, false);
@@ -1069,7 +1073,7 @@ declare global {
     content.appendChild(indicatorsDiv);
 
     // slide content
-    const slidesDiv = document.createElement("div");;
+    const slidesDiv = document.createElement("div");
     slidesDiv.className = "carousel-inner";
     steps.forEach(step => {
       const item = document.createElement("div");
@@ -1273,6 +1277,9 @@ declare global {
   function handleOffcanvasLayoutsContainer(printess: iPrintessApi, forMobile: boolean): void {
     const layoutsDiv = document.getElementById("layoutSnippets");
 
+    if (layoutsDiv && printess.hasLayoutSnippetMenu()) {
+      layoutsDiv.style.paddingTop = "0";
+    }
     const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
     const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
     const snippetsChanged = currentSnippets !== previousSnippets;
@@ -1509,6 +1516,9 @@ declare global {
 
   function getPropertiesTitle(printess: iPrintessApi, forExternalLayoutsContainer: boolean = false): HTMLElement {
     const currentTab = uih_currentTabs.filter(t => t.id === uih_currentTabId)[0] || "";
+    if (currentTab.id === "#LAYOUTS" && printess.hasLayoutSnippetMenu() && !forExternalLayoutsContainer) {
+      return document.createElement("div");
+    }
     const hasFormFieldTab = uih_currentTabs.filter(t => t.id === "#FORMFIELDS").length > 0;
     const titleDiv = document.createElement("div");
     titleDiv.className = "properties-title";
@@ -2361,7 +2371,7 @@ declare global {
     return textPropertiesDiv;
   }
 
-  async function createLetterGeneratorModal(printess: iPrintessApi, p: iExternalProperty) {
+  async function createLetterGeneratorModal(printess: iPrintessApi, _p: iExternalProperty) {
     const modal = document.createElement("div");
     modal.id = "lettergenerator-modal";
     modal.className = "modal show align-items-center";
@@ -4125,7 +4135,7 @@ declare global {
     const extColor = printess.getColorInfo(p);
 
     if (!extColor) {
-      console.error("Color not found for property: " + p.id, p); 
+      console.error("Color not found for property: " + p.id, p);
     } else {
       submitHex.innerText = printess.gl("ui.buttonMoreColors");
 
@@ -4261,7 +4271,7 @@ declare global {
           search.style.width = "100%";
           search.placeholder = printess.gl("search");
 
-          search.addEventListener("input", (e) => {
+          search.addEventListener("input", (_e) => {
             // hier suchen 
             const s = search.value.toLowerCase();
             for (const x of Array.from(ddContent.children)) {
@@ -4493,7 +4503,7 @@ declare global {
   // Mobile Grip Gap Control for Photo Collages
   let lastSelectedGridSize: "XS" | "S" | "M" | "XL" | null;
 
-  function getGridGapControl(printess: iPrintessApi, p: iExternalProperty): HTMLElement {
+  function getGridGapControl(printess: iPrintessApi, _p: iExternalProperty): HTMLElement {
     const div = document.createElement("div");
     div.className = "d-flex h-100 justify-content-center align-items-center";
 
@@ -4641,9 +4651,14 @@ declare global {
             const d = document.createElement("div");
             d.style.display = "grid";
             d.style.gridTemplateColumns = "1fr auto";
+            d.style.gap = "9px";
             d.appendChild(getNumberSlider(printess, p, "image-contrast", true));
             d.appendChild(getInvertImageChecker(printess, p, "image-invert", false));
             container.appendChild(d);
+
+            //  const check = getInvertImageCheckerMobile(printess, p,"image-invert", false);
+            //  container.appendChild(check);
+            // invert-image-checker
           } else {
             container.appendChild(getNumberSlider(printess, p, "image-contrast"));
           }
@@ -4682,7 +4697,7 @@ declare global {
     return container;
   }
 
-  function getSplitterSnippetsControl(printess: iPrintessApi, p: iExternalProperty, splitterDiv?: HTMLDivElement, hasReset: boolean = true): HTMLElement {
+  function getSplitterSnippetsControl(printess: iPrintessApi, p: iExternalProperty, splitterDiv?: HTMLDivElement, _hasReset: boolean = true): HTMLElement {
     const container = splitterDiv || document.createElement("div");
     container.appendChild(getSplitterSnippets(printess, p));
     return container;
@@ -5315,35 +5330,51 @@ declare global {
     if (forMobile) {
       return getInvertImageCheckerMobile(printess, p, metaProperty, forMobile);
     }
-    const button = document.createElement("button");
-    button.className = "btn btn-primary";
-    if (forMobile) {
-      button.classList.add("form-switch")
+
+    const f = document.createElement("div");
+    f.classList.add("invert-image-checker-container")
+    f.classList.add("form-control")
+
+    const label = document.createElement("label");
+    label.innerText = printess.gl("ui.invertImage");
+    f.appendChild(label);
+
+    const svg = printess.getIcon("image-solid");
+    svg.classList.add("invert-image-checker-svg");
+
+    const svg2 = printess.getIcon("image-regular");
+    svg2.classList.add("invert-image-checker-svg");
+
+    if (p.imageMeta?.invert !== 0) {
+      svg.classList.add("selected");
+      svg2.classList.remove("selected");
+    } else {
+      svg2.classList.add("selected");
+      svg.classList.remove("selected");
     }
 
-    const svg = printess.getIcon(p.imageMeta?.invert !== 0 ? "image-solid" : "image-regular");
-    svg.style.width = "32px";
-    svg.style.height = "32px";
-    svg.style.cursor = "pointer";
-    svg.style.margin = "5px";
-
-    button.onclick = () => {
-      const newValue = p.imageMeta?.invert === 0 ? 100 : 0;
-      printess.setNumberUiProperty(p, "image-invert", newValue);
+    svg.onclick = () => {
+      printess.setNumberUiProperty(p, "image-invert", 100);
       if (metaProperty && p.imageMeta) {
-        p.imageMeta["invert"] = newValue; // update our model
+        p.imageMeta["invert"] = 100; // update our model
       }
-      const svg = printess.getIcon(p.imageMeta?.invert !== 0 ? "image-solid" : "image-regular");
-      svg.style.width = "42px";
-      svg.style.height = "42px";
-      svg.style.cursor = "pointer";
-      button.innerHTML = "";
-      button.appendChild(svg);
+      svg.classList.add("selected");
+      svg2.classList.remove("selected");
+
+    }
+    svg2.onclick = () => {
+      printess.setNumberUiProperty(p, "image-invert", 0);
+      if (metaProperty && p.imageMeta) {
+        p.imageMeta["invert"] = 0; // update our model
+      }
+      svg2.classList.add("selected");
+      svg.classList.remove("selected");
     }
 
-    button.appendChild(svg);
 
-    return button;
+    f.appendChild(svg2);
+    f.appendChild(svg);
+    return f;
 
   }
 
@@ -6318,7 +6349,7 @@ declare global {
     if (addSpreads || removeSpreads) {
       const arrangePagesBtn = document.createElement("button");
       arrangePagesBtn.className = "btn btn-sm btn-outline-secondary w-100";
-      arrangePagesBtn.innerText = "Arrange Pages";
+      arrangePagesBtn.innerText = printess.gl("ui.arrangePages");
       arrangePagesBtn.onclick = () => getArrangePagesOverlay(printess, forMobile);
       pageButtons.appendChild(arrangePagesBtn);
     }
@@ -8351,7 +8382,7 @@ declare global {
     showModal(printess, modalId, layoutContainer, title);
   }
 
-  function closeLayoutOverlays(printess: iPrintessApi, forMobile: boolean) {
+  function closeLayoutOverlays(printess: iPrintessApi, _forMobile: boolean) {
 
     // close off canvas via its button, the only way it propably worked ...
     const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
@@ -8412,7 +8443,12 @@ declare global {
         }
 
         if (hasKeywordMenu) {
+          const desktopProperties = document.getElementById("desktop-properties");
+          if (desktopProperties) {
+            desktopProperties.style.paddingTop = "0px";
+          }
           const filter = document.createElement("div");
+          filter.classList.add("keyword-menu-wrapper");
           renderLayoutSnippetKeywordMenu(printess, filter, clusterDiv, forLayoutDialog); // is async! 
           container.appendChild(filter);
         }
@@ -8512,8 +8548,8 @@ declare global {
           if (s.title.startsWith("@@")) {
             return false;
           }
-          if (s.favourite && imCount === -1) {
-            return true;
+          if (imCount === -1) {
+            return s.sortNumber > 0;
           }
           return imCount === s.imageCount;
         })
@@ -8548,13 +8584,11 @@ declare global {
     if (!entry) return;
 
     for (const c of entry.categories) {
-      const categoryBtn = document.createElement("button");
-      categoryBtn.className = "btn btn-outline-primary mb-1 me-1";
+      const categoryBtn = document.createElement("li");
       categoryBtn.textContent = translateKeyWord(printess, c.name);
 
       if (c === entry.category) {
-        categoryBtn.classList.add("btn-primary");
-        categoryBtn.classList.remove("btn-outline-primary");
+        categoryBtn.classList.add("selected");
       }
 
       renderTopicButtons(printess, topicWrapper, clusterDiv, forLayoutDialog);
@@ -8562,7 +8596,7 @@ declare global {
       categoryBtn.onclick = () => {
         // Category always needs Topic selected
         uih_currentLayoutSnippetCategory = c.name;
-        uih_currentLayoutSnippetTopic = c.topics[0].name;
+        uih_currentLayoutSnippetTopic = c.topics[0];
         uih_currentLayoutSnippetKeywords = c.topics[0].keywords;
 
         renderTopicButtons(printess, topicWrapper, clusterDiv, forLayoutDialog);
@@ -8572,11 +8606,9 @@ declare global {
         if (buttons) {
           for (const b of buttons) {
             if (b !== categoryBtn) {
-              b.classList.remove("btn-primary");
-              b.classList.add("btn-outline-primary");
+              b.classList.remove("selected");
             } else {
-              b.classList.add("btn-primary");
-              b.classList.remove("btn-outline-primary");
+              b.classList.add("selected");
             }
           }
         }
@@ -8601,7 +8633,7 @@ declare global {
         topicBtn.textContent = translateKeyWord(printess, t.name);
 
         if (entry.topic === t) {
-          topicBtn.classList.add("btn-secondary");
+          topicBtn.classList.add("btn-primary");
           topicBtn.classList.remove("btn-outline-secondary");
         }
 
@@ -8611,10 +8643,10 @@ declare global {
           if (buttons) {
             for (const b of buttons) {
               if (b !== topicBtn) {
-                b.classList.remove("btn-secondary");
+                b.classList.remove("btn-primary");
                 b.classList.add("btn-outline-secondary");
               } else {
-                b.classList.add("btn-secondary");
+                b.classList.add("btn-primary");
                 b.classList.remove("btn-outline-secondary");
               }
             }
@@ -8637,10 +8669,10 @@ declare global {
   }
 
   async function setMenuState(printess: iPrintessApi, topic: iSnippetMenuTopic, clusterDiv: HTMLDivElement, forLayoutDialog: boolean): Promise<void> {
-    uih_currentLayoutSnippetTopic = topic.name;
+    uih_currentLayoutSnippetTopic = topic;
     uih_currentLayoutSnippetKeywords = topic.keywords;
 
-    const resultSet = await printess.loadLayoutSnippetsByKeywords(uih_currentLayoutSnippetKeywords);
+    const resultSet = await printess.loadLayoutSnippetsByKeywords(uih_currentLayoutSnippetKeywords, topic.id);
     uih_lastLayouSnippetKeywordsResults = resultSet;
     uih_lastLayouSnippetKeywords = uih_currentLayoutSnippetKeywords;
 
@@ -8685,8 +8717,28 @@ declare global {
       }
     }
 
+    let hasFavs = false;
+    for (const s of snippets) {
+      if (s.sortNumber > 0) {
+        hasFavs = true;
+        break;
+      }
+    }
 
-    const sorted = ["", ...Array.from(buttons).sort((a, b) => a - b).map(n => n + "")];
+
+    const sorted = Array.from(buttons).sort((a, b) => a - b).map(n => n + "");
+    if (hasFavs) {
+      sorted.unshift("");
+    }
+
+    if (!sorted.includes(uih_currentLayoutSnippetImageAmount)) {
+      if (sorted.includes("")) {
+        uih_currentLayoutSnippetImageAmount = "";
+      } else {
+        uih_currentLayoutSnippetImageAmount = sorted[sorted.length > 1 ? 1 : 0];
+      }
+    }
+
 
     for (const b of sorted) {
       const btn = document.createElement("button");
@@ -8722,7 +8774,7 @@ declare global {
     // clusterDiv: load snippet results into it (layout-snippet-cluster)
 
     const categoryWrapper = document.createElement("div");
-    categoryWrapper.className = "menu-category-wrapper";
+    categoryWrapper.className = "category-tabs"; // "menu-category-wrapper";
     parent.appendChild(categoryWrapper);
 
     const topicWrapper = document.createElement("div");
@@ -9255,7 +9307,7 @@ declare global {
     tableRow.style.border = "1px solid #ccc";
     tableRow.style.background = "var(--bs-table-active-bg)";
 
-    const bgs: Map<string, string> = new Map();
+    //const bgs: Map<string, string> = new Map();
     for (const ao of p.tableMeta?.tableAddOptions || []) {
       if (ao.type && ao.bg && ao.type === tableEditRow.type) {
         tableRow.style.background = ao.bg;
@@ -9312,7 +9364,7 @@ declare global {
     return validation;
   }
 
-  function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, forMobile: boolean): HTMLElement {
+  function renderTableDetails(printess: iPrintessApi, p: iExternalProperty, _forMobile: boolean): HTMLElement {
     const details: HTMLElement = document.createElement("div");
 
     if (!p.tableMeta) return details;
@@ -9861,7 +9913,7 @@ declare global {
   }
 
   // render ui hints for mobile-property-plus-button ("add-design") & change-layout button
-  function renderUiButtonHints(printess: iPrintessApi, container: HTMLElement, state: MobileUiState = uih_currentState, forMobile: boolean): void {
+  function renderUiButtonHints(printess: iPrintessApi, container: HTMLElement, _state: MobileUiState = uih_currentState, forMobile: boolean): void {
     const showLayoutsHint = (printess.showTabNavigation() && forMobile) || (!forMobile && uih_currentTabId !== "#LAYOUTS");
 
     const uiHints = [{
@@ -10043,7 +10095,7 @@ declare global {
   }
 
   // render mobile buttons to navigate through properties
-  function getMobilePropertyNavButtons(printess: iPrintessApi, state: MobileUiState, fromAutoSelect: boolean, hasControlHost: boolean = false): HTMLElement {
+  function getMobilePropertyNavButtons(printess: iPrintessApi, state: MobileUiState, fromAutoSelect: boolean, _hasControlHost: boolean = false): HTMLElement {
     let container = document.getElementById("mobile-nav-buttons-container");
     if (container) {
       container.innerHTML = "";
@@ -11254,7 +11306,16 @@ declare global {
         }
 
         const externalPropertyKinds: Array<iExternalPropertyKind> = ["background-button", "record-left-button", "record-right-button", "horizontal-scissor", "vertical-scissor", "splitter-layouts-button", "grid-gap-button", "convert-to-image", "convert-to-text"];
-        if (b.newState.externalProperty && externalPropertyKinds.includes(b.newState.externalProperty.kind)) {
+        if (b.newState.state === "off-canvas") {
+          // 
+          const buttonCircle = getButtonCircle(printess, b, false);
+          const caption = printess.gl(b.caption).replace(/\\n/g, "");
+          const buttonText = document.createElement("div");
+          buttonText.className = "mobile-property-caption no-selection";
+          buttonText.innerText = caption;
+          buttonDiv.appendChild(buttonCircle);
+          buttonDiv.appendChild(buttonText);
+        } else if (b.newState.externalProperty && externalPropertyKinds.includes(b.newState.externalProperty.kind)) {
           drawButtonContent(printess, buttonDiv, [b.newState.externalProperty], controlGroup)
         } else if (controlGroup > 0) {
           drawButtonContent(printess, buttonDiv, properties, controlGroup);
@@ -11377,7 +11438,25 @@ declare global {
     let hadSelectedButtons: boolean = false;
     const selectImageZoomButton = fromAutoSelect && b.newState.externalProperty?.kind === "image" && b.newState.externalProperty?.value !== b.newState.externalProperty?.validation?.defaultValue && b.newState.externalProperty?.imageMeta?.canScale;
 
-    if (b.newState.externalProperty?.kind === "background-button") {
+    if (b.newState.state === "off-canvas") {
+      // show current properties on off canvas
+      if (uih_currentProperties) {
+        const propsDiv = document.createElement("div");
+        propsDiv.classList.add("desktop-properties");
+        getProperties(printess, "frames", uih_currentProperties.filter(p => printess.isOffCanvasProperty(p)), propsDiv);
+
+        const button = document.createElement("button");
+        button.innerText = printess.gl("ui.buttonClose");
+        button.classList.add("btn");
+        button.classList.add("btn-primary");
+        button.addEventListener("click", () => {
+          hideModal("desktop-properties-off-canvas");
+        });
+        propsDiv.appendChild(button);
+        showModal(printess, "desktop-properties-off-canvas", propsDiv, printess.gl("ui.edit"));
+      }
+
+    } else if (b.newState.externalProperty?.kind === "background-button") {
       printess.selectBackground();
 
     } else if (b.newState.externalProperty?.kind === "record-left-button" || b.newState.externalProperty?.kind === "record-right-button") {

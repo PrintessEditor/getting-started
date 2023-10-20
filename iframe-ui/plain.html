@@ -61,11 +61,16 @@
             prompt("Save button pressed.\n\nsave-token:\n", + event.data.token);
             break;
 
+          case "load":
+            alert("Please show ui to load a new template.");
+            break;
+
           case "formFieldChanged":
             /* You can react to changes of price-relevant form fields here */
             console.log("Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'");
             console.log("label: [" + event.data.label + "]");
             console.log("tag: [" + event.data.tag + "]");
+
         }
       });
 
@@ -79,7 +84,7 @@
           token: "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJneTh6NDRFbUxpWjB2clVLclhsV3RpWlkxNUQyIiwianRpIjoibnl4NGJFZlZ5SVVvM1NkR2dYVnEtempzS3hlb0FYZUYiLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODg2ODUxMSwiZXhwIjoxOTM0MjI4NTExLCJpYXQiOjE2MTg4Njg1MTEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.CuI6zdCzBm2y3t2GBD4pYdyztFzSeSEfdGIDBeiZIYvzQckB9oEB1Z4hDkBCGZGBtTMRyuHCbkwZgO6uxD-ZyahifiqrIqfqSqtFEGwgZUF87TvV_KlrYWBzDNTaUIQjr-yUoxLkdnEMzh-3D5qV8UKWIDfqwnYd0KhJiB2K9CSg82_etnz5Lk-altMDAT8b1AnzxcjRAJ9_b6-CAJFXG6AAnfdl7c_PS3sD-RPOkJ75Ta2glfikIiGZzfh09bn5Ptk7rucRdxUsLCLR6m5nUFpZbV77d2eqRw8pT4Kl-5by5gvMr1wUBGbEx751CNXtcCO3qk4uNnptfZ3yCpK0Z2FOo2CYLZBzmDiYCrdFV5U-_SZuVOEl8vk0uR3tj_PQci_R7MlQOjpB4NjlKckQ2zGvBSKNeupuiC71UZ2AT5BFlbqMsuYu0necIztyKiWsBmbniVlLe-v7_paP1N4nS2haD2n4s4N_CenJqijtPggWsITfoLm2twCOe7yNB5IH7bcEFv1-MbANuaFmJVLOcTfc89Zi-mkidaHV-n_9qXypzyB-ih_27YBNluRGwcHgTEkbJecSssMfvHSt1MUuqX-8gbl7bhFGryqHA2gMoSZNDW0LkSYig2K3poOUumD67vtYdNSPLhOmDK4ck9wLAKLOvk6dtywg2qfV-58_VbI", // 
 
           /* Name of the template to load. You can also pass a save-token from "basket" or "back" callback here to load previously saved work. */
-          templateName: "spine",
+          templateName: "Emelie Font Problem",
           templateVersion: "draft",
 
           /* A unique ID to identify this session, can later be used to connect to a UserID once the user has logged in or createdan account */
@@ -88,6 +93,7 @@
           /* Optional if available: the ID of the current shop-user to keep all uploaded resources together and display for reccuring users */
           shopUserId: "",
 
+          showGallery: true,
 
           /* Optional: List of one or more templates to merge on load */
           /* mergeTemplates: [

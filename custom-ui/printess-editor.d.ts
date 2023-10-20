@@ -113,7 +113,7 @@ export interface printessAttachParameters {
   /**
    * list if custom-translations to be used by Printess buyer-side.
    * If set, it overrides all translations from your account-settings
-   * https://printess.com/kb/api-reference/custom-integration/index.html#translations
+   * https://printess.com/kb/api-reference/custom-integration.html#translations
    */
   translations?: Record<string, Record<string, string> | string>;
 
@@ -125,7 +125,7 @@ export interface printessAttachParameters {
   /**
    * To prevent the use of offensive language in customizeable texts, you can pass a list of forbidden words.
    * The use of offensive words can either throw an error during the validation or trigger the replacement of a bad word. 
-   * https://printess.com/kb/api-reference/custom-integration/index.html#offensive-language
+   * https://printess.com/kb/api-reference/custom-integration.html#offensive-language
    */
   offensiveWords?: string,
 
@@ -301,10 +301,10 @@ export interface printessAttachParameters {
 
   /**
    * Labels displayed at form-fields which have a price tag set
-   * e.g. {
+   * e.g. \{
           "mug-front": "+ 2.10 €",
           "mug-back": "+ 2.10 €",
-        }
+        \}
    */
   priceCategoryLabels?: Record<string, string>
 
@@ -472,6 +472,12 @@ export interface iPrintessApi {
    * @param err
    */
   bringErrorIntoView(err: iExternalError): Promise<void>
+
+  /**
+   * For off-canvas displays of to many frame properties. Determines if the property is suitable to be displayed off canvas.
+   * @param p the property to look for
+   */
+  isOffCanvasProperty(p: iExternalProperty): boolean
 
   /**
    * Indicates if a selected image frame can be splitted in certain directions
@@ -1274,10 +1280,33 @@ export interface iPrintessApi {
   isNoOfPagesValid(spreadSize: number): boolean
 
   /**
-   * Photo-Book only feature:
-   * re arranges all spreads by a given array of ids or `newSpread` 
-   * Handle with care, this can destroy your photo-book document
-   * @param newSpreadIds Array of spread id and optional snippetUrls in correct order
+   * Book-Inside-Pages only feature:
+   * re arranges all spreads by a given array of ids or "newSpread"
+   * 
+   * `id`: either current spread id or "newSpread"
+   * 
+   * `snippetUrl` (optional): Layout Snippet, which is inserted on the new spread
+   * 
+   * example:
+   * 
+   * ```
+   * await api.reArrangeSpreads([
+   *  {
+   *    id: "PZE4tKlZmD9Mx9gZ0OIfx" // existing spread
+   *  },
+   *  {
+   *    id: "newSpread", 
+   *    snippetUrl: "
+https://printess-prod.s3.eu-central-1.amazonaws.com/uploads/snippet/fc8b773be98ee6d58ffebd9d955a55252ddc9a0a/json/764f973bb7d9a0ae9691c3d62cf941baac6cd13e/91b02c876e345bdc8efe5d4582519a85dfc3726d.json?DOC=PCepmgRyO8E3vz0f7rXlh&ID=40be80b32d36fd85d3127f7258ead6b1dbcb8458"
+      },
+      {
+        id: "PRE4tKlZmD4jj9gZ0OIfx" // existing spread
+      }
+   * ])
+   * ```
+   * 
+   * Handle with care, this can destroy your Book-Inside-Pages document
+   * @param newSpreadIds Array of spread id or "newSpread" and optional snippetUrls for all "newSpreads" in correct order
    */
   reArrangeSpreads(newSpreadIds: Array<{ id: string | "newSpread", snippetUrl: string }>): Promise<boolean>
 
@@ -1709,7 +1738,7 @@ export interface iPrintessApi {
   /**
    * Retrieved availbale keyowrds for layout search
    */
-  loadLayoutSnippetsByKeywords(keywords: string[]): Promise<Array<iExternalSnippet>>
+  loadLayoutSnippetsByKeywords(keywords: string[], topicId?: string): Promise<Array<iExternalSnippet>>
 
   /** only for internal use, to transfer visual-viewport to iOs in iframe-mode */
   setIFrameViewPort(v: { offsetTop: number, height: number }): void
@@ -1960,7 +1989,7 @@ export interface iExternalSnippet {
   bgColor: string;
   priceLabel: string;
   imageCount: number;
-  favourite: number;
+  sortNumber: number;
 }
 
 export interface iLayoutSnippetFilterMenu {
@@ -1974,8 +2003,9 @@ export interface iLayoutSnippetFilterCategory {
 }
 
 export interface iLayoutSnippetFilterTopic {
-  keywords: Array<string>
-  name: string
+  keywords: Array<string>;
+  name: string;
+  id: string;
 }
 
 
@@ -1993,8 +2023,9 @@ export interface iSnippetMenuCategory {
 }
 
 export interface iSnippetMenuTopic {
-  keywords: Array<string>
-  name: string
+  keywords: Array<string>;
+  name: string;
+  id: string;
 }
 
 export interface iExternalFrameBounds {
@@ -2279,7 +2310,7 @@ export interface iMobileUIButton {
 }
 
 export interface iMobileUiState {
-  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop" | "table-edit"
+  state: "ext-value" | "form-fields" | "add" | "selection" | "imageCrop" | "table-edit" | "off-canvas"
   externalProperty?: iExternalProperty,
   metaProperty?: iExternalMetaPropertyKind,
   tableRowIndex?: number
