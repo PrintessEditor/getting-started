@@ -1406,9 +1406,7 @@ ul.progress-steps {
   background-color: var(--bs-primary);
 }
 
-.menu-image-amount-wrapper {
-  margin-bottom: 10px;
-}
+
 
 .mobile-upload-success-icon {
   width: 250px;
@@ -4044,24 +4042,48 @@ body.has-mobile-price-bar .mobile-pricebar {
  ***** Keyword Menu **** 
  */
 
+#desktop-properties.keyword-menu {
+  padding: 0px !important;
+}
+#desktop-properties.keyword-menu > * {
+  margin-bottom: 0px !important;
+}
+#desktop-properties.keyword-menu .layout-snippet-cluster {
+  padding: 10px;  
+}
+
 .keyword-menu-wrapper {
   position: sticky;
   left: 0;
   top: 0;
   z-index: 99999999;
   background-color: white;
-  /* top: calc(-1rem - 0px); */
 }
 
-.snippet-label {
+.menu-image-amount-wrapper {
+  min-height: 72px;
+  padding: 10px;
+  border-bottom: 1px solid gray;
+  overflow-x: auto;
+  background: #ddd;
+}
+.image-amount {
+  white-space: nowrap;
+}
+
+.menu-image-amount-wrapper > .label {
   font-size: var(--printess-font-size-normal);
+  padding-bottom: 5px;
+}
+.menu-image-amount-wrapper > .btn-group {
+  background-color: white;
 }
 
 .category-tabs {
   list-style: none;
   display: flex;
   justify-content: space-around;
-  padding: 0 60px;
+  padding: 10px 20px 0px 20px;
   margin: 0;
   width: 100%;
 
@@ -4099,48 +4121,13 @@ body.has-mobile-price-bar .mobile-pricebar {
   border-right: 1px solid gray;
 }
 
-/*
-.topics {
-  align-self: center;
-  background: #eee;
-  justify-content: center;
-  display: flex;
-  padding: 19px 10px;
-  border-top: 1px solid gray;
-  flex-wrap: wrap;
-}
-
-.topic {
-  background-color: white;
-  font-size: var(--printess-font-size-normal);
-  vertical-align: middle;
-  margin: 5px;
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  color: #666;
-}
-
-.topic:hover {
-  background: var(--printess-light);
-}
-
-.topic.selected {
-  background: var(--printess-dark);
-  color: white;
-}
-*/
-
 .menu-topic-wrapper {
   align-self: center;
   background: #eee;
-  margin: 0 -10px;
   justify-content: center;
   display: flex;
   padding: 19px 10px;
   border-top: 1px solid gray;
-  border-bottom: 1px solid gray;
   flex-wrap: wrap;
 }
 

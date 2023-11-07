@@ -312,6 +312,17 @@ export interface printessAttachParameters {
    * Provide a callback function which is called when an error happens.
    */
   errorCallback?: (errorName: ErrorName, data?: Record<string, string>) => void
+
+
+  showSplitterGridSizeButton?: boolean,
+  showBoxMenuUploadButton?: boolean,
+
+  /**
+   * Globally activates image-pixel-size-hints for all templates
+   * Is false by default. 
+   * (hint is shown close to the upload button)
+   */
+  showImageSizeHint?: boolean
 }
 
 
@@ -333,13 +344,13 @@ export interface iPrintessApi {
    */
   loadTemplate(templateNameOrToken: string, mergeTemplates?: iMergeTemplate[], takeOverFormFieldValues?: boolean): Promise<void>
 
- /**
-  * Loads template first and then exchange state from save-token.
-  * @param templateName name of template to load
-  * @param saveToken save-token to extract exchange state from 
-  * @param publishedVersion optional, default is true.
-  */
-  loadTemplateWithExchangeToken(templateName: string,  saveToken: string, publishedVersion?: boolean = true): Promise<void>
+  /**
+   * Loads template first and then exchange state from save-token.
+   * @param templateName name of template to load
+   * @param saveToken save-token to extract exchange state from 
+   * @param publishedVersion optional, default is true.
+   */
+  loadTemplateWithExchangeToken(templateName: string, saveToken: string, publishedVersion?: boolean = true): Promise<void>
 
   /**
    * Load a template to the Printess editor and sets form fields.
@@ -1341,7 +1352,7 @@ https://printess-prod.s3.eu-central-1.amazonaws.com/uploads/snippet/fc8b773be98e
   /**
    * Tells if user is allowed to duplicate the current spread
    */
-  canDuplicateSpread(): boolean 
+  canDuplicateSpread(): boolean
 
   /**
    * Duplicates the currently selected spread
@@ -1710,9 +1721,9 @@ https://printess-prod.s3.eu-central-1.amazonaws.com/uploads/snippet/fc8b773be98e
   hasLayoutSnippets(): boolean,
 
   /**
-    * Returns if LayoutSnippets are available
+    * Returns if sticker or layout snippet menus should be rendered
     */
-  hasLayoutSnippetMenu(): boolean
+  hasSnippetMenu(which: "layout" | "sticker"): boolean
 
   /**
     * Returns if LayoutSnippets are available
@@ -1720,9 +1731,17 @@ https://printess-prod.s3.eu-central-1.amazonaws.com/uploads/snippet/fc8b773be98e
   getDocumentAspectRatioName(): string
 
   /**
-   * Returns Filter Menu for Layout Snippets
+   * Returns the recommended upload size of the currently selected image
    */
+  getSelectedImageRecommendedSize(): null | { pxWidth: number, pxHeight: number }
+
+  /** @deprecated */
   getLayoutSnippetFilterMenu(): Promise<iLayoutSnippetFilterCategory[] | undefined>
+
+  /**
+   * Returns Filter Menu for Layout Snippets or Stickers
+   */
+  getSnippetFilterMenu(which: "layout" | "sticker"): Promise<iLayoutSnippetFilterCategory[] | undefined>
 
   /**
    * Returns if ui should show image count filter for layou snippets

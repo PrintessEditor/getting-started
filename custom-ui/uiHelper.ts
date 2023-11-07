@@ -89,6 +89,8 @@ declare global {
     uih_lastLayouSnippetKeywords = [];
     uih_lastLayouSnippetKeywordsResults = [];
     uih_currentLayoutSnippetImageAmount = "";
+
+    uih_scrollPositions.clear();
   }
 
   let uih_viewportHeight: number = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -119,7 +121,9 @@ declare global {
 
   let uih_stepTabOffset = 0;
   let uih_stepTabsScrollPosition = 0;
-  let uih_snippetsScrollPosition = 0;
+
+  const uih_scrollPositions: Map<string, number> = new Map();
+  const uih_scrollHandlerApplied = false;
 
   let uih_lastOverflowState = false;
   let uih_activeImageAccordion = "Buyer Upload";
@@ -142,7 +146,6 @@ declare global {
   let uih_lastLayouSnippetKeywordsResults: Array<iExternalSnippet> = [];
   let uih_currentLayoutSnippetImageAmount: string = "";
 
-  let uih_currentSpreadAspect: string = "not loaded"
   let uih_lastSpreadAspect: string = "not set"
 
   //console.log("Printess ui-helper loaded");
@@ -625,9 +628,7 @@ declare global {
               desktopGrid.style.height = height + "px"; // set desktopGrid height to available viewportHeight to determine 1fr properly on safari
 
               const desktopProperties = document.getElementById("desktop-properties");
-              if (desktopProperties) {
-                desktopProperties.style.paddingTop = "10px";
-              }
+
               const tabsContainer = <HTMLDivElement>document.querySelector(".tabs-navigation");
               if (printess.showTabNavigation() && desktopProperties) {
 
@@ -718,6 +719,20 @@ declare global {
       throw new Error("#desktop-properties or #desktop-printess-container not found, please add to html.")
     }
 
+    if (!uih_scrollHandlerApplied) {
+      container.addEventListener("scroll", () => {
+        const hash = uih_currentTabId;
+        const sp = container.scrollTop;
+        //console.log(sp);
+        //const c2 = document.getElementById("desktop-properties");
+        if (uih_scrollPositions.has(hash) && sp === 0) {
+          // skip, happens after redraw. 
+        } else {
+          uih_scrollPositions.set(hash, sp);
+          // console.warn("set scroll position " + hash + "=" + sp);
+        }
+      });
+    }
     const isPageIconsNavigation = printess.pageNavigationDisplay() === "icons";
     const isDocTabs = printess.pageNavigationDisplay() === "doc-tabs";
     const isStepTabsList = printess.stepHeaderDisplay() === "tabs list";
@@ -867,6 +882,13 @@ declare global {
       }
 
       if (printess.showTabNavigation()) {
+        if (uih_currentTabId === "#LAYOUTS" && printess.hasSnippetMenu("layout")) {
+          container.classList.add("keyword-menu");
+        } else if (isStickerTabSelected() && printess.hasSnippetMenu("sticker")) {
+          container.classList.add("keyword-menu");
+        } else {
+          container.classList.remove("keyword-menu");
+        }
         if (uih_currentTabId) {
           container.appendChild(getPropertiesTitle(printess));
           if (uih_currentTabId.startsWith("#FORMFIELDS")) {
@@ -893,6 +915,8 @@ declare global {
       }
 
     } else {
+
+      container.classList.remove("keyword-menu");
 
       //****** Show Just the frame / text Properties
 
@@ -1277,7 +1301,7 @@ declare global {
   function handleOffcanvasLayoutsContainer(printess: iPrintessApi, forMobile: boolean): void {
     const layoutsDiv = document.getElementById("layoutSnippets");
 
-    if (layoutsDiv && printess.hasLayoutSnippetMenu()) {
+    if (layoutsDiv && printess.hasSnippetMenu("layout")) {
       layoutsDiv.style.paddingTop = "0";
     }
     const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
@@ -1516,7 +1540,10 @@ declare global {
 
   function getPropertiesTitle(printess: iPrintessApi, forExternalLayoutsContainer: boolean = false): HTMLElement {
     const currentTab = uih_currentTabs.filter(t => t.id === uih_currentTabId)[0] || "";
-    if (currentTab.id === "#LAYOUTS" && printess.hasLayoutSnippetMenu() && !forExternalLayoutsContainer) {
+    if (currentTab.id === "#LAYOUTS" && !forExternalLayoutsContainer) {
+      return document.createElement("div");
+    }
+    if (isStickerTabSelected() && !forExternalLayoutsContainer) {
       return document.createElement("div");
     }
     const hasFormFieldTab = uih_currentTabs.filter(t => t.id === "#FORMFIELDS").length > 0;
@@ -1599,9 +1626,7 @@ declare global {
         if (forMobile && t.id === uih_currentTabId) {
           closeMobileFullscreenContainer();
         }
-        if (t.id !== uih_currentTabId) {
-          uih_snippetsScrollPosition = 0;
-        }
+
         selectTab(printess, t.id);
         if (t.id === "#BACKGROUND") {
           printess.selectBackground(); // triggers complete redraw with new Selection 
@@ -1658,7 +1683,7 @@ declare global {
         if (groupSnippets.length) {
           tabs.push({ title: printess.gl("ui.addPhotoFrame"), id: "photo-frames", content: renderGroupSnippets(printess, groupSnippets, forMobile) });
           container.appendChild(getTabPanel(printess, tabs, "photo-frames"));
-          container.scrollTop = uih_snippetsScrollPosition;
+          recallCurTabScrollPosition(container);
         } else {
           container.appendChild(renderMyImagesTab(printess, forMobile, undefined, undefined, undefined, printess.showSearchBar(), true));
         }
@@ -1671,9 +1696,17 @@ declare global {
         } else {
           removeExternalSnippetsContainer();
 
+
+          const currentSnippets = uih_currentLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+          const previousSnippets = uih_previousLayoutSnippets.map(g => g.name + "_" + g.snippets.length).join("|");
+          if (currentSnippets !== previousSnippets) {
+            uih_previousLayoutSnippets = uih_currentLayoutSnippets;
+            resetCurTabScrollPosition();
+          }
+
           const layoutsDiv = renderLayoutSnippets(printess, uih_currentLayoutSnippets, forMobile);
           container.appendChild(layoutsDiv);
-          container.scrollTop = uih_snippetsScrollPosition;
+          recallCurTabScrollPosition(container);
         }
         break;
       }
@@ -1692,12 +1725,52 @@ declare global {
         const groupSnippets = uih_currentGroupSnippets.filter(gs => gs.tabId === uih_currentTabId);
         if (groupSnippets.length) {
           const snippetsDiv = renderGroupSnippets(printess, groupSnippets, forMobile);
+          //TODO: resetCurTabScrollPosition() if snippets have changed
           container.appendChild(snippetsDiv);
-          container.scrollTop = uih_snippetsScrollPosition;
+          recallCurTabScrollPosition(container);
         }
         break;
       }
     }
+  }
+
+  function isStickerTabSelected(): boolean {
+    switch (uih_currentTabId) {
+      case "#PHOTOS":
+      case "#LAYOUTS":
+      case "#BACKGROUND":
+      case "#FORMFIELDS":
+      case "#FORMFIELDS1":
+      case "#FORMFIELDS2":
+        return false;
+      default: {
+        return true;
+      }
+    }
+  }
+
+  function recallCurTabScrollPosition(container?: HTMLElement | null) {
+    const s = uih_scrollPositions.get(uih_currentTabId);
+    if (s !== undefined) {
+      container = container || document.getElementById("desktop-properties");
+      if (container) {
+        // console.warn("SET CONTAINER SCROLLTOP = " + s);
+        if (s <= container.scrollHeight) {
+          container.scrollTop = s;
+        } else {
+          window.setTimeout(() => {
+            // do it again, in case some ui was not fully loaded.
+            if (container) {
+              container.scrollTo({ top: s, behavior: 'smooth' });
+            }
+          }, 500);
+        }
+      }
+    }
+  }
+
+  function resetCurTabScrollPosition() {
+    uih_scrollPositions.set(uih_currentTabId, 0);
   }
 
   /*
@@ -6325,7 +6398,7 @@ declare global {
   }
 
   // Get the add pages and arrange pages buttons for books to add them right after the page icons
-  function getPageArrangementButtons(printess: iPrintessApi, addSpreads: number, removeSpreads: number, forMobile: boolean): HTMLLIElement {
+  function getPageArrangementButtons(printess: iPrintessApi, addSpreads: number, removeSpreads: number, hasFacingPages: boolean, forMobile: boolean): HTMLLIElement {
     const li = document.createElement("li");
     li.className = "big-page-item mr";
     if (forMobile) {
@@ -6340,7 +6413,8 @@ declare global {
     if (addSpreads > 0) {
       const btnAdd = document.createElement("div");
       btnAdd.className = "btn btn-sm btn-outline-secondary w-100";
-      btnAdd.innerText = "+" + (addSpreads * 2) + " " + printess.gl("ui.pages");
+      const faktor = hasFacingPages ? 2 : 1
+      btnAdd.innerText = "+" + (addSpreads * faktor) + " " + printess.gl("ui.pages");
       btnAdd.onclick = () => {
         printess.addSpreads();
       }
@@ -6682,7 +6756,7 @@ declare global {
         const addSpreads = printess.canAddSpreads();
         const removeSpreads = printess.canRemoveSpreads();
         if (addSpreads > 0 || removeSpreads > 0) {
-          pagesContainer.appendChild(getPageArrangementButtons(printess, addSpreads, removeSpreads, forMobile));
+          pagesContainer.appendChild(getPageArrangementButtons(printess, addSpreads, removeSpreads, hasFacingPages, forMobile));
         }
 
         ul.appendChild(pagesContainer);
@@ -7424,6 +7498,18 @@ declare global {
     multipleImagesHint.textContent = printess.gl("ui.uploadMultipleImagesInfo");
     if (forMobile && p) multipleImagesHint.style.display = "none";
     if (images.length <= 12 && !p?.id.startsWith("FF_")) container.appendChild(multipleImagesHint);
+
+    const s = printess.getSelectedImageRecommendedSize();
+    if (s) {
+      let info = printess.gl("ui.imageSizeInfo");
+      info = info.replace("[image-size]", s.pxWidth + " x " + s.pxHeight + " px");
+      const imageSizeHint = document.createElement("p");
+      imageSizeHint.id = "image-size-hint";
+      imageSizeHint.style.fontFamily = "var(--bs-font-sans-serif)";
+      imageSizeHint.textContent = info;
+      if (forMobile && p) imageSizeHint.style.display = "none";
+      if (images.length <= 12 && !p?.id.startsWith("FF_")) container.appendChild(imageSizeHint);
+    }
 
     if (printess.showSearchBar()) { // && images.length > 5 => searchBar gone after search, if result has 5 or less items only
       container.appendChild(getSearchBar(printess, p, container, forMobile, showSearchIcon));
@@ -8297,10 +8383,6 @@ declare global {
           if (snippet.priceLabel) thumbDiv.appendChild(priceBox);
 
           thumbDiv.onclick = () => {
-            const propsDiv = document.getElementById("desktop-properties");
-            if (propsDiv && !forMobile && printess.showTabNavigation()) {
-              uih_snippetsScrollPosition = propsDiv.scrollTop;
-            }
             if (forMobile) {
               closeMobileFullscreenContainer();
               div.innerHTML === "";
@@ -8413,7 +8495,7 @@ declare global {
     if (layoutSnippets) {
 
       // render layout snippet filter 
-      const hasKeywordMenu = printess.hasLayoutSnippetMenu();
+      const hasKeywordMenu = printess.hasSnippetMenu("layout");
 
       for (const cluster of layoutSnippets) {
         if (!forLayoutDialog && !hasKeywordMenu) {
@@ -8443,27 +8525,23 @@ declare global {
         }
 
         if (hasKeywordMenu) {
-          const desktopProperties = document.getElementById("desktop-properties");
-          if (desktopProperties) {
-            desktopProperties.style.paddingTop = "0px";
-          }
           const filter = document.createElement("div");
           filter.classList.add("keyword-menu-wrapper");
-          renderLayoutSnippetKeywordMenu(printess, filter, clusterDiv, forLayoutDialog); // is async! 
+          renderSnippetKeywordMenu(printess, "layout", filter, clusterDiv, forLayoutDialog); // is async! 
           container.appendChild(filter);
         }
 
         if (hasKeywordMenu && uih_currentLayoutSnippetKeywords.length > 0) {
 
-          const uih_currentSpreadAspect = printess.getDocumentAspectRatioName();
+          const currentSpreadAspect = printess.getDocumentAspectRatioName();
 
-          if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|") && uih_currentSpreadAspect === uih_lastSpreadAspect) {
+          if (uih_currentLayoutSnippetKeywords.join("|") === uih_lastLayouSnippetKeywords.join("|") && currentSpreadAspect === uih_lastSpreadAspect) {
             renderLayoutSnippetCluster(printess, clusterDiv, uih_lastLayouSnippetKeywordsResults, forLayoutDialog, !!forMobile)
           } else {
             printess.loadLayoutSnippetsByKeywords(uih_currentLayoutSnippetKeywords).then((snippets) => {
               uih_lastLayouSnippetKeywordsResults = snippets;
               uih_lastLayouSnippetKeywords = uih_currentLayoutSnippetKeywords;
-              uih_lastSpreadAspect = uih_currentSpreadAspect;
+              uih_lastSpreadAspect = currentSpreadAspect;
               renderLayoutSnippetCluster(printess, clusterDiv, snippets, forLayoutDialog, !!forMobile)
             });
           }
@@ -8514,10 +8592,6 @@ declare global {
     if (snippet.priceLabel) thumbDiv.appendChild(priceBox);
 
     thumbDiv.onclick = () => {
-      const propsDiv = document.getElementById("desktop-properties");
-      if (propsDiv && !forMobile && printess.showTabNavigation()) {
-        uih_snippetsScrollPosition = propsDiv.scrollTop;
-      }
       printess.insertLayoutSnippet(snippet.snippetUrl);
       // close layout dialogs / canvas
       closeLayoutOverlays(printess, forMobile ?? uih_currentRender === "mobile");
@@ -8530,7 +8604,7 @@ declare global {
     clusterDiv: HTMLDivElement, resultSet: Array<iExternalSnippet>,
     forLayoutDialog: boolean, forMobile: boolean) {
 
-    const hasKeywordMenu = printess.hasLayoutSnippetMenu();
+    const hasKeywordMenu = printess.hasSnippetMenu("layout");
     const numberOfColumns = printess.numberOfColumns();
 
     let snippets: Array<iExternalSnippet> = resultSet;
@@ -8700,7 +8774,7 @@ declare global {
     //btnGroup.ariaLabel = "Image Amount Filter Buttons";
 
     const label1 = document.createElement("div");
-    label1.className = "snippet-label";
+    label1.className = "label";
     label1.innerText = printess.gl("ui.photoAmount"); //  "How many photos?"
     div.appendChild(label1);
 
@@ -8767,7 +8841,7 @@ declare global {
     div.appendChild(btnGroup);
   }
 
-  async function renderLayoutSnippetKeywordMenu(printess: iPrintessApi, parent: HTMLDivElement, clusterDiv: HTMLDivElement, forLayoutDialog: boolean) {
+  async function renderSnippetKeywordMenu(printess: iPrintessApi, which: "layout" | "sticker", parent: HTMLDivElement, clusterDiv: HTMLDivElement, forLayoutDialog: boolean) {
     //forLayoutDialog: boolean, forMobile: boolean) {
 
     // parent: Menu Div / Filter
@@ -8788,7 +8862,7 @@ declare global {
 
 
     if (!uih_currentMenuCategories) {
-      uih_currentMenuCategories = (await printess.getLayoutSnippetFilterMenu()) ?? null;
+      uih_currentMenuCategories = (await printess.getSnippetFilterMenu(which)) ?? null;
     }
 
     if (uih_currentMenuCategories) {
@@ -11145,8 +11219,9 @@ declare global {
 
         // also show chage layout on images:
         // buttons.unshift(...printess.getMobileUiSplitterLayoutsButton());
-
-        buttons.push(...printess.getMobileUiScissorsButtons());
+        if (uih_currentProperties.filter(p => p.kind === "image").length) {
+          buttons.push(...printess.getMobileUiScissorsButtons());
+        }
         buttons.push(...printess.getMobileUiSplitterGapButton());
 
         const isImageProperty = uih_currentProperties.length === 1 && uih_currentProperties[0].kind === "image";
