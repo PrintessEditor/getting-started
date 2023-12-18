@@ -43,10 +43,7 @@ iframe.contentWindow.postMessage({
 
       /* Optional if available: the ID of the current shop-user to keep all uploaded resources together and display for reccuring users */ 
       shopUserId: properties.shopUserId,
-      
-      /* Optional: you custom CSS or a Bootstrap Theme */
-      cssUrl: window.location.origin + "/bootstrap-themes/sketchy.css", 
-
+     
       /* Optional: List of one or more templates to merge on load */
       mergeTemplates: [
         {
