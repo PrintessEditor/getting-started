@@ -8,7 +8,7 @@
   <meta charset="utf-8">
 
   <!--Please always add the correct viewport to ensure Printess works fine on mobile devices-->
-  <meta name="viewport" content="width=device-width">
+  <meta name="viewport" content="width=device-width, interactive-widget=resizes-content">
 
   <style>
     /* Counter act the Safari viewport-height bug */
@@ -61,11 +61,16 @@
             prompt("Save button pressed.\n\nsave-token:\n", + event.data.token);
             break;
 
+          case "load":
+            alert("Please show ui to load a new template.");
+            break;
+
           case "formFieldChanged":
             /* You can react to changes of price-relevant form fields here */
             console.log("Form Field: [" + event.data.name + "] changed to '" + event.data.value + "'");
             console.log("label: [" + event.data.label + "]");
             console.log("tag: [" + event.data.tag + "]");
+
         }
       });
 
@@ -76,18 +81,17 @@
         cmd: "attach", properties: {
 
           /* Paste your Printess shop-token here */
-          token: "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJZa3BjU0xoQWpKVXNBUmtnd1UwQjV6WEVub3kxIiwianRpIjoiZld5VGpNaUVrMjU2QUpWWFBmWEZndTRxWnlnMkltSUciLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYyMTU0MjA5NywiZXhwIjoxOTM2OTAyMDk3LCJpYXQiOjE2MjE1NDIwOTcsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.ODyJTgVwyT8LdmXg9bLnMusRJS9wSm5EVGUPhEyxnBmJcoviIfVZ4PByDsk09W0dzQmsHmt9H4PdO_71JxasNu6dbs8StKl0UZgJtX6zYJc8XLI421MJ2U3sn4_KXPFonRJ3HeaeMQCapSApgZCiisxxZRw8aKTn4RckAZEwNh9dXQBe0x72tknn0NHeX361pGJ2BVpa6GthGRUNl25xAZ-YW2AXnWGpJPkEf5Exv8GASeoH9UlwgrJ04WfCa1yElx8q7Q1HLoZy7d8oLxQ4BePdVOKqPQd5dbbXJvAvqtJ8B0PsarrnB0jY7GOisvccTLUGRVsKTUV6itw9MpTR3xV2QaymRP35zryNwcFkqbp6FiE6M7iB2kD1BTVzJskauQVOL9_gBfBKKjiQwxyy7KRCjDh53lxTkBsJujX0zHTsXn46dR0g5pr6FZNoTXhdCT8GTtc616Jv7RRxide4Pt8zEdaOAOo16YHA2QTwU7OjfT9x2YIkX-wjrlqzn81WnbU5Ycz54FD7xyAdHYSiC9VZpno74Bpcw7hUt7wmt__5bJlxZg-UwMdW2eflujBZ8kNa9xMi7nmtWHrojzzfn-WQOL2zTiiK5-T2SNKpBlntZKnFpy_JVDj_AN6MiWvCf29Jw3xSfZFDUgmihNTBzwxOu5L_6IwH5aLk2nOLJCs", // 
+          token: "eyJhbGciOiJSUzI1NiIsImtpZCI6InByaW50ZXNzLXNhYXMtYWxwaGEiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJneTh6NDRFbUxpWjB2clVLclhsV3RpWlkxNUQyIiwianRpIjoibnl4NGJFZlZ5SVVvM1NkR2dYVnEtempzS3hlb0FYZUYiLCJyb2xlIjoic2hvcCIsIm5iZiI6MTYxODg2ODUxMSwiZXhwIjoxOTM0MjI4NTExLCJpYXQiOjE2MTg4Njg1MTEsImlzcyI6IlByaW50ZXNzIEdtYkggJiBDby5LRyIsImF1ZCI6InByaW50ZXNzLXNhYXMifQ.CuI6zdCzBm2y3t2GBD4pYdyztFzSeSEfdGIDBeiZIYvzQckB9oEB1Z4hDkBCGZGBtTMRyuHCbkwZgO6uxD-ZyahifiqrIqfqSqtFEGwgZUF87TvV_KlrYWBzDNTaUIQjr-yUoxLkdnEMzh-3D5qV8UKWIDfqwnYd0KhJiB2K9CSg82_etnz5Lk-altMDAT8b1AnzxcjRAJ9_b6-CAJFXG6AAnfdl7c_PS3sD-RPOkJ75Ta2glfikIiGZzfh09bn5Ptk7rucRdxUsLCLR6m5nUFpZbV77d2eqRw8pT4Kl-5by5gvMr1wUBGbEx751CNXtcCO3qk4uNnptfZ3yCpK0Z2FOo2CYLZBzmDiYCrdFV5U-_SZuVOEl8vk0uR3tj_PQci_R7MlQOjpB4NjlKckQ2zGvBSKNeupuiC71UZ2AT5BFlbqMsuYu0necIztyKiWsBmbniVlLe-v7_paP1N4nS2haD2n4s4N_CenJqijtPggWsITfoLm2twCOe7yNB5IH7bcEFv1-MbANuaFmJVLOcTfc89Zi-mkidaHV-n_9qXypzyB-ih_27YBNluRGwcHgTEkbJecSssMfvHSt1MUuqX-8gbl7bhFGryqHA2gMoSZNDW0LkSYig2K3poOUumD67vtYdNSPLhOmDK4ck9wLAKLOvk6dtywg2qfV-58_VbI", // 
 
           /* Name of the template to load. You can also pass a save-token from "basket" or "back" callback here to load previously saved work. */
-          templateName: "dm_football_wales_tabloid_proposal",
+          templateName:  "Photo Mug",
           templateVersion: "draft",
 
           /* A unique ID to identify this session, can later be used to connect to a UserID once the user has logged in or createdan account */
           basketId: "Some-Unique-Basket-Or-Session-Id",
 
           /* Optional if available: the ID of the current shop-user to keep all uploaded resources together and display for reccuring users */
-          shopUserId: "",
-
+          shopUserId: ""
 
           /* Optional: List of one or more templates to merge on load */
           /* mergeTemplates: [
@@ -131,7 +135,7 @@
   </script>
 
 
-  <iframe id="printess" src="https://editor.printess.com/v/nightly/printess-editor/embed.html" onload="loadPrintess()"></iframe>
+  <iframe id="printess" src="https://editor.printess.com/v/2.6.0/printess-editor/embed.html" onload="loadPrintess()"></iframe>
 
   </body>
 

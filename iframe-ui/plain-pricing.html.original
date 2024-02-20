@@ -8,7 +8,7 @@
   <meta charset="utf-8">
 
   <!--Please always add the correct viewport to ensure Printess works fine on mobile devices-->
-  <meta name="viewport" content="width=device-width">
+  <meta name="viewport" content="width=device-width, interactive-widget=resizes-content">
 
   <style>
     /* Counter act the Safari viewport-height bug */
@@ -90,7 +90,7 @@
             };
 
             // ** calculate snippet prices
-            const snippetPrice = event.data.priceInfo.snippetPriceCategories.map(pc => (sampleData.snippetPrices[pc.priceCategory] || 0) * pc.amount).reduce((p, c) => p + c, 0)
+            const snippetPrice = event.data.priceInfo.snippetPriceCategories.map(pc => (sampleData.snippetPrices[pc.priceCategory - 1] || 0) * pc.amount).reduce((p, c) => p + c, 0)
 
             // ** calculate price categories
             const categoriesPrice = event.data.priceInfo.priceCategories.map(dc => (sampleData.priceCategories[dc] || 0)).reduce((p, c) => p + c, 0);
