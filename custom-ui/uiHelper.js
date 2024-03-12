@@ -25,6 +25,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         resetUi: resetUi,
         customLayoutSnippetRenderCallback: undefined
     };
+    const resolvedPromise = Promise.resolve();
+    function asyncTimeout(ms) {
+        if (ms === 0) {
+            return resolvedPromise;
+        }
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
     function createValidationRegex(pattern) {
         let flag = undefined;
         const fidx = pattern.indexOf("/");
@@ -384,6 +391,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const callback = printess.getAddToBasketCallback();
             if (callback) {
                 yield printess.clearSelection();
+                const basketBtn = document.querySelector(".printess-basket-button");
+                if (basketBtn) {
+                    basketBtn.classList.add("disabled-button");
+                    yield asyncTimeout(100);
+                }
                 printess.showOverlay(printess.gl("ui.saveProgress"));
                 const saveToken = yield printess.save();
                 let url = "";
@@ -392,6 +404,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 }
                 callback(saveToken, url);
                 printess.hideOverlay();
+                if (basketBtn) {
+                    basketBtn.classList.remove("disabled-button");
+                }
             }
             else {
                 alert(printess.gl("ui.addToBasketCallback"));
@@ -404,12 +419,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const saveButton = document.getElementById("printess-save-button");
             if (callback) {
                 yield printess.clearSelection();
-                if (saveButton)
-                    saveButton.classList.add("disabled");
+                if (saveButton) {
+                    saveButton.classList.add("disabled-button");
+                    yield asyncTimeout(100);
+                }
                 printess.showOverlay(printess.gl("ui.saveProgress"));
                 const saveToken = yield printess.save();
                 callback(saveToken, type);
                 printess.hideOverlay();
+                if (saveButton) {
+                    saveButton.classList.remove("disabled-button");
+                }
             }
             else {
                 alert(printess.gl("ui.saveTemplateCallback"));
@@ -808,6 +828,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 uih_layoutSelectionDialogHasBeenRendered = true;
                 renderLayoutSelectionDialog(printess, layoutSnippets, false);
             }
+        }
+        else if (printess.selectLayoutsTabOneTime()) {
+            window.setTimeout(() => {
+                const layoutTab = document.querySelector('[data-tabid="#LAYOUTS"]');
+                if (layoutTab)
+                    layoutTab.click();
+            }, 1000);
         }
         if (state === "document" && printess.hasLayoutSnippets() && !getStorageItemSafe("changeLayout") && !printess.showTabNavigation()) {
             toggleChangeLayoutButtonHint();
@@ -2021,6 +2048,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         ok.style.marginRight = "4px";
         ok.style.alignSelf = "start";
         ok.style.padding = "5px";
+        if (btn.name === "basket") {
+            ok.classList.add("printess-basket-button");
+        }
         ok.textContent = btn.text;
         ok.onclick = () => btn.task();
         return ok;
@@ -2507,7 +2537,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         const basketBtn = document.createElement("button");
         const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket");
-        basketBtn.className = "btn btn-primary d-flex justify-content-center";
+        basketBtn.className = "btn btn-primary d-flex justify-content-center printess-basket-button";
         basketBtn.style.whiteSpace = "nowrap";
         if (!hasSaveAndCloseBtnInPageIconView && printess.pageNavigationDisplay() === "icons") {
             basketBtn.style.flex = "1 1 0";
@@ -2659,7 +2689,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         txt.textContent = printess.gl("ui.buttonLoad").toUpperCase();
         btn.appendChild(txt);
         btn.onclick = () => __awaiter(this, void 0, void 0, function* () {
-            btn.classList.add("disabled");
+            btn.classList.add("disabled-button");
+            yield asyncTimeout(100);
             const cb = printess.getLoadTemplateButtonCallback();
             if (cb) {
                 yield printess.clearSelection();
@@ -2668,7 +2699,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             else {
                 alert("Please add your callback in attachPrintess. [loadTemplateButtonCallback]");
             }
-            window.setTimeout(() => btn.classList.remove("disabled"), 1500);
+            window.setTimeout(() => btn.classList.remove("disabled-button"), 1500);
         });
         return btn;
     }
@@ -3192,7 +3223,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     }
     function getStepsPutToBasketButton(printess) {
         const basketButton = document.createElement("button");
-        basketButton.className = "btn btn-primary";
+        basketButton.className = "btn btn-primary printess-basket-button";
         basketButton.style.whiteSpace = "nowrap";
         basketButton.innerText = printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket");
         basketButton.onclick = () => addToBasket(printess);
@@ -5843,7 +5874,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     wrapper.appendChild(saveAndQuitButton);
                 }
                 const button = document.createElement("button");
-                button.className = "btn btn-primary ms-2";
+                button.className = "btn btn-primary ms-2 printess-basket-button";
                 const iconName = printess.userInBuyerSide() ? "print-solid" : printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
                 const icon = printess.getIcon(iconName);
                 icon.style.width = "25px";
@@ -7459,6 +7490,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         layoutContainer.appendChild(infoText);
         layoutContainer.appendChild(renderLayoutSnippets(printess, layoutSnippets, forMobile, true));
         showModal(printess, modalId, layoutContainer, title);
+        if (forMobile) {
+        }
     }
     function closeLayoutOverlays(printess, _forMobile) {
         const myOffcanvas = document.getElementById("closeLayoutOffCanvas");
@@ -8738,6 +8771,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                 renderLayoutSelectionDialog(printess, layoutSnippets, true);
             }
         }
+        else if (printess.selectLayoutsTabOneTime()) {
+            window.setTimeout(() => {
+                const layoutTab = document.querySelector('[data-tabid="#LAYOUTS"]');
+                if (layoutTab)
+                    layoutTab.click();
+                window.setTimeout(() => removeMobileOverlayPaddings(), 100);
+            }, 1000);
+        }
         if (state === "document" && printess.hasLayoutSnippets() && !getStorageItemSafe("changeLayout")) {
             toggleChangeLayoutButtonHint();
         }
@@ -8983,6 +9024,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     function getMobileNavButton(btn, circleWhiteBg) {
         const button = document.createElement("div");
         button.className = "mobile-property-nav-button";
+        if (btn.name === "basket") {
+            button.classList.add("printess-basket-button");
+        }
         const circle = document.createElement("div");
         circle.className = "mobile-property-circle bg-primary text-white";
         circle.onclick = () => btn.task();
@@ -9308,7 +9352,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         }
         {
             const btn = document.createElement("button");
-            btn.className = "btn btn-sm ms-2 me-2 main-button";
+            btn.className = "btn btn-sm ms-2 me-2 main-button printess-basket-button";
             if (printess.hasSteps() && !printess.hasNextStep()) {
                 btn.classList.add("main-button-pulse");
             }

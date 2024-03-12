@@ -1038,6 +1038,11 @@ export interface iPrintessApi {
   showLayoutsDialog(): boolean;
 
   /**
+   * Indicates if a Layouts Tab should be auto selected;
+   */
+  selectLayoutsTabOneTime(): boolean;
+
+  /**
    * Returns how many columns a Change Layout overview should have to display layout snippets more properly
    */
   numberOfColumns(): number;
@@ -1212,6 +1217,8 @@ export interface iPrintessApi {
    * @param height Optional: Overrides the retrieved offsetHeight of the printess container - helpfull when animation are longer running
    */
   resizePrintess(immediate?: boolean, focusSelection?: boolean, width?: number, height?: number, focusFormFieldId?: string): void;
+
+  resizePrintessExact(immediate: boolean, focusSelection: boolean, size: iRect, focusFormFieldId?: string): Promise<void> 
 
   getTemplateTitle(): string;
 
@@ -1733,7 +1740,7 @@ https://printess-prod.s3.eu-central-1.amazonaws.com/uploads/snippet/fc8b773be98e
   /**
    * Returns all default english translations or if language property is set / browser language is detected (if set to auto) the respective translation if available
    */
-  getTranslations(): Record<string, Record<string, string | number> | string | number>;
+  //  getTranslations(): Record<string, Record<string, string | number> | string | number>;
 
   /**
    * @deprecated please use async version instead, to ensure open text editors are saved
@@ -1940,6 +1947,9 @@ https://printess-prod.s3.eu-central-1.amazonaws.com/uploads/snippet/fc8b773be98e
 
   streamPrompt(prompt: string, onMessage: (message: string) => void, onFinished: () => void): void;
   loadLetterGeneratorState(): Promise<LetterState | undefined>;
+
+  /** Provides access to the sample date of the template */
+  getSamplePriceData(): { priceTestModeEnabled: boolean, legalNotice: string, oldPrice: number, snippetPrices: Array<number>, priceCategories: { [key: string]: number }, basePrice: number, infoUrl: string }
 }
 
 export interface iBuyerStep {
@@ -2135,6 +2145,10 @@ export interface iExternalProperty {
   listMeta?: iExternalListMeta;
   tableMeta?: iExternalTableMeta;
   tabId?: string;
+  validationResult?: {
+    remainingChars: string,
+    error: string
+  }
 }
 export interface iExternalTextStyle {
   size: string;
@@ -2327,7 +2341,7 @@ export interface iMergeTemplate {
   ignoreExchangeIds?: boolean
 }
 
-export declare type externalFormFieldChangeCallback = (name: string, value: string, tag: string) => void;
+export declare type externalFormFieldChangeCallback = (name: string, value: string, tag: string, label: string, ffLabel: string) => void;
 export declare type externalSelectionChangeCallback = (properties: Array<iExternalProperty>, scope: "document" | "frames" | "text") => void;
 export declare type externalSpreadChangeCallback = (groupSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, layoutSnippets: ReadonlyArray<iExternalSnippetCluster> | Array<iExternalSnippetCluster>, tabs: ReadonlyArray<iExternalTab> | Array<iExternalTab>) => void;
 export declare type externalGetOverlayCallback = (properties: Array<{ kind: iExternalPropertyKind, isDefault: boolean, isMandatory: boolean }>, width: number, height: number) => HTMLDivElement;

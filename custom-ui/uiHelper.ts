@@ -24,7 +24,17 @@ declare const bootstrap: any;
     customLayoutSnippetRenderCallback: undefined
   }
 
+  const resolvedPromise = Promise.resolve();
+
+  function asyncTimeout(ms: number): Promise<void> {
+    if (ms === 0) {
+      return resolvedPromise;
+    }
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   // bkr: das MUSS bei änderungen auch im BuyerPropertiesGroup.ts landen!!!
+  // und allen anderen uis  
   function createValidationRegex(pattern: string): RegExp {
     let flag: string | undefined = undefined;
     const fidx = pattern.indexOf("/");
@@ -439,7 +449,13 @@ declare const bootstrap: any;
 
     const callback = printess.getAddToBasketCallback();
     if (callback) {
+
       await printess.clearSelection();
+      const basketBtn = document.querySelector(".printess-basket-button");
+      if (basketBtn) {
+        basketBtn.classList.add("disabled-button");
+        await asyncTimeout(100);
+      }
       printess.showOverlay(printess.gl("ui.saveProgress"))
       const saveToken = await printess.save();
       let url = "";
@@ -448,6 +464,9 @@ declare const bootstrap: any;
       }
       callback(saveToken, url);
       printess.hideOverlay();
+      if (basketBtn) {
+        basketBtn.classList.remove("disabled-button");
+      }
     } else {
       alert(printess.gl("ui.addToBasketCallback"));
     }
@@ -459,11 +478,17 @@ declare const bootstrap: any;
 
     if (callback) {
       await printess.clearSelection();
-      if (saveButton) saveButton.classList.add("disabled");
+      if (saveButton) {
+        saveButton.classList.add("disabled-button");
+        await asyncTimeout(100);
+      }
       printess.showOverlay(printess.gl("ui.saveProgress"));
       const saveToken = await printess.save();
       callback(saveToken, type);
       printess.hideOverlay();
+      if (saveButton) {
+        saveButton.classList.remove("disabled-button");
+      }
     } else {
       alert(printess.gl("ui.saveTemplateCallback"))
     }
@@ -935,6 +960,11 @@ declare const bootstrap: any;
         uih_layoutSelectionDialogHasBeenRendered = true;
         renderLayoutSelectionDialog(printess, layoutSnippets, false);
       }
+    } else if (printess.selectLayoutsTabOneTime()) {
+      window.setTimeout(() => {
+        const layoutTab = document.querySelector('[data-tabid="#LAYOUTS"]');
+        if (layoutTab) (<HTMLDivElement>layoutTab).click();
+      }, 1000)
     }
 
     // attach/remove shadow pulse animation to/from "change layout" button
@@ -2423,6 +2453,9 @@ declare const bootstrap: any;
     ok.style.marginRight = "4px";
     ok.style.alignSelf = "start";
     ok.style.padding = "5px";
+    if (btn.name === "basket") {
+      ok.classList.add("printess-basket-button");
+    }
     ok.textContent = btn.text;
     ok.onclick = () => btn.task();
     return ok;
@@ -3036,7 +3069,7 @@ declare const bootstrap: any;
 
     const basketBtn = document.createElement("button");
     const caption = hasSaveAndCloseBtnInPageIconView ? "" : printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket")
-    basketBtn.className = "btn btn-primary d-flex justify-content-center";
+    basketBtn.className = "btn btn-primary d-flex justify-content-center printess-basket-button";
     basketBtn.style.whiteSpace = "nowrap";
     if (!hasSaveAndCloseBtnInPageIconView && printess.pageNavigationDisplay() === "icons") {
       basketBtn.style.flex = "1 1 0";
@@ -3191,7 +3224,8 @@ declare const bootstrap: any;
     txt.textContent = printess.gl("ui.buttonLoad").toUpperCase();
     btn.appendChild(txt);
     btn.onclick = async () => {
-      btn.classList.add("disabled");
+      btn.classList.add("disabled-button");
+      await asyncTimeout(100);
       const cb = printess.getLoadTemplateButtonCallback();
       if (cb) {
         await printess.clearSelection();
@@ -3199,7 +3233,7 @@ declare const bootstrap: any;
       } else {
         alert("Please add your callback in attachPrintess. [loadTemplateButtonCallback]")
       }
-      window.setTimeout(() => btn.classList.remove("disabled"), 1500);
+      window.setTimeout(() => btn.classList.remove("disabled-button"), 1500);
     }
 
     return btn;
@@ -3854,7 +3888,7 @@ declare const bootstrap: any;
   function getStepsPutToBasketButton(printess: iPrintessApi): HTMLButtonElement {
     // put to basket callback
     const basketButton = document.createElement("button");
-    basketButton.className = "btn btn-primary";
+    basketButton.className = "btn btn-primary printess-basket-button";
     basketButton.style.whiteSpace = "nowrap";
     basketButton.innerText = printess.userInBuyerSide() ? printess.gl("ui.buttonPrint") : printess.gl("ui.buttonBasket")
     basketButton.onclick = () => addToBasket(printess);
@@ -7024,7 +7058,7 @@ declare const bootstrap: any;
 
         // Mini-Cart Button
         const button = document.createElement("button");
-        button.className = "btn btn-primary ms-2";
+        button.className = "btn btn-primary ms-2 printess-basket-button";
         const iconName = printess.userInBuyerSide() ? <iconName>"print-solid" : <iconName>printess.gl("ui.buttonBasketIcon") || "shopping-cart-add";
         const icon = printess.getIcon(iconName);
         icon.style.width = "25px";
@@ -10572,6 +10606,12 @@ declare const bootstrap: any;
         uih_layoutSelectionDialogHasBeenRendered = true;
         renderLayoutSelectionDialog(printess, layoutSnippets, true);
       }
+    } else if (printess.selectLayoutsTabOneTime()) {
+      window.setTimeout(() => {
+        const layoutTab = document.querySelector('[data-tabid="#LAYOUTS"]');
+        if (layoutTab) (<HTMLDivElement>layoutTab).click();
+        window.setTimeout(()=> removeMobileOverlayPaddings(),100);
+      }, 1000)
     }
 
     // attach/remove shadow pulse animation to/from "change layout" button
@@ -10854,7 +10894,9 @@ declare const bootstrap: any;
   function getMobileNavButton(btn: { name: string; icon: SVGElement; task: (() => void) | (() => Promise<void>) }, circleWhiteBg: boolean): HTMLDivElement {
     const button = document.createElement("div");
     button.className = "mobile-property-nav-button";
-
+    if (btn.name === "basket") {
+      button.classList.add("printess-basket-button");
+    }
     const circle = document.createElement("div");
     circle.className = "mobile-property-circle bg-primary text-white"
     circle.onclick = () => btn.task();
@@ -11289,7 +11331,7 @@ declare const bootstrap: any;
     // NEXT BUTON
     {
       const btn = document.createElement("button");
-      btn.className = "btn btn-sm ms-2 me-2 main-button";
+      btn.className = "btn btn-sm ms-2 me-2 main-button printess-basket-button";
       if (printess.hasSteps() && !printess.hasNextStep()) {
         btn.classList.add("main-button-pulse");
       }

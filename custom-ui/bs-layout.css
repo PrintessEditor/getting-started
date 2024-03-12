@@ -250,6 +250,13 @@ body {
   border-left: 1px solid gray;
 }
 
+.disabled-button {
+  pointer-events: none !important;
+  opacity: 0.3 !important;
+  background-color: gray;
+  border-color: gray;
+}
+
 #desktop-pagebar.big.extra .big-gradient2 {
   width: 365px;
 }
