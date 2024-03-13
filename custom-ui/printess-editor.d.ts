@@ -1,4 +1,3 @@
-import { tableAddOption } from "../classes/model/FormField";
 
 /** 
  * Main call to attach the Printess to div-element of your choice. 
